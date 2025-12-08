@@ -28,8 +28,16 @@ pub struct ThemeFonts {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThemeLayout {
-    pub style: String, // "minimal", "modern", "creative"
+    pub style: LayoutStyle,
     pub sidebar: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LayoutStyle {
+    Minimal,
+    Modern,
+    Creative,
 }
 
 impl Default for Theme {
@@ -47,7 +55,7 @@ impl Default for Theme {
                 body: "Inter".to_string(),
             },
             layout: ThemeLayout {
-                style: "modern".to_string(),
+                style: LayoutStyle::Modern,
                 sidebar: false,
             },
         }
@@ -220,7 +228,7 @@ mod tests {
         let theme = Theme::default();
         assert_eq!(theme.name, "default");
         assert_eq!(theme.colors.primary, "#3b82f6");
-        assert_eq!(theme.layout.style, "modern");
+        assert!(matches!(theme.layout.style, LayoutStyle::Modern));
     }
 
     #[test]
@@ -242,7 +250,7 @@ mod tests {
                 body: "Open Sans".to_string(),
             },
             layout: ThemeLayout {
-                style: "minimal".to_string(),
+                style: LayoutStyle::Minimal,
                 sidebar: true,
             },
         };

@@ -59,9 +59,11 @@ pub fn track_detailed_event(event: AnalyticsEvent) -> anyhow::Result<()> {
     );
     
     // Serialize for storage/transmission
-    let _json = serde_json::to_string(&event)?;
+    let json = serde_json::to_string(&event)?;
     
-    // In a real implementation, send to analytics backend
+    // TODO: In production, send to analytics backend (e.g., PostHog, Mixpanel)
+    // For now, we log the serialized event for debugging
+    tracing::debug!("Analytics event JSON: {}", json);
     
     Ok(())
 }

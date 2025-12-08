@@ -13,11 +13,24 @@ pub struct SharedConfig {
 impl SharedConfig {
     /// Load configuration from environment variables
     pub fn from_env() -> Result<Self> {
-        let jwt_secret = env::var("JWT_SECRET")
-            .unwrap_or_else(|_| {
+        // Check if we're in production
+        let is_production = env::var("ENVIRONMENT")
+            .or_else(|_| env::var("NODE_ENV"))
+            .map(|v| v == "production" || v == "prod")
+            .unwrap_or(false);
+
+        let jwt_secret = match env::var("JWT_SECRET") {
+            Ok(secret) => secret,
+            Err(_) => {
+                if is_production {
+                    return Err(SharedError::ConfigError(
+                        "JWT_SECRET must be set in production environment".to_string()
+                    ));
+                }
                 tracing::warn!("JWT_SECRET not set, using default (NOT SECURE FOR PRODUCTION)");
                 "dev-secret-change-in-production".to_string()
-            });
+            }
+        };
 
         let jwt_expiration_hours = env::var("JWT_EXPIRATION_HOURS")
             .unwrap_or_else(|_| "24".to_string())

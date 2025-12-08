@@ -10,6 +10,11 @@ const MAX_RETRY_ATTEMPTS: i32 = 5;
 /// Base backoff time in seconds (exponential backoff: 10, 20, 40, 80, 160 seconds)
 const BASE_BACKOFF_SECONDS: i64 = 10;
 
+/// Calculate backoff time in seconds for a given retry count
+fn calculate_backoff_seconds(retry_count: i32) -> i64 {
+    BASE_BACKOFF_SECONDS * 2_i64.pow(retry_count as u32)
+}
+
 pub struct EventProcessor {
     pool: PgPool,
 }
@@ -23,6 +28,8 @@ impl EventProcessor {
     pub async fn fetch_unprocessed_events(&self) -> Result<Vec<Event>> {
         let now = Utc::now();
         
+        // Note: The SQL uses POWER(2, retry_count) * INTERVAL '10 seconds' which matches
+        // our calculate_backoff_seconds function (BASE_BACKOFF_SECONDS * 2^retry_count)
         let events: Vec<EventRow> = sqlx::query_as(
             r#"
             SELECT id, tenant_id, event_type, payload, created_at, processed_at, retry_count, failed_at, error_message
@@ -97,7 +104,7 @@ impl EventProcessor {
             .await?;
         } else {
             // Calculate next retry time with exponential backoff
-            let backoff_seconds = BASE_BACKOFF_SECONDS * 2_i64.pow(retry_count as u32);
+            let backoff_seconds = calculate_backoff_seconds(retry_count);
             let next_retry = Utc::now() + Duration::seconds(backoff_seconds);
             
             tracing::warn!(
