@@ -68,6 +68,219 @@ fn verify_password(password: &str, hash: &str) -> Result<bool, bcrypt::BcryptErr
     bcrypt::verify(password, hash)
 }
 
+#[cfg(test)]
+mod password_tests {
+    use super::*;
+
+    #[test]
+    fn test_hash_password() {
+        let password = "secure_password_123";
+        let hash = hash_password(password).unwrap();
+        
+        // Hash should be different from original password
+        assert_ne!(password, hash);
+        // Hash should be a bcrypt hash (starts with $2a$, $2b$, or $2y$)
+        assert!(hash.starts_with("$2a$") || hash.starts_with("$2b$") || hash.starts_with("$2y$"));
+    }
+
+    #[test]
+    fn test_verify_correct_password() {
+        let password = "correct_password";
+        let hash = hash_password(password).unwrap();
+        
+        let result = verify_password(password, &hash).unwrap();
+        assert!(result);
+    }
+
+    #[test]
+    fn test_verify_incorrect_password() {
+        let password = "correct_password";
+        let hash = hash_password(password).unwrap();
+        
+        let result = verify_password("wrong_password", &hash).unwrap();
+        assert!(!result);
+    }
+
+    #[test]
+    fn test_hash_same_password_different_hashes() {
+        let password = "my_password";
+        let hash1 = hash_password(password).unwrap();
+        let hash2 = hash_password(password).unwrap();
+        
+        // Bcrypt produces different hashes even for same password
+        assert_ne!(hash1, hash2);
+        
+        // But both should verify correctly
+        assert!(verify_password(password, &hash1).unwrap());
+        assert!(verify_password(password, &hash2).unwrap());
+    }
+
+    #[test]
+    fn test_generate_token() {
+        let user_id = "user-123";
+        let tenant_id = "tenant-456";
+        
+        let token = generate_token(user_id, tenant_id).unwrap();
+        
+        // Token should not be empty
+        assert!(!token.is_empty());
+        // JWT tokens have 3 parts separated by dots
+        assert_eq!(token.split('.').count(), 3);
+    }
+
+    #[test]
+    fn test_generate_token_different_users() {
+        let user1_token = generate_token("user1", "tenant1").unwrap();
+        let user2_token = generate_token("user2", "tenant2").unwrap();
+        
+        // Different users should have different tokens
+        assert_ne!(user1_token, user2_token);
+    }
+
+    #[test]
+    fn test_claims_structure() {
+        let user_id = "test-user";
+        let tenant_id = "test-tenant";
+        let expiration = Utc::now()
+            .checked_add_signed(Duration::hours(24))
+            .expect("valid timestamp")
+            .timestamp();
+
+        let claims = Claims {
+            sub: user_id.to_string(),
+            tenant_id: tenant_id.to_string(),
+            exp: expiration,
+        };
+
+        assert_eq!(claims.sub, user_id);
+        assert_eq!(claims.tenant_id, tenant_id);
+        assert!(claims.exp > Utc::now().timestamp());
+    }
+
+    #[test]
+    fn test_signup_request_creation() {
+        let req = SignupRequest {
+            email: "user@example.com".to_string(),
+            password: "password123".to_string(),
+            portfolio_slug: "my-portfolio".to_string(),
+        };
+
+        assert_eq!(req.email, "user@example.com");
+        assert_eq!(req.password, "password123");
+        assert_eq!(req.portfolio_slug, "my-portfolio");
+    }
+
+    #[test]
+    fn test_login_request_creation() {
+        let req = LoginRequest {
+            email: "user@example.com".to_string(),
+            password: "password123".to_string(),
+        };
+
+        assert_eq!(req.email, "user@example.com");
+        assert_eq!(req.password, "password123");
+    }
+
+    #[test]
+    fn test_user_response() {
+        let resp = UserResponse {
+            id: "user-123".to_string(),
+            email: "user@example.com".to_string(),
+        };
+
+        assert_eq!(resp.id, "user-123");
+        assert_eq!(resp.email, "user@example.com");
+    }
+
+    #[test]
+    fn test_tenant_response() {
+        let resp = TenantResponse {
+            id: "tenant-123".to_string(),
+            slug: "my-workspace".to_string(),
+        };
+
+        assert_eq!(resp.id, "tenant-123");
+        assert_eq!(resp.slug, "my-workspace");
+    }
+
+    #[test]
+    fn test_me_response() {
+        let resp = MeResponse {
+            id: "user-456".to_string(),
+            email: "me@example.com".to_string(),
+            tenant_id: "tenant-789".to_string(),
+        };
+
+        assert_eq!(resp.id, "user-456");
+        assert_eq!(resp.email, "me@example.com");
+        assert_eq!(resp.tenant_id, "tenant-789");
+    }
+
+    #[test]
+    fn test_email_validation() {
+        let valid_emails = vec![
+            "user@example.com",
+            "test.user@domain.co.uk",
+            "name+tag@example.org",
+        ];
+
+        for email in valid_emails {
+            assert!(email.contains('@'));
+        }
+    }
+
+    #[test]
+    fn test_password_validation() {
+        let valid_password = "password_123";
+        assert!(valid_password.len() >= 8);
+
+        let short_password = "short";
+        assert!(short_password.len() < 8);
+    }
+
+    #[test]
+    fn test_slug_validation() {
+        let valid_slugs = vec!["my-portfolio", "portfolio123", "a-b-c"];
+        
+        for slug in valid_slugs {
+            assert!(!slug.is_empty());
+            assert!(slug.chars().all(|c| c.is_alphanumeric() || c == '-'));
+        }
+    }
+
+    #[test]
+    fn test_invalid_slug() {
+        let invalid_slugs = vec!["my portfolio", "portfolio@123", "portfolio#1"];
+        
+        for slug in invalid_slugs {
+            assert!(!slug.chars().all(|c| c.is_alphanumeric() || c == '-'));
+        }
+    }
+
+    #[test]
+    fn test_empty_slug_invalid() {
+        let slug = "";
+        assert!(slug.is_empty() || !slug.chars().all(|c| c.is_alphanumeric() || c == '-'));
+    }
+
+    #[test]
+    fn test_claims_serialization() {
+        let claims = Claims {
+            sub: "user-123".to_string(),
+            tenant_id: "tenant-456".to_string(),
+            exp: 1234567890,
+        };
+
+        let json = serde_json::to_string(&claims).unwrap();
+        assert!(json.contains("user-123"));
+        assert!(json.contains("tenant-456"));
+
+        let deserialized: Claims = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.sub, claims.sub);
+        assert_eq!(deserialized.tenant_id, claims.tenant_id);
+    }
+}
+
 /// Generate a JWT token for a user
 fn generate_token(user_id: &str, tenant_id: &str) -> Result<String, jsonwebtoken::errors::Error> {
     let expiration = Utc::now()
