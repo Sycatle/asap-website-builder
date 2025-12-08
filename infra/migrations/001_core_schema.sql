@@ -1,7 +1,7 @@
 -- Core tables for ASAP platform
 -- Migration: 001_core_schema
 
--- Users table
+-- Users table (without tenant_id FK initially)
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email TEXT UNIQUE NOT NULL,
@@ -10,17 +10,21 @@ CREATE TABLE users (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Tenants table for multi-tenancy
+-- Tenants table
 CREATE TABLE tenants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_id UUID NOT NULL REFERENCES users(id),
+    owner_id UUID NOT NULL,
     slug TEXT UNIQUE NOT NULL,
     plan TEXT NOT NULL DEFAULT 'free',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Add foreign key from users to tenants (circular reference handled after creation)
-ALTER TABLE users ADD CONSTRAINT users_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+-- Add foreign keys with DEFERRABLE constraints
+ALTER TABLE tenants ADD CONSTRAINT tenants_owner_id_fkey 
+    FOREIGN KEY (owner_id) REFERENCES users(id) DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE users ADD CONSTRAINT users_tenant_id_fkey 
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) DEFERRABLE INITIALLY DEFERRED;
 
 -- User data for extended information (JSONB)
 CREATE TABLE user_data (
