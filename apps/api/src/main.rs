@@ -1,5 +1,7 @@
 mod config;
 mod db;
+mod cache;
+mod portfolio_cache;
 
 use std::net::SocketAddr;
 use axum::{Router, routing::get, Json, extract::State};
@@ -50,6 +52,26 @@ async fn main() -> anyhow::Result<()> {
     // Create database pool
     let pool = db::create_pool(&config.database_url).await?;
     tracing::info!("Database pool created");
+
+    // Create Redis cache (optional - will log warning if not available)
+    let _cache = match std::env::var("REDIS_URL") {
+        Ok(redis_url) => {
+            match db::create_redis_cache(&redis_url).await {
+                Ok(cache_service) => {
+                    tracing::info!("Redis cache initialized");
+                    Some(cache_service)
+                }
+                Err(e) => {
+                    tracing::warn!("Redis cache initialization failed: {}. Continuing without caching.", e);
+                    None
+                }
+            }
+        }
+        Err(_) => {
+            tracing::info!("REDIS_URL not set. Caching disabled.");
+            None
+        }
+    };
 
     // Create API router
     let api_router = asap_core_api::create_router(pool.clone(), shared_config);

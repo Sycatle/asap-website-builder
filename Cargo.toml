@@ -64,6 +64,9 @@ sha2 = "0.10"
 hex = "0.4"
 futures = "0.3"
 
+# Caching
+redis = { version = "0.24", features = ["aio", "tokio-comp", "connection-manager"] }
+
 # Testing
 mockall = "0.12"
 tokio-test = "0.4"
