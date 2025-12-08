@@ -84,7 +84,7 @@ export default function Dashboard() {
             <div>
               <p className="text-sm font-medium text-gray-600">Stockage</p>
               <p className="mt-2 text-3xl font-bold text-gray-900">
-                {quota ? `${quota.used_percentage.toFixed(0)}%` : '0%'}
+                {quota ? `${quota.usage_percentage.toFixed(0)}%` : '0%'}
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -95,12 +95,12 @@ export default function Dashboard() {
           </div>
           <div className="mt-2">
             <p className="text-sm text-gray-600">
-              {quota ? formatBytes(quota.used_bytes) : '0 Bytes'} / {quota ? formatBytes(quota.total_bytes) : '1 GB'}
+              {quota ? formatBytes(quota.total_size_used) : '0 Bytes'} / {quota ? formatBytes(quota.quota_limit) : '50 MB'}
             </p>
           </div>
           <div className="mt-4">
             <a
-              href="/app/files"
+              href="/app/cloud"
               className="text-sm text-primary-600 hover:text-primary-700 font-medium"
             >
               Gérer les fichiers →
@@ -157,7 +157,7 @@ export default function Dashboard() {
           </a>
 
           <a
-            href="/app/files"
+            href="/app/cloud"
             className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors"
           >
             <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">

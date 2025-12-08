@@ -12,9 +12,10 @@ export interface FileMetadata {
 }
 
 export interface QuotaUsage {
-  used_bytes: number;
-  total_bytes: number;
-  used_percentage: number;
+  total_size_used: number;
+  quota_limit: number;
+  remaining: number;
+  usage_percentage: number;
 }
 
 export const filesAPI = {
