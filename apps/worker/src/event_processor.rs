@@ -140,6 +140,7 @@ impl EventProcessor {
 
 // Helper struct for SQLx query mapping
 #[derive(Debug, sqlx::FromRow)]
+#[allow(dead_code)]
 struct EventRow {
     id: Uuid,
     tenant_id: Uuid,
