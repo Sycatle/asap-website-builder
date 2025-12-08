@@ -7,6 +7,7 @@ license.workspace = true
 
 [dependencies]
 asap-core-domain = { path = "../../core/domain" }
+asap-github-generator = { path = "../../modules/github-generator", package = "asap-module-github-generator" }
 
 # Async runtime
 tokio = { workspace = true }
@@ -26,3 +27,4 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 dotenv = { workspace = true }
 anyhow = { workspace = true }
+async-trait = { workspace = true }
