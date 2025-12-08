@@ -231,12 +231,36 @@ pub async fn signup(
         }))).into_response();
     }
 
-    // Validate slug format
-    if payload.portfolio_slug.is_empty() || !payload.portfolio_slug.chars().all(|c| c.is_alphanumeric() || c == '-') {
+    // Validate slug format (strict security rules)
+    let slug = payload.portfolio_slug.trim().to_lowercase();
+    if slug.is_empty() {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "Invalid portfolio slug format"
+            "error": "Portfolio slug is required"
         }))).into_response();
     }
+    if slug.len() < 3 || slug.len() > 50 {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "Portfolio slug must be between 3 and 50 characters"
+        }))).into_response();
+    }
+    if !slug.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-') {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "Portfolio slug can only contain lowercase letters, numbers, and hyphens"
+        }))).into_response();
+    }
+    if slug.starts_with('-') || slug.ends_with('-') || slug.contains("--") {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "Portfolio slug cannot start/end with hyphen or contain consecutive hyphens"
+        }))).into_response();
+    }
+    // Reserved slugs that could conflict with routes
+    let reserved_slugs = ["api", "admin", "auth", "login", "signup", "public", "private", "health", "static", "assets", "www", "app"];
+    if reserved_slugs.contains(&slug.as_str()) {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "This portfolio slug is reserved"
+        }))).into_response();
+    }
+    let slug = slug; // Use sanitized slug
 
     // Hash password
     let password_hash = match hash_password(&payload.password) {
@@ -268,7 +292,7 @@ pub async fn signup(
     let tenant_result = sqlx::query!(
         "INSERT INTO tenants (id, owner_id, slug, plan) VALUES ($1, $1, $2, 'free')",
         tenant_id,
-        payload.portfolio_slug
+        slug // Use sanitized slug, not raw payload
     )
     .execute(&mut *tx)
     .await;
@@ -335,7 +359,7 @@ pub async fn signup(
         "INSERT INTO portfolios (id, tenant_id, slug, title, tagline, status) VALUES ($1, $2, $3, $4, '', 'draft')",
         portfolio_id,
         tenant_id,
-        payload.portfolio_slug,
+        slug, // Use sanitized slug, not raw payload
         payload.email.split('@').next().unwrap_or("User")
     )
     .execute(&mut *tx)
@@ -390,7 +414,7 @@ pub async fn signup(
         },
         tenant: TenantResponse {
             id: tenant_id.to_string(),
-            slug: payload.portfolio_slug,
+            slug, // Use sanitized slug
         },
     })).into_response()
 }
