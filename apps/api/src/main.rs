@@ -1,8 +1,17 @@
 use std::net::SocketAddr;
-use axum::Router;
+use axum::{Router, routing::get, Json};
+use serde_json::json;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+async fn health() -> Json<serde_json::Value> {
+    Json(json!({
+        "status": "ok",
+        "service": "asap-api",
+        "version": env!("CARGO_PKG_VERSION")
+    }))
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -22,6 +31,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Create router
     let app = Router::new()
+        .route("/health", get(health))
         .nest("/api", asap_core_api::create_router())
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http());
