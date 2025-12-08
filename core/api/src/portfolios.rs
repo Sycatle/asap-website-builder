@@ -209,6 +209,8 @@ pub async fn update_portfolio(
 
     query_parts.push("updated_at = now()".to_string());
 
+    let _ = param_count; // Used for dynamic query building
+
     let query = format!(
         "UPDATE portfolios SET {} WHERE id = $1 AND tenant_id = $2",
         query_parts.join(", ")
