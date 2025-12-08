@@ -1,0 +1,26 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SignupForm from '../components/SignupForm';
+---
+
+<BaseLayout title="Créer un compte - ASAP">
+  <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full">
+      <!-- Logo/Header -->
+      <div class="text-center mb-8">
+        <a href="/" class="text-3xl font-bold text-primary-600">ASAP</a>
+        <h2 class="mt-6 text-3xl font-bold text-gray-900">
+          Créez votre compte
+        </h2>
+        <p class="mt-2 text-sm text-gray-600">
+          Commencez à créer votre portfolio en quelques minutes
+        </p>
+      </div>
+
+      <!-- Signup Form Card -->
+      <div class="bg-white py-8 px-6 shadow-lg rounded-lg border border-gray-200">
+        <SignupForm client:load />
+      </div>
+    </div>
+  </div>
+</BaseLayout>
