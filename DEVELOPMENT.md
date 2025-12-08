@@ -8,31 +8,56 @@ This guide covers the development setup and workflow for ASAP v2.
 - **Docker** & Docker Compose
 - **PostgreSQL** 15+ (via Docker or local)
 - **Node.js** 18+ (for future frontend)
+- **Make** (optional, for command shortcuts)
 
 ## Quick Start
 
-### 1. Clone and Setup
+### 1. Initialize Database (One-time Setup)
 
 ```bash
-git clone https://github.com/Sycatle/asap-v2.git
-cd asap-v2
+# Start PostgreSQL and apply migrations
+make setup-db
 
-# Run the setup script
-./scripts/setup-dev.sh
+# Or manually:
+bash scripts/setup-db.sh
+
+# Verify connection
+docker exec asap-postgres psql -U asap -d asap -c "SELECT 1;"
 ```
 
-### 2. Development Workflow
+### 2. Set Environment Variables
+
+```bash
+# Load database configuration
+export DATABASE_URL="postgresql://asap:asap@localhost:5432/asap"
+
+# Or add to .bashrc/.zshrc for persistence
+echo 'export DATABASE_URL="postgresql://asap:asap@localhost:5432/asap"' >> ~/.bashrc
+```
+
+### 3. Run Tests
+
+```bash
+# All unit tests
+make test
+
+# Test by component
+make test-domain      # Core domain models (31 tests)
+make test-modules     # All modules (36 tests)
+```
+
+### 4. Development Workflow
 
 Start the services in separate terminals:
 
 ```bash
 # Terminal 1 - API
-cd apps/api
-cargo run
+export DATABASE_URL="postgresql://asap:asap@localhost:5432/asap"
+cargo run -p asap-api
 
 # Terminal 2 - Worker
-cd apps/worker
-cargo run
+export DATABASE_URL="postgresql://asap:asap@localhost:5432/asap"
+cargo run -p asap-worker
 ```
 
 The API will be available at `http://localhost:3000`.
@@ -72,6 +97,225 @@ cargo build -p asap-worker
 
 # Build for production
 cargo build --release
+```
+
+## Testing
+
+### Unit Tests
+
+All tests can be run without a database connection:
+
+```bash
+# Run all unit tests
+make test
+
+# Test core domain (31 tests)
+make test-domain
+
+# Test modules (36 tests)
+make test-modules
+
+# Run specific test suite
+cargo test --lib -p asap-core-domain
+cargo test --lib -p asap-module-analytics
+cargo test --lib -p asap-module-themes
+cargo test --lib -p asap-module-github-generator
+cargo test --lib -p asap-module-projections
+```
+
+### Test Coverage
+
+**67+ unit tests covering:**
+
+- **Core Domain**: 31 tests
+  - Users (5 tests): creation, cloning, serialization
+  - Portfolios (7 tests): status, metadata, data
+  - Events (8 tests): creation, processing, serialization
+  - Integrations (9 tests): GitHub integration, token management
+
+- **Modules**: 36 tests
+  - Analytics (7 tests): event tracking
+  - Themes (8 tests): theme application, JSON handling
+  - GitHub Generator (13 tests): repo filtering, content generation
+  - Projections (8 tests): slug validation, data structure
+
+- **API**: Password & Route tests (requires DATABASE_URL)
+  - Password hashing & verification (6 tests)
+  - Route definitions (13 tests)
+  - Request/Response structures (10 tests)
+
+### Running Tests with Output
+
+```bash
+# Show test output
+cargo test --lib -- --nocapture
+
+# Run single test
+cargo test test_user_creation -- --exact
+
+# Run tests sequentially (for debugging)
+cargo test -- --test-threads=1
+
+# List all tests
+cargo test --lib -- --list
+```
+
+## Database Management
+
+### Database Commands
+
+```bash
+# Initialize database (one-time)
+make setup-db
+
+# Start PostgreSQL
+make db-start
+
+# Stop PostgreSQL
+make db-stop
+
+# Reset database (WARNING: deletes data)
+make db-reset
+
+# Connect to database shell
+docker exec -it asap-postgres psql -U asap -d asap
+
+# List tables
+docker exec asap-postgres psql -U asap -d asap -c "\dt"
+
+# View table structure
+docker exec asap-postgres psql -U asap -d asap -c "\d users"
+```
+
+### Database Configuration
+
+**Connection Details:**
+- Host: `localhost`
+- Port: `5432`
+- Username: `asap`
+- Password: `asap`
+- Database: `asap`
+
+**Environment Variable:**
+```bash
+DATABASE_URL=postgresql://asap:asap@localhost:5432/asap
+```
+
+### Database Schema
+
+**Tables:**
+- `users` - User accounts with email and password hash
+- `tenants` - Isolated workspaces (multi-tenancy)
+- `user_data` - Extended user info (JSONB format)
+- `portfolios` - User portfolio records
+- `portfolio_data` - Portfolio content (JSONB format)
+- `events` - System events for event-driven architecture
+- `modules` - Available modules
+- `module_configs` - Per-tenant module configuration
+
+**Security Features:**
+- Row-Level Security (RLS) for tenant isolation
+- Password hashing with bcrypt
+- JWT token authentication
+- CORS configuration
+
+## Code Quality
+
+```bash
+# Format code
+make fmt
+
+# Check formatting
+make fmt-check
+
+# Run linter
+make clippy
+
+# Check for errors
+cargo check
+
+# Run clippy with strict rules
+cargo clippy --all --all-targets -- -D warnings
+```
+
+## Environment Setup
+
+### .env.local
+
+The project uses `.env.local` for configuration:
+
+```bash
+# Database
+DATABASE_URL=postgresql://asap:asap@localhost:5432/asap
+
+# Logging
+RUST_LOG=asap_api=debug,asap_core_api=debug,tower_http=debug,sqlx=info
+
+# API Server
+ASAP_API_PORT=3000
+ASAP_API_HOST=127.0.0.1
+
+# JWT
+JWT_SECRET=dev_secret_key_change_in_production_12345
+
+# Modules
+GITHUB_API_ENABLED=true
+ANALYTICS_ENABLED=true
+THEMES_ENABLED=true
+PROJECTIONS_ENABLED=true
+```
+
+### Load Environment
+
+```bash
+# In your shell session
+set -a
+source .env.local
+set +a
+```
+
+## Troubleshooting
+
+### PostgreSQL Connection Issues
+
+```bash
+# Check if container is running
+docker ps | grep asap-postgres
+
+# Restart PostgreSQL
+make db-stop
+make db-start
+
+# Check logs
+docker logs asap-postgres
+
+# Verify connection
+docker exec asap-postgres psql -U asap -d asap -c "SELECT 1;"
+```
+
+### sqlx Macro Compilation Errors
+
+The `sqlx!` macros require DATABASE_URL to be set:
+
+```bash
+# Set environment variable
+export DATABASE_URL="postgresql://asap:asap@localhost:5432/asap"
+
+# Rebuild
+cargo build
+```
+
+### Tests Failing
+
+```bash
+# Ensure DATABASE_URL is set
+echo $DATABASE_URL
+
+# Ensure PostgreSQL is running
+docker ps | grep postgres
+
+# Run setup again if needed
+make setup-db
 ```
 
 ## Running Tests

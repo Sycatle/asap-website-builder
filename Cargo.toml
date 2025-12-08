@@ -51,3 +51,11 @@ dotenv = "0.15"
 
 # HTTP client (for modules)
 reqwest = { version = "0.11", features = ["json"] }
+
+# Async traits
+async-trait = "0.1"
+
+# Testing
+mockall = "0.12"
+tokio-test = "0.4"
+
