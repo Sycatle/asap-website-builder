@@ -104,8 +104,8 @@ pub async fn get_events(
                 tenant_id: row.get::<Uuid, _>("tenant_id").to_string(),
                 event_type: row.get("event_type"),
                 payload: row.get("payload"),
-                created_at: row.get::<chrono::NaiveDateTime, _>("created_at").to_string(),
-                processed_at: row.get::<Option<chrono::NaiveDateTime>, _>("processed_at").map(|t| t.to_string()),
+                created_at: row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_string(),
+                processed_at: row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("processed_at").map(|t| t.to_string()),
             }
         })
         .collect();
