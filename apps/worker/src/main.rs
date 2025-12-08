@@ -5,11 +5,14 @@ mod db;
 mod event_processor;
 mod module_executor;
 mod file_cleanup;
+mod parallel_processor;
 
 use config::Config;
 use event_processor::EventProcessor;
 use module_executor::{ModuleExecutorRegistry, GitHubIntegrationExecutor};
 use file_cleanup::FileCleanupTask;
+use parallel_processor::{ParallelProcessorConfig, process_events_parallel};
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -40,7 +43,7 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Database health check passed");
 
     // Create event processor
-    let event_processor = EventProcessor::new(pool.clone());
+    let event_processor = Arc::new(EventProcessor::new(pool.clone()));
 
     // Create module executor registry
     let mut registry = ModuleExecutorRegistry::new();
@@ -51,15 +54,24 @@ async fn main() -> anyhow::Result<()> {
         config.core_api_url.clone(),
     )));
 
+    let registry = Arc::new(registry);
+
     tracing::info!("Module executors registered");
 
     // Create file cleanup task
     let cleanup_task = FileCleanupTask::new(pool.clone());
 
     // Start file cleanup task in background
-    let cleanup_handle = tokio::spawn(async move {
+    let _cleanup_handle = tokio::spawn(async move {
         cleanup_task.start().await;
     });
+
+    // Configure parallel event processing
+    let parallel_config = ParallelProcessorConfig::default();
+    tracing::info!(
+        "Parallel event processing enabled with max {} concurrent tasks",
+        parallel_config.max_concurrency
+    );
 
     // Main event loop
     let polling_interval = std::time::Duration::from_secs(config.polling_interval_secs);
@@ -67,10 +79,16 @@ async fn main() -> anyhow::Result<()> {
     loop {
         tracing::debug!("Polling for unprocessed events...");
         
-        match process_events(&event_processor, &registry).await {
-            Ok(count) => {
-                if count > 0 {
-                    tracing::info!("Processed {} events", count);
+        match process_events_parallel_wrapper(&event_processor, &registry, &parallel_config).await {
+            Ok(stats) => {
+                if stats.total_events > 0 {
+                    tracing::info!(
+                        "Processed {} events: {} successful, {} failed in {}ms",
+                        stats.total_events,
+                        stats.successful,
+                        stats.failed,
+                        stats.duration_ms
+                    );
                 }
             }
             Err(e) => {
@@ -82,32 +100,24 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
-async fn process_events(
-    event_processor: &EventProcessor,
-    registry: &ModuleExecutorRegistry,
-) -> anyhow::Result<usize> {
+async fn process_events_parallel_wrapper(
+    event_processor: &Arc<EventProcessor>,
+    registry: &Arc<ModuleExecutorRegistry>,
+    config: &ParallelProcessorConfig,
+) -> anyhow::Result<parallel_processor::ProcessingStats> {
     // Fetch unprocessed events
     let events = event_processor.fetch_unprocessed_events().await?;
-    let count = events.len();
-
-    for event in events {
-        tracing::info!(
-            "Processing event {} (type: {:?})",
-            event.id,
-            event.event_type
-        );
-
-        match registry.execute_for_event(&event).await {
-            Ok(_) => {
-                event_processor.mark_processed(event.id).await?;
-                tracing::info!("Event {} processed successfully", event.id);
-            }
-            Err(e) => {
-                tracing::error!("Error executing event {}: {}", event.id, e);
-                event_processor.mark_failed(event.id, &e.to_string()).await?;
-            }
-        }
+    
+    if events.is_empty() {
+        return Ok(parallel_processor::ProcessingStats::default());
     }
 
-    Ok(count)
+    // Process events in parallel
+    process_events_parallel(
+        event_processor.clone(),
+        registry.clone(),
+        events,
+        config.clone(),
+    )
+    .await
 }

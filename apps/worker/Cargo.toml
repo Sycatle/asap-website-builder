@@ -10,8 +10,14 @@ asap-core-domain = { path = "../../core/domain" }
 asap-github-generator = { path = "../../modules/github-generator", package = "asap-module-github-generator" }
 
 # Async runtime
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
 tokio-util = { workspace = true }
+
+# Async utilities
+futures = "0.3"
+
+# Parallelism
+num_cpus = "1.16"
 
 # Database
 sqlx = { workspace = true }
