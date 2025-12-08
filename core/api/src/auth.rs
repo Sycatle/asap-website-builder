@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 use chrono::{Utc, Duration};
-use jsonwebtoken::{encode, decode, Header, Validation, EncodingKey, DecodingKey};
+use jsonwebtoken::{encode, Header, EncodingKey};
 
 const JWT_SECRET: &str = "dev-secret-change-in-production"; // TODO: Load from config
 
