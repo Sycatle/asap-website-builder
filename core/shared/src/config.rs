@@ -1,5 +1,7 @@
 use std::env;
-use anyhow::{Context, Result};
+use crate::errors::SharedError;
+
+pub type Result<T> = std::result::Result<T, SharedError>;
 
 /// Shared configuration that can be used across all components
 #[derive(Debug, Clone)]
@@ -19,8 +21,7 @@ impl SharedConfig {
 
         let jwt_expiration_hours = env::var("JWT_EXPIRATION_HOURS")
             .unwrap_or_else(|_| "24".to_string())
-            .parse()
-            .context("JWT_EXPIRATION_HOURS must be a valid number")?;
+            .parse::<i64>()?;
 
         Ok(Self {
             jwt_secret,

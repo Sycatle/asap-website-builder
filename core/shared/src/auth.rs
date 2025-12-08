@@ -3,6 +3,9 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use serde::{Deserialize, Serialize};
 
 use crate::config::SharedConfig;
+use crate::errors::SharedError;
+
+pub type Result<T> = std::result::Result<T, SharedError>;
 
 /// JWT Claims structure
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -17,7 +20,7 @@ pub fn generate_token(
     user_id: &str,
     tenant_id: &str,
     config: &SharedConfig,
-) -> Result<String, jsonwebtoken::errors::Error> {
+) -> Result<String> {
     let expiration = Utc::now()
         .checked_add_signed(Duration::hours(config.jwt_expiration_hours))
         .expect("valid timestamp")
@@ -34,13 +37,14 @@ pub fn generate_token(
         &claims,
         &EncodingKey::from_secret(config.jwt_secret.as_ref()),
     )
+    .map_err(SharedError::from)
 }
 
 /// Validate and decode a JWT token
 pub fn validate_token(
     token: &str,
     config: &SharedConfig,
-) -> Result<Claims, jsonwebtoken::errors::Error> {
+) -> Result<Claims> {
     let token_data = decode::<Claims>(
         token,
         &DecodingKey::from_secret(config.jwt_secret.as_ref()),
