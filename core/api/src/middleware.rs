@@ -7,7 +7,7 @@ use axum::{
 };
 use serde_json::json;
 
-use asap_core_shared::{validate_token, Claims, SharedConfig};
+use asap_core_shared::{validate_token, SharedConfig};
 
 pub async fn auth_middleware(
     State(config): State<SharedConfig>,
