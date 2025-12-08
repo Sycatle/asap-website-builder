@@ -47,20 +47,10 @@ pub async fn list_portfolios(
         }
     };
 
-    let result = sqlx::query!(
-        r#"
-        SELECT 
-            p.id, p.tenant_id, p.slug, p.title, p.tagline, p.status, p.metadata,
-            COALESCE(pd.data, '{}'::jsonb) as "data!"
-        FROM portfolios p
-        LEFT JOIN portfolio_data pd ON p.id = pd.portfolio_id
-        WHERE p.tenant_id = $1
-        ORDER BY p.created_at DESC
-        "#,
-        tenant_id
-    )
-    .fetch_all(&pool)
-    .await;
+    // Use optimized prepared statement
+    use crate::queries;
+    
+    let result = queries::list_portfolios_with_data(&pool, tenant_id).await;
 
     match result {
         Ok(portfolios) => {
@@ -74,7 +64,7 @@ pub async fn list_portfolios(
                     tagline: p.tagline,
                     status: p.status,
                     metadata: p.metadata,
-                    data: p.data,
+                    data: p.data.unwrap_or_else(|| serde_json::json!({})),
                 })
                 .collect();
 
@@ -112,20 +102,10 @@ pub async fn get_portfolio(
         }
     };
 
-    let result = sqlx::query!(
-        r#"
-        SELECT 
-            p.id, p.tenant_id, p.slug, p.title, p.tagline, p.status, p.metadata,
-            COALESCE(pd.data, '{}'::jsonb) as "data!"
-        FROM portfolios p
-        LEFT JOIN portfolio_data pd ON p.id = pd.portfolio_id
-        WHERE p.id = $1 AND p.tenant_id = $2
-        "#,
-        portfolio_id,
-        tenant_id
-    )
-    .fetch_optional(&pool)
-    .await;
+    // Use optimized prepared statement
+    use crate::queries;
+    
+    let result = queries::get_portfolio_with_data(&pool, portfolio_id, tenant_id).await;
 
     match result {
         Ok(Some(p)) => {
@@ -137,7 +117,7 @@ pub async fn get_portfolio(
                 tagline: p.tagline,
                 status: p.status,
                 metadata: p.metadata,
-                data: p.data,
+                data: p.data.unwrap_or_else(|| serde_json::json!({})),
             })).into_response()
         }
         Ok(None) => {
@@ -178,64 +158,29 @@ pub async fn update_portfolio(
         }
     };
 
-    // Build update query dynamically based on provided fields
-    let mut query_parts = vec![];
-    let mut params: Vec<String> = vec![];
-    let mut param_count = 3; // Starting after $1 (id) and $2 (tenant_id)
-
-    if let Some(title) = &payload.title {
-        query_parts.push(format!("title = ${}", param_count));
-        params.push(title.clone());
-        param_count += 1;
-    }
-
-    if let Some(tagline) = &payload.tagline {
-        query_parts.push(format!("tagline = ${}", param_count));
-        params.push(tagline.clone());
-        param_count += 1;
-    }
-
-    if let Some(metadata) = &payload.metadata {
-        query_parts.push(format!("metadata = ${}::jsonb", param_count));
-        params.push(serde_json::to_string(metadata).unwrap_or_else(|_| "{}".to_string()));
-        param_count += 1;
-    }
-
-    if query_parts.is_empty() {
+    // Check if there are any fields to update
+    if payload.title.is_none() && payload.tagline.is_none() && payload.metadata.is_none() {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
             "error": "No fields to update"
         }))).into_response();
     }
 
-    query_parts.push("updated_at = now()".to_string());
+    // Use prepared statements from queries module for type-safe updates
+    use crate::queries;
 
-    let _ = param_count; // Used for dynamic query building
-
-    let query = format!(
-        "UPDATE portfolios SET {} WHERE id = $1 AND tenant_id = $2",
-        query_parts.join(", ")
-    );
-
-    // Execute update with dynamic parameters
-    let mut query_builder = sqlx::query(&query)
-        .bind(portfolio_id)
-        .bind(tenant_id);
-
-    for param in params {
-        query_builder = query_builder.bind(param);
-    }
-
-    let result = query_builder.execute(&pool).await;
+    let result = queries::update_portfolio_batch_fields(
+        &pool,
+        portfolio_id,
+        tenant_id,
+        payload.title.as_deref(),
+        payload.tagline.as_deref(),
+        payload.metadata.as_ref(),
+    ).await;
 
     match result {
-        Ok(result) if result.rows_affected() > 0 => {
+        Ok(_) => {
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Portfolio updated successfully"
-            }))).into_response()
-        }
-        Ok(_) => {
-            (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Portfolio not found"
             }))).into_response()
         }
         Err(e) => {
@@ -295,21 +240,10 @@ pub async fn patch_portfolio_data(
         _ => {}
     }
 
-    // Update or insert portfolio_data
-    let result = sqlx::query!(
-        r#"
-        INSERT INTO portfolio_data (portfolio_id, data)
-        VALUES ($1, $2)
-        ON CONFLICT (portfolio_id)
-        DO UPDATE SET 
-            data = portfolio_data.data || $2,
-            updated_at = now()
-        "#,
-        portfolio_id,
-        payload.data
-    )
-    .execute(&pool)
-    .await;
+    // Use optimized prepared statement for upsert
+    use crate::queries;
+    
+    let result = queries::upsert_portfolio_data(&pool, portfolio_id, &payload.data).await;
 
     match result {
         Ok(_) => {
@@ -349,14 +283,11 @@ pub async fn publish_portfolio(
         }
     };
 
+    // Use optimized prepared statement
+    use crate::queries;
+    
     // Update portfolio status to published
-    let result = sqlx::query!(
-        "UPDATE portfolios SET status = 'published', updated_at = now() WHERE id = $1 AND tenant_id = $2",
-        portfolio_id,
-        tenant_id
-    )
-    .execute(&pool)
-    .await;
+    let result = queries::update_portfolio_status(&pool, portfolio_id, tenant_id, "published").await;
 
     match result {
         Ok(result) if result.rows_affected() > 0 => {
@@ -406,19 +337,10 @@ pub async fn get_public_portfolio(
     State(pool): State<PgPool>,
     Path(slug): Path<String>,
 ) -> impl IntoResponse {
-    let result = sqlx::query!(
-        r#"
-        SELECT 
-            p.id, p.tenant_id, p.slug, p.title, p.tagline, p.status, p.metadata,
-            COALESCE(pd.data, '{}'::jsonb) as "data!"
-        FROM portfolios p
-        LEFT JOIN portfolio_data pd ON p.id = pd.portfolio_id
-        WHERE p.slug = $1 AND p.status = 'published'
-        "#,
-        slug
-    )
-    .fetch_optional(&pool)
-    .await;
+    // Use optimized prepared statement
+    use crate::queries;
+    
+    let result = queries::get_public_portfolio(&pool, &slug).await;
 
     match result {
         Ok(Some(p)) => {
@@ -430,7 +352,7 @@ pub async fn get_public_portfolio(
                 tagline: p.tagline,
                 status: p.status,
                 metadata: p.metadata,
-                data: p.data,
+                data: p.data.unwrap_or_else(|| serde_json::json!({})),
             })).into_response()
         }
         Ok(None) => {

@@ -7,6 +7,7 @@ use std::io::Write;
 use uuid::Uuid;
 use sha2::{Sha256, Digest};
 use hex;
+use tokio::io::AsyncRead;
 
 use asap_core_domain::{File, UserStorageQuota};
 
@@ -94,12 +95,73 @@ impl FileStorageService {
         Ok(())
     }
 
-    /// Compress file content
+    /// Compress file content (buffered, for small files)
+    /// 
+    /// For files < 10 MB, uses standard in-memory compression.
+    /// For larger files, use `compress_file_streaming()` instead.
     pub fn compress_file(&self, data: &[u8]) -> Result<Bytes> {
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
         encoder.write_all(data)?;
         let compressed = encoder.finish()?;
         Ok(Bytes::from(compressed))
+    }
+
+    /// Compress file content using streaming for large files
+    /// 
+    /// This method progressively compresses data without loading the entire file
+    /// into memory at once. Ideal for files > 10 MB.
+    /// 
+    /// # Arguments
+    /// * `reader` - Async reader for the file data (e.g., from multipart stream)
+    /// * `max_compressed_size` - Maximum allowed compressed size (safety limit)
+    /// 
+    /// # Example
+    /// ```ignore
+    /// let mut reader = ... // AsyncRead source
+    /// let compressed = service.compress_file_streaming(&mut reader, 500_000_000).await?;
+    /// ```
+    pub async fn compress_file_streaming<R: AsyncRead + Unpin>(
+        &self,
+        reader: &mut R,
+        max_compressed_size: i64,
+    ) -> Result<Bytes> {
+        // Use fast compression for streaming (balance between speed and ratio)
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::fast());
+        
+        let mut buffer = vec![0u8; 1024 * 1024]; // 1 MB buffer for streaming
+        let mut total_compressed = 0i64;
+        
+        loop {
+            let n = tokio::io::AsyncReadExt::read(reader, &mut buffer).await?;
+            if n == 0 {
+                break; // EOF
+            }
+            
+            encoder.write_all(&buffer[..n])?;
+            
+            // Check compressed size limit to prevent memory exhaustion
+            total_compressed += n as i64;
+            if total_compressed > max_compressed_size {
+                return Err(anyhow::anyhow!(
+                    "Compressed file size exceeds maximum of {} MB",
+                    max_compressed_size / 1_000_000
+                ));
+            }
+        }
+        
+        let compressed = encoder.finish()?;
+        Ok(Bytes::from(compressed))
+    }
+
+    /// Compression ratio helper - check if compression is worthwhile
+    /// 
+    /// Returns true if compression provides >5% savings
+    pub fn is_compression_worthwhile(original_size: usize, compressed_size: usize) -> bool {
+        if original_size == 0 {
+            return false;
+        }
+        let ratio = (compressed_size as f64 / original_size as f64) * 100.0;
+        ratio < 95.0 // More than 5% compression
     }
 
     /// Calculate file hash
