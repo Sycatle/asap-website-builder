@@ -2,8 +2,18 @@ use axum::{
     Router,
     routing::{get, post, put, patch},
     middleware,
+    Json,
 };
 use sqlx::PgPool;
+use serde_json::json;
+
+async fn root() -> Json<serde_json::Value> {
+    Json(json!({
+        "service": "ASAP Core API",
+        "version": "0.1.0",
+        "status": "running"
+    }))
+}
 
 /// Creates the main API router with all routes
 pub fn create_router(pool: PgPool) -> Router {
@@ -30,6 +40,7 @@ pub fn create_router(pool: PgPool) -> Router {
 
     // Public routes (no auth required)
     let public_routes = Router::new()
+        .route("/", get(root))
         .route("/auth/signup", post(crate::auth::signup))
         .route("/auth/login", post(crate::auth::login))
         .route("/public/portfolios/:slug", get(crate::portfolios::get_public_portfolio))
