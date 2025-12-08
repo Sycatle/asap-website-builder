@@ -11,6 +11,47 @@ use flate2::Compression;
 use std::io::Write;
 use tokio::io::{AsyncRead, AsyncReadExt};
 
+/// Minimum file size for compression to be worthwhile (5 KB)
+pub const MIN_COMPRESSION_SIZE: usize = 5 * 1024;
+
+/// Maximum compression overhead ratio (150% = no benefit if file stays larger)
+pub const MAX_COMPRESSION_OVERHEAD_RATIO: f64 = 1.50;
+
+/// List of MIME types that should NOT be compressed (already compressed)
+pub fn get_incompressible_types() -> Vec<&'static str> {
+    vec![
+        // Images
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        "image/avif",
+        "image/x-icon",
+        "image/svg+xml",
+        // Archives
+        "application/zip",
+        "application/x-rar",
+        "application/x-7z-compressed",
+        "application/gzip",
+        "application/x-tar",
+        "application/x-bzip2",
+        "application/x-xz",
+        // Audio/Video
+        "audio/mpeg",
+        "audio/aac",
+        "audio/ogg",
+        "audio/wav",
+        "video/mp4",
+        "video/mpeg",
+        "video/webm",
+        "video/ogg",
+        "video/quicktime",
+        "video/x-msvideo",
+        // Already compressed documents
+        "application/pdf",
+    ]
+}
+
 /// Streaming compressor for efficient memory usage
 /// 
 /// Compresses data in chunks without requiring the entire file in memory.

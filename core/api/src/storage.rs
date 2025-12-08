@@ -29,34 +29,118 @@ impl FileStorageService {
         }
     }
 
-    /// Get default allowed MIME types
+    /// Get default allowed MIME types (50+ formats)
     fn default_allowed_mime_types() -> Vec<String> {
         vec![
-            // Documents
+            // ===== Documents =====
             "application/pdf".to_string(),
             "text/plain".to_string(),
+            "text/markdown".to_string(),
+            "text/csv".to_string(),
+            // Microsoft Office
             "application/msword".to_string(),
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document".to_string(),
             "application/vnd.ms-excel".to_string(),
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".to_string(),
-            // Images
+            "application/vnd.ms-powerpoint".to_string(),
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation".to_string(),
+            // OpenDocument
+            "application/vnd.oasis.opendocument.text".to_string(),
+            "application/vnd.oasis.opendocument.spreadsheet".to_string(),
+            "application/vnd.oasis.opendocument.presentation".to_string(),
+            // Rich Text
+            "application/rtf".to_string(),
+            "text/richtext".to_string(),
+
+            // ===== Images =====
             "image/jpeg".to_string(),
             "image/png".to_string(),
             "image/gif".to_string(),
             "image/webp".to_string(),
-            // Archives
+            "image/avif".to_string(),
+            "image/tiff".to_string(),
+            "image/bmp".to_string(),
+            "image/x-icon".to_string(),
+            "image/svg+xml".to_string(),
+            "image/heic".to_string(),
+            "image/heif".to_string(),
+
+            // ===== Archives =====
             "application/zip".to_string(),
-            "application/x-tar".to_string(),
+            "application/x-rar".to_string(),
+            "application/x-7z-compressed".to_string(),
             "application/gzip".to_string(),
-            // Code
+            "application/x-tar".to_string(),
+            "application/x-bzip2".to_string(),
+            "application/x-xz".to_string(),
+
+            // ===== Code/Markup =====
             "text/html".to_string(),
             "text/css".to_string(),
             "text/javascript".to_string(),
+            "text/typescript".to_string(),
             "application/json".to_string(),
+            "application/xml".to_string(),
             "text/xml".to_string(),
-            // Generic
+            "application/yaml".to_string(),
+            "text/yaml".to_string(),
+            "text/x-python".to_string(),
+            "text/x-shellscript".to_string(),
+            "text/x-sql".to_string(),
+
+            // ===== Audio/Video =====
+            "audio/mpeg".to_string(),
+            "audio/aac".to_string(),
+            "audio/ogg".to_string(),
+            "audio/wav".to_string(),
+            "audio/flac".to_string(),
+            "video/mp4".to_string(),
+            "video/mpeg".to_string(),
+            "video/webm".to_string(),
+            "video/ogg".to_string(),
+            "video/quicktime".to_string(),
+            "video/x-msvideo".to_string(),
+
+            // ===== Generic/Fallback =====
             "application/octet-stream".to_string(),
         ]
+    }
+
+    /// Strip metadata from filename (security) - removes path traversal and special chars
+    pub fn sanitize_filename(&self, filename: &str) -> String {
+        // Remove path components
+        let filename = filename.split('/').last().unwrap_or(filename);
+        let filename = filename.split('\\').last().unwrap_or(filename);
+        
+        // Remove null bytes and limit to safe characters while preserving extension
+        filename
+            .chars()
+            .filter(|c| c.is_alphanumeric() || *c == '-' || *c == '_' || *c == '.')
+            .collect::<String>()
+            .chars()
+            .rev()
+            .take_while(|c| c == &'.' || !c.is_ascii_control())
+            .collect::<String>()
+            .chars()
+            .rev()
+            .collect::<String>()
+    }
+
+    /// Check if file should be compressed based on MIME type and size
+    fn should_compress(&self, mime_type: &str, file_size: usize) -> bool {
+        // Skip compression for very small files (< 5KB) - overhead not worth it
+        if file_size < crate::compression::MIN_COMPRESSION_SIZE {
+            return false;
+        }
+
+        // Skip compression for already-compressed formats
+        let incompressible = crate::compression::get_incompressible_types();
+        if incompressible.iter().any(|t| mime_type == *t) {
+            return false;
+        }
+
+        // Compress everything else (text, documents, code, structured data, etc.)
+        true
     }
 
     /// Validate file upload
@@ -66,7 +150,6 @@ impl FileStorageService {
         mime_type: &str,
         file_size: i64,
     ) -> Result<()> {
-        // Check file size
         if file_size > self.max_file_size {
             return Err(anyhow::anyhow!(
                 "File too large. Maximum size: {} MB",
@@ -193,8 +276,13 @@ impl FileStorageService {
             return Ok(existing_file);
         }
 
-        // Compress file
-        let compressed_data = self.compress_file(data)?;
+        // Decide whether to compress based on file type and size
+        let compressed_data = if self.should_compress(mime_type, data.len()) {
+            self.compress_file(data)?
+        } else {
+            // Store uncompressed
+            Bytes::copy_from_slice(data)
+        };
 
         // Generate storage key
         let storage_key = format!("{}/{}", user_id, Uuid::new_v4());
@@ -213,7 +301,7 @@ impl FileStorageService {
         // Save to database
         self.save_file(&file).await?;
 
-        // Update user quota
+        // Update user quota (use compressed size for quota)
         self.update_user_quota(user_id, compressed_data.len() as i64)
             .await?;
 
@@ -429,16 +517,6 @@ impl FileStorageService {
         .await?;
 
         Ok(result.rows_affected())
-    }
-
-    /// Strip metadata from filename (security)
-    pub fn sanitize_filename(&self, filename: &str) -> String {
-        // Remove path components
-        let filename = filename.split('/').last().unwrap_or(filename);
-        let filename = filename.split('\\').last().unwrap_or(filename);
-        
-        // Remove null bytes
-        filename.replace('\0', "")
     }
 }
 
