@@ -4,10 +4,12 @@ mod config;
 mod db;
 mod event_processor;
 mod module_executor;
+mod file_cleanup;
 
 use config::Config;
 use event_processor::EventProcessor;
 use module_executor::{ModuleExecutorRegistry, GitHubIntegrationExecutor};
+use file_cleanup::FileCleanupTask;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -50,6 +52,14 @@ async fn main() -> anyhow::Result<()> {
     )));
 
     tracing::info!("Module executors registered");
+
+    // Create file cleanup task
+    let cleanup_task = FileCleanupTask::new(pool.clone());
+
+    // Start file cleanup task in background
+    let cleanup_handle = tokio::spawn(async move {
+        cleanup_task.start().await;
+    });
 
     // Main event loop
     let polling_interval = std::time::Duration::from_secs(config.polling_interval_secs);

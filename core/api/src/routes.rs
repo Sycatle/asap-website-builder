@@ -1,6 +1,6 @@
 use axum::{
     Router,
-    routing::{get, post, put, patch},
+    routing::{get, post, put, patch, delete},
     middleware,
     Json,
     Extension,
@@ -19,6 +19,9 @@ async fn root() -> Json<serde_json::Value> {
 
 /// Creates the main API router with all routes
 pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
+    // Initialize file storage service
+    let storage_service = std::sync::Arc::new(crate::storage::FileStorageService::new(pool.clone()));
+
     // Authenticated routes (require JWT)
     let authenticated_routes = Router::new()
         .route("/auth/me", get(crate::auth::me))
@@ -37,6 +40,12 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
         .route("/modules", get(crate::modules::list_modules))
         .route("/modules/:id/config", get(crate::modules::get_module_config))
         .route("/modules/:id/config", put(crate::modules::update_module_config))
+        // Files routes
+        .route("/files", post(crate::files::upload_file))
+        .route("/files", get(crate::files::list_files))
+        .route("/files/:file_id", delete(crate::files::delete_file))
+        .route("/files/quota/usage", get(crate::files::get_quota))
+        .layer(Extension(storage_service))
         .layer(Extension(config.clone()))
         .with_state(pool.clone())
         .layer(middleware::from_fn_with_state(config.clone(), crate::middleware::auth_middleware));
