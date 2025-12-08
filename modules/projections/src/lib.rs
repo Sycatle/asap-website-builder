@@ -3,22 +3,68 @@
 
 use std::path::Path;
 use tokio::fs;
+use serde::{Serialize, Deserialize};
+use chrono::Utc;
 
+/// Metadata for a projection
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ProjectionMetadata {
+    pub slug: String,
+    pub generated_at: String,
+    pub version: String,
+}
+
+/// A complete projection with metadata
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Projection {
+    pub metadata: ProjectionMetadata,
+    pub data: serde_json::Value,
+}
+
+/// Generate a static JSON projection file for a portfolio
 pub async fn generate_projection(slug: &str, data: serde_json::Value) -> anyhow::Result<()> {
-    // TODO: Implement projection generation
     tracing::info!("Generating projection for slug: {}", slug);
     
+    // Create projection with metadata
+    let projection = Projection {
+        metadata: ProjectionMetadata {
+            slug: slug.to_string(),
+            generated_at: Utc::now().to_rfc3339(),
+            version: "1.0.0".to_string(),
+        },
+        data,
+    };
+    
     let path = format!("data/sites/{}.json", slug);
-    let json = serde_json::to_string_pretty(&data)?;
+    let json = serde_json::to_string_pretty(&projection)?;
     
     // Create directory if it doesn't exist
     if let Some(parent) = Path::new(&path).parent() {
         fs::create_dir_all(parent).await?;
     }
     
+    // Write projection to file
     fs::write(&path, json).await?;
     tracing::info!("Projection saved to {}", path);
     
+    Ok(())
+}
+
+/// Read a projection from disk
+pub async fn read_projection(slug: &str) -> anyhow::Result<Projection> {
+    let path = format!("data/sites/{}.json", slug);
+    let contents = fs::read_to_string(&path).await?;
+    let projection: Projection = serde_json::from_str(&contents)?;
+    Ok(projection)
+}
+
+/// Delete a projection from disk
+pub async fn delete_projection(slug: &str) -> anyhow::Result<()> {
+    let path = format!("data/sites/{}.json", slug);
+    if Path::new(&path).exists() {
+        fs::remove_file(&path).await?;
+        tracing::info!("Projection deleted: {}", path);
+    }
     Ok(())
 }
 
