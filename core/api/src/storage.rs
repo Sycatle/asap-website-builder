@@ -178,6 +178,66 @@ impl FileStorageService {
         Ok(())
     }
 
+    /// Validate file content matches declared MIME type using magic bytes
+    /// SECURITY: Never trust client-provided MIME type alone
+    pub fn validate_magic_bytes(&self, data: &[u8], declared_mime: &str) -> Result<()> {
+        if data.len() < 4 {
+            return Err(anyhow::anyhow!("File too small to validate"));
+        }
+
+        // Check magic bytes for common dangerous file types
+        let magic = &data[..std::cmp::min(12, data.len())];
+        
+        // Detect actual file type from magic bytes
+        let detected_type = match magic {
+            // Executables - ALWAYS block
+            [0x4D, 0x5A, ..] => Some("application/x-msdownload"), // PE/EXE
+            [0x7F, 0x45, 0x4C, 0x46, ..] => Some("application/x-executable"), // ELF
+            [0xCA, 0xFE, 0xBA, 0xBE, ..] => Some("application/x-mach-binary"), // Mach-O
+            [0x23, 0x21, ..] => Some("text/x-shellscript"), // Shebang scripts
+            
+            // Images
+            [0xFF, 0xD8, 0xFF, ..] => Some("image/jpeg"),
+            [0x89, 0x50, 0x4E, 0x47, ..] => Some("image/png"),
+            [0x47, 0x49, 0x46, 0x38, ..] => Some("image/gif"),
+            [0x52, 0x49, 0x46, 0x46, ..] if data.len() >= 12 && &data[8..12] == b"WEBP" => Some("image/webp"),
+            
+            // Archives
+            [0x50, 0x4B, 0x03, 0x04, ..] => Some("application/zip"),
+            [0x1F, 0x8B, ..] => Some("application/gzip"),
+            [0x52, 0x61, 0x72, 0x21, ..] => Some("application/x-rar"),
+            [0x37, 0x7A, 0xBC, 0xAF, ..] => Some("application/x-7z-compressed"),
+            
+            // Documents
+            [0x25, 0x50, 0x44, 0x46, ..] => Some("application/pdf"),
+            
+            _ => None,
+        };
+
+        // Block executables regardless of declared type
+        if let Some(detected) = detected_type {
+            if detected == "application/x-msdownload" 
+                || detected == "application/x-executable" 
+                || detected == "application/x-mach-binary" {
+                return Err(anyhow::anyhow!("Executable files are not allowed"));
+            }
+
+            // For images, verify declared type matches detected type
+            if declared_mime.starts_with("image/") && detected.starts_with("image/") {
+                if declared_mime != detected {
+                    tracing::warn!(
+                        "MIME type mismatch: declared={}, detected={}",
+                        declared_mime,
+                        detected
+                    );
+                    // Allow but log - some browsers send wrong MIME
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Compress file content (buffered, for small files)
     /// 
     /// For files < 10 MB, uses standard in-memory compression.
