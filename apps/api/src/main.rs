@@ -2,6 +2,7 @@ mod config;
 mod db;
 mod cache;
 mod portfolio_cache;
+mod pool;
 
 use std::net::SocketAddr;
 use axum::{Router, routing::get, Json, extract::State};
@@ -22,6 +23,19 @@ async fn health(State(pool): State<PgPool>) -> Json<serde_json::Value> {
         "service": "asap-api",
         "version": env!("CARGO_PKG_VERSION"),
         "database": db_status
+    }))
+}
+
+async fn health_pool(State(pool): State<PgPool>) -> Json<serde_json::Value> {
+    let pool_info = match pool::get_pool_info(&pool).await {
+        Ok(info) => info,
+        Err(e) => format!("Error: {}", e),
+    };
+
+    Json(json!({
+        "status": "ok",
+        "pool_status": "healthy",
+        "pool_info": pool_info
     }))
 }
 
@@ -49,9 +63,14 @@ async fn main() -> anyhow::Result<()> {
     let shared_config = asap_core_api::SharedConfig::from_env()?;
     tracing::info!("Shared configuration initialized");
 
-    // Create database pool
-    let pool = db::create_pool(&config.database_url).await?;
-    tracing::info!("Database pool created");
+    // Create database pool with optimized configuration
+    let pool = pool::create_api_pool(&config.database_url).await?;
+    tracing::info!("Database pool created and warmed up");
+
+    // Log pool info
+    if let Ok(pool_info) = pool::get_pool_info(&pool).await {
+        tracing::info!("{}", pool_info);
+    }
 
     // Create Redis cache (optional - will log warning if not available)
     let _cache = match std::env::var("REDIS_URL") {
@@ -79,6 +98,7 @@ async fn main() -> anyhow::Result<()> {
     // Create main app router
     let app = Router::new()
         .route("/health", get(health))
+        .route("/health/pool", get(health_pool))
         .with_state(pool.clone())
         .nest("/api", api_router)
         .layer(CorsLayer::permissive())
