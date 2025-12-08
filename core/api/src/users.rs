@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::auth::Claims;
+use asap_core_shared::Claims;
 
 #[derive(Debug, Serialize)]
 pub struct UserData {
