@@ -1,0 +1,13 @@
+[package]
+name = "asap-module-themes"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+asap-core-domain = { path = "../../core/domain" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
