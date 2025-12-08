@@ -2,10 +2,7 @@ use axum::{Json, response::IntoResponse, http::StatusCode, extract::{State, Exte
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
-use chrono::{Utc, Duration};
-use jsonwebtoken::{encode, Header, EncodingKey};
-
-const JWT_SECRET: &str = "dev-secret-change-in-production"; // TODO: Load from config
+use asap_core_shared::{SharedConfig, generate_token, Claims};
 
 #[derive(Debug, Deserialize)]
 pub struct SignupRequest {
@@ -49,13 +46,6 @@ pub struct MeResponse {
     pub id: String,
     pub email: String,
     pub tenant_id: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Claims {
-    pub sub: String,      // user_id
-    pub tenant_id: String,
-    pub exp: i64,
 }
 
 /// Hash a password using bcrypt
@@ -113,48 +103,6 @@ mod password_tests {
         // But both should verify correctly
         assert!(verify_password(password, &hash1).unwrap());
         assert!(verify_password(password, &hash2).unwrap());
-    }
-
-    #[test]
-    fn test_generate_token() {
-        let user_id = "user-123";
-        let tenant_id = "tenant-456";
-        
-        let token = generate_token(user_id, tenant_id).unwrap();
-        
-        // Token should not be empty
-        assert!(!token.is_empty());
-        // JWT tokens have 3 parts separated by dots
-        assert_eq!(token.split('.').count(), 3);
-    }
-
-    #[test]
-    fn test_generate_token_different_users() {
-        let user1_token = generate_token("user1", "tenant1").unwrap();
-        let user2_token = generate_token("user2", "tenant2").unwrap();
-        
-        // Different users should have different tokens
-        assert_ne!(user1_token, user2_token);
-    }
-
-    #[test]
-    fn test_claims_structure() {
-        let user_id = "test-user";
-        let tenant_id = "test-tenant";
-        let expiration = Utc::now()
-            .checked_add_signed(Duration::hours(24))
-            .expect("valid timestamp")
-            .timestamp();
-
-        let claims = Claims {
-            sub: user_id.to_string(),
-            tenant_id: tenant_id.to_string(),
-            exp: expiration,
-        };
-
-        assert_eq!(claims.sub, user_id);
-        assert_eq!(claims.tenant_id, tenant_id);
-        assert!(claims.exp > Utc::now().timestamp());
     }
 
     #[test]
@@ -262,47 +210,11 @@ mod password_tests {
         let slug = "";
         assert!(slug.is_empty() || !slug.chars().all(|c| c.is_alphanumeric() || c == '-'));
     }
-
-    #[test]
-    fn test_claims_serialization() {
-        let claims = Claims {
-            sub: "user-123".to_string(),
-            tenant_id: "tenant-456".to_string(),
-            exp: 1234567890,
-        };
-
-        let json = serde_json::to_string(&claims).unwrap();
-        assert!(json.contains("user-123"));
-        assert!(json.contains("tenant-456"));
-
-        let deserialized: Claims = serde_json::from_str(&json).unwrap();
-        assert_eq!(deserialized.sub, claims.sub);
-        assert_eq!(deserialized.tenant_id, claims.tenant_id);
-    }
-}
-
-/// Generate a JWT token for a user
-fn generate_token(user_id: &str, tenant_id: &str) -> Result<String, jsonwebtoken::errors::Error> {
-    let expiration = Utc::now()
-        .checked_add_signed(Duration::hours(24))
-        .expect("valid timestamp")
-        .timestamp();
-
-    let claims = Claims {
-        sub: user_id.to_string(),
-        tenant_id: tenant_id.to_string(),
-        exp: expiration,
-    };
-
-    encode(
-        &Header::default(),
-        &claims,
-        &EncodingKey::from_secret(JWT_SECRET.as_ref()),
-    )
 }
 
 pub async fn signup(
     State(pool): State<PgPool>,
+    Extension(config): Extension<SharedConfig>,
     Json(payload): Json<SignupRequest>,
 ) -> impl IntoResponse {
     // Validate email format
@@ -458,7 +370,7 @@ pub async fn signup(
     }
 
     // Generate JWT token
-    let token = match generate_token(&user_id.to_string(), &tenant_id.to_string()) {
+    let token = match generate_token(&user_id.to_string(), &tenant_id.to_string(), &config) {
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate token: {}", e);
@@ -485,6 +397,7 @@ pub async fn signup(
 
 pub async fn login(
     State(pool): State<PgPool>,
+    Extension(config): Extension<SharedConfig>,
     Json(payload): Json<LoginRequest>,
 ) -> impl IntoResponse {
     // Query user by email
@@ -525,7 +438,7 @@ pub async fn login(
     }
 
     // Generate JWT token
-    let token = match generate_token(&user.id.to_string(), &user.tenant_id.to_string()) {
+    let token = match generate_token(&user.id.to_string(), &user.tenant_id.to_string(), &config) {
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate token: {}", e);

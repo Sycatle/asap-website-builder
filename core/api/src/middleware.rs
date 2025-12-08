@@ -1,18 +1,16 @@
 use axum::{
-    extract::Request,
+    extract::{Request, State},
     http::{header, StatusCode},
     middleware::Next,
     response::Response,
     Json,
 };
-use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde_json::json;
 
-use crate::auth::Claims;
-
-const JWT_SECRET: &str = "dev-secret-change-in-production"; // TODO: Load from config
+use asap_core_shared::{validate_token, Claims, SharedConfig};
 
 pub async fn auth_middleware(
+    State(config): State<SharedConfig>,
     mut req: Request,
     next: Next,
 ) -> Result<Response, (StatusCode, Json<serde_json::Value>)> {
@@ -37,12 +35,8 @@ pub async fn auth_middleware(
     };
 
     // Validate token
-    let token_data = match decode::<Claims>(
-        token,
-        &DecodingKey::from_secret(JWT_SECRET.as_ref()),
-        &Validation::default(),
-    ) {
-        Ok(data) => data,
+    let claims = match validate_token(token, &config) {
+        Ok(claims) => claims,
         Err(e) => {
             tracing::warn!("Failed to decode JWT: {}", e);
             return Err((
@@ -55,7 +49,7 @@ pub async fn auth_middleware(
     };
 
     // Insert claims into request extensions
-    req.extensions_mut().insert(token_data.claims);
+    req.extensions_mut().insert(claims);
 
     Ok(next.run(req).await)
 }
