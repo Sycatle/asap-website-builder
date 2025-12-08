@@ -1,5 +1,6 @@
 use anyhow::Result;
 
+#[allow(dead_code)]
 pub struct GitHubClient {
     client: reqwest::Client,
 }
