@@ -54,6 +54,11 @@ pub async fn upload_file(
             .await
             .map_err(|e| (StatusCode::BAD_REQUEST, format!("Failed to read file: {}", e)))?;
 
+        // Security: Validate magic bytes match declared MIME type
+        storage
+            .validate_magic_bytes(&data, &content_type)
+            .map_err(|e| (StatusCode::BAD_REQUEST, format!("File validation failed: {}", e)))?;
+
         // Upload file (with compression and validation)
         let file = storage
             .upload_file(user_id, &filename, &content_type, &data)
@@ -75,13 +80,19 @@ pub async fn list_files(
     let user_id = uuid::Uuid::parse_str(&claims.sub)
         .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid user ID".to_string()))?;
     
+    // Security: Strict pagination limits to prevent DoS
+    const MAX_LIMIT: i64 = 100;
+    const MAX_OFFSET: i64 = 10_000;
+    
     let limit = params
         .get("limit")
         .and_then(|s| s.parse::<i64>().ok())
+        .map(|l| l.clamp(1, MAX_LIMIT)) // Enforce bounds
         .unwrap_or(50);
     let offset = params
         .get("offset")
         .and_then(|s| s.parse::<i64>().ok())
+        .map(|o| o.clamp(0, MAX_OFFSET)) // Enforce bounds
         .unwrap_or(0);
 
     let files = storage
