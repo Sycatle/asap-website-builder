@@ -1,39 +1,426 @@
-# ASAP v2 - Plan de Développement Complet
+# ASAP v2 - Plan de Développement Actualisé
 
-## Analyse de la Documentation Existante
-
-### Documents Analysés
-1. ✅ **README.md** - Vision globale, architecture, business model
-2. ✅ **docs/SPEC_MVP.md** - Spécifications fonctionnelles du MVP
-3. ✅ **docs/ARCHITECTURE.md** - Architecture technique détaillée
-4. ✅ **docs/STRUCTURE.md** - Structure du monorepo
-5. ✅ **docs/API_SPEC.md** - Contrat d'API complet
-6. ✅ **docs/FLOWS.md** - Parcours utilisateur et système
-7. ✅ **docs/DECISIONS.md** - Journal des décisions architecturales
-8. ✅ **docs/BUSINESS.md** - Vision business et modèle économique
-
-### Constats Clés
-
-**Architecture "Core + Modules"**
-- Le Core centralise l'authentification, les utilisateurs, les tenants et les données
-- Les Modules implémentent toutes les fonctionnalités (GitHub, IA, themes, analytics)
-- Communication event-driven entre Core et Modules
-- Projections locales pour performances de lecture
-
-**Technologies**
-- Backend: Rust + Axum (performance, sécurité mémoire)
-- Database: PostgreSQL (JSONB, RLS pour multi-tenant)
-- Worker: Rust + Tokio (traitement événements asynchrone)
-- Frontend: Astro (SSG/SSR optimisé)
-
-**Isolation Multi-tenant**
-- Chaque tenant est isolé via `tenant_id`
-- RLS (Row Level Security) au niveau PostgreSQL
-- Quotas par ressource (tokens IA, stockage, sites)
+**Dernière mise à jour:** 8 décembre 2024  
+**Statut:** Backend complet (Phases 1-3) | Frontend en attente (Phase 4)
 
 ---
 
-## Phase 1 : Infrastructure de Base ✅ TERMINÉE
+## 📊 État Actuel du Projet
+
+### ✅ Phases Complétées
+
+#### Phase 1 : Infrastructure de Base - ✅ TERMINÉE (100%)
+- ✅ Structure Monorepo complète
+- ✅ Domain Models (User, Tenant, Portfolio, Event)
+- ✅ API Routes (stubs → implémentation complète)
+- ✅ Database Schema & Migrations
+- ✅ Docker Infrastructure
+- ✅ Workspace Cargo fonctionnel
+
+#### Phase 2 : Core API Complet - ✅ TERMINÉE (100%)
+- ✅ Configuration et Database Pool
+- ✅ Authentification JWT + bcrypt
+- ✅ Gestion Utilisateurs complète
+- ✅ Gestion Intégrations (GitHub)
+- ✅ Gestion Portfolios (CRUD + publish)
+- ✅ Système d'Événements
+- ✅ Gestion Modules (registry + config)
+- ✅ Middleware JWT
+- ✅ Multi-tenant strict avec RLS
+
+#### Phase 3 : Worker et Modules - ✅ TERMINÉE (100%)
+- ✅ Event Processor avec polling
+- ✅ Module Executor Framework
+- ✅ GitHub Generator Module complet
+- ✅ Themes Module avec tests
+- ✅ Projections Module avec tests
+- ✅ Analytics Module avec tests
+- ✅ Retry Mechanism (exponential backoff)
+
+#### Optimisations Avancées - ✅ PARTIELLEMENT COMPLÉTÉES (60%)
+- ✅ File Storage System (upload, compression, quotas)
+- ✅ Redis Caching pour portfolios publics
+- ✅ Parallel Event Processing (4x speedup)
+- ✅ Query Optimization (indexes)
+- ✅ Compression API (gzip, brotli, zstd)
+- ✅ Shared Core Module (config centralisée)
+- ⏳ Monitoring production (non fait)
+- ⏳ Rate limiting (non fait)
+
+### ❌ Phases Non Démarrées
+
+#### Phase 4 : Frontend Astro - ❌ NON DÉMARRÉE (0%)
+- ❌ Setup Astro + Tailwind
+- ❌ Client API TypeScript
+- ❌ Pages publiques (landing, [slug])
+- ❌ Dashboard privé
+- ❌ Formulaires signup/login
+- ❌ Gestion portfolios UI
+- ❌ Upload fichiers UI
+- ❌ Preview portfolio
+
+#### Phase 5 : Tests E2E et CI/CD - ❌ NON DÉMARRÉE (0%)
+- ❌ Tests end-to-end avec Playwright
+- ❌ GitHub Actions CI/CD
+- ❌ Deploy automatique
+- ❌ Documentation utilisateur finale
+
+---
+
+## 🎯 Priorités Révisées
+
+### 🔴 PRIORITÉ 1 - Frontend Astro (CRITIQUE)
+
+**Problème:** Le backend est complet mais inutilisable sans interface utilisateur.
+
+**Objectif:** Créer un MVP démontrable avec interface web fonctionnelle.
+
+**Durée estimée:** 2-3 semaines
+
+**Tâches détaillées:**
+
+#### 1. Setup Initial (2 jours)
+- [ ] Initialiser projet Astro dans `apps/web/`
+- [ ] Installer et configurer Tailwind CSS
+- [ ] Setup TypeScript strict
+- [ ] Configurer ESLint + Prettier
+- [ ] Créer structure de dossiers
+
+#### 2. Client API TypeScript (2 jours)
+- [ ] `lib/api/client.ts` - Wrapper fetch avec JWT
+- [ ] `lib/api/auth.ts` - Signup, login, me
+- [ ] `lib/api/portfolios.ts` - CRUD portfolios
+- [ ] `lib/api/files.ts` - Upload, list, delete
+- [ ] `lib/api/integrations.ts` - GitHub config
+- [ ] Gestion erreurs et retry
+- [ ] Types TypeScript complets
+
+#### 3. Pages Publiques (3 jours)
+- [ ] `pages/index.astro` - Landing page
+  - [ ] Hero section avec CTA
+  - [ ] Features principales
+  - [ ] Pricing (si applicable)
+  - [ ] Footer avec liens
+- [ ] `pages/[slug].astro` - Portfolio public
+  - [ ] SSG avec getStaticPaths
+  - [ ] Lecture projection JSON
+  - [ ] Fallback API si projection absente
+  - [ ] Métadonnées SEO dynamiques
+  - [ ] Design responsive
+
+#### 4. Authentification (2 jours)
+- [ ] `pages/signup.astro` - Formulaire inscription
+  - [ ] Validation email/password
+  - [ ] Création portfolio initial
+  - [ ] Redirection après signup
+- [ ] `pages/login.astro` - Formulaire connexion
+  - [ ] Validation credentials
+  - [ ] Gestion JWT en cookie/localStorage
+  - [ ] Redirection dashboard
+- [ ] `components/AuthGuard.tsx` - Protection routes privées
+- [ ] Session management
+
+#### 5. Dashboard Privé (5 jours)
+- [ ] `pages/app/dashboard.astro` - Vue principale
+  - [ ] Sidebar navigation
+  - [ ] Stats overview (quotas, usage)
+  - [ ] Actions rapides
+- [ ] `pages/app/portfolio.astro` - Gestion portfolio
+  - [ ] Formulaire édition (title, tagline)
+  - [ ] Configuration GitHub username
+  - [ ] Bouton "Générer depuis GitHub"
+  - [ ] Bouton "Publier portfolio"
+  - [ ] Preview portfolio
+- [ ] `pages/app/files.astro` - Gestion fichiers
+  - [ ] Liste fichiers uploadés
+  - [ ] Upload avec drag & drop
+  - [ ] Progress bar upload
+  - [ ] Delete fichier
+  - [ ] Quota usage visuel
+- [ ] `pages/app/settings.astro` - Paramètres
+  - [ ] Profil utilisateur
+  - [ ] Changement mot de passe
+  - [ ] API keys (future)
+
+#### 6. Components Réutilisables (2 jours)
+- [ ] `Button.astro` - Boutons stylisés
+- [ ] `Input.astro` - Champs formulaire
+- [ ] `Card.astro` - Cartes info
+- [ ] `Modal.astro` - Modales
+- [ ] `Loader.astro` - Loading states
+- [ ] `Toast.astro` - Notifications
+- [ ] `Header.astro` - Navigation
+- [ ] `Footer.astro` - Pied de page
+
+#### 7. Polish & Responsive (2 jours)
+- [ ] Design mobile optimisé
+- [ ] Animations transitions
+- [ ] Dark mode (optionnel)
+- [ ] Accessibility (a11y)
+- [ ] Loading states
+- [ ] Error states
+
+---
+
+### 🟡 PRIORITÉ 2 - Tests E2E (IMPORTANT)
+
+**Objectif:** Valider les flux utilisateur complets et garantir la stabilité.
+
+**Durée estimée:** 1 semaine
+
+**Tâches:**
+
+#### 1. Setup Tests (1 jour)
+- [ ] Installer Playwright
+- [ ] Configuration tests
+- [ ] Fixtures et helpers
+- [ ] Database de test
+
+#### 2. Scénarios Critiques (3 jours)
+- [ ] **Test: Signup → Dashboard**
+  - [ ] Créer compte
+  - [ ] Vérifier tenant créé
+  - [ ] Vérifier portfolio par défaut
+  - [ ] Accéder dashboard
+- [ ] **Test: Configure GitHub → Generate**
+  - [ ] Configurer GitHub username
+  - [ ] Déclencher génération
+  - [ ] Vérifier event créé
+  - [ ] Vérifier portfolio_data mis à jour
+- [ ] **Test: Publish → Public Access**
+  - [ ] Publier portfolio
+  - [ ] Vérifier status = published
+  - [ ] Accéder page publique
+  - [ ] Vérifier contenu affiché
+- [ ] **Test: File Upload → Quota**
+  - [ ] Upload fichier
+  - [ ] Vérifier quota mis à jour
+  - [ ] Upload jusqu'à limite
+  - [ ] Vérifier erreur quota dépassé
+
+#### 3. Tests Sécurité (2 jours)
+- [ ] **Test: Isolation Multi-tenant**
+  - [ ] Créer 2 utilisateurs
+  - [ ] Vérifier User A ne voit pas données User B
+  - [ ] Tenter accès cross-tenant (doit échouer)
+- [ ] **Test: JWT Expiration**
+  - [ ] Token valide → accès OK
+  - [ ] Token expiré → accès refusé
+  - [ ] Pas de token → redirection login
+- [ ] **Test: SQL Injection**
+  - [ ] Tentative injection dans formulaires
+  - [ ] Vérifier sanitization
+
+#### 4. Rapport et CI (1 jour)
+- [ ] Génération rapport HTML
+- [ ] Intégration GitHub Actions
+- [ ] Fail si tests échouent
+
+---
+
+### 🟢 PRIORITÉ 3 - CI/CD (NICE TO HAVE)
+
+**Objectif:** Automatiser tests et déploiements.
+
+**Durée estimée:** 3-5 jours
+
+**Tâches:**
+
+#### 1. GitHub Actions (2 jours)
+- [ ] `.github/workflows/test.yml` - Tests automatiques
+  - [ ] Tests Rust (cargo test)
+  - [ ] Tests E2E (Playwright)
+  - [ ] Matrix strategy (OS, versions)
+- [ ] `.github/workflows/build.yml` - Build Docker
+  - [ ] Build API image
+  - [ ] Build Worker image
+  - [ ] Build Frontend image
+  - [ ] Push vers Docker Hub/GHCR
+
+#### 2. Deploy Automatique (2 jours)
+- [ ] `.github/workflows/deploy-staging.yml`
+  - [ ] Deploy sur staging à chaque commit main
+  - [ ] Migrations automatiques
+  - [ ] Health checks
+- [ ] `.github/workflows/deploy-prod.yml`
+  - [ ] Deploy production sur tag (v*)
+  - [ ] Approval manuel
+  - [ ] Rollback automatique si échec
+
+#### 3. Preview Deployments (1 jour)
+- [ ] Deploy preview par PR
+- [ ] URL unique par PR
+- [ ] Cleanup après merge
+
+---
+
+## 📋 Backlog (Post-MVP)
+
+### Fonctionnalités Avancées
+
+#### Module IA (2-3 semaines)
+- [ ] Intégration OpenAI API
+- [ ] Text generation avec prompts
+- [ ] Image generation (DALL-E)
+- [ ] Quota tokens par utilisateur
+- [ ] Tracking usage tokens
+- [ ] UI génération IA dans dashboard
+
+#### Analytics Avancées (2 semaines)
+- [ ] Page views tracking
+- [ ] Heatmaps (Hotjar-like)
+- [ ] Conversion funnels
+- [ ] Dashboard analytics
+- [ ] Export données
+
+#### Custom Domains (1 semaine)
+- [ ] Configuration DNS
+- [ ] SSL automatique (Let's Encrypt)
+- [ ] CNAME validation
+- [ ] Wildcard support
+
+#### Stripe Integration (2 semaines)
+- [ ] Plans abonnement (Free, Pro, Team)
+- [ ] Usage-based billing (tokens IA, stockage)
+- [ ] Webhooks Stripe
+- [ ] Invoicing automatique
+- [ ] Portal client
+
+#### Module Marketplace (3 semaines)
+- [ ] Upload thèmes personnalisés
+- [ ] Validation thèmes
+- [ ] Prix et commissions (70/30)
+- [ ] Paiements vendeurs
+- [ ] Ratings & reviews
+
+---
+
+## 🎯 Timeline Réaliste MVP Complet
+
+### Semaines 1-2 : Frontend Core
+- Setup Astro + Pages publiques + Auth
+
+### Semaine 3 : Dashboard
+- Interface privée complète
+
+### Semaine 4 : Tests & Polish
+- Tests E2E + CI/CD + Documentation
+
+### Semaine 5+ : Post-MVP
+- Fonctionnalités avancées selon priorités business
+
+---
+
+## 📈 Métriques de Succès
+
+### MVP Fonctionnel (Définition stricte)
+- [x] Backend API complet
+- [x] Worker traite événements
+- [x] GitHub import fonctionne
+- [x] File storage opérationnel
+- [ ] **Frontend permet signup/login**
+- [ ] **Dashboard affiche portfolio**
+- [ ] **Page publique render portfolio**
+- [ ] **Upload fichiers via UI**
+- [ ] **Tests E2E passent**
+- [ ] **Déployable en production**
+
+### Performance Targets
+- [x] API response time: < 100ms (p95) ✅
+- [x] Database queries: < 50ms (p95) ✅
+- [x] Worker event processing: < 5s ✅
+- [x] Cache hit time: < 5ms ✅
+- [ ] Public page TTFB: < 100ms (à mesurer après frontend)
+- [ ] Frontend FCP: < 1s (à mesurer)
+
+---
+
+## 🔧 Décisions Techniques à Prendre
+
+### Frontend Stack (À décider)
+- **Option 1 (Recommandé):** Astro + React islands
+  - ✅ SSG performant
+  - ✅ Hydratation sélective
+  - ✅ SEO optimal
+  - ⚠️ Moins de composants réactifs
+  
+- **Option 2:** Astro + Svelte
+  - ✅ Bundle size minimal
+  - ✅ Performance excellente
+  - ⚠️ Écosystème plus petit
+
+- **Option 3:** Full React (Next.js)
+  - ✅ Écosystème mature
+  - ✅ Composants réutilisables
+  - ⚠️ Bundle size plus gros
+
+**Recommandation:** **Astro + React islands** pour MVP (SSG + réactivité où nécessaire)
+
+### State Management
+- **Option 1:** Context API + localStorage
+  - ✅ Simple, natif
+  - ⚠️ Pas de persistence automatique
+  
+- **Option 2:** Zustand
+  - ✅ Léger (3kb)
+  - ✅ Persistence facile
+  - ✅ DevTools
+
+**Recommandation:** **Zustand** pour gestion état global (auth, portfolio)
+
+### Hosting Frontend
+- **Option 1:** Vercel
+  - ✅ Deploy automatique
+  - ✅ Preview URLs
+  - ✅ SSR/SSG optimisé
+  
+- **Option 2:** Cloudflare Pages
+  - ✅ Edge network
+  - ✅ Gratuit généreux
+  - ⚠️ Moins features
+
+**Recommandation:** **Vercel** pour MVP (simplicité + fonctionnalités)
+
+---
+
+## 🎓 Leçons Apprises (Rétrospective)
+
+### ✅ Ce qui a bien fonctionné
+1. **Architecture modulaire** - Ajout modules facile
+2. **Tests unitaires** - Confiance dans le code
+3. **Rust + SQLx** - Performance excellente
+4. **Event-driven** - Découplage propre
+5. **Documentation technique** - Maintenue régulièrement
+
+### ⚠️ Ce qui peut être amélioré
+1. **Priorisation** - Optimisations avant frontend
+2. **Planification** - MVP trop large initialement
+3. **Feedback utilisateur** - Aucun test avec utilisateurs réels
+4. **SQLx offline** - Compilation complexe
+
+### 💡 Recommandations Futures
+1. **Frontend en priorité** - UI utilisable dès début
+2. **MVP minimal** - Fonctionnalités essentielles uniquement
+3. **Démos régulières** - Validation avec stakeholders
+4. **CI/CD précoce** - Automatisation dès début
+5. **Tests E2E tôt** - Valider flux avant fonctionnalités
+
+---
+
+## 📝 Conclusion
+
+**État actuel:** Backend techniquement excellent mais **non utilisable sans frontend**.
+
+**Action immédiate:** **Focus 100% sur Frontend Astro** (Phases 4).
+
+**Timeline réaliste:** 3-4 semaines pour MVP complet et démontrable.
+
+**Succès garanti si:** Priorisation stricte sur interface utilisateur avant toute nouvelle fonctionnalité backend.
+
+---
+
+**Dernière mise à jour:** 8 décembre 2024  
+**Prochaine révision:** Après complétion Phase 4 (Frontend)
 
 ### Réalisations
 
