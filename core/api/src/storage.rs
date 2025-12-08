@@ -360,6 +360,9 @@ impl FileStorageService {
 
         // Save to database
         self.save_file(&file).await?;
+        
+        // Save file content
+        self.save_file_content(file.id, &compressed_data).await?;
 
         // Update user quota (use compressed size for quota)
         self.update_user_quota(user_id, compressed_data.len() as i64)
@@ -387,6 +390,61 @@ impl FileStorageService {
         .await?;
 
         Ok(())
+    }
+
+    /// Save file content (compressed binary data)
+    async fn save_file_content(&self, file_id: Uuid, data: &Bytes) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO file_content (file_id, data) VALUES ($1, $2)"
+        )
+        .bind(file_id)
+        .bind(data.as_ref())
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Get file content (returns decompressed data)
+    pub async fn get_file_content(&self, file_id: Uuid) -> Result<Vec<u8>> {
+        let row = sqlx::query(
+            "SELECT fc.data, f.original_size, f.compressed_size 
+             FROM file_content fc 
+             JOIN files f ON f.id = fc.file_id 
+             WHERE fc.file_id = $1"
+        )
+        .bind(file_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        match row {
+            Some(r) => {
+                let compressed_data: Vec<u8> = r.get(0);
+                let original_size: i64 = r.get(1);
+                let compressed_size: i64 = r.get(2);
+                
+                // If sizes are equal, data was not compressed (e.g., images, already compressed formats)
+                if original_size == compressed_size {
+                    Ok(compressed_data)
+                } else {
+                    // Decompress gzip data
+                    self.decompress_data(&compressed_data, original_size as usize)
+                }
+            }
+            None => Err(anyhow::anyhow!("File content not found")),
+        }
+    }
+
+    /// Decompress gzip data
+    fn decompress_data(&self, compressed: &[u8], _expected_size: usize) -> Result<Vec<u8>> {
+        use flate2::read::GzDecoder;
+        use std::io::Read;
+
+        let mut decoder = GzDecoder::new(compressed);
+        let mut decompressed = Vec::new();
+        decoder.read_to_end(&mut decompressed)?;
+        
+        Ok(decompressed)
     }
 
     /// Get file by hash (for content deduplication)

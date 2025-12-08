@@ -40,12 +40,12 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
         .route("/modules", get(crate::modules::list_modules))
         .route("/modules/:id/config", get(crate::modules::get_module_config))
         .route("/modules/:id/config", put(crate::modules::update_module_config))
-        // Files routes
+        // Files routes (authenticated)
         .route("/files", post(crate::files::upload_file))
         .route("/files", get(crate::files::list_files))
         .route("/files/:file_id", delete(crate::files::delete_file))
         .route("/files/quota/usage", get(crate::files::get_quota))
-        .layer(Extension(storage_service))
+        .layer(Extension(storage_service.clone()))
         .layer(Extension(config.clone()))
         .with_state(pool.clone())
         .layer(middleware::from_fn_with_state(config.clone(), crate::middleware::auth_middleware));
@@ -56,6 +56,9 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
         .route("/auth/signup", post(crate::auth::signup))
         .route("/auth/login", post(crate::auth::login))
         .route("/public/portfolios/:slug", get(crate::portfolios::get_public_portfolio))
+        // File download (auth via query param for media embeds)
+        .route("/files/:file_id", get(crate::files::download_file))
+        .layer(Extension(storage_service))
         .layer(Extension(config))
         .with_state(pool);
 

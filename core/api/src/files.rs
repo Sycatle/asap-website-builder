@@ -1,25 +1,16 @@
 use axum::{
     extract::{multipart::Multipart, Path, Extension},
-    http::StatusCode,
-    Json, Router,
-    routing::{get, post, delete},
+    http::{StatusCode, header},
+    response::Response,
+    body::Body,
+    Json,
 };
 use uuid::Uuid;
 use std::collections::HashMap;
 
 use crate::storage::FileStorageService;
-use asap_core_shared::Claims;
+use asap_core_shared::{Claims, SharedConfig, validate_token};
 use asap_core_domain::{FileUploadResponse, StorageQuotaResponse};
-
-/// Create files router
-pub fn create_router(storage_service: std::sync::Arc<FileStorageService>) -> Router {
-    Router::new()
-        .route("/", post(upload_file))
-        .route("/", get(list_files))
-        .route("/:file_id", delete(delete_file))
-        .route("/quota/usage", get(get_quota))
-        .layer(Extension(storage_service))
-}
 
 /// Upload file handler
 pub async fn upload_file(
@@ -123,6 +114,56 @@ pub async fn delete_file(
         .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// Download/serve file
+pub async fn download_file(
+    Extension(config): Extension<SharedConfig>,
+    Extension(storage): Extension<std::sync::Arc<FileStorageService>>,
+    Path(file_id): Path<Uuid>,
+    axum::extract::Query(params): axum::extract::Query<HashMap<String, String>>,
+) -> Result<Response, (StatusCode, String)> {
+    // Support token via query param for media embeds (img/video/audio tags)
+    let token = params.get("token")
+        .ok_or_else(|| (StatusCode::UNAUTHORIZED, "Missing token".to_string()))?;
+    
+    let claims = validate_token(token, &config)
+        .map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid token".to_string()))?;
+    
+    let user_id = uuid::Uuid::parse_str(&claims.sub)
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid user ID".to_string()))?;
+
+    // Get file metadata
+    let file = storage
+        .get_file(file_id)
+        .await
+        .map_err(|_| (StatusCode::NOT_FOUND, "File not found".to_string()))?;
+
+    // Security: Verify ownership
+    if file.user_id != user_id {
+        return Err((StatusCode::FORBIDDEN, "Access denied".to_string()));
+    }
+
+    // Get file content (decompressed)
+    let content = storage
+        .get_file_content(file_id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // Build response with proper headers
+    let response = Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, &file.mime_type)
+        .header(header::CONTENT_LENGTH, content.len())
+        .header(
+            header::CONTENT_DISPOSITION,
+            format!("inline; filename=\"{}\"", file.filename)
+        )
+        .header(header::CACHE_CONTROL, "private, max-age=3600")
+        .body(Body::from(content))
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(response)
 }
 
 /// Get user quota usage
