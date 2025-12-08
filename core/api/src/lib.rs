@@ -8,4 +8,4 @@ pub mod modules;
 pub mod middleware;
 
 pub use routes::create_router;
-pub use auth::Claims;
+pub use asap_core_shared::{Claims, SharedConfig};

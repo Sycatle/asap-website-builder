@@ -3,9 +3,11 @@ use axum::{
     routing::{get, post, put, patch},
     middleware,
     Json,
+    Extension,
 };
 use sqlx::PgPool;
 use serde_json::json;
+use asap_core_shared::SharedConfig;
 
 async fn root() -> Json<serde_json::Value> {
     Json(json!({
@@ -16,7 +18,7 @@ async fn root() -> Json<serde_json::Value> {
 }
 
 /// Creates the main API router with all routes
-pub fn create_router(pool: PgPool) -> Router {
+pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
     // Authenticated routes (require JWT)
     let authenticated_routes = Router::new()
         .route("/auth/me", get(crate::auth::me))
@@ -35,8 +37,9 @@ pub fn create_router(pool: PgPool) -> Router {
         .route("/modules", get(crate::modules::list_modules))
         .route("/modules/:id/config", get(crate::modules::get_module_config))
         .route("/modules/:id/config", put(crate::modules::update_module_config))
+        .layer(Extension(config.clone()))
         .with_state(pool.clone())
-        .layer(middleware::from_fn(crate::middleware::auth_middleware));
+        .layer(middleware::from_fn_with_state(config.clone(), crate::middleware::auth_middleware));
 
     // Public routes (no auth required)
     let public_routes = Router::new()
@@ -44,6 +47,7 @@ pub fn create_router(pool: PgPool) -> Router {
         .route("/auth/signup", post(crate::auth::signup))
         .route("/auth/login", post(crate::auth::login))
         .route("/public/portfolios/:slug", get(crate::portfolios::get_public_portfolio))
+        .layer(Extension(config))
         .with_state(pool);
 
     // Combine routers

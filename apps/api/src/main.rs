@@ -43,12 +43,16 @@ async fn main() -> anyhow::Result<()> {
     let config = config::Config::from_env()?;
     tracing::info!("Configuration loaded");
 
+    // Create shared config
+    let shared_config = asap_core_api::SharedConfig::from_env()?;
+    tracing::info!("Shared configuration initialized");
+
     // Create database pool
     let pool = db::create_pool(&config.database_url).await?;
     tracing::info!("Database pool created");
 
     // Create API router
-    let api_router = asap_core_api::create_router(pool.clone());
+    let api_router = asap_core_api::create_router(pool.clone(), shared_config);
     
     // Create main app router
     let app = Router::new()

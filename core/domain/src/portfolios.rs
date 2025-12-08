@@ -116,7 +116,7 @@ mod tests {
 
     #[test]
     fn test_portfolio_with_metadata() {
-        let mut portfolio = Portfolio {
+        let portfolio = Portfolio {
             id: Uuid::new_v4(),
             tenant_id: Uuid::new_v4(),
             slug: "test".to_string(),

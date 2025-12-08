@@ -3,6 +3,10 @@ target/
 Cargo.lock
 **/*.rs.bk
 
+# SQLx offline cache (local build cache)
+.sqlx/
+**/.sqlx/
+
 # Node.js
 node_modules/
 dist/
@@ -31,6 +35,7 @@ data/logs/*.log
 *.swp
 *.swo
 *~
+*.iml
 
 # OS
 .DS_Store
@@ -47,3 +52,16 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# SQLx prepared statements (compiled queries)
+sqlx-prepare-check/
+sqlx-tmp/
+
+# Cargo incremental compilation
+incremental/
+
+# IDE cache and local settings
+*.sublime-project
+*.sublime-workspace
+.fleet/
+

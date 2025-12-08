@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "core/domain",
     "core/api",
+    "core/shared",
     "modules/github-generator",
     "modules/themes",
     "modules/analytics",
