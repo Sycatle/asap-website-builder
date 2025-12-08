@@ -55,11 +55,11 @@ pub async fn get_events(
     let mut query_str = String::from(
         "SELECT id, tenant_id, event_type, payload, created_at, processed_at FROM events WHERE tenant_id = $1"
     );
-    let mut bind_count = 2;
+    
+    let has_event_type = params.event_type.is_some();
 
-    if let Some(_) = &params.event_type {
-        query_str.push_str(&format!(" AND event_type = ${}", bind_count));
-        bind_count += 1;
+    if has_event_type {
+        query_str.push_str(" AND event_type = $2");
     }
 
     if unprocessed_only {
@@ -72,20 +72,29 @@ pub async fn get_events(
         query_str.push_str(" ORDER BY created_at DESC");
     }
 
-    query_str.push_str(&format!(" LIMIT ${}", bind_count));
-
-    // Execute query with dynamic bindings
-    let mut query = sqlx::query(&query_str).bind(tenant_id).bind(limit);
-
-    if let Some(event_type) = &params.event_type {
-        // Need to rebind in correct order
-        query = sqlx::query(&query_str)
-            .bind(tenant_id)
-            .bind(event_type)
-            .bind(limit);
+    if has_event_type {
+        query_str.push_str(" LIMIT $3");
+    } else {
+        query_str.push_str(" LIMIT $2");
     }
 
-    let rows = match query.fetch_all(&pool).await {
+    // Execute query with proper bindings
+    let rows = if let Some(event_type) = &params.event_type {
+        sqlx::query(&query_str)
+            .bind(tenant_id)
+            .bind(event_type)
+            .bind(limit)
+            .fetch_all(&pool)
+            .await
+    } else {
+        sqlx::query(&query_str)
+            .bind(tenant_id)
+            .bind(limit)
+            .fetch_all(&pool)
+            .await
+    };
+
+    let rows = match rows {
         Ok(rows) => rows,
         Err(e) => {
             tracing::error!("Database error fetching events: {}", e);

@@ -197,7 +197,7 @@ pub async fn update_portfolio(
 
     if let Some(metadata) = &payload.metadata {
         query_parts.push(format!("metadata = ${}::jsonb", param_count));
-        params.push(metadata.to_string());
+        params.push(serde_json::to_string(metadata).unwrap_or_else(|_| "{}".to_string()));
         param_count += 1;
     }
 

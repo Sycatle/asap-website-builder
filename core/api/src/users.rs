@@ -54,6 +54,15 @@ pub async fn get_user(
         }))).into_response();
     }
 
+    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
     // Query user and user_data
     let result = sqlx::query!(
         r#"
@@ -63,7 +72,7 @@ pub async fn get_user(
         WHERE u.id = $1 AND u.tenant_id = $2
         "#,
         user_id,
-        Uuid::parse_str(&claims.tenant_id).unwrap()
+        tenant_id
     )
     .fetch_optional(&pool)
     .await;

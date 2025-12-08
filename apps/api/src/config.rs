@@ -1,4 +1,5 @@
 use std::env;
+use anyhow::{Context, Result};
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -10,22 +11,25 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn from_env() -> anyhow::Result<Self> {
+    pub fn from_env() -> Result<Self> {
         Ok(Config {
             database_url: env::var("DATABASE_URL")
-                .expect("DATABASE_URL must be set"),
+                .context("DATABASE_URL must be set. Example: postgresql://user:pass@localhost:5432/dbname")?,
             jwt_secret: env::var("JWT_SECRET")
-                .unwrap_or_else(|_| "dev-secret-change-in-production".to_string()),
+                .unwrap_or_else(|_| {
+                    tracing::warn!("JWT_SECRET not set, using default (NOT SECURE FOR PRODUCTION)");
+                    "dev-secret-change-in-production".to_string()
+                }),
             jwt_expiration_hours: env::var("JWT_EXPIRATION_HOURS")
                 .unwrap_or_else(|_| "24".to_string())
                 .parse()
-                .unwrap_or(24),
+                .context("JWT_EXPIRATION_HOURS must be a valid number")?,
             server_host: env::var("SERVER_HOST")
                 .unwrap_or_else(|_| "0.0.0.0".to_string()),
             server_port: env::var("SERVER_PORT")
                 .unwrap_or_else(|_| "3000".to_string())
                 .parse()
-                .unwrap_or(3000),
+                .context("SERVER_PORT must be a valid port number (0-65535)")?,
         })
     }
 }
