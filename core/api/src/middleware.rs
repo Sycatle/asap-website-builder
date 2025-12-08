@@ -31,7 +31,7 @@ pub async fn auth_middleware(
                     "error": "Missing or invalid Authorization header"
                 })),
             ));
-        }
+        }   
     };
 
     // Validate token
