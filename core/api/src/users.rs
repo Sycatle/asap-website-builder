@@ -18,9 +18,45 @@ pub struct UserData {
     pub data: serde_json::Value,
 }
 
+/// Maximum allowed size for user data JSON (64KB)
+const MAX_USER_DATA_SIZE: usize = 64 * 1024;
+/// Maximum nesting depth for JSON
+const MAX_JSON_DEPTH: usize = 10;
+
 #[derive(Debug, Deserialize)]
 pub struct UpdateUserRequest {
     pub data: serde_json::Value,
+}
+
+/// Validate JSON data size and structure
+fn validate_user_data(data: &serde_json::Value) -> Result<(), &'static str> {
+    // Check serialized size
+    let serialized = serde_json::to_string(data).map_err(|_| "Invalid JSON structure")?;
+    if serialized.len() > MAX_USER_DATA_SIZE {
+        return Err("Data payload too large (max 64KB)");
+    }
+    
+    // Check nesting depth
+    fn check_depth(value: &serde_json::Value, current_depth: usize) -> bool {
+        if current_depth > MAX_JSON_DEPTH {
+            return false;
+        }
+        match value {
+            serde_json::Value::Object(map) => {
+                map.values().all(|v| check_depth(v, current_depth + 1))
+            }
+            serde_json::Value::Array(arr) => {
+                arr.iter().all(|v| check_depth(v, current_depth + 1))
+            }
+            _ => true,
+        }
+    }
+    
+    if !check_depth(data, 0) {
+        return Err("JSON nesting too deep (max 10 levels)");
+    }
+    
+    Ok(())
 }
 
 pub async fn get_user(
@@ -129,6 +165,13 @@ pub async fn update_user(
     if user_id != claims_user_id {
         return (StatusCode::FORBIDDEN, Json(serde_json::json!({
             "error": "Access denied"
+        }))).into_response();
+    }
+
+    // Validate payload data (size, depth, structure)
+    if let Err(e) = validate_user_data(&payload.data) {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": e
         }))).into_response();
     }
 
