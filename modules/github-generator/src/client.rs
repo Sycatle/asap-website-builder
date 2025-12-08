@@ -23,13 +23,12 @@ pub struct GitHubClient {
 }
 
 impl GitHubClient {
-    pub fn new() -> Self {
+    pub fn new() -> Result<Self> {
         let client = reqwest::Client::builder()
             .user_agent("asap-portfolio-generator/0.1")
-            .build()
-            .expect("Failed to build HTTP client");
+            .build()?;
         
-        Self { client }
+        Ok(Self { client })
     }
 
     /// Fetch public repositories for a given GitHub username
@@ -73,9 +72,11 @@ impl GitHubClient {
         );
 
         // Convert to JSON values for flexibility
-        Ok(filtered_repos
+        let json_repos: Vec<serde_json::Value> = filtered_repos
             .into_iter()
-            .map(|repo| serde_json::to_value(repo).unwrap())
-            .collect())
+            .map(|repo| serde_json::to_value(repo))
+            .collect::<Result<Vec<_>, _>>()?;
+            
+        Ok(json_repos)
     }
 }

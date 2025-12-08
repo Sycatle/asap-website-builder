@@ -103,7 +103,7 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
         tracing::info!("Fetching GitHub repos for user: {}", github_username);
 
         // Fetch repos from GitHub (using the github-generator module)
-        let github_client = asap_github_generator::GitHubClient::new();
+        let github_client = asap_github_generator::GitHubClient::new()?;
         let repos = github_client.fetch_repos(github_username).await?;
 
         tracing::info!("Fetched {} repositories from GitHub", repos.len());
@@ -114,25 +114,35 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
         tracing::debug!("Generated portfolio content");
 
         // Find the user's portfolio
-        let portfolio: (uuid::Uuid,) = sqlx::query_as(
+        let portfolio: Option<(uuid::Uuid,)> = sqlx::query_as(
             "SELECT id FROM portfolios WHERE tenant_id = $1 LIMIT 1"
         )
         .bind(event.tenant_id)
-        .fetch_one(&self.pool)
+        .fetch_optional(&self.pool)
         .await?;
+
+        let portfolio_id = match portfolio {
+            Some((id,)) => id,
+            None => {
+                return Err(anyhow::anyhow!(
+                    "No portfolio found for tenant {}",
+                    event.tenant_id
+                ));
+            }
+        };
 
         // Update portfolio_data with the generated content
         sqlx::query(
             "UPDATE portfolio_data SET data = data || $1 WHERE portfolio_id = $2"
         )
         .bind(&portfolio_content)
-        .bind(portfolio.0)
+        .bind(portfolio_id)
         .execute(&self.pool)
         .await?;
 
         tracing::info!(
             "Successfully updated portfolio {} with GitHub data",
-            portfolio.0
+            portfolio_id
         );
 
         // Create a new event to indicate repos have been synced
@@ -142,7 +152,7 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
         .bind(uuid::Uuid::new_v4())
         .bind(event.tenant_id)
         .bind(serde_json::json!({
-            "portfolio_id": portfolio.0,
+            "portfolio_id": portfolio_id,
             "repo_count": portfolio_content["projects"].as_array().map(|a| a.len()).unwrap_or(0)
         }))
         .execute(&self.pool)

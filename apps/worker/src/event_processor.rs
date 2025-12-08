@@ -41,8 +41,9 @@ impl EventProcessor {
     /// Mark an event as failed (for retry logic)
     pub async fn mark_failed(&self, event_id: Uuid, error: &str) -> Result<()> {
         tracing::error!("Event {} failed: {}", event_id, error);
-        // For now, we'll still mark it as processed to avoid infinite retries
-        // In a production system, you'd want a separate failed_events table or retry count
+        // TODO: Implement proper retry mechanism with exponential backoff
+        // For now, we mark as processed to avoid infinite retries
+        // Future: Add retry_count field and failed_events table
         self.mark_processed(event_id).await
     }
 }
