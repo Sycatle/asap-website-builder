@@ -21,6 +21,43 @@ pub struct UpdateGitHubIntegrationRequest {
     pub github_token: Option<String>,
 }
 
+/// Validate GitHub username format (security)
+fn validate_github_username(username: &str) -> Result<(), &'static str> {
+    if username.is_empty() {
+        return Err("GitHub username is required");
+    }
+    if username.len() > 39 {
+        return Err("GitHub username too long (max 39 characters)");
+    }
+    if !username.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+        return Err("GitHub username can only contain alphanumeric characters and hyphens");
+    }
+    if username.starts_with('-') || username.ends_with('-') || username.contains("--") {
+        return Err("Invalid GitHub username format");
+    }
+    Ok(())
+}
+
+/// Validate GitHub token format (security)
+fn validate_github_token(token: &Option<String>) -> Result<(), &'static str> {
+    if let Some(t) = token {
+        // GitHub tokens: ghp_ (PAT), gho_ (OAuth), ghu_ (user-to-server), ghs_ (server-to-server), ghr_ (refresh)
+        let valid_prefixes = ["ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_"];
+        if !valid_prefixes.iter().any(|p| t.starts_with(p)) {
+            return Err("Invalid GitHub token format. Must be a valid GitHub token (ghp_, gho_, etc.)");
+        }
+        if t.len() < 20 || t.len() > 255 {
+            return Err("Invalid GitHub token length");
+        }
+        // Check for only valid characters in token
+        let token_part = &t[4..]; // Skip prefix
+        if !token_part.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+            return Err("Invalid characters in GitHub token");
+        }
+    }
+    Ok(())
+}
+
 pub async fn get_integrations(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
@@ -113,6 +150,20 @@ pub async fn update_github_integration(
     if user_id != claims_user_id {
         return (StatusCode::FORBIDDEN, Json(serde_json::json!({
             "error": "Access denied"
+        }))).into_response();
+    }
+
+    // Security: Validate GitHub username format
+    if let Err(e) = validate_github_username(&payload.github_username) {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": e
+        }))).into_response();
+    }
+
+    // Security: Validate GitHub token format (if provided)
+    if let Err(e) = validate_github_token(&payload.github_token) {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": e
         }))).into_response();
     }
 
