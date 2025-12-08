@@ -1,0 +1,12 @@
+[package]
+name = "asap-module-analytics"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+asap-core-domain = { path = "../../core/domain" }
+serde = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
