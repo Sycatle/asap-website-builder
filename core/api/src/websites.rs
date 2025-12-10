@@ -233,16 +233,11 @@ pub async fn patch_website_data(
     };
 
     // Verify website belongs to tenant
-    let verify_result = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND tenant_id = $2"
-    )
-    .bind(website_id)
-    .bind(tenant_id)
-    .fetch_one(&pool)
-    .await;
-
-    match verify_result {
-        Ok(count) if count == 0 => {
+    use crate::queries;
+    
+    match queries::verify_website_ownership(&pool, website_id, tenant_id).await {
+        Ok(true) => {}
+        Ok(false) => {
             return (StatusCode::NOT_FOUND, Json(serde_json::json!({
                 "error": "Website not found"
             }))).into_response();
@@ -253,12 +248,8 @@ pub async fn patch_website_data(
                 "error": "Internal server error"
             }))).into_response();
         }
-        _ => {}
     }
 
-    // Use optimized prepared statement for upsert
-    use crate::queries;
-    
     let result = queries::upsert_website_data(&pool, website_id, &payload.data).await;
 
     match result {
@@ -439,16 +430,11 @@ pub async fn list_website_modules(
     };
 
     // Verify website belongs to tenant
-    let verify_result = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND tenant_id = $2"
-    )
-    .bind(website_uuid)
-    .bind(tenant_id)
-    .fetch_one(&pool)
-    .await;
-
-    match verify_result {
-        Ok(count) if count == 0 => {
+    use crate::queries;
+    
+    match queries::verify_website_ownership(&pool, website_uuid, tenant_id).await {
+        Ok(true) => {}
+        Ok(false) => {
             return (StatusCode::NOT_FOUND, Json(serde_json::json!({
                 "error": "Website not found"
             }))).into_response();
@@ -459,10 +445,8 @@ pub async fn list_website_modules(
                 "error": "Internal server error"
             }))).into_response();
         }
-        _ => {}
     }
 
-    use crate::queries;
     let result = queries::list_website_modules(&pool, website_uuid).await;
 
     match result {

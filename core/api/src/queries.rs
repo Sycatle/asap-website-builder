@@ -368,6 +368,24 @@ pub async fn batch_delete_old_events(
 // Website Queries
 // ============================================================================
 
+/// Verify that a website belongs to the specified tenant
+/// Returns Ok(true) if website exists and belongs to tenant, Ok(false) otherwise
+pub async fn verify_website_ownership(
+    pool: &PgPool,
+    website_id: Uuid,
+    tenant_id: Uuid,
+) -> Result<bool, sqlx::Error> {
+    let count: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM websites WHERE id = $1 AND tenant_id = $2"
+    )
+    .bind(website_id)
+    .bind(tenant_id)
+    .fetch_one(pool)
+    .await?;
+
+    Ok(count.0 > 0)
+}
+
 /// Get website by ID with data
 pub async fn get_website_with_data(
     pool: &PgPool,
@@ -1017,7 +1035,8 @@ pub async fn create_website_from_preset(
             let section_slug = section.get("slug").and_then(|s| s.as_str()).unwrap_or("section");
             let section_title = section.get("title").and_then(|s| s.as_str()).unwrap_or("Section");
             let layout = section.get("layout").and_then(|l| l.as_str()).unwrap_or("full");
-            let settings = section.get("settings").unwrap_or(&serde_json::json!({}));
+            let default_settings = serde_json::json!({});
+            let settings = section.get("settings").unwrap_or(&default_settings);
 
             sqlx::query(
                 r#"

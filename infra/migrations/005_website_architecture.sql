@@ -96,9 +96,7 @@ ALTER TABLE websites
 -- STEP 5: Insert default modules into catalog
 -- ============================================================================
 
--- Clear existing modules and insert fresh catalog
-DELETE FROM modules WHERE slug IN ('github-sync', 'blog-engine', 'contact-form', 'analytics-tracker', 'theme-engine');
-
+-- Insert or update default modules (using ON CONFLICT for idempotency)
 INSERT INTO modules (name, slug, version, description, category, default_settings, enabled) VALUES
     ('GitHub Sync', 'github-sync', '1.0.0', 'Sync projects and repositories from GitHub', 'integration', '{"auto_sync": false, "include_forks": false}', true),
     ('Blog Engine', 'blog-engine', '1.0.0', 'Full-featured blog with posts and categories', 'content', '{"posts_per_page": 10, "enable_comments": false}', true),
