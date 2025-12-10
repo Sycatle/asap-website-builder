@@ -6,13 +6,36 @@ use chrono::{DateTime, Utc};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum EventType {
+    // User events
     UserCreated,
     UserIntegrationAdded,
     UserIntegrationUpdated,
+    
+    // Legacy portfolio events (kept for backward compatibility)
     PortfolioCreated,
     PortfolioPublished,
     PortfolioUpdated,
+    
+    // New website events
+    WebsiteCreated,
+    WebsitePublished,
+    WebsiteUpdated,
+    WebsiteDeleted,
+    
+    // Module events
     ModuleConfigChanged,
+    ModuleActivated,
+    ModuleDeactivated,
+    ModuleConfigured,
+    
+    // Section events
+    SectionCreated,
+    SectionUpdated,
+    SectionDeleted,
+    SectionReordered,
+    
+    // Preset events
+    PresetApplied,
 }
 
 /// Event represents a system event that can trigger module actions
@@ -55,6 +78,16 @@ mod tests {
             EventType::PortfolioCreated,
             EventType::PortfolioPublished,
             EventType::ModuleConfigChanged,
+            EventType::WebsiteCreated,
+            EventType::WebsitePublished,
+            EventType::WebsiteDeleted,
+            EventType::ModuleActivated,
+            EventType::ModuleDeactivated,
+            EventType::SectionCreated,
+            EventType::SectionUpdated,
+            EventType::SectionDeleted,
+            EventType::SectionReordered,
+            EventType::PresetApplied,
         ];
 
         for event_type in event_types {
@@ -168,10 +201,22 @@ mod tests {
             Event::new(tenant_id, EventType::PortfolioCreated, serde_json::json!({})),
             Event::new(tenant_id, EventType::PortfolioPublished, serde_json::json!({})),
             Event::new(tenant_id, EventType::PortfolioUpdated, serde_json::json!({})),
+            Event::new(tenant_id, EventType::WebsiteCreated, serde_json::json!({})),
+            Event::new(tenant_id, EventType::WebsitePublished, serde_json::json!({})),
+            Event::new(tenant_id, EventType::WebsiteUpdated, serde_json::json!({})),
+            Event::new(tenant_id, EventType::WebsiteDeleted, serde_json::json!({})),
             Event::new(tenant_id, EventType::ModuleConfigChanged, serde_json::json!({})),
+            Event::new(tenant_id, EventType::ModuleActivated, serde_json::json!({})),
+            Event::new(tenant_id, EventType::ModuleDeactivated, serde_json::json!({})),
+            Event::new(tenant_id, EventType::ModuleConfigured, serde_json::json!({})),
+            Event::new(tenant_id, EventType::SectionCreated, serde_json::json!({})),
+            Event::new(tenant_id, EventType::SectionUpdated, serde_json::json!({})),
+            Event::new(tenant_id, EventType::SectionDeleted, serde_json::json!({})),
+            Event::new(tenant_id, EventType::SectionReordered, serde_json::json!({})),
+            Event::new(tenant_id, EventType::PresetApplied, serde_json::json!({})),
         ];
 
-        assert_eq!(events.len(), 7);
+        assert_eq!(events.len(), 19);
         for event in events {
             assert_eq!(event.tenant_id, tenant_id);
             assert!(!event.is_processed());

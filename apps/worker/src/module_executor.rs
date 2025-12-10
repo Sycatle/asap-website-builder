@@ -74,7 +74,7 @@ impl GitHubIntegrationExecutor {
 #[async_trait::async_trait]
 impl ModuleExecutor for GitHubIntegrationExecutor {
     fn can_handle(&self, event_type: &EventType) -> bool {
-        matches!(event_type, EventType::UserIntegrationAdded)
+        matches!(event_type, EventType::UserIntegrationAdded | EventType::ModuleActivated)
     }
 
     async fn execute(&self, event: &Event) -> Result<()> {
@@ -113,36 +113,60 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
 
         tracing::debug!("Generated portfolio content");
 
-        // Find the user's portfolio
-        let portfolio: Option<(uuid::Uuid,)> = sqlx::query_as(
-            "SELECT id FROM portfolios WHERE tenant_id = $1 LIMIT 1"
+        // Find the user's website (try new table first, then legacy)
+        let website: Option<(uuid::Uuid,)> = sqlx::query_as(
+            "SELECT id FROM websites WHERE tenant_id = $1 LIMIT 1"
         )
         .bind(event.tenant_id)
         .fetch_optional(&self.pool)
         .await?;
 
-        let portfolio_id = match portfolio {
+        let website_id = match website {
             Some((id,)) => id,
             None => {
-                return Err(anyhow::anyhow!(
-                    "No portfolio found for tenant {}",
-                    event.tenant_id
-                ));
+                // Try legacy portfolios table
+                let portfolio: Option<(uuid::Uuid,)> = sqlx::query_as(
+                    "SELECT id FROM portfolios WHERE tenant_id = $1 LIMIT 1"
+                )
+                .bind(event.tenant_id)
+                .fetch_optional(&self.pool)
+                .await?;
+
+                match portfolio {
+                    Some((id,)) => id,
+                    None => {
+                        return Err(anyhow::anyhow!(
+                            "No website found for tenant {}",
+                            event.tenant_id
+                        ));
+                    }
+                }
             }
         };
 
-        // Update portfolio_data with the generated content
-        sqlx::query(
-            "UPDATE portfolio_data SET data = data || $1 WHERE portfolio_id = $2"
+        // Update website_data with the generated content (try new table first)
+        let result = sqlx::query(
+            "UPDATE website_data SET data = data || $1 WHERE website_id = $2"
         )
         .bind(&portfolio_content)
-        .bind(portfolio_id)
+        .bind(website_id)
         .execute(&self.pool)
-        .await?;
+        .await;
+
+        if result.is_err() {
+            // Try legacy portfolio_data table
+            sqlx::query(
+                "UPDATE portfolio_data SET data = data || $1 WHERE portfolio_id = $2"
+            )
+            .bind(&portfolio_content)
+            .bind(website_id)
+            .execute(&self.pool)
+            .await?;
+        }
 
         tracing::info!(
-            "Successfully updated portfolio {} with GitHub data",
-            portfolio_id
+            "Successfully updated website {} with GitHub data",
+            website_id
         );
 
         // Create a new event to indicate repos have been synced
@@ -152,12 +176,84 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
         .bind(uuid::Uuid::new_v4())
         .bind(event.tenant_id)
         .bind(serde_json::json!({
-            "portfolio_id": portfolio_id,
+            "website_id": website_id,
             "repo_count": portfolio_content["projects"].as_array().map(|a| a.len()).unwrap_or(0)
         }))
         .execute(&self.pool)
         .await?;
 
+        Ok(())
+    }
+}
+
+/// Website Module Executor - handles website-related events
+pub struct WebsiteModuleExecutor {
+    pool: PgPool,
+}
+
+impl WebsiteModuleExecutor {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+}
+
+#[async_trait::async_trait]
+impl ModuleExecutor for WebsiteModuleExecutor {
+    fn can_handle(&self, event_type: &EventType) -> bool {
+        matches!(
+            event_type,
+            EventType::WebsiteCreated |
+            EventType::WebsitePublished |
+            EventType::WebsiteUpdated |
+            EventType::WebsiteDeleted |
+            EventType::SectionCreated |
+            EventType::SectionUpdated |
+            EventType::SectionDeleted |
+            EventType::SectionReordered |
+            EventType::PresetApplied
+        )
+    }
+
+    async fn execute(&self, event: &Event) -> Result<()> {
+        match event.event_type {
+            EventType::WebsiteCreated => {
+                tracing::info!("Processing website creation for event {}", event.id);
+                // Website creation logic - could trigger initial setup
+            }
+            EventType::WebsitePublished => {
+                tracing::info!("Processing website publication for event {}", event.id);
+                // Could trigger static site generation, CDN invalidation, etc.
+                let website_id = event.payload["website_id"]
+                    .as_str()
+                    .ok_or_else(|| anyhow::anyhow!("Missing website_id in event payload"))?;
+                tracing::info!("Website {} was published", website_id);
+            }
+            EventType::WebsiteUpdated => {
+                tracing::info!("Processing website update for event {}", event.id);
+                // Could trigger re-rendering or cache invalidation
+            }
+            EventType::WebsiteDeleted => {
+                tracing::info!("Processing website deletion for event {}", event.id);
+                // Could trigger cleanup of associated resources
+            }
+            EventType::SectionCreated | EventType::SectionUpdated | EventType::SectionDeleted | EventType::SectionReordered => {
+                tracing::info!("Processing section change for event {}", event.id);
+                // Could trigger partial re-rendering
+            }
+            EventType::PresetApplied => {
+                tracing::info!("Processing preset application for event {}", event.id);
+                let website_id = event.payload["website_id"]
+                    .as_str()
+                    .ok_or_else(|| anyhow::anyhow!("Missing website_id in event payload"))?;
+                let preset_id = event.payload["preset_id"]
+                    .as_str()
+                    .ok_or_else(|| anyhow::anyhow!("Missing preset_id in event payload"))?;
+                tracing::info!("Preset {} applied to website {}", preset_id, website_id);
+            }
+            _ => {
+                tracing::debug!("Unhandled event type in WebsiteModuleExecutor: {:?}", event.event_type);
+            }
+        }
         Ok(())
     }
 }
