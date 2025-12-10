@@ -1,6 +1,6 @@
 # Plan d'Action Révisé - ASAP v2
 
-**Date:** 8 décembre 2024  
+**Date:** 8 décembre 2025  
 **Objectif:** Finaliser MVP utilisable avec frontend
 
 ---
@@ -526,5 +526,5 @@ jobs:
 ---
 
 **Auteur:** Analyse Copilot  
-**Date:** 8 décembre 2024  
+**Date:** 8 décembre 2025  
 **Version:** 1.0

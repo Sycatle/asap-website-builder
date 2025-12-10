@@ -4,7 +4,7 @@ This guide covers the development setup and workflow for ASAP v2.
 
 ## Prerequisites
 
-- **Rust** 1.75+
+- **Rust** 1.70+
 - **Docker** & Docker Compose
 - **PostgreSQL** 15+ (via Docker or local)
 - **Node.js** 18+ (for future frontend)
@@ -125,24 +125,29 @@ cargo test --lib -p asap-module-projections
 
 ### Test Coverage
 
-**67+ unit tests covering:**
+**79 unit tests covering:**
 
 - **Core Domain**: 31 tests
   - Users (5 tests): creation, cloning, serialization
   - Portfolios (7 tests): status, metadata, data
   - Events (8 tests): creation, processing, serialization
-  - Integrations (9 tests): GitHub integration, token management
+  - Integrations (11 tests): GitHub integration, token management
 
-- **Modules**: 36 tests
+- **Core Shared**: 10 tests
+  - Configuration management
+  - JWT token generation and validation
+  - Error handling
+
+- **Modules**: 38 tests
   - Analytics (7 tests): event tracking
-  - Themes (8 tests): theme application, JSON handling
+  - Themes (10 tests): theme application, JSON handling
   - GitHub Generator (13 tests): repo filtering, content generation
   - Projections (8 tests): slug validation, data structure
 
 - **API**: Password & Route tests (requires DATABASE_URL)
-  - Password hashing & verification (6 tests)
-  - Route definitions (13 tests)
-  - Request/Response structures (10 tests)
+  - Password hashing & verification
+  - Route definitions
+  - Request/Response structures
 
 ### Running Tests with Output
 
@@ -395,27 +400,36 @@ cargo clippy
 
 ## Current Status
 
-### ✅ Completed (Phase 1)
+### ✅ Completed (Phase 1-3)
 - [x] Monorepo structure
 - [x] Core domain models
-- [x] API route stubs
+- [x] API routes and handlers
 - [x] Database schema
 - [x] Docker infrastructure
 - [x] Development scripts
+- [x] Core API implementation
+- [x] Authentication (JWT, bcrypt)
+- [x] Database integration (SQLx)
+- [x] User management endpoints
+- [x] Portfolio management endpoints
+- [x] Worker event processor
+- [x] GitHub Generator module
+- [x] Theme rendering module
+- [x] Projections module
+- [x] Analytics module
+- [x] Redis caching (optional)
+- [x] File storage with quotas
 
-### 🚧 In Progress (Phase 2)
-- [ ] Core API implementation
-- [ ] Authentication (JWT, bcrypt)
-- [ ] Database integration (SQLx)
-- [ ] User management endpoints
-- [ ] Portfolio management endpoints
-
-### 📋 Planned (Phase 3+)
-- [ ] Worker event processor
-- [ ] GitHub Generator module
-- [ ] Theme rendering
+### 🚧 In Progress (Current Phase)
 - [ ] Frontend (Astro)
 - [ ] End-to-end tests
+- [ ] CI/CD pipeline
+
+### 📋 Planned (Future)
+- [ ] AI Generator module
+- [ ] Custom domains
+- [ ] Advanced analytics
+- [ ] Stripe integration
 
 ## Contributing
 

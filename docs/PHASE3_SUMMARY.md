@@ -159,8 +159,8 @@ WHERE user_id = ...;
 Phase 4 will focus on:
 1. Theme rendering module
 2. Projection generation (static JSON files)
-3. PORTFOLIO_PUBLISHED event handling
-4. Public portfolio serving
+3. WEBSITE_PUBLISHED event handling
+4. Public website serving
 
 ---
 

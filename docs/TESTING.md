@@ -4,9 +4,10 @@ This document provides comprehensive information about the unit tests in ASAP v2
 
 ## Overview
 
-The project includes **67+ unit tests** covering:
-- Core domain models
-- Feature modules
+The project includes **79 unit tests** covering:
+- Core domain models (31 tests)
+- Core shared utilities (10 tests)
+- Feature modules (38 tests)
 - API handlers
 - Data validation
 
@@ -125,7 +126,7 @@ Tests cover:
 - ✅ Tagged union enumeration
 - ✅ Serialization with serde
 
-### Module Tests (36 tests)
+### Module Tests (38 tests)
 
 #### Analytics Module (7 tests)
 - `test_track_event_page_view` - Page view tracking
@@ -143,7 +144,7 @@ Tests cover:
 - ✅ String handling and validation
 - ✅ Multiple event processing
 
-#### Themes Module (8 tests)
+#### Themes Module (10 tests)
 - `test_apply_theme_empty_data` - Empty data handling
 - `test_apply_theme_with_portfolio_data` - Portfolio theming
 - `test_apply_theme_with_complex_structure` - Complex JSON
@@ -152,6 +153,8 @@ Tests cover:
 - `test_apply_theme_with_array` - Array data
 - `test_apply_theme_with_numbers` - Number handling
 - `test_apply_theme_with_unicode` - Unicode characters
+- `test_theme_metadata` - Theme metadata generation
+- `test_custom_theme_support` - Custom theme application
 
 **File:** `modules/themes/src/lib.rs`
 
@@ -276,18 +279,20 @@ Run test modules:
     │   ├── users::tests (5)
     │   ├── portfolios::tests (7)
     │   ├── events::tests (8)
-    │   └── integrations::tests (9)
+    │   └── integrations::tests (11)
+    ├── core/shared
+    │   └── all::tests (10)
     ├── modules
     │   ├── analytics::tests (7)
-    │   ├── themes::tests (8)
+    │   ├── themes::tests (10)
     │   ├── github-generator::client::tests (6)
     │   ├── github-generator::processor::tests (7)
     │   └── projections::tests (8)
     └── api (optional)
-        ├── auth::password_tests (16)
-        └── routes::tests (13)
+        ├── auth::password_tests
+        └── routes::tests
     ↓
-Total: 67+ tests executed
+Total: 79 tests executed
     ↓
 Test results summary
 ```
@@ -297,14 +302,14 @@ Test results summary
 | Component | Tests | Status |
 |-----------|-------|--------|
 | Core Domain | 31 | ✅ Passing |
+| Core Shared | 10 | ✅ Passing |
 | Analytics | 7 | ✅ Passing |
-| Themes | 8 | ✅ Passing |
+| Themes | 10 | ✅ Passing |
 | GitHub Generator | 13 | ✅ Passing |
 | Projections | 8 | ✅ Passing |
-| Auth & Routes | ~29 | ✅ Passing* |
-| **Total** | **67+** | **✅ Passing** |
+| **Total** | **79** | **✅ Passing** |
 
-*Requires DATABASE_URL to be set
+*Auth & Routes tests require DATABASE_URL to be set
 
 ## Writing New Tests
 

@@ -1,6 +1,6 @@
 # ASAP v2 - Plan de Développement Actualisé
 
-**Dernière mise à jour:** 8 décembre 2024  
+**Dernière mise à jour:** 8 décembre 2025  
 **Statut:** Backend complet (Phases 1-3) | Frontend en attente (Phase 4)
 
 ---
@@ -419,7 +419,7 @@
 
 ---
 
-**Dernière mise à jour:** 8 décembre 2024  
+**Dernière mise à jour:** 8 décembre 2025  
 **Prochaine révision:** Après complétion Phase 4 (Frontend)
 
 ### Réalisations

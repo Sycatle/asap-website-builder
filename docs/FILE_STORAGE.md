@@ -56,7 +56,7 @@ Response:
   "compressed_size": 512000,
   "mime_type": "application/pdf",
   "compression_ratio": 25.0,
-  "created_at": "2024-12-08T10:00:00Z"
+  "created_at": "2025-12-08T10:00:00Z"
 }
 ```
 
@@ -73,7 +73,7 @@ Response:
     "compressed_size": 512000,
     "mime_type": "application/pdf",
     "compression_ratio": 25.0,
-    "created_at": "2024-12-08T10:00:00Z"
+    "created_at": "2025-12-08T10:00:00Z"
   }
 ]
 ```
