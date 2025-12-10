@@ -166,12 +166,7 @@ impl From<EventRow> for Event {
             "USER_INTEGRATION_ADDED" => EventType::UserIntegrationAdded,
             "USER_INTEGRATION_UPDATED" => EventType::UserIntegrationUpdated,
             
-            // Legacy portfolio events (backward compatibility)
-            "PORTFOLIO_CREATED" => EventType::PortfolioCreated,
-            "PORTFOLIO_PUBLISHED" => EventType::PortfolioPublished,
-            "PORTFOLIO_UPDATED" => EventType::PortfolioUpdated,
-            
-            // New website events
+            // Website events
             "WEBSITE_CREATED" => EventType::WebsiteCreated,
             "WEBSITE_PUBLISHED" => EventType::WebsitePublished,
             "WEBSITE_UPDATED" => EventType::WebsiteUpdated,

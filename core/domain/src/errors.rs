@@ -13,8 +13,8 @@ pub enum DomainError {
     #[error("User not found: {0}")]
     UserNotFound(String),
 
-    #[error("Portfolio not found: {0}")]
-    PortfolioNotFound(String),
+    #[error("Website not found: {0}")]
+    WebsiteNotFound(String),
 
     #[error("Tenant not found: {0}")]
     TenantNotFound(String),

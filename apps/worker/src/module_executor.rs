@@ -108,12 +108,12 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
 
         tracing::info!("Fetched {} repositories from GitHub", repos.len());
 
-        // Generate portfolio content from repos
-        let portfolio_content = asap_github_generator::generate_portfolio_content(repos).await?;
+        // Generate website content from repos
+        let website_content = asap_github_generator::generate_portfolio_content(repos).await?;
 
-        tracing::debug!("Generated portfolio content");
+        tracing::debug!("Generated website content");
 
-        // Find the user's website (try new table first, then legacy)
+        // Find the user's website
         let website: Option<(uuid::Uuid,)> = sqlx::query_as(
             "SELECT id FROM websites WHERE tenant_id = $1 LIMIT 1"
         )
@@ -124,45 +124,21 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
         let website_id = match website {
             Some((id,)) => id,
             None => {
-                // Try legacy portfolios table
-                let portfolio: Option<(uuid::Uuid,)> = sqlx::query_as(
-                    "SELECT id FROM portfolios WHERE tenant_id = $1 LIMIT 1"
-                )
-                .bind(event.tenant_id)
-                .fetch_optional(&self.pool)
-                .await?;
-
-                match portfolio {
-                    Some((id,)) => id,
-                    None => {
-                        return Err(anyhow::anyhow!(
-                            "No website found for tenant {}",
-                            event.tenant_id
-                        ));
-                    }
-                }
+                return Err(anyhow::anyhow!(
+                    "No website found for tenant {}",
+                    event.tenant_id
+                ));
             }
         };
 
-        // Update website_data with the generated content (try new table first)
-        let result = sqlx::query(
+        // Update website_data with the generated content
+        sqlx::query(
             "UPDATE website_data SET data = data || $1 WHERE website_id = $2"
         )
-        .bind(&portfolio_content)
+        .bind(&website_content)
         .bind(website_id)
         .execute(&self.pool)
-        .await;
-
-        if result.is_err() {
-            // Try legacy portfolio_data table
-            sqlx::query(
-                "UPDATE portfolio_data SET data = data || $1 WHERE portfolio_id = $2"
-            )
-            .bind(&portfolio_content)
-            .bind(website_id)
-            .execute(&self.pool)
-            .await?;
-        }
+        .await?;
 
         tracing::info!(
             "Successfully updated website {} with GitHub data",
@@ -177,7 +153,7 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
         .bind(event.tenant_id)
         .bind(serde_json::json!({
             "website_id": website_id,
-            "repo_count": portfolio_content["projects"].as_array().map(|a| a.len()).unwrap_or(0)
+            "repo_count": website_content["projects"].as_array().map(|a| a.len()).unwrap_or(0)
         }))
         .execute(&self.pool)
         .await?;

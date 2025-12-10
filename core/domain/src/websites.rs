@@ -189,11 +189,6 @@ pub struct Preset {
     pub updated_at: DateTime<Utc>,
 }
 
-// Backward compatibility aliases
-pub type Portfolio = Website;
-pub type PortfolioStatus = WebsiteStatus;
-pub type PortfolioData = WebsiteData;
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -528,38 +523,5 @@ mod tests {
         let deserialized: PresetConfig = serde_json::from_str(&serialized).unwrap();
 
         assert_eq!(deserialized.modules, config.modules);
-    }
-
-    // Backward compatibility tests
-    #[test]
-    fn test_portfolio_alias() {
-        let website: Portfolio = Website {
-            id: Uuid::new_v4(),
-            tenant_id: Uuid::new_v4(),
-            slug: "test".to_string(),
-            title: "Test".to_string(),
-            tagline: "Test".to_string(),
-            status: WebsiteStatus::Draft,
-            creation_mode: CreationMode::FromScratch,
-            preset_id: None,
-            metadata: serde_json::json!({}),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-        };
-
-        assert_eq!(website.slug, "test");
-    }
-
-    #[test]
-    fn test_portfolio_status_alias() {
-        let status: PortfolioStatus = WebsiteStatus::Published;
-        assert_eq!(status, WebsiteStatus::Published);
-    }
-
-    #[test]
-    fn test_portfolio_data_alias() {
-        let website_id = Uuid::new_v4();
-        let data: PortfolioData = WebsiteData::new(website_id);
-        assert_eq!(data.website_id, website_id);
     }
 }

@@ -165,28 +165,3 @@ CREATE INDEX IF NOT EXISTS idx_websites_preset_id ON websites(preset_id);
 ALTER TABLE website_modules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE website_sections ENABLE ROW LEVEL SECURITY;
 -- Presets are global, no RLS needed
-
--- ============================================================================
--- STEP 10: Create views for backward compatibility (optional)
--- ============================================================================
-
--- Create view for legacy portfolio access
-CREATE OR REPLACE VIEW portfolios AS
-SELECT 
-    id,
-    tenant_id,
-    slug,
-    title,
-    tagline,
-    status,
-    metadata,
-    created_at,
-    updated_at
-FROM websites;
-
-CREATE OR REPLACE VIEW portfolio_data AS
-SELECT 
-    website_id as portfolio_id,
-    data,
-    updated_at
-FROM website_data;

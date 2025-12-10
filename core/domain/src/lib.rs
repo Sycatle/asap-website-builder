@@ -1,5 +1,4 @@
 pub mod users;
-pub mod portfolios;
 pub mod websites;
 pub mod events;
 pub mod integrations;
@@ -7,9 +6,6 @@ pub mod errors;
 pub mod storage;
 
 pub use users::{User, Tenant, UserData};
-// Legacy portfolio exports (backward compatibility)
-pub use portfolios::{Portfolio, PortfolioData, PortfolioStatus};
-// New website exports
 pub use websites::{
     Website, WebsiteData, WebsiteStatus, CreationMode,
     Module, WebsiteModule, WebsiteSection, SectionType, SectionLayout,

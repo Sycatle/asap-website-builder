@@ -11,12 +11,7 @@ pub enum EventType {
     UserIntegrationAdded,
     UserIntegrationUpdated,
     
-    // Legacy portfolio events (kept for backward compatibility)
-    PortfolioCreated,
-    PortfolioPublished,
-    PortfolioUpdated,
-    
-    // New website events
+    // Website events
     WebsiteCreated,
     WebsitePublished,
     WebsiteUpdated,
@@ -75,14 +70,14 @@ mod tests {
         let event_types = vec![
             EventType::UserCreated,
             EventType::UserIntegrationAdded,
-            EventType::PortfolioCreated,
-            EventType::PortfolioPublished,
-            EventType::ModuleConfigChanged,
             EventType::WebsiteCreated,
             EventType::WebsitePublished,
+            EventType::WebsiteUpdated,
             EventType::WebsiteDeleted,
+            EventType::ModuleConfigChanged,
             EventType::ModuleActivated,
             EventType::ModuleDeactivated,
+            EventType::ModuleConfigured,
             EventType::SectionCreated,
             EventType::SectionUpdated,
             EventType::SectionDeleted,
@@ -164,9 +159,9 @@ mod tests {
         let tenant_id = Uuid::new_v4();
         let event = Event::new(
             tenant_id,
-            EventType::PortfolioPublished,
+            EventType::WebsitePublished,
             serde_json::json!({
-                "portfolio_slug": "my-portfolio"
+                "website_slug": "my-website"
             }),
         );
 
@@ -174,7 +169,7 @@ mod tests {
         let deserialized: Event = serde_json::from_str(&serialized).unwrap();
 
         assert_eq!(deserialized.tenant_id, tenant_id);
-        assert_eq!(deserialized.event_type, EventType::PortfolioPublished);
+        assert_eq!(deserialized.event_type, EventType::WebsitePublished);
     }
 
     #[test]
@@ -198,9 +193,6 @@ mod tests {
             Event::new(tenant_id, EventType::UserCreated, serde_json::json!({})),
             Event::new(tenant_id, EventType::UserIntegrationAdded, serde_json::json!({})),
             Event::new(tenant_id, EventType::UserIntegrationUpdated, serde_json::json!({})),
-            Event::new(tenant_id, EventType::PortfolioCreated, serde_json::json!({})),
-            Event::new(tenant_id, EventType::PortfolioPublished, serde_json::json!({})),
-            Event::new(tenant_id, EventType::PortfolioUpdated, serde_json::json!({})),
             Event::new(tenant_id, EventType::WebsiteCreated, serde_json::json!({})),
             Event::new(tenant_id, EventType::WebsitePublished, serde_json::json!({})),
             Event::new(tenant_id, EventType::WebsiteUpdated, serde_json::json!({})),
@@ -216,7 +208,7 @@ mod tests {
             Event::new(tenant_id, EventType::PresetApplied, serde_json::json!({})),
         ];
 
-        assert_eq!(events.len(), 19);
+        assert_eq!(events.len(), 16);
         for event in events {
             assert_eq!(event.tenant_id, tenant_id);
             assert!(!event.is_processed());
