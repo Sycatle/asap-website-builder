@@ -29,14 +29,32 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
         .route("/users/:id", put(crate::users::update_user))
         .route("/users/:id/integrations", get(crate::integrations::get_integrations))
         .route("/users/:id/integrations/github", put(crate::integrations::update_github_integration))
-        .route("/portfolios", get(crate::portfolios::list_portfolios))
-        .route("/portfolios/:id", get(crate::portfolios::get_portfolio))
-        .route("/portfolios/:id", put(crate::portfolios::update_portfolio))
-        .route("/portfolios/:id/data", patch(crate::portfolios::patch_portfolio_data))
-        .route("/portfolios/:id/publish", post(crate::portfolios::publish_portfolio))
+        // Website routes
+        .route("/websites", get(crate::websites::list_websites))
+        .route("/websites/:id", get(crate::websites::get_website))
+        .route("/websites/:id", put(crate::websites::update_website))
+        .route("/websites/:id/data", patch(crate::websites::patch_website_data))
+        .route("/websites/:id/publish", post(crate::websites::publish_website))
+        // Website modules routes
+        .route("/websites/:id/modules", get(crate::websites::list_website_modules))
+        .route("/websites/:id/modules", post(crate::websites::activate_module))
+        .route("/websites/:id/modules/:module_id", patch(crate::websites::update_website_module))
+        // Website sections routes
+        .route("/websites/:id/sections", get(crate::websites::list_website_sections))
+        .route("/websites/:id/sections", post(crate::websites::create_section))
+        .route("/websites/:id/sections/reorder", post(crate::websites::reorder_sections))
+        .route("/websites/:id/sections/:section_id", patch(crate::websites::update_section))
+        .route("/websites/:id/sections/:section_id", delete(crate::websites::delete_section))
+        // Presets routes
+        .route("/presets", get(crate::websites::list_presets))
+        .route("/websites/from-preset", post(crate::websites::create_website_from_preset))
+        // Module catalog routes
+        .route("/modules/catalog", get(crate::websites::list_available_modules))
+        // Events routes
         .route("/events", get(crate::events::get_events))
         .route("/events", post(crate::events::create_event))
         .route("/events/:id", patch(crate::events::mark_processed))
+        // Module config routes
         .route("/modules", get(crate::modules::list_modules))
         .route("/modules/:id/config", get(crate::modules::get_module_config))
         .route("/modules/:id/config", put(crate::modules::update_module_config))
@@ -55,7 +73,8 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
         .route("/", get(root))
         .route("/auth/signup", post(crate::auth::signup))
         .route("/auth/login", post(crate::auth::login))
-        .route("/public/portfolios/:slug", get(crate::portfolios::get_public_portfolio))
+        // Public website route
+        .route("/public/websites/:slug", get(crate::websites::get_public_website))
         // File download (auth via query param for media embeds)
         .route("/files/:file_id", get(crate::files::download_file))
         .layer(Extension(storage_service))
@@ -94,12 +113,14 @@ mod tests {
             "/users/:id",
             "/users/:id/integrations",
             "/users/:id/integrations/github",
-            "/portfolios",
-            "/portfolios/:id",
-            "/portfolios/:id/publish",
+            "/websites",
+            "/websites/:id",
+            "/websites/:id/modules",
+            "/websites/:id/sections",
+            "/presets",
             "/events",
             "/modules",
-            "/public/portfolios/:slug",
+            "/public/websites/:slug",
         ];
 
         for route in routes_list {
@@ -113,9 +134,10 @@ mod tests {
         let auth_routes = vec![
             "/auth/me",
             "/users/:id",
-            "/portfolios",
+            "/websites",
             "/events",
             "/modules",
+            "/presets",
         ];
 
         for route in auth_routes {
@@ -130,7 +152,7 @@ mod tests {
             "/",
             "/auth/signup",
             "/auth/login",
-            "/public/portfolios/:slug",
+            "/public/websites/:slug",
         ];
 
         for route in public_routes {
@@ -143,10 +165,12 @@ mod tests {
     fn test_route_parameter_patterns() {
         let parameterized_routes = vec![
             "/users/:id",
-            "/portfolios/:id",
+            "/websites/:id",
+            "/websites/:id/modules/:module_id",
+            "/websites/:id/sections/:section_id",
             "/events/:id",
             "/modules/:id/config",
-            "/public/portfolios/:slug",
+            "/public/websites/:slug",
         ];
 
         for route in parameterized_routes {
@@ -166,16 +190,35 @@ mod tests {
     }
 
     #[test]
-    fn test_portfolio_crud_routes() {
-        // Test that we have the necessary CRUD routes for portfolios
-        let portfolio_routes = vec![
-            "/portfolios",      // List
-            "/portfolios/:id",  // Get/Update
-            "/portfolios/:id/publish", // Publish action
+    fn test_website_crud_routes() {
+        // Test that we have the necessary CRUD routes for websites
+        let website_routes = vec![
+            "/websites",           // List
+            "/websites/:id",       // Get/Update
+            "/websites/:id/data",  // Patch data
+            "/websites/:id/publish", // Publish action
+            "/websites/:id/modules", // List/Activate modules
+            "/websites/:id/modules/:module_id", // Update module
+            "/websites/:id/sections", // List/Create sections
+            "/websites/:id/sections/:section_id", // Update/Delete section
+            "/websites/:id/sections/reorder", // Reorder sections
         ];
 
-        for route in portfolio_routes {
-            assert!(route.contains("/portfolios"));
+        for route in website_routes {
+            assert!(route.contains("/websites"));
+        }
+    }
+
+    #[test]
+    fn test_preset_routes() {
+        // Test preset routes
+        let preset_routes = vec![
+            "/presets",              // List presets
+            "/websites/from-preset", // Create from preset
+        ];
+
+        for route in preset_routes {
+            assert!(!route.is_empty());
         }
     }
 
@@ -198,6 +241,7 @@ mod tests {
         let module_routes = vec![
             "/modules",           // List
             "/modules/:id/config", // Get/Update config
+            "/modules/catalog",   // Module catalog
         ];
 
         for route in module_routes {
@@ -232,15 +276,15 @@ mod tests {
     }
 
     #[test]
-    fn test_public_portfolio_routes() {
-        // Test public portfolio access
+    fn test_public_website_routes() {
+        // Test public website access
         let public_routes = vec![
-            "/public/portfolios/:slug",
+            "/public/websites/:slug",
         ];
 
         for route in public_routes {
             assert!(route.contains("public"));
-            assert!(route.contains("/portfolios/"));
+            assert!(route.contains("/websites/"));
         }
     }
 }

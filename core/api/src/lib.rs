@@ -3,6 +3,7 @@ pub mod auth;
 pub mod users;
 pub mod integrations;
 pub mod portfolios;
+pub mod websites;
 pub mod events;
 pub mod modules;
 pub mod middleware;

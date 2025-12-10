@@ -161,13 +161,32 @@ struct RetryCountRow {
 impl From<EventRow> for Event {
     fn from(row: EventRow) -> Self {
         let event_type = match row.event_type.as_str() {
+            // User events
             "USER_CREATED" => EventType::UserCreated,
             "USER_INTEGRATION_ADDED" => EventType::UserIntegrationAdded,
             "USER_INTEGRATION_UPDATED" => EventType::UserIntegrationUpdated,
-            "PORTFOLIO_CREATED" => EventType::PortfolioCreated,
-            "PORTFOLIO_PUBLISHED" => EventType::PortfolioPublished,
-            "PORTFOLIO_UPDATED" => EventType::PortfolioUpdated,
+            
+            // Website events
+            "WEBSITE_CREATED" => EventType::WebsiteCreated,
+            "WEBSITE_PUBLISHED" => EventType::WebsitePublished,
+            "WEBSITE_UPDATED" => EventType::WebsiteUpdated,
+            "WEBSITE_DELETED" => EventType::WebsiteDeleted,
+            
+            // Module events
             "MODULE_CONFIG_CHANGED" => EventType::ModuleConfigChanged,
+            "MODULE_ACTIVATED" => EventType::ModuleActivated,
+            "MODULE_DEACTIVATED" => EventType::ModuleDeactivated,
+            "MODULE_CONFIGURED" => EventType::ModuleConfigured,
+            
+            // Section events
+            "SECTION_CREATED" => EventType::SectionCreated,
+            "SECTION_UPDATED" => EventType::SectionUpdated,
+            "SECTION_DELETED" => EventType::SectionDeleted,
+            "SECTION_REORDERED" => EventType::SectionReordered,
+            
+            // Preset events
+            "PRESET_APPLIED" => EventType::PresetApplied,
+            
             _ => {
                 tracing::warn!("Unknown event type: {}, defaulting to USER_CREATED", row.event_type);
                 EventType::UserCreated
