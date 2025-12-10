@@ -283,8 +283,6 @@ asap/
 | `apps/worker/` | Event processor et module executor (Rust) |
 | `apps/web/` | Frontend dashboard + pages publiques (Astro + React) |
 | `infra/` | Docker, migrations, configuration |
-| `apps/web/` | Frontend dashboard + pages publiques (Astro) |
-| `infra/` | Docker, migrations, configuration |
 
 ---
 

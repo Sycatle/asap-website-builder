@@ -6,7 +6,7 @@ Ce fichier enregistre les choix importants faits pour la conception d'ASAP. Chaq
 
 ## ADR-0001 – Choix du backend : Rust (Axum) + PostgreSQL
 
-**Date :** 2024-12-08
+**Date :** 2025-12-08
 
 ### Contexte
 
@@ -41,7 +41,7 @@ Utiliser **Rust** avec le framework **Axum** pour exposer l'API HTTP, et **Postg
 
 ## ADR-0002 – Séparation lecture/écriture via projections locales
 
-**Date :** 2024-12-08
+**Date :** 2025-12-08
 
 ### Contexte
 
@@ -75,7 +75,7 @@ Adopter un modèle **CQRS léger** : l'écriture se fait dans PostgreSQL et la l
 
 ## ADR-0003 – Monorepo et open-core
 
-**Date :** 2024-12-08
+**Date :** 2025-12-08
 
 ### Contexte
 

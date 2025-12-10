@@ -78,7 +78,7 @@ Generates static JSON files for fast public access to websites.
 {
   "metadata": {
     "slug": "website-slug",
-    "generated_at": "2024-01-01T00:00:00Z",
+    "generated_at": "2025-01-01T00:00:00Z",
     "version": "1.0.0"
   },
   "data": { /* website content */ }

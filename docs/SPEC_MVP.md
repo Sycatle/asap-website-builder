@@ -1,6 +1,6 @@
 # Spécification fonctionnelle du MVP - État Actuel
 
-**Dernière mise à jour:** 10 décembre 2024  
+**Dernière mise à jour:** 10 décembre 2025  
 **Statut:** Backend complet avec architecture Website | Frontend en cours
 
 ---
@@ -415,5 +415,5 @@ Le core centralise les données utilisateur :
 ---
 
 **Auteur:** Analyse Copilot  
-**Date:** 8 décembre 2024  
+**Date:** 8 décembre 2025  
 **Version:** 2.0 (révisé)
