@@ -15,13 +15,13 @@ Each module is an independent Rust crate that provides specific functionality to
 
 ### GitHub Generator (`github-generator/`)
 
-Imports repository data from GitHub and transforms it into portfolio content.
+Imports repository data from GitHub and transforms it into website content.
 
 **Features:**
 - Fetches public repositories via GitHub API
 - Filters forks and archived repos
 - Sorts by stars and activity
-- Generates structured portfolio data
+- Generates structured website data
 
 **Events Handled:**
 - `USER_INTEGRATION_ADDED` - When GitHub username is added
@@ -33,12 +33,12 @@ use asap_module_github_generator::{GitHubClient, process_repos};
 
 let client = GitHubClient::new();
 let repos = client.fetch_user_repos("username").await?;
-let portfolio_data = process_repos(&repos)?;
+let website_data = process_repos(&repos)?;
 ```
 
 ### Themes (`themes/`)
 
-Applies visual themes to portfolio data for consistent styling.
+Applies visual themes to website data for consistent styling.
 
 **Features:**
 - Default and custom theme support
@@ -60,12 +60,12 @@ Theme {
 ```rust
 use asap_module_themes::{apply_theme, Theme};
 
-let themed_output = apply_theme(portfolio_data, Some(custom_theme))?;
+let themed_output = apply_theme(website_data, Some(custom_theme))?;
 ```
 
 ### Projections (`projections/`)
 
-Generates static JSON files for fast public access to portfolios.
+Generates static JSON files for fast public access to websites.
 
 **Features:**
 - Creates versioned projection files
@@ -77,11 +77,11 @@ Generates static JSON files for fast public access to portfolios.
 ```json
 {
   "metadata": {
-    "slug": "portfolio-slug",
+    "slug": "website-slug",
     "generated_at": "2024-01-01T00:00:00Z",
     "version": "1.0.0"
   },
-  "data": { /* portfolio content */ }
+  "data": { /* website content */ }
 }
 ```
 
@@ -90,24 +90,24 @@ Generates static JSON files for fast public access to portfolios.
 use asap_module_projections::{generate_projection, read_projection};
 
 // Generate
-generate_projection("my-portfolio", portfolio_data).await?;
+generate_projection("my-website", website_data).await?;
 
 // Read
-let projection = read_projection("my-portfolio").await?;
+let projection = read_projection("my-website").await?;
 ```
 
 ### Analytics (`analytics/`)
 
-Tracks user interactions and portfolio metrics.
+Tracks user interactions and website metrics.
 
 **Features:**
 - Event tracking (page views, clicks, etc.)
 - Detailed metadata support
-- Portfolio-specific tracking
+- Website-specific tracking
 - User attribution
 
 **Event Types:**
-- `page_view` - Portfolio page viewed
+- `page_view` - Website page viewed
 - `click` - Button or link clicked
 - `form_submit` - Contact form submitted
 - Custom events
@@ -117,7 +117,7 @@ Tracks user interactions and portfolio metrics.
 use asap_module_analytics::{track_page_view, track_click, AnalyticsEvent};
 
 // Simple tracking
-track_page_view("my-portfolio", Some(user_id))?;
+track_page_view("my-website", Some(user_id))?;
 
 // Detailed tracking
 let event = AnalyticsEvent::new("custom_event", slug, user_id)
@@ -178,10 +178,10 @@ Modules are executed by the Worker in response to events:
 // In worker/module_executor.rs
 match event.event_type {
     EventType::UserIntegrationAdded => {
-        // Execute GitHub Generator
+        // Execute GitHub Sync
         github_executor.execute(&event).await?;
     }
-    EventType::PortfolioPublished => {
+    EventType::WebsitePublished => {
         // Execute Theme + Projection
         theme_executor.execute(&event).await?;
         projection_executor.execute(&event).await?;

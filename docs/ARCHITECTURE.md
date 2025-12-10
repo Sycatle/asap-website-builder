@@ -115,16 +115,19 @@ ASAP utilise **PostgreSQL** comme source de vérité pour le core :
 | `users` | Profil utilisateur centralisé |
 | `tenants` | Isolation multi-tenant |
 | `user_data` | Données étendues (GitHub, intégrations, préférences) |
-| `portfolios` | Structure portefeuille (slug, statut, métadonnées) |
-| `portfolio_data` | Contenu du portfolio (JSONB extensible) |
+| `websites` | Structure du site (slug, statut, création mode, preset) |
+| `website_data` | Contenu du website (JSONB extensible) |
+| `website_sections` | Sections du site (Hero, About, Projects, etc.) |
+| `website_modules` | Modules activés par website (many-to-many) |
+| `presets` | Templates prédéfinis pour création rapide |
+| `modules` | Catalogue des modules disponibles |
 | `events` | Événements métier pour les modules |
-| `modules` | Enregistrement des modules disponibles |
-| `module_config` | Configuration per-tenant des modules |
 
 #### Architecture multi-tenant
 
 - Chaque `user` appartient à un seul `tenant`
-- Chaque `tenant` peut avoir plusieurs `portfolios`
+- Chaque `tenant` peut avoir plusieurs `websites`
+- Chaque `website` a des `sections` et des `modules` activés
 - `RLS (Row Level Security)` : assure que les données ne fuient pas entre tenants
 - Toutes les lectures/écritures passent par `tenant_id`
 
@@ -132,7 +135,7 @@ ASAP utilise **PostgreSQL** comme source de vérité pour le core :
 
 ## Flux de données
 
-### Scénario : Utilisateur crée un portfolio avec GitHub
+### Scénario : Utilisateur crée un website avec un Preset
 
 ```
 1. SIGNUP (Core)
@@ -140,28 +143,35 @@ ASAP utilise **PostgreSQL** comme source de vérité pour le core :
    ├─> INSERT users, tenants
    └─> EMIT(USER_CREATED)
 
-2. CONFIGURE (Core)
+2. CREATE FROM PRESET (Core)
+   ├─> POST /websites/from-preset {preset_id, slug}
+   ├─> INSERT website (creation_mode = from_preset)
+   ├─> INSERT website_sections (depuis preset.config.sections)
+   ├─> INSERT website_modules (depuis preset.config.modules)
+   └─> EMIT(WEBSITE_CREATED)
+
+3. CONFIGURE GITHUB (Core)
    ├─> PUT /users/:id/integrations {github_username}
    ├─> UPDATE user_data.integrations
    └─> EMIT(USER_INTEGRATION_ADDED)
 
-3. GENERATE (Module GitHubGenerator)
+4. SYNC (Module GitHub Sync)
    ├─> Worker reçoit USER_INTEGRATION_ADDED
    ├─> Module appelle Core: GET /users/:id/data
    ├─> Core retourne user_data (GitHub username, etc.)
    ├─> Module appelle GitHub API
-   ├─> Module stocke résultats dans PORTFOLIO_DATA (JSONB)
-   └─> EMIT(PORTFOLIO_GENERATED)
+   ├─> Module stocke résultats dans WEBSITE_DATA (JSONB)
+   └─> EMIT(GITHUB_REPOS_SYNCED)
 
-4. RENDER (Module Themes)
-   ├─> Worker reçoit PORTFOLIO_GENERATED
-   ├─> Module appelle Core: GET /portfolios/:id
-   ├─> Module récupère la structure + contenu
+5. RENDER (Module Theme Engine)
+   ├─> Worker reçoit WEBSITE_PUBLISHED
+   ├─> Module appelle Core: GET /websites/:id + sections
+   ├─> Module récupère la structure + contenu + sections
    ├─> Module applique le thème
    ├─> Module génère data/sites/<slug>.json
-   └─> EMIT(PORTFOLIO_RENDERED)
+   └─> EMIT(WEBSITE_RENDERED)
 
-5. SERVE (Frontend Astro)
+6. SERVE (Frontend Astro)
    ├─> GET {slug}.asap.cool
    ├─> Astro lit data/sites/<slug>.json
    └─> Rendu utilisateur

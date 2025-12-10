@@ -2,7 +2,7 @@
   <img src="https://img.shields.io/badge/status-Backend%20Complete%20|%20Frontend%20In%20Progress-blue" alt="Status">
   <img src="https://img.shields.io/badge/license-Open--Core-blue" alt="License">
   <img src="https://img.shields.io/badge/rust-1.70+-orange" alt="Rust">
-  <img src="https://img.shields.io/badge/tests-79%20passing-green" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-100%2B%20passing-green" alt="Tests">
 </p>
 
 <h1 align="center">🚀 ASAP</h1>
@@ -44,9 +44,11 @@ Au lieu d'utiliser 10 outils différents (un pour les sites, un pour l'IA, un po
 
 | Élément | Gestion |
 |--------|---------|
-| **Sites & Portfolios** | Créer, publier, configurer des sites pour eux ou leurs clients |
+| **Sites Web** | Créer, publier, configurer des sites modulaires avec sections personnalisables |
 | **Utilisateurs & Clients** | Inviter, gérer, assigner des ressources |
-| **Modules** | Activer/désactiver les features (GitHub import, IA, Analytics, etc.) |
+| **Modules** | Activer/désactiver les features (GitHub Sync, Blog, Analytics, etc.) |
+| **Sections** | Hero, About, Projects, Skills, Contact, Blog, Gallery, etc. |
+| **Presets** | Templates prêts à l'emploi pour démarrer rapidement |
 | **Tokens IA** | Budget limité avec suivi par utilisateur/client |
 | **Stockage Cloud** | Quota d'espace partagé ou per-client |
 | **Statistiques** | Dashboards unifiées (visites, utilisations, coûts) |
@@ -105,8 +107,9 @@ Au lieu d'utiliser 10 outils différents (un pour les sites, un pour l'IA, un po
 
 Un endroit unique pour :
 - 👥 **Gérer utilisateurs/clients** : créer, inviter, assigner ressources et quotas
-- 📊 **Sites & Portfolios** : créer, publier, configurer, personnaliser par client
-- 🔧 **Modules activés** : voir et configurer les features disponibles
+- 🌐 **Sites Web modulaires** : créer avec sections personnalisables (Hero, About, Projects, etc.)
+- 📦 **Presets** : démarrer rapidement avec des templates prédéfinis
+- 🔧 **Modules activés** : GitHub Sync, Blog Engine, Contact Form, Analytics, Theme Engine
 - 💾 **Stockage Cloud** : upload, gestion des assets, quota par utilisateur/client
 - 🤖 **Budget IA** : tokens limités, suivi par utilisation, partage entre utilisateurs
 - 📈 **Statistiques** : dashboards unifiées (visites, coûts, utilisation, revenu)
@@ -117,6 +120,7 @@ Un endroit unique pour :
 
 - ✅ **Multi-tenant** : isolation complète par tenant_id, RLS en base
 - ✅ **Authentification** : JWT, OAuth (GitHub), 2FA optionnel
+- ✅ **Architecture modulaire** : Websites → Sections → Modules
 - ✅ **Gestion des quotas** : IA tokens, stockage, sites par utilisateur
 - ✅ **Event-driven** : Core → Modules via événements persistés
 - ✅ **Facturations** : tracking usage, projections de coûts, webhooks
@@ -126,12 +130,31 @@ Un endroit unique pour :
 
 | Module | Description | Usage |
 |--------|-------------|-------|
-| **Sites** | Créer/publier sites statiques rapides (GitHub import, custom domains) | Core product |
-| **IA** | Text generation, image gen, SEO optimization avec budget tokens | Premium |
-| **Analytics** | Page views, user tracking, conversion funnels, heatmaps | Premium |
+| **GitHub Sync** | Import automatique des projets depuis GitHub | Integration |
+| **Blog Engine** | Blog complet avec posts et catégories | Content |
+| **Contact Form** | Formulaire de contact avec protection spam | Engagement |
+| **Analytics Tracker** | Tracking des visites et comportements | Analytics |
+| **Theme Engine** | Thèmes personnalisables et styles | Appearance |
 | **Cloud Storage** | File hosting, CDN delivery, quota management | Per-client |
-| **Themes** | Pre-built designs, custom CSS, publishing | Free + Premium |
-| **Intégrations** | GitHub sync, API access, webhooks, Zapier/Make | Core |
+
+### Types de Sections
+
+| Section | Description | Layouts disponibles |
+|---------|-------------|---------------------|
+| **Hero** | Section d'accueil principale | Full |
+| **About** | Présentation personnelle/entreprise | Split, Full |
+| **Projects** | Portfolio de projets | Grid, Cards |
+| **Skills** | Compétences techniques | Grid, List |
+| **Experience** | Parcours professionnel | Timeline, List |
+| **Education** | Formation | Timeline, List |
+| **Contact** | Formulaire de contact | Full, Split |
+| **Blog** | Articles de blog | List, Grid |
+| **Gallery** | Galerie d'images | Grid |
+| **Testimonials** | Témoignages clients | Cards |
+| **Services** | Services proposés | Cards, Grid |
+| **Pricing** | Grille tarifaire | Cards |
+| **FAQ** | Questions fréquentes | List |
+| **Custom** | Section personnalisée | Tous |
 
 ---
 
@@ -152,27 +175,29 @@ Frontend (Astro)
 │  │  Gestion Centralisée                                     │
 │  │  • Auth & Users (email, password)                        │
 │  │  • User Data (GitHub username, tokens, prefs)           │
-│  │  • Portfolios (structure: slug, title, tagline)         │
-│  │  • Portfolio Data (JSONB - contenu généré par modules)  │
+│  │  • Websites (structure: slug, title, sections)          │
+│  │  • Website Sections (Hero, About, Projects, etc.)       │
+│  │  • Website Modules (activated per website)              │
+│  │  • Presets (templates prédéfinis)                       │
 │  │  • Events (USER_CREATED, INTEGRATION_ADDED, etc.)       │
-│  │  • Module Registry & Config                              │
+│  │  • Module Catalog & Config                               │
 │  └──────────────────────────────────────────────────────────┘
 └─────────────────────────────────────────────────────────────┘
     ↑                                   ↑
-    │ GET /users/:id/data             │ POST /events
-    │ PUT /portfolios/:id/data        │ (modules écoutent)
-    │ PATCH integrations              │
+    │ GET /websites/:id/sections       │ POST /events
+    │ PATCH /websites/:id/data         │ (modules écoutent)
+    │ PATCH integrations               │
     │                                   │
     │ Modules                           Worker
     ├──────────────────────────────────┤
-    │                                   ├─→ github-generator
-    │ • github-generator                ├─→ ai-generator
-    │ • ai-generator                    ├─→ theme-renderer
-    │ • themes                          └─→ analytics
-    │ • analytics                   (exécute les modules)
-    │ • projections
+    │                                   ├─→ github-sync
+    │ • github-sync                     ├─→ blog-engine
+    │ • blog-engine                     ├─→ theme-engine
+    │ • theme-engine                    └─→ analytics-tracker
+    │ • analytics-tracker          (exécute les modules)
+    │ • contact-form
     │
-    └─→ Résultats → portfolio_data (JSONB du core)
+    └─→ Résultats → website_data (JSONB du core)
          ↓
       data/sites/<slug>.json (projection)
          ↓
@@ -183,8 +208,10 @@ Frontend (Astro)
 
 | Aspect | Description |
 |--------|-------------|
-| **Core = Structure** | Données utilisateur, isolation multi-tenant, événements |
-| **Modules = Features** | Chaque module implémente une fonctionnalité (GitHub, IA, rendu, etc.) |
+| **Core = Structure** | Données utilisateur, websites, sections, isolation multi-tenant, événements |
+| **Modules = Features** | Chaque module implémente une fonctionnalité (GitHub Sync, Blog, Analytics, etc.) |
+| **Sections = Contenu** | Blocs de contenu modulaires avec types et layouts configurables |
+| **Presets = Templates** | Configurations prédéfinies pour créer rapidement des sites |
 | **Données centralisées** | Les données utilisateur vivent dans le core, modules les consomment dynamiquement |
 | **Event-driven** | Les modules réagissent aux événements du core |
 | **CQRS lite** | Projections locales pour les lectures publiques, Core API pour les écritures |
@@ -206,7 +233,8 @@ Frontend (Astro)
 | Décision | Contexte | Alternative rejetée |
 |----------|----------|---------------------|
 | **Rust backend** | Performances et sécurité mémoire critiques | Node.js (CPU), Go (typage), PHP (async) |
-| **Projections locales** | Milliers de portfolios à servir rapidement | Lecture directe PostgreSQL |
+| **Architecture Website/Sections** | Flexibilité et modularité du contenu | Structure portfolio rigide |
+| **Projections locales** | Milliers de sites à servir rapidement | Lecture directe PostgreSQL |
 | **Monorepo open-core** | Contributions externes + modules premium | Multi-repos (complexité) |
 
 ---
@@ -216,25 +244,25 @@ Frontend (Astro)
 ```
 asap/
 ├── core/                          # Core API (open-source)
-│   ├── domain/                    # Types et structures
+│   ├── domain/                    # Types et structures (Website, Section, Module)
 │   ├── api/                       # Routes HTTP
-│   └── schemas/                   # JSON schemas
+│   └── shared/                    # Utilitaires partagés (config, auth, errors)
 │
 ├── modules/                       # Modules (fonctionnalités)
 │   ├── github-generator/          # Import GitHub
-│   ├── ai-generator/              # Génération IA
 │   ├── themes/                    # Thèmes de rendu
-│   └── analytics/                 # Analytics
+│   ├── analytics/                 # Analytics
+│   └── projections/               # Génération projections
 │
 ├── apps/                          # Applications
 │   ├── api/                       # Core API executable
 │   ├── worker/                    # Module task executor
-│   └── web/                       # Frontend Astro
+│   └── web/                       # Frontend Astro (React + TypeScript)
 │
 ├── infra/                         # Infrastructure
 │   ├── docker-compose.yml
-│   ├── migrations/
-│   └── env.example/
+│   ├── migrations/                # 6 migrations SQL
+│   └── env.example
 │
 ├── data/                          # Runtime (non versionné)
 │   ├── sites/                     # Projections générées
@@ -247,10 +275,14 @@ asap/
 
 | Dossier | Responsabilité |
 |---------|-----------------|
-| `core/` | Gestion utilisateurs, data, portfolios, événements (open-source) |
-| `modules/` | Implémentent les features (GitHub, IA, rendering, etc.) |
+| `core/` | Gestion utilisateurs, websites, sections, modules, événements (open-source) |
+| `core/domain/` | Types métier: Website, WebsiteSection, WebsiteModule, Preset, etc. |
+| `core/shared/` | Configuration centralisée, JWT, gestion des erreurs |
+| `modules/` | Implémentent les features (GitHub, Themes, Analytics, Projections) |
 | `apps/api/` | Core API executable (Rust) |
 | `apps/worker/` | Event processor et module executor (Rust) |
+| `apps/web/` | Frontend dashboard + pages publiques (Astro + React) |
+| `infra/` | Docker, migrations, configuration |
 | `apps/web/` | Frontend dashboard + pages publiques (Astro) |
 | `infra/` | Docker, migrations, configuration |
 
@@ -307,7 +339,7 @@ cd apps/web && npm install && npm run dev
 | Landing | http://localhost:4321 |
 | Dashboard | http://localhost:4321/app |
 | API | http://localhost:3000 |
-| Portfolio public | http://{slug}.localhost:4321 (en local) / `{slug}.asap.cool` (prod) |
+| Site public | http://{slug}.localhost:4321 (en local) / `{slug}.asap.cool` (prod) |
 
 ---
 
@@ -316,21 +348,21 @@ cd apps/web && npm install && npm run dev
 ### Authentification
 
 #### `POST /auth/signup`
-Crée un utilisateur, un tenant et un site par défaut.
+Crée un utilisateur, un tenant et un website par défaut.
 
 ```json
 // Request
 {
   "email": "dev@example.com",
   "password": "securepassword",
-  "slug": "mon-portfolio"
+  "slug": "mon-site"
 }
 
 // Response 201
 {
   "token": "eyJhbG...",
   "user": { "id": "uuid", "email": "dev@example.com" },
-  "site": { "slug": "mon-portfolio" }
+  "website": { "slug": "mon-site" }
 }
 ```
 
@@ -345,59 +377,168 @@ Authentifie et retourne un JWT.
 { "token": "eyJhbG..." }
 ```
 
-### Sites (authentifié)
+### Websites (authentifié)
 
-#### `GET /me/site`
-Retourne la configuration du site de l'utilisateur.
+#### `GET /websites`
+Liste tous les websites du tenant.
+
+```json
+// Response 200
+[
+  {
+    "id": "uuid",
+    "slug": "mon-site",
+    "title": "John Doe",
+    "tagline": "Développeur Full-Stack",
+    "status": "draft",
+    "creation_mode": "from_preset",
+    "preset_id": "uuid"
+  }
+]
+```
+
+#### `GET /websites/:id`
+Retourne un website avec ses données.
 
 ```json
 // Response 200
 {
   "id": "uuid",
-  "slug": "mon-portfolio",
+  "slug": "mon-site",
   "status": "draft",
-  "config": { /* SiteConfig */ },
-  "published_config": null,
   "title": "John Doe",
   "tagline": "Développeur Full-Stack",
-  "github_username": "johndoe"
+  "creation_mode": "from_preset",
+  "metadata": {},
+  "data": {}
 }
 ```
 
-#### `PUT /me/site`
-Met à jour les informations du site.
+#### `PUT /websites/:id`
+Met à jour les informations du website.
 
 ```json
 // Request
 {
   "title": "John Doe",
-  "tagline": "Senior Developer",
-  "github_username": "johndoe"
+  "tagline": "Senior Developer"
 }
 ```
 
-#### `POST /me/site/generate-from-github`
-Importe les projets depuis GitHub.
+### Sections (authentifié)
 
-```json
-// Request
-{ "github_username": "johndoe" }
-
-// Response 200 - Nouvelle config avec projets importés
-```
-
-#### `POST /me/site/publish`
-Publie le site et le rend accessible publiquement.
+#### `GET /websites/:id/sections`
+Liste les sections d'un website.
 
 ```json
 // Response 200
-{ "message": "Site published", "status": "published" }
+[
+  {
+    "id": "uuid",
+    "section_type": "hero",
+    "slug": "hero",
+    "title": "Welcome",
+    "order": 0,
+    "layout": "full",
+    "visible": true
+  },
+  {
+    "id": "uuid",
+    "section_type": "projects",
+    "slug": "projects",
+    "title": "My Projects",
+    "order": 1,
+    "layout": "grid",
+    "visible": true
+  }
+]
+```
+
+#### `POST /websites/:id/sections`
+Crée une nouvelle section.
+
+```json
+// Request
+{
+  "section_type": "about",
+  "slug": "about",
+  "title": "About Me",
+  "order": 2,
+  "layout": "split"
+}
+```
+
+#### `POST /websites/:id/sections/reorder`
+Réordonne les sections.
+
+```json
+// Request
+{
+  "section_ids": ["uuid1", "uuid2", "uuid3"]
+}
+```
+
+### Modules (authentifié)
+
+#### `GET /modules/catalog`
+Liste les modules disponibles dans le catalogue.
+
+#### `GET /websites/:id/modules`
+Liste les modules activés pour un website.
+
+#### `POST /websites/:id/modules`
+Active un module pour un website.
+
+```json
+// Request
+{
+  "module_id": "uuid",
+  "settings": { "auto_sync": true }
+}
+```
+
+### Presets
+
+#### `GET /presets`
+Liste les templates disponibles.
+
+```json
+// Response 200
+[
+  {
+    "id": "uuid",
+    "name": "Developer Portfolio",
+    "slug": "developer-portfolio",
+    "description": "Perfect for developers",
+    "category": "professional"
+  }
+]
+```
+
+#### `POST /websites/from-preset`
+Crée un website à partir d'un preset.
+
+```json
+// Request
+{
+  "preset_id": "uuid",
+  "slug": "mon-site",
+  "title": "Mon Site"
+}
+```
+
+#### `POST /websites/:id/publish`
+Publie le website et le rend accessible publiquement.
+
+```json
+// Response 200
+{ "message": "Website published", "status": "published" }
 ```
 
 ### Public
 
-#### `GET /api/public/site/:slug`
-Fallback pour récupérer un site publié (si projection absente).
+#### `GET /public/websites/:slug`
+Récupère un website publié (fallback si projection absente).
 
 ---
 
@@ -410,12 +551,27 @@ User signup
     ↓
 POST /auth/signup
     ↓
-Core crée user, tenant, portfolio
+Core crée user, tenant, website (avec preset par défaut)
     ↓
 Redirige vers dashboard
 ```
 
-### 2. Configuration GitHub (Core + Module)
+### 2. Choix du Preset (Core)
+
+```
+User sélectionne un preset (Developer Portfolio, Blog, etc.)
+    ↓
+POST /websites/from-preset
+    ↓
+Core crée website avec:
+  • Modules pré-activés
+  • Sections pré-configurées
+  • Settings par défaut
+    ↓
+Dashboard affiche le site avec ses sections
+```
+
+### 3. Configuration GitHub (Core + Module)
 
 ```
 User fournit GitHub username
@@ -424,27 +580,39 @@ PUT /users/:id/integrations/github
     ↓
 Core émet USER_INTEGRATION_ADDED
     ↓
-GitHubGenerator module exécuté :
+GitHub Sync module exécuté :
   • Lit user_data.integrations depuis Core
   • Appelle GitHub API
-  • PATCH /portfolios/:id/data (stocke contenu)
+  • PATCH /websites/:id/data (stocke contenu)
 ```
 
-### 3. Publication + Rendering (Core + Theme Module)
+### 4. Personnalisation des Sections (Core)
+
+```
+User modifie les sections
+    ↓
+PATCH /websites/:id/sections/:section_id
+    ↓
+Core met à jour section_data
+    ↓
+Preview en temps réel
+```
+
+### 5. Publication + Rendering (Core + Theme Module)
 
 ```
 User clique "Publier"
     ↓
-POST /portfolios/:id/publish
+POST /websites/:id/publish
     ↓
-Core émet PORTFOLIO_PUBLISHED
+Core émet WEBSITE_PUBLISHED
     ↓
 Theme module exécuté :
-  • GET /portfolios/:id (contenu du core)
+  • GET /websites/:id (contenu + sections)
   • Applique thème
   • Génère data/sites/<slug>.json
     ↓
-Projection prête → portfolio public accessible
+Projection prête → site public accessible
 ```
 
 ---
@@ -458,11 +626,13 @@ Projection prête → portfolio public accessible
 | `users` | Profil utilisateur (email, password_hash) |
 | `tenants` | Isolation multi-tenant |
 | `user_data` | Données étendues (GitHub username, tokens, preferences) |
-| `portfolios` | Structure portfolio (slug, title, tagline, status) |
-| `portfolio_data` | Contenu généré par les modules (JSONB) |
-| `events` | Événements système (USER_CREATED, INTEGRATION_ADDED, etc.) |
-| `modules` | Registry des modules disponibles |
-| `module_configs` | Configuration per-tenant des modules |
+| `websites` | Structure du site (slug, title, tagline, status, creation_mode) |
+| `website_data` | Contenu généré par les modules (JSONB) |
+| `website_sections` | Sections du site (Hero, About, Projects, etc.) |
+| `website_modules` | Modules activés par website |
+| `presets` | Templates prédéfinis |
+| `modules` | Catalogue des modules disponibles |
+| `events` | Événements système (USER_CREATED, WEBSITE_PUBLISHED, etc.) |
 
 ### Flux de données
 
@@ -475,12 +645,16 @@ User Data (Core)
 
     ↓ Modules lisent via API
 
-Modules (GitHub Generator, etc.)
-    ↓ Écrivent contenu générés
+Website (Core)
+├─ Structure (slug, title, status)
+├─ Sections (Hero, About, Projects, Contact...)
+└─ Activated Modules (GitHub Sync, Analytics...)
 
-Portfolio Data (Core JSONB)
-├─ projects
-├─ links
+    ↓ Modules écrivent contenu
+
+Website Data (Core JSONB)
+├─ projects (from GitHub)
+├─ posts (from Blog)
 └─ (autres données modulaires)
 
     ↓ Theme Module lit et applique
@@ -488,21 +662,23 @@ Portfolio Data (Core JSONB)
 Projection (data/sites/<slug>.json)
     ↓ Frontend lit
 
-Public Portfolio
+Site Public
 ```
 
 ---
 
 ## 🗺 Roadmap
 
-### ✅ Phase 1-3 - Backend Core (Terminé) 
+### ✅ Phase 1-4 - Backend Core + Architecture Website (Terminé) 
 
-> **Statut :** Backend complet et optimisé - Dépassé les objectifs initiaux
+> **Statut :** Backend complet avec architecture Website/Sections modulaire
 
-- [x] **Core API** (auth, multi-tenant, users, portfolios, quotas, events)
+- [x] **Core API** (auth, multi-tenant, users, websites, sections, modules, events)
   - [x] Authentification JWT complète
   - [x] Gestion utilisateurs et tenants
-  - [x] CRUD portfolios complet
+  - [x] Architecture Website avec Sections modulaires
+  - [x] Système de Presets (templates prédéfinis)
+  - [x] Catalogue de Modules activables par website
   - [x] Système d'événements avec retry
   - [x] Intégrations (GitHub)
   - [x] File storage avec quotas
@@ -512,32 +688,39 @@ Public Portfolio
   - [x] Module executor framework
   - [x] Retry mechanism avancé
 - [x] **Modules initiaux**
-  - [x] GitHub Generator (import repos)
-  - [x] Theme renderer (système complet)
+  - [x] GitHub Sync (import repos)
+  - [x] Theme Engine (système complet)
   - [x] Projections (génération JSON)
-  - [x] Analytics (tracking événements)
+  - [x] Analytics Tracker (tracking événements)
+  - [x] Blog Engine (structure)
+  - [x] Contact Form (structure)
 - [x] **Optimisations avancées**
-  - [x] Redis caching pour portfolios publics
+  - [x] Redis caching pour sites publics
   - [x] Compression multi-format (gzip, brotli, zstd)
   - [x] Parallel event processing
   - [x] Query optimization avec indexes
   - [x] File storage avec audit trail
 
-**📊 Métriques:** 79 tests unitaires | ~8,000 lignes Rust | 4 migrations SQL
+**📊 Métriques:** 100+ tests unitaires | ~12,000 lignes Rust | 6 migrations SQL
 
 ### 🔨 Phase Actuelle - Frontend & UX (En cours)
 
 > **Focus :** Rendre le MVP utilisable avec interface web complète
 
-- [ ] **Dashboard principal (Astro)**
-  - [ ] Landing page et authentification
+- [x] **Setup Frontend (Astro + React)**
+  - [x] Landing page
+  - [x] Pages signup/login
+  - [x] Client API TypeScript
+  - [x] Store d'authentification
+- [ ] **Dashboard principal**
   - [ ] Dashboard utilisateur
-  - [ ] Configuration GitHub
-  - [ ] Gestion portfolios
+  - [ ] Sélecteur de Presets
+  - [ ] Éditeur de Sections
+  - [ ] Configuration modules
   - [ ] Upload fichiers
-  - [ ] Prévisualisation portfolio
+  - [ ] Prévisualisation website
 - [ ] **Pages publiques**
-  - [ ] Portfolio public ([slug])
+  - [ ] Website public ([slug])
   - [ ] SSG optimisé
 - [ ] **Tests E2E**
   - [ ] Scénarios utilisateur complets
@@ -548,11 +731,11 @@ Public Portfolio
 
 **🎯 Objectif:** MVP démontrable et utilisable
 
-### Phase 2 - Modules Avancés & Marketplace 📦
+### Phase Future - Modules Avancés & Marketplace 📦
 
 > **Focus :** Monétisation et écosystème de modules
 
-- [ ] AIGenerator module (text/image avec quotas tokens)
+- [ ] AI Generator module (text/image avec quotas tokens)
 - [ ] Analytics avancées (page views, heatmaps, funnels)
 - [ ] Custom domains (DNS + SSL automatique)
 - [ ] Module marketplace (thèmes payants, plugins)
@@ -560,7 +743,7 @@ Public Portfolio
 - [ ] Rate limiting global
 - [ ] Monitoring production (Prometheus/Grafana)
 
-### Phase 3 - Facturation & Enterprise 💳
+### Phase Future - Facturation & Enterprise 💳
 
 - [ ] Stripe integration (récurrent + usage-based)
 - [ ] Invoicing automatique
@@ -570,7 +753,7 @@ Public Portfolio
 - [ ] Multi-language support
 - [ ] Advanced permissions (RBAC)
 
-### Phase 4 - Scale & Global 🌍
+### Phase Future - Scale & Global 🌍
 
 - [ ] Edge rendering (Cloudflare Workers)
 - [ ] Custom modules SDK public

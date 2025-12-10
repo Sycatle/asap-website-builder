@@ -1,15 +1,15 @@
 # Spécification fonctionnelle du MVP - État Actuel
 
-**Dernière mise à jour:** 8 décembre 2024  
-**Statut:** Backend complet | Frontend à développer
+**Dernière mise à jour:** 10 décembre 2024  
+**Statut:** Backend complet avec architecture Website | Frontend en cours
 
 ---
 
 ## Objectif du MVP
 
-Permettre à un développeur ou étudiant de générer et publier un portfolio professionnel en **moins de 5 minutes** en utilisant son compte GitHub, avec un nombre minimal de champs obligatoires.
+Permettre à un développeur ou étudiant de générer et publier un site web professionnel en **moins de 5 minutes** en utilisant des templates prédéfinis (presets) et l'import GitHub, avec un nombre minimal de champs obligatoires.
 
-> **Important :** Le MVP se concentre uniquement sur le **CORE**. Les fonctionnalités viennent des **MODULES**.
+> **Important :** Le MVP utilise une architecture **Website → Sections → Modules** pour une flexibilité maximale.
 
 ---
 
@@ -22,14 +22,18 @@ Le core expose et implémente :
 - ✅ **Authentification** : signup, login, JWT avec middleware
 - ✅ **Gestion utilisateurs** : profil, email, password (bcrypt)
 - ✅ **Gestion data utilisateur** : intégrations (GitHub username, tokens) via JSONB
-- ✅ **Gestion portfolios** : structure (slug, title, tagline, status), CRUD complet
+- ✅ **Architecture Website** : 
+  - Websites avec création from_scratch ou from_preset
+  - Sections modulaires (Hero, About, Projects, Skills, Contact, Blog, etc.)
+  - Modules activables par website (GitHub Sync, Blog Engine, Analytics, etc.)
+  - Presets (templates prédéfinis)
 - ✅ **Événements** : création, polling, retry mechanism avec exponential backoff
 - ✅ **Multi-tenant** : isolation stricte par tenant_id + RLS PostgreSQL
-- ✅ **Module registry** : enregistrement, configuration per-tenant, activation/désactivation
+- ✅ **Module catalog** : catalogue de modules avec activation per-website
 
 **Bonus implémentés (non prévus initialement):**
 - ✅ File storage avec quotas utilisateurs
-- ✅ Redis caching pour portfolios publics
+- ✅ Redis caching pour sites publics
 - ✅ Compression automatique fichiers (gzip)
 - ✅ Audit trail complet
 - ✅ Query optimization avec indexes
@@ -45,17 +49,17 @@ Le core expose et implémente :
 
 ### ✅ Modules MVP - COMPLET (100%)
 
-#### Module GitHub Generator
+#### Module GitHub Sync
 - ✅ Récupère le `github_username` du `user_data` via Core API
 - ✅ Appelle GitHub API (repos publics)
 - ✅ Transforme les repos en contenu structuré
-- ✅ Stocke dans `portfolio_data` (JSONB)
+- ✅ Stocke dans `website_data` (JSONB)
 - ✅ Filtre forks et repos archivés
 - ✅ Tri par nombre d'étoiles
 - ✅ 13 tests unitaires
 
-#### Module Default Theme
-- ✅ Lit `portfolio_data` depuis Core
+#### Module Theme Engine
+- ✅ Lit `website_data` depuis Core
 - ✅ Applique le thème par défaut (couleurs, fonts, layouts)
 - ✅ Support thèmes personnalisés
 - ✅ Métadonnées de thème
@@ -67,42 +71,79 @@ Le core expose et implémente :
 - ✅ CRUD operations
 - ✅ 8 tests unitaires
 
-#### Module Analytics
+#### Module Analytics Tracker
 - ✅ Système de tracking d'événements
 - ✅ Structure d'événements détaillée
-- ✅ Tracking par portfolio
+- ✅ Tracking par website
 - ✅ 7 tests unitaires
 
-### ❌ Frontend Astro - NON DÉMARRÉ (0%)
+### 🔨 Frontend Astro - EN COURS (~30%)
 
-**BLOQUANT pour MVP utilisable**
+**En progression**
 
-- ❌ Landing page
-- ❌ Pages publiques portfolios ([slug])
-- ❌ Dashboard privé (auth, portfolio, files, settings)
-- ❌ Formulaires signup/login
-- ❌ Client API TypeScript
-- ❌ Preview portfolio
-- ❌ Gestion fichiers UI
+- ✅ Landing page
+- ✅ Pages signup/login
+- ✅ Client API TypeScript
+- ✅ Store d'authentification (Zustand)
+- [ ] Dashboard utilisateur complet
+- [ ] Sélecteur de Presets
+- [ ] Éditeur de Sections
+- [ ] Pages publiques websites ([slug])
+- [ ] Preview website
+- [ ] Gestion fichiers UI
 
 ---
 
-## Données du portfolio (Core)
+## Données du Website (Core)
 
-Le core gère la **structure** du portfolio :
+Le core gère la **structure** du website :
 
 | Champ | Type | Description | Statut |
 |-------|------|-------------|---------|
-| `id` | `UUID` | Identifiant unique du portfolio | ✅ Implémenté |
+| `id` | `UUID` | Identifiant unique du website | ✅ Implémenté |
 | `tenant_id` | `UUID` | Tenant propriétaire | ✅ Implémenté |
 | `slug` | `string` | URL-friendly slug | ✅ Implémenté |
 | `title` | `string` | Titre (ex. "John Doe") | ✅ Implémenté |
 | `tagline` | `string` | Sous-titre (ex. "Full-Stack Dev") | ✅ Implémenté |
 | `status` | `enum` | draft \| published | ✅ Implémenté |
+| `creation_mode` | `enum` | from_scratch \| from_preset | ✅ Implémenté |
+| `preset_id` | `UUID?` | Preset utilisé (si applicable) | ✅ Implémenté |
 | `metadata` | `JSONB` | SEO, settings générales | ✅ Implémenté |
-| `portfolio_data` | `JSONB` | **Contenu généré par les modules** | ✅ Implémenté |
 
-Le **contenu** du portfolio vit dans `portfolio_data` et est généré par les modules.
+## Sections du Website
+
+| Champ | Type | Description | Statut |
+|-------|------|-------------|---------|
+| `id` | `UUID` | Identifiant unique de la section | ✅ Implémenté |
+| `website_id` | `UUID` | Website parent | ✅ Implémenté |
+| `module_id` | `UUID?` | Module associé (optionnel) | ✅ Implémenté |
+| `section_type` | `enum` | hero, about, projects, skills, etc. | ✅ Implémenté |
+| `slug` | `string` | Slug de la section | ✅ Implémenté |
+| `title` | `string` | Titre de la section | ✅ Implémenté |
+| `order` | `int` | Ordre d'affichage | ✅ Implémenté |
+| `layout` | `enum` | full, split, grid, list, cards, timeline | ✅ Implémenté |
+| `settings` | `JSONB` | Configuration spécifique | ✅ Implémenté |
+| `data` | `JSONB` | Contenu de la section | ✅ Implémenté |
+| `visible` | `bool` | Visibilité de la section | ✅ Implémenté |
+
+### Types de Sections Disponibles
+
+- `hero` - Section d'accueil principale
+- `about` - Présentation personnelle/entreprise
+- `projects` - Portfolio de projets
+- `skills` - Compétences techniques
+- `experience` - Parcours professionnel
+- `education` - Formation
+- `contact` - Formulaire de contact
+- `blog` - Articles de blog
+- `gallery` - Galerie d'images
+- `testimonials` - Témoignages
+- `services` - Services proposés
+- `pricing` - Grille tarifaire
+- `faq` - Questions fréquentes
+- `custom` - Section personnalisée
+
+Le **contenu** du website vit dans les `sections` et `website_data`.
 
 ---
 
