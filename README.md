@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/status-MVP%20in%20development-yellow" alt="Status">
+  <img src="https://img.shields.io/badge/status-Backend%20Complete%20|%20Frontend%20In%20Progress-blue" alt="Status">
   <img src="https://img.shields.io/badge/license-Open--Core-blue" alt="License">
   <img src="https://img.shields.io/badge/rust-1.70+-orange" alt="Rust">
-  <img src="https://img.shields.io/badge/astro-4.x-blueviolet" alt="Astro">
+  <img src="https://img.shields.io/badge/tests-79%20passing-green" alt="Tests">
 </p>
 
 <h1 align="center">🚀 ASAP</h1>
@@ -495,48 +495,89 @@ Public Portfolio
 
 ## 🗺 Roadmap
 
-### Phase 1 - Core MVP + Dashboard (En cours) 🔨
+### ✅ Phase 1-3 - Backend Core (Terminé) 
 
-> **Focus :** Core API robuste + Dashboard pour gérer users, clients, sites et quotas
+> **Statut :** Backend complet et optimisé - Dépassé les objectifs initiaux
 
-- [ ] Core API (auth, multi-tenant, users, portfolios, quotas, events)
-- [ ] Worker (event processor + module executor)
-- [ ] Dashboard principal (Astro)
-  - [ ] Gestion utilisateurs/clients (invitations, permissions)
-  - [ ] Gestion sites/portfolios
-  - [ ] Vue quotas et budgets (IA tokens, stockage)
-  - [ ] Facturation et usage tracking
-- [ ] Modules initiaux
-  - [ ] GitHub Generator (import repos)
-  - [ ] Theme renderer (sites statiques)
-- [ ] Authentification (JWT, OAuth GitHub)
+- [x] **Core API** (auth, multi-tenant, users, portfolios, quotas, events)
+  - [x] Authentification JWT complète
+  - [x] Gestion utilisateurs et tenants
+  - [x] CRUD portfolios complet
+  - [x] Système d'événements avec retry
+  - [x] Intégrations (GitHub)
+  - [x] File storage avec quotas
+- [x] **Worker** (event processor + module executor)
+  - [x] Event processor avec polling
+  - [x] Traitement parallèle des événements
+  - [x] Module executor framework
+  - [x] Retry mechanism avancé
+- [x] **Modules initiaux**
+  - [x] GitHub Generator (import repos)
+  - [x] Theme renderer (système complet)
+  - [x] Projections (génération JSON)
+  - [x] Analytics (tracking événements)
+- [x] **Optimisations avancées**
+  - [x] Redis caching pour portfolios publics
+  - [x] Compression multi-format (gzip, brotli, zstd)
+  - [x] Parallel event processing
+  - [x] Query optimization avec indexes
+  - [x] File storage avec audit trail
 
-### Phase 2 - Module Ecosystem & Quotas (Q2-Q3) 📦
+**📊 Métriques:** 79 tests unitaires | ~8,000 lignes Rust | 4 migrations SQL
 
-> **Focus :** Modules payants + système de quotas avancé
+### 🔨 Phase Actuelle - Frontend & UX (En cours)
 
-- [ ] AIGenerator module (tokens limités)
-- [ ] Analytics module (page views, tracking)
-- [ ] Cloud Storage module (fichiers, quota)
-- [ ] Quotas enforcement (rate limiting, usage tracking)
-- [ ] Module marketplace (thèmes, composants)
-- [ ] Advanced dashboard (graphs, KPIs)
+> **Focus :** Rendre le MVP utilisable avec interface web complète
 
-### Phase 3 - Facturation & Scaling (Q4) 💳
+- [ ] **Dashboard principal (Astro)**
+  - [ ] Landing page et authentification
+  - [ ] Dashboard utilisateur
+  - [ ] Configuration GitHub
+  - [ ] Gestion portfolios
+  - [ ] Upload fichiers
+  - [ ] Prévisualisation portfolio
+- [ ] **Pages publiques**
+  - [ ] Portfolio public ([slug])
+  - [ ] SSG optimisé
+- [ ] **Tests E2E**
+  - [ ] Scénarios utilisateur complets
+  - [ ] Tests d'intégration
+- [ ] **CI/CD**
+  - [ ] GitHub Actions
+  - [ ] Deploy automatique
+
+**🎯 Objectif:** MVP démontrable et utilisable
+
+### Phase 2 - Modules Avancés & Marketplace 📦
+
+> **Focus :** Monétisation et écosystème de modules
+
+- [ ] AIGenerator module (text/image avec quotas tokens)
+- [ ] Analytics avancées (page views, heatmaps, funnels)
+- [ ] Custom domains (DNS + SSL automatique)
+- [ ] Module marketplace (thèmes payants, plugins)
+- [ ] Advanced dashboard (graphs, KPIs temps réel)
+- [ ] Rate limiting global
+- [ ] Monitoring production (Prometheus/Grafana)
+
+### Phase 3 - Facturation & Enterprise 💳
 
 - [ ] Stripe integration (récurrent + usage-based)
-- [ ] Invoicing system
-- [ ] Webhooks & API access (Team+)
-- [ ] Self-hosted licensing (Enterprise)
-- [ ] Multi-language support
-
-### Phase 4 - Enterprise & Global (Y2+) 🌍
-
-- [ ] Advanced permission system
-- [ ] Custom modules SDK
-- [ ] Edge rendering (Cloudflare)
-- [ ] International expansion
+- [ ] Invoicing automatique
+- [ ] Webhooks publics & API access
+- [ ] Self-hosted licensing
 - [ ] White-label options
+- [ ] Multi-language support
+- [ ] Advanced permissions (RBAC)
+
+### Phase 4 - Scale & Global 🌍
+
+- [ ] Edge rendering (Cloudflare Workers)
+- [ ] Custom modules SDK public
+- [ ] Mobile app (React Native)
+- [ ] International expansion
+- [ ] Enterprise features (SSO, audit logs)
+- [ ] Partnerships & intégrations
 
 ---
 

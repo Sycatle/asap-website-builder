@@ -22,7 +22,7 @@ CREATE INDEX idx_files_created_at ON files(created_at);
 CREATE TABLE user_storage_quota (
     user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     total_size_used BIGINT NOT NULL DEFAULT 0,
-    quota_limit BIGINT NOT NULL DEFAULT 1073741824, -- 1 GB
+    quota_limit BIGINT NOT NULL DEFAULT 52428800, -- 50 MB (plan standard)
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

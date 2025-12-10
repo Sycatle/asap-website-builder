@@ -64,7 +64,7 @@ pub struct UserStorageQuota {
 }
 
 impl UserStorageQuota {
-    pub const DEFAULT_QUOTA: i64 = 1_073_741_824; // 1 GB in bytes
+    pub const DEFAULT_QUOTA: i64 = 52_428_800; // 50 MB in bytes (plan standard)
 
     pub fn new(user_id: Uuid) -> Self {
         Self {
