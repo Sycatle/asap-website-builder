@@ -250,7 +250,7 @@ pub async fn execute_module_action(
                 Ok(_) => {
                     tracing::info!("GitHub sync requested for website {}", website_id);
                     (StatusCode::OK, Json(serde_json::json!({
-                        "message": "Synchronisation GitHub lancée",
+                        "message": "GitHub synchronization started",
                         "status": "pending"
                     }))).into_response()
                 }

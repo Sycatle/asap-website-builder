@@ -347,7 +347,7 @@ pub async fn execute_tenant_module_action(
                 Ok(_) => {
                     tracing::info!("GitHub sync requested for tenant {}", tenant_id);
                     (StatusCode::OK, Json(serde_json::json!({
-                        "message": "Synchronisation GitHub lancée",
+                        "message": "GitHub synchronization started",
                         "status": "pending"
                     }))).into_response()
                 }
