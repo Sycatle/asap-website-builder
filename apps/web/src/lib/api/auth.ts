@@ -3,7 +3,7 @@ import { apiClient } from './client';
 export interface SignupRequest {
   email: string;
   password: string;
-  website_slug: string;
+  portfolio_slug: string;  // Backend still uses 'portfolio_slug'
 }
 
 export interface SignupResponse {

@@ -2,6 +2,7 @@ import { apiClient } from './client';
 
 export interface Website {
   id: string;
+  tenant_id: string;  // Backend includes tenant_id in response
   slug: string;
   title: string;
   tagline: string;

@@ -6,8 +6,8 @@ export interface Module {
   slug: string;
   version: string;
   description: string;
-  enabled: boolean;
-  configured?: boolean; // True if the module is configured for this website
+  category: string;  // Backend includes category field
+  default_settings: Record<string, any>;  // Backend includes default_settings
 }
 
 export interface WebsiteModule {
@@ -15,10 +15,10 @@ export interface WebsiteModule {
   website_id: string;
   module_id: string;
   module_name: string;
+  module_slug: string;  // Backend includes module_slug
   settings: Record<string, any>;
   enabled: boolean;
-  created_at?: string;
-  updated_at?: string;
+  activated_at: string;  // Backend uses 'activated_at' not 'created_at'
 }
 
 export interface ActivateModuleRequest {

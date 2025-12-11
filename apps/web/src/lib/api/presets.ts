@@ -6,9 +6,8 @@ export interface Preset {
   slug: string;
   description: string;
   category: string; // 'professional', 'creative', 'business', 'blog', etc.
-  preview_image?: string;
+  thumbnail_url?: string;  // Backend uses 'thumbnail_url' not 'preview_image'
   config: Record<string, any>;
-  created_at?: string;
 }
 
 export interface CreateWebsiteFromPresetRequest {

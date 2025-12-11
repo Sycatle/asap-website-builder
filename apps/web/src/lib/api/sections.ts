@@ -3,6 +3,7 @@ import { apiClient } from './client';
 export interface Section {
   id: string;
   website_id: string;
+  module_id?: string;  // Backend includes optional module_id
   section_type: string; // 'hero', 'about', 'projects', 'skills', 'contact', etc.
   slug: string;
   title: string;
