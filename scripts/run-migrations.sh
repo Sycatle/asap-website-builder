@@ -71,13 +71,14 @@ compute_checksum() {
 # Function to extract version from filename
 extract_version() {
     local filename="$1"
-    echo "$filename" | grep -oE '^[0-9]+' | head -1
+    echo "$filename" | grep -oE '^[0-9]+'
 }
 
-# Function to extract description from filename
+# Function to extract description from filename (sanitized for SQL)
 extract_description() {
     local filename="$1"
-    echo "$filename" | sed 's/^[0-9]*_//' | sed 's/\.sql$//' | tr '_' ' '
+    # Extract description and sanitize it by replacing single quotes with double single quotes for SQL safety
+    echo "$filename" | sed 's/^[0-9]*_//' | sed 's/\.sql$//' | tr '_' ' ' | sed "s/'/''/g"
 }
 
 # Run migrations
@@ -107,7 +108,7 @@ for migration_file in "$MIGRATIONS_DIR"/*.sql; do
     migration_count=$((migration_count + 1))
     
     # Check if migration was already applied
-    already_applied=$(psql "$DATABASE_URL" -t -c "SELECT 1 FROM _sqlx_migrations WHERE version = $version LIMIT 1;" 2>/dev/null | tr -d ' ')
+    already_applied=$(psql "$DATABASE_URL" -t -c "SELECT 1 FROM _sqlx_migrations WHERE version = $version LIMIT 1;" 2>/dev/null | xargs)
     
     if [ "$already_applied" = "1" ]; then
         echo -e "  ${GREEN}✓${NC} $filename (already applied)"
@@ -125,11 +126,11 @@ for migration_file in "$MIGRATIONS_DIR"/*.sql; do
         end_time=$(date +%s%N)
         execution_time=$(( (end_time - start_time) / 1000000 )) # Convert to milliseconds
         
-        # Record successful migration
-        psql "$DATABASE_URL" -c "
-            INSERT INTO _sqlx_migrations (version, description, success, checksum, execution_time)
-            VALUES ($version, '$description', true, decode('$checksum', 'base64'), $execution_time);
-        " > /dev/null 2>&1
+        # Record successful migration using parameterized approach via heredoc
+        psql "$DATABASE_URL" > /dev/null 2>&1 <<EOF
+INSERT INTO _sqlx_migrations (version, description, success, checksum, execution_time)
+VALUES ($version, '$description', true, decode('$checksum', 'base64'), $execution_time);
+EOF
         
         echo -e "    ${GREEN}✓${NC} Applied successfully (${execution_time}ms)"
         applied_count=$((applied_count + 1))
@@ -138,11 +139,11 @@ for migration_file in "$MIGRATIONS_DIR"/*.sql; do
         end_time=$(date +%s%N)
         execution_time=$(( (end_time - start_time) / 1000000 ))
         
-        psql "$DATABASE_URL" -c "
-            INSERT INTO _sqlx_migrations (version, description, success, checksum, execution_time)
-            VALUES ($version, '$description', false, decode('$checksum', 'base64'), $execution_time)
-            ON CONFLICT (version) DO UPDATE SET success = false;
-        " > /dev/null 2>&1 || true
+        psql "$DATABASE_URL" > /dev/null 2>&1 <<EOF || true
+INSERT INTO _sqlx_migrations (version, description, success, checksum, execution_time)
+VALUES ($version, '$description', false, decode('$checksum', 'base64'), $execution_time)
+ON CONFLICT (version) DO UPDATE SET success = false;
+EOF
         
         echo -e "    ${RED}✗${NC} Migration failed!"
         echo -e "${RED}Error applying migration: $filename${NC}"

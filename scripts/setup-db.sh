@@ -66,7 +66,7 @@ fi
 
 # Verify tables were created
 echo "Verifying tables..."
-TABLE_COUNT=$(docker exec asap-postgres psql -U asap -d asap -tc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null | tr -d ' ')
+TABLE_COUNT=$(docker exec asap-postgres psql -U asap -d asap -tc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null | xargs)
 echo -e "${GREEN}✓ Found $TABLE_COUNT tables${NC}"
 
 # Enable RLS if needed
