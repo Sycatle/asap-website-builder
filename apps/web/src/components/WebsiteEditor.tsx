@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { websitesAPI, authAPI, type Website, type UpdateWebsiteRequest } from '../lib/api';
 
-export default function PortfolioEditor() {
-  const [portfolio, setPortfolio] = useState<Website | null>(null);
+export default function WebsiteEditor() {
+  const [website, setWebsite] = useState<Website | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -13,21 +13,21 @@ export default function PortfolioEditor() {
   const [githubUsername, setGithubUsername] = useState('');
 
   useEffect(() => {
-    loadPortfolio();
+    loadWebsite();
   }, []);
 
-  const loadPortfolio = async () => {
+  const loadWebsite = async () => {
     try {
       const websites = await websitesAPI.list();
       if (websites.length > 0) {
-        const p = websites[0];
-        setPortfolio(p);
-        setTitle(p.title || '');
-        setTagline(p.tagline || '');
+        const w = websites[0];
+        setWebsite(w);
+        setTitle(w.title || '');
+        setTagline(w.tagline || '');
       }
     } catch (error) {
-      console.error('Failed to load portfolio:', error);
-      setMessage({ type: 'error', text: 'Erreur lors du chargement du portfolio' });
+      console.error('Failed to load website:', error);
+      setMessage({ type: 'error', text: 'Erreur lors du chargement du site' });
     } finally {
       setIsLoading(false);
     }
@@ -35,20 +35,20 @@ export default function PortfolioEditor() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!portfolio) return;
+    if (!website) return;
 
     setIsSaving(true);
     setMessage(null);
 
     try {
       const data: UpdateWebsiteRequest = { title, tagline };
-      await websitesAPI.update(portfolio.id, data);
-      setMessage({ type: 'success', text: 'Portfolio mis à jour avec succès !' });
+      await websitesAPI.update(website.id, data);
+      setMessage({ type: 'success', text: 'Site mis à jour avec succès !' });
       
-      // Reload portfolio
-      await loadPortfolio();
+      // Reload website
+      await loadWebsite();
     } catch (error) {
-      console.error('Failed to save portfolio:', error);
+      console.error('Failed to save website:', error);
       setMessage({ type: 'error', text: 'Erreur lors de la sauvegarde' });
     } finally {
       setIsSaving(false);
@@ -56,17 +56,17 @@ export default function PortfolioEditor() {
   };
 
   const handlePublish = async () => {
-    if (!portfolio) return;
+    if (!website) return;
 
     setIsSaving(true);
     setMessage(null);
 
     try {
-      await websitesAPI.publish(portfolio.id);
-      setMessage({ type: 'success', text: 'Portfolio publié avec succès !' });
-      await loadPortfolio();
+      await websitesAPI.publish(website.id);
+      setMessage({ type: 'success', text: 'Site publié avec succès !' });
+      await loadWebsite();
     } catch (error) {
-      console.error('Failed to publish portfolio:', error);
+      console.error('Failed to publish website:', error);
       setMessage({ type: 'error', text: 'Erreur lors de la publication' });
     } finally {
       setIsSaving(false);
@@ -75,7 +75,7 @@ export default function PortfolioEditor() {
 
   const handleGitHubConnect = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!portfolio || !githubUsername.trim()) return;
+    if (!website || !githubUsername.trim()) return;
 
     setIsSaving(true);
     setMessage(null);
@@ -106,10 +106,10 @@ export default function PortfolioEditor() {
     );
   }
 
-  if (!portfolio) {
+  if (!website) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600">Aucun portfolio trouvé</p>
+        <p className="text-gray-600">Aucun site trouvé</p>
       </div>
     );
   }
@@ -119,20 +119,20 @@ export default function PortfolioEditor() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Mon Portfolio</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Mon Site</h1>
           <p className="mt-2 text-gray-600">
-            Personnalisez les informations de votre portfolio
+            Personnalisez les informations de votre site
           </p>
         </div>
         <div className="flex items-center gap-3">
           <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-            portfolio.status === 'published' 
+            website.status === 'published' 
               ? 'bg-green-100 text-green-800' 
               : 'bg-yellow-100 text-yellow-800'
           }`}>
-            {portfolio.status === 'published' ? '● Publié' : '○ Brouillon'}
+            {website.status === 'published' ? '● Publié' : '○ Brouillon'}
           </span>
-          {portfolio.status === 'draft' && (
+          {website.status === 'draft' && (
             <button
               onClick={handlePublish}
               disabled={isSaving}
@@ -155,21 +155,21 @@ export default function PortfolioEditor() {
         </div>
       )}
 
-      {/* Portfolio Info Form */}
+      {/* Website Info Form */}
       <form onSubmit={handleSave} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-6">Informations générales</h2>
         
         <div className="space-y-6">
           <div>
             <label htmlFor="slug" className="block text-sm font-medium text-gray-700 mb-1">
-              URL du portfolio
+              URL du site
             </label>
             <div className="flex items-center gap-2">
               <span className="text-gray-500">asap.cool/</span>
               <input
                 type="text"
                 id="slug"
-                value={portfolio.slug}
+                value={website.slug}
                 disabled
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
               />
@@ -227,7 +227,7 @@ export default function PortfolioEditor() {
         </div>
         
         <p className="text-gray-600 mb-4">
-          Connectez votre compte GitHub pour afficher automatiquement vos projets sur votre portfolio.
+          Connectez votre compte GitHub pour afficher automatiquement vos projets sur votre site.
         </p>
 
         <div className="flex gap-3">
@@ -250,19 +250,19 @@ export default function PortfolioEditor() {
 
       {/* Preview Link */}
       <div className="bg-gradient-to-r from-primary-50 to-purple-50 rounded-lg p-6 border border-primary-100">
-        <h3 className="font-semibold text-gray-900 mb-2">Prévisualiser votre portfolio</h3>
+        <h3 className="font-semibold text-gray-900 mb-2">Prévisualiser votre site</h3>
         <p className="text-gray-600 mb-4">
-          Voyez à quoi ressemble votre portfolio pour les visiteurs.
+          Voyez à quoi ressemble votre site pour les visiteurs.
         </p>
         <a
-          href={`/${portfolio.slug}`}
+          href={`/${website.slug}`}
           target="_blank"
           className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
           </svg>
-          Ouvrir le portfolio
+          Ouvrir le site
         </a>
       </div>
     </div>

@@ -44,7 +44,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const response = await authAPI.signup({ 
         email, 
         password, 
-        portfolio_slug: slug 
+        website_slug: slug 
       });
       authAPI.setToken(response.token);
       

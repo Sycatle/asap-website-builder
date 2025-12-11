@@ -3,7 +3,7 @@ import { websitesAPI, filesAPI, type Website, type QuotaUsage } from '../lib/api
 import { formatBytes } from '../lib/utils/formatters';
 
 export default function Dashboard() {
-  const [portfolio, setPortfolio] = useState<Website | null>(null);
+  const [website, setWebsite] = useState<Website | null>(null);
   const [quota, setQuota] = useState<QuotaUsage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -12,7 +12,7 @@ export default function Dashboard() {
       try {
         const websites = await websitesAPI.list();
         if (websites.length > 0) {
-          setPortfolio(websites[0]);
+          setWebsite(websites[0]);
         }
         
         const quotaData = await filesAPI.getQuota();
@@ -43,19 +43,19 @@ export default function Dashboard() {
           Bienvenue ! 👋
         </h1>
         <p className="mt-2 text-gray-600">
-          Gérez votre portfolio et vos fichiers depuis un seul endroit
+          Gérez votre site et vos fichiers depuis un seul endroit
         </p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid md:grid-cols-3 gap-6">
-        {/* Portfolio Status */}
+        {/* Site Status */}
         <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Portfolio</p>
+              <p className="text-sm font-medium text-gray-600">Site</p>
               <p className="mt-2 text-3xl font-bold text-gray-900">
-                {portfolio?.status === 'published' ? (
+                {website?.status === 'published' ? (
                   <span className="text-green-600">Publié</span>
                 ) : (
                   <span className="text-yellow-600">Brouillon</span>
@@ -70,10 +70,10 @@ export default function Dashboard() {
           </div>
           <div className="mt-4">
             <a
-              href="/app/portfolio"
+              href="/app/website"
               className="text-sm text-primary-600 hover:text-primary-700 font-medium"
             >
-              Gérer le portfolio →
+              Gérer le site →
             </a>
           </div>
         </div>
@@ -108,13 +108,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Portfolio URL */}
+        {/* URL du site */}
         <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">URL publique</p>
               <p className="mt-2 text-lg font-semibold text-gray-900 truncate">
-                {portfolio?.slug || 'N/A'}
+                {website?.slug || 'N/A'}
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -124,13 +124,13 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="mt-4">
-            {portfolio && (
+            {website && (
               <a
-                href={`/${portfolio.slug}`}
+                href={`/${website.slug}`}
                 target="_blank"
                 className="text-sm text-primary-600 hover:text-primary-700 font-medium"
               >
-                Voir le portfolio →
+                Voir le site →
               </a>
             )}
           </div>
@@ -142,7 +142,7 @@ export default function Dashboard() {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Actions rapides</h2>
         <div className="grid md:grid-cols-2 gap-4">
           <a
-            href="/app/portfolio"
+            href="/app/website"
             className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors"
           >
             <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -151,7 +151,7 @@ export default function Dashboard() {
               </svg>
             </div>
             <div>
-              <h3 className="font-medium text-gray-900">Éditer mon portfolio</h3>
+              <h3 className="font-medium text-gray-900">Éditer mon site</h3>
               <p className="text-sm text-gray-600">Mettre à jour les informations</p>
             </div>
           </a>
@@ -173,32 +173,32 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Portfolio Info */}
-      {portfolio && (
+      {/* Informations du site */}
+      {website && (
         <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Informations du portfolio</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Informations du site</h2>
           <dl className="grid md:grid-cols-2 gap-4">
             <div>
               <dt className="text-sm font-medium text-gray-600">Titre</dt>
-              <dd className="mt-1 text-sm text-gray-900">{portfolio.title || 'Non défini'}</dd>
+              <dd className="mt-1 text-sm text-gray-900">{website.title || 'Non défini'}</dd>
             </div>
             <div>
               <dt className="text-sm font-medium text-gray-600">Tagline</dt>
-              <dd className="mt-1 text-sm text-gray-900">{portfolio.tagline || 'Non défini'}</dd>
+              <dd className="mt-1 text-sm text-gray-900">{website.tagline || 'Non défini'}</dd>
             </div>
             <div>
               <dt className="text-sm font-medium text-gray-600">Slug</dt>
-              <dd className="mt-1 text-sm text-gray-900">{portfolio.slug}</dd>
+              <dd className="mt-1 text-sm text-gray-900">{website.slug}</dd>
             </div>
             <div>
               <dt className="text-sm font-medium text-gray-600">Statut</dt>
               <dd className="mt-1">
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  portfolio.status === 'published' 
+                  website.status === 'published' 
                     ? 'bg-green-100 text-green-800' 
                     : 'bg-yellow-100 text-yellow-800'
                 }`}>
-                  {portfolio.status === 'published' ? 'Publié' : 'Brouillon'}
+                  {website.status === 'published' ? 'Publié' : 'Brouillon'}
                 </span>
               </dd>
             </div>
