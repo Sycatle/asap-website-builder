@@ -50,14 +50,17 @@ export interface ConfigAction {
 // Display configuration for data lists
 export interface DataDisplayField {
   key: string;
-  label: string;
-  type?: 'text' | 'link' | 'badge' | 'date' | 'number';
+  label?: string;
+  type?: 'text' | 'link' | 'badge' | 'date' | 'number' | 'image' | 'title' | 'subtitle' | 'meta' | 'stat' | 'description';
   linkKey?: string;       // For 'link' type, which field contains the URL
   colorKey?: string;      // For 'badge' type with dynamic colors
+  icon?: string;          // Icon for meta fields
+  prefix?: string;        // Prefix for display (e.g., "@" for username)
+  linkPrefix?: string;    // URL prefix for links
 }
 
 export interface DataDisplay {
-  type: 'list' | 'table' | 'stats' | 'custom';
+  type: 'list' | 'table' | 'stats' | 'custom' | 'profile' | 'avatarList';
   source: string;         // Data key in module response (e.g., "projects")
   title?: string;
   emptyMessage?: string;
