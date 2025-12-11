@@ -1,15 +1,96 @@
 use anyhow::Result;
 use asap_core_domain::events::{Event, EventType};
+use asap_core_domain::ConfigSchema;
 use sqlx::PgPool;
 
-/// Trait for module executors
+// ============================================================================
+// Module Info Trait - Metadata about a module
+// ============================================================================
+
+/// Trait providing metadata about a module executor.
+/// 
+/// This trait should be implemented alongside `ModuleExecutor` to provide
+/// information for logging, debugging, and module discovery.
+/// 
+/// The `config_schema()` method returns the UI schema for configuration,
+/// which is defined in code (not in the database) to ensure:
+/// - Type safety at compile time
+/// - Co-location with module logic
+/// - Automatic versioning with the module
+#[allow(dead_code)]
+pub trait ModuleInfo {
+    /// The unique slug identifier for this module (e.g., "github-sync")
+    fn slug(&self) -> &'static str;
+    
+    /// Human-readable name of the module
+    fn name(&self) -> &'static str;
+    
+    /// Semantic version of the module (e.g., "1.0.0")
+    fn version(&self) -> &'static str;
+    
+    /// Brief description of what the module does
+    fn description(&self) -> &'static str;
+    
+    /// Module category for grouping in UI
+    fn category(&self) -> &'static str {
+        "other"
+    }
+    
+    /// List of event types this module handles
+    fn handled_events(&self) -> Vec<EventType>;
+    
+    /// Configuration schema for the module UI
+    /// 
+    /// This defines the fields, actions, and data displays for the module
+    /// configuration page. Returns None if the module has no configuration.
+    fn config_schema(&self) -> Option<ConfigSchema> {
+        None
+    }
+    
+    /// Default settings for when the module is first activated
+    fn default_settings(&self) -> serde_json::Value {
+        serde_json::json!({})
+    }
+}
+
+// ============================================================================
+// Module Executor Trait - Core execution logic
+// ============================================================================
+
+/// Trait for module executors that process events.
+/// 
+/// Implementors should also implement `ModuleInfo` for metadata.
 #[async_trait::async_trait]
-pub trait ModuleExecutor: Send + Sync {
-    /// Execute the module logic for the given event
+#[allow(dead_code)]
+pub trait ModuleExecutor: ModuleInfo + Send + Sync {
+    /// Execute the module logic for the given event.
+    /// 
+    /// This method is called when an event matching `can_handle` is received.
+    /// It should be idempotent when possible to handle retries gracefully.
     async fn execute(&self, event: &Event) -> Result<()>;
     
-    /// Check if this executor can handle the given event type
-    fn can_handle(&self, event_type: &EventType) -> bool;
+    /// Check if this executor can handle the given event type.
+    /// 
+    /// Default implementation uses `handled_events()` from `ModuleInfo`.
+    fn can_handle(&self, event_type: &EventType) -> bool {
+        self.handled_events().contains(event_type)
+    }
+    
+    /// Called before event execution (optional hook).
+    /// 
+    /// Can be used for validation, logging, or setup.
+    #[allow(unused_variables)]
+    async fn before_execute(&self, event: &Event) -> Result<()> {
+        Ok(())
+    }
+    
+    /// Called after successful event execution (optional hook).
+    /// 
+    /// Can be used for cleanup, notifications, or metrics.
+    #[allow(unused_variables)]
+    async fn after_execute(&self, event: &Event) -> Result<()> {
+        Ok(())
+    }
 }
 
 pub struct ModuleExecutorRegistry {
@@ -71,11 +152,101 @@ impl GitHubIntegrationExecutor {
     }
 }
 
+impl ModuleInfo for GitHubIntegrationExecutor {
+    fn slug(&self) -> &'static str {
+        "github-sync"
+    }
+
+    fn name(&self) -> &'static str {
+        "GitHub Integration"
+    }
+
+    fn version(&self) -> &'static str {
+        "1.0.0"
+    }
+
+    fn description(&self) -> &'static str {
+        "Syncs GitHub repositories and profile data to generate portfolio content"
+    }
+
+    fn handled_events(&self) -> Vec<EventType> {
+        vec![
+            EventType::UserIntegrationAdded,
+            EventType::ModuleActivated,
+            EventType::GitHubSyncRequested,
+        ]
+    }
+
+    fn category(&self) -> &'static str {
+        "integration"
+    }
+
+    fn config_schema(&self) -> Option<ConfigSchema> {
+        use asap_core_domain::{
+            ConfigField, ConfigAction, ConfigSection, 
+            DataDisplay, DataDisplayField, FieldValidation,
+        };
+
+        Some(ConfigSchema::new()
+            .with_fields(vec![
+                ConfigField::text("github_username", "Nom d'utilisateur GitHub")
+                    .with_description("Votre nom d'utilisateur GitHub pour synchroniser vos projets")
+                    .with_placeholder("ex: octocat")
+                    .required(),
+                ConfigField::boolean("auto_sync", "Synchronisation automatique")
+                    .with_description("Synchroniser automatiquement vos projets toutes les 24h")
+                    .with_default(false),
+                ConfigField::boolean("include_forks", "Inclure les forks")
+                    .with_description("Inclure les repositories forkés dans la liste")
+                    .with_default(false),
+                ConfigField::number("max_repos", "Nombre maximum de repos")
+                    .with_description("Limite du nombre de projets à afficher")
+                    .with_default(10)
+                    .with_validation(FieldValidation {
+                        min: Some(1),
+                        max: Some(50),
+                        ..Default::default()
+                    }),
+            ])
+            .with_actions(vec![
+                ConfigAction::post("sync", "Synchroniser maintenant", "/sync")
+                    .with_description("Récupérer les dernières données depuis GitHub")
+                    .primary()
+                    .refresh_after(),
+            ])
+            .with_data_display(vec![
+                DataDisplay::list("projects")
+                    .with_title("Projets synchronisés")
+                    .with_empty_message("Aucun projet synchronisé. Configurez votre nom d'utilisateur GitHub et lancez une synchronisation.")
+                    .with_fields(vec![
+                        DataDisplayField::link("name", "Nom", "url"),
+                        DataDisplayField::text("description", "Description"),
+                        DataDisplayField::badge("language", "Langage"),
+                        DataDisplayField::number("stars", "Stars"),
+                        DataDisplayField::number("forks", "Forks"),
+                    ]),
+            ])
+            .with_sections(vec![
+                ConfigSection::new(
+                    "github_config",
+                    "Configuration GitHub",
+                    vec!["github_username", "auto_sync", "include_forks", "max_repos"]
+                ).with_description("Connectez votre compte GitHub pour synchroniser vos projets"),
+            ]))
+    }
+
+    fn default_settings(&self) -> serde_json::Value {
+        serde_json::json!({
+            "github_username": "",
+            "auto_sync": false,
+            "include_forks": false,
+            "max_repos": 10
+        })
+    }
+}
+
 #[async_trait::async_trait]
 impl ModuleExecutor for GitHubIntegrationExecutor {
-    fn can_handle(&self, event_type: &EventType) -> bool {
-        matches!(event_type, EventType::UserIntegrationAdded | EventType::ModuleActivated | EventType::GitHubSyncRequested)
-    }
 
     async fn execute(&self, event: &Event) -> Result<()> {
         tracing::info!("Processing GitHub integration for event {}", event.id);
@@ -223,23 +394,46 @@ impl WebsiteModuleExecutor {
     }
 }
 
-#[async_trait::async_trait]
-impl ModuleExecutor for WebsiteModuleExecutor {
-    fn can_handle(&self, event_type: &EventType) -> bool {
-        matches!(
-            event_type,
-            EventType::WebsiteCreated |
-            EventType::WebsitePublished |
-            EventType::WebsiteUpdated |
-            EventType::WebsiteDeleted |
-            EventType::SectionCreated |
-            EventType::SectionUpdated |
-            EventType::SectionDeleted |
-            EventType::SectionReordered |
-            EventType::PresetApplied
-        )
+impl ModuleInfo for WebsiteModuleExecutor {
+    fn slug(&self) -> &'static str {
+        "website-lifecycle"
     }
 
+    fn name(&self) -> &'static str {
+        "Website Lifecycle"
+    }
+
+    fn version(&self) -> &'static str {
+        "1.0.0"
+    }
+
+    fn description(&self) -> &'static str {
+        "Handles website creation, publication, updates, and section management"
+    }
+
+    fn category(&self) -> &'static str {
+        "system"
+    }
+
+    fn handled_events(&self) -> Vec<EventType> {
+        vec![
+            EventType::WebsiteCreated,
+            EventType::WebsitePublished,
+            EventType::WebsiteUpdated,
+            EventType::WebsiteDeleted,
+            EventType::SectionCreated,
+            EventType::SectionUpdated,
+            EventType::SectionDeleted,
+            EventType::SectionReordered,
+            EventType::PresetApplied,
+        ]
+    }
+
+    // No config_schema - this is a system module, not user-configurable
+}
+
+#[async_trait::async_trait]
+impl ModuleExecutor for WebsiteModuleExecutor {
     async fn execute(&self, event: &Event) -> Result<()> {
         match event.event_type {
             EventType::WebsiteCreated => {

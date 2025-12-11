@@ -6,10 +6,11 @@ mod event_processor;
 mod module_executor;
 mod file_cleanup;
 mod parallel_processor;
+mod registry;
 
 use config::Config;
 use event_processor::EventProcessor;
-use module_executor::{ModuleExecutorRegistry, GitHubIntegrationExecutor};
+use registry::{ModuleRegistryConfig, register_all_modules};
 use file_cleanup::FileCleanupTask;
 use parallel_processor::{ParallelProcessorConfig, process_events_parallel};
 use std::sync::Arc;
@@ -45,18 +46,12 @@ async fn main() -> anyhow::Result<()> {
     // Create event processor
     let event_processor = Arc::new(EventProcessor::new(pool.clone()));
 
-    // Create module executor registry
-    let mut registry = ModuleExecutorRegistry::new();
-    
-    // Register GitHub integration executor
-    registry.register(Box::new(GitHubIntegrationExecutor::new(
+    // Create module executor registry using centralized registration
+    let registry_config = ModuleRegistryConfig::new(
         pool.clone(),
         config.core_api_url.clone(),
-    )));
-
-    let registry = Arc::new(registry);
-
-    tracing::info!("Module executors registered");
+    );
+    let registry = Arc::new(register_all_modules(registry_config)?);
 
     // Create file cleanup task
     let cleanup_task = FileCleanupTask::new(pool.clone());
@@ -102,7 +97,7 @@ async fn main() -> anyhow::Result<()> {
 
 async fn process_events_parallel_wrapper(
     event_processor: &Arc<EventProcessor>,
-    registry: &Arc<ModuleExecutorRegistry>,
+    registry: &Arc<module_executor::ModuleExecutorRegistry>,
     config: &ParallelProcessorConfig,
 ) -> anyhow::Result<parallel_processor::ProcessingStats> {
     // Fetch unprocessed events
