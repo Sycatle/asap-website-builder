@@ -23,6 +23,9 @@ pub enum EventType {
     ModuleDeactivated,
     ModuleConfigured,
     
+    // GitHub events
+    GitHubSyncRequested,
+    
     // Section events
     SectionCreated,
     SectionUpdated,
