@@ -1,6 +1,11 @@
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::time::Duration;
 
+/// Create a simple database pool (legacy function, prefer pool.rs for advanced configuration)
+/// 
+/// NOTE: Kept for backwards compatibility and simpler use cases.
+/// For production, use `create_api_pool` or `create_pool_with_config` from pool.rs
+#[allow(dead_code)]
 pub async fn create_pool(database_url: &str) -> anyhow::Result<PgPool> {
     let pool = PgPoolOptions::new()
         .min_connections(5)

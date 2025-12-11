@@ -5,6 +5,10 @@ use std::time::Duration;
 use crate::cache::CacheService;
 
 /// Portfolio cache entry
+/// 
+/// NOTE: Prepared for caching published portfolios for public access.
+/// Will be integrated when public portfolio routes are implemented.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CachedPortfolio {
     pub id: String,
@@ -18,12 +22,17 @@ pub struct CachedPortfolio {
 }
 
 /// Portfolio caching service
+/// 
+/// NOTE: Service for caching public portfolio data with Redis.
+/// Prepared for future integration with public portfolio routes.
+#[allow(dead_code)]
 pub struct PortfolioCacheService {
     db_pool: PgPool,
     cache: CacheService,
     cache_ttl: Duration,
 }
 
+#[allow(dead_code)]
 impl PortfolioCacheService {
     /// Create a new portfolio cache service
     pub fn new(db_pool: PgPool, cache: CacheService) -> Self {

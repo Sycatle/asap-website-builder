@@ -56,11 +56,14 @@ pub fn get_incompressible_types() -> Vec<&'static str> {
 /// 
 /// Compresses data in chunks without requiring the entire file in memory.
 /// Perfect for handling large files (100+ MB) while maintaining reasonable memory footprint.
+#[allow(dead_code)]
 pub struct StreamingCompressor {
     encoder: GzEncoder<Vec<u8>>,
+    /// Buffer size for chunked reads (stored for potential future resets)
     buffer_size: usize,
     bytes_processed: u64,
     bytes_compressed: u64,
+    /// Compression level (stored for potential encoder recreation)
     compression_level: Compression,
 }
 

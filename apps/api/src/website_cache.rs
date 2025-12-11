@@ -5,6 +5,10 @@ use std::time::Duration;
 use crate::cache::CacheService;
 
 /// Website cache entry
+/// 
+/// NOTE: Prepared for caching published websites for public access.
+/// Will be integrated when public website routes are implemented.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CachedWebsite {
     pub id: String,
@@ -20,12 +24,17 @@ pub struct CachedWebsite {
 }
 
 /// Website caching service
+/// 
+/// NOTE: Service for caching public website data with Redis.
+/// Prepared for future integration with public website routes.
+#[allow(dead_code)]
 pub struct WebsiteCacheService {
     db_pool: PgPool,
     cache: CacheService,
     cache_ttl: Duration,
 }
 
+#[allow(dead_code)]
 impl WebsiteCacheService {
     /// Create a new website cache service
     pub fn new(db_pool: PgPool, cache: CacheService) -> Self {
