@@ -12,7 +12,9 @@ fi
 # Copy environment files if they don't exist
 if [ ! -f infra/.env ]; then
     echo "📝 Creating environment files..."
-    cp infra/env.example/api.env infra/.env
+    if [ -f infra/env.example/api.env ]; then
+        cp infra/env.example/api.env infra/.env
+    fi
 fi
 
 # Start PostgreSQL
@@ -24,22 +26,10 @@ docker compose up -d postgres
 echo "⏳ Waiting for PostgreSQL to be ready..."
 sleep 5
 
-# Run migrations
+# Run migrations via Docker Compose
 echo "📊 Running database migrations..."
+docker compose up migrations
 cd ..
-export DATABASE_URL="postgres://asap:asap_dev_password@localhost:5432/asap"
-
-# Check if sqlx-cli is installed
-if ! command -v sqlx &> /dev/null; then
-    echo "📦 Installing sqlx-cli..."
-    cargo install sqlx-cli --no-default-features --features postgres
-fi
-
-# Apply migrations
-for migration in infra/migrations/*.sql; do
-    echo "Applying $(basename $migration)..."
-    psql $DATABASE_URL -f $migration
-done
 
 echo "✅ Setup complete!"
 echo ""
@@ -47,3 +37,6 @@ echo "To start development:"
 echo "  1. Terminal 1: cd apps/api && cargo run"
 echo "  2. Terminal 2: cd apps/worker && cargo run"
 echo "  3. Terminal 3: cd apps/web && npm run dev"
+echo ""
+echo "Or use Docker Compose to start all services:"
+echo "  docker compose -f infra/docker-compose.yml up"

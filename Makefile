@@ -1,4 +1,4 @@
-.PHONY: help setup-db test test-domain test-modules test-api test-all clean db-start db-stop db-reset
+.PHONY: help setup-db test test-domain test-modules test-api test-all clean db-start db-stop db-reset migrate
 
 help:
 	@echo "ASAP v2 - Development Commands"
@@ -8,6 +8,7 @@ help:
 	@echo "  make db-start        - Start PostgreSQL container"
 	@echo "  make db-stop         - Stop PostgreSQL container"
 	@echo "  make db-reset        - Drop and recreate database (DANGEROUS!)"
+	@echo "  make migrate         - Run database migrations"
 	@echo ""
 	@echo "Test Commands:"
 	@echo "  make test            - Run all tests"
@@ -30,7 +31,7 @@ setup-db:
 	@bash scripts/setup-db.sh
 
 db-start:
-	docker-compose -f infra/docker-compose.yml up -d
+	docker-compose -f infra/docker-compose.yml up -d postgres
 
 db-stop:
 	docker-compose -f infra/docker-compose.yml down
@@ -42,8 +43,11 @@ db-reset:
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
 		docker exec asap-postgres psql -U asap -c "DROP DATABASE IF EXISTS asap;"; \
 		docker exec asap-postgres psql -U asap -c "CREATE DATABASE asap;"; \
-		bash scripts/setup-db.sh; \
+		docker-compose -f infra/docker-compose.yml up migrations; \
 	fi
+
+migrate:
+	docker-compose -f infra/docker-compose.yml up migrations
 
 test: test-domain test-modules
 	@echo "✓ All unit tests passed"
@@ -84,4 +88,4 @@ fmt-check:
 clippy:
 	cargo clippy --all --all-targets -- -D warnings
 
-.PHONY: help setup-db test test-domain test-modules test-api test-all clean db-start db-stop db-reset build release check fmt fmt-check clippy
+.PHONY: help setup-db test test-domain test-modules test-api test-all clean db-start db-stop db-reset build release check fmt fmt-check clippy migrate

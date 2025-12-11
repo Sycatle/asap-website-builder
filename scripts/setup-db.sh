@@ -22,7 +22,7 @@ fi
 # Check if PostgreSQL container exists
 if ! docker ps | grep -q asap-postgres; then
     echo -e "${YELLOW}PostgreSQL container not found. Starting docker-compose...${NC}"
-    docker-compose -f infra/docker-compose.yml up -d
+    docker-compose -f infra/docker-compose.yml up -d postgres
     sleep 5
 else
     echo -e "${GREEN}✓ PostgreSQL container is running${NC}"
@@ -53,18 +53,20 @@ else
     echo -e "${GREEN}✓ Database 'asap' already exists${NC}"
 fi
 
-# Run migrations
-echo "Running migrations..."
-if [ -f "infra/migrations/001_core_schema.sql" ]; then
-    docker exec asap-postgres psql -U asap -d asap -f /dev/stdin < infra/migrations/001_core_schema.sql
+# Run migrations using the migration runner
+echo "Running database migrations..."
+docker-compose -f infra/docker-compose.yml up migrations
+
+# Check if migrations completed successfully
+if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓ Migrations applied successfully${NC}"
 else
-    echo -e "${YELLOW}Warning: Migration file not found${NC}"
+    echo -e "${YELLOW}Warning: Migration may have failed${NC}"
 fi
 
 # Verify tables were created
 echo "Verifying tables..."
-TABLE_COUNT=$(docker exec asap-postgres psql -U asap -d asap -tc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null || echo "0")
+TABLE_COUNT=$(docker exec asap-postgres psql -U asap -d asap -tc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null | xargs)
 echo -e "${GREEN}✓ Found $TABLE_COUNT tables${NC}"
 
 # Enable RLS if needed
@@ -77,7 +79,7 @@ if [ ! -f ".env.local" ]; then
     echo "Creating .env.local..."
     cat > .env.local << 'EOF'
 # Local Development Configuration
-DATABASE_URL=postgresql://asap:asap@localhost:5432/asap
+DATABASE_URL=postgresql://asap:asap_dev_password@localhost:5432/asap
 RUST_LOG=asap_api=debug,asap_core_api=debug,tower_http=debug,sqlx=info
 ASAP_API_PORT=3000
 ASAP_API_HOST=127.0.0.1
@@ -95,11 +97,16 @@ echo "Database Info:"
 echo "  Host: localhost"
 echo "  Port: 5432"
 echo "  Username: asap"
-echo "  Password: asap"
+echo "  Password: asap_dev_password"
 echo "  Database: asap"
+echo ""
+echo "Migration System:"
+echo "  Migrations are stored in: infra/migrations/"
+echo "  To add a new migration, create a file with format: YYYYMMDDHHMMSS_description.sql"
+echo "  Migrations run automatically when starting services via Docker Compose"
 echo ""
 echo "To test the connection, run:"
 echo "  ${BLUE}docker exec asap-postgres psql -U asap -d asap -c \"SELECT 1;\"${NC}"
 echo ""
 echo "To use the database in your code, set:"
-echo "  ${BLUE}DATABASE_URL=postgresql://asap:asap@localhost:5432/asap${NC}"
+echo "  ${BLUE}DATABASE_URL=postgresql://asap:asap_dev_password@localhost:5432/asap${NC}"

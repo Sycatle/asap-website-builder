@@ -11,12 +11,31 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U asap"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - asap-network
+
+  # Database migrations service
+  # Runs automatically on startup and applies any pending migrations
+  migrations:
+    image: postgres:15-alpine
+    container_name: asap-migrations
+    environment:
+      DATABASE_URL: postgresql://asap:asap_dev_password@postgres:5432/asap
+      MIGRATIONS_DIR: /migrations
+      PGPASSWORD: asap_dev_password
+    volumes:
+      - ./migrations:/migrations:ro
+      - ../scripts/run-migrations.sh:/run-migrations.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c", "apk add --no-cache bash coreutils xxd && bash /run-migrations.sh"]
+    restart: "no"
     networks:
       - asap-network
 
@@ -53,8 +72,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev_secret_key_change_in_production_12345}
       CORS_ALLOWED_ORIGINS: http://localhost:4321,http://web:4321
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     healthcheck:
@@ -77,8 +96,8 @@ services:
       RUST_LOG: asap_worker=info,sqlx=warn
       POLL_INTERVAL_SECONDS: 5
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
     networks:
       - asap-network
 

@@ -67,6 +67,12 @@ async fn main() -> anyhow::Result<()> {
     let pool = pool::create_api_pool(&config.database_url).await?;
     tracing::info!("Database pool created and warmed up");
 
+    // Sync module catalog to database
+    match asap_core_api::queries::sync_modules_catalog(&pool).await {
+        Ok(count) => tracing::info!("Synced {} modules from catalog to database", count),
+        Err(e) => tracing::warn!("Failed to sync module catalog: {}", e),
+    }
+
     // Log pool info
     if let Ok(pool_info) = pool::get_pool_info(&pool).await {
         tracing::info!("{}", pool_info);

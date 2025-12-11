@@ -307,13 +307,10 @@ cp infra/env.example/api.env infra/api.env
 cp infra/env.example/worker.env infra/worker.env
 cp infra/env.example/web.env infra/web.env
 
-# 3. Lancer l'environnement complet
-docker compose up -d
+# 3. Lancer l'environnement complet (les migrations sont automatiques)
+docker compose -f infra/docker-compose.yml up
 
-# 4. Appliquer les migrations
-./scripts/migrate.sh
-
-# 5. (Optionnel) Créer des données de démo
+# 4. (Optionnel) Créer des données de démo
 ./scripts/seed-demo.sh
 ```
 
@@ -338,6 +335,50 @@ cd apps/web && npm install && npm run dev
 | Dashboard | http://localhost:4321/app |
 | API | http://localhost:3000 |
 | Site public | http://{slug}.localhost:4321 (en local) / `{slug}.asap.cool` (prod) |
+
+---
+
+## 🗄️ Database Migrations
+
+ASAP utilise un système de migrations automatiques intégré à Docker Compose.
+
+### Comment ça fonctionne
+
+1. **Migrations automatiques** : Lors du démarrage des services via `docker compose up`, un service `migrations` s'exécute automatiquement et applique toutes les migrations en attente.
+
+2. **Format des fichiers** : Les migrations sont stockées dans `infra/migrations/` avec le format `YYYYMMDDHHMMSS_description.sql`.
+
+3. **Tracking** : Les migrations appliquées sont enregistrées dans la table `_sqlx_migrations` pour éviter les réapplications.
+
+### Commandes utiles
+
+```bash
+# Lancer les migrations manuellement
+make migrate
+
+# Réinitialiser la base de données (ATTENTION: supprime toutes les données)
+make db-reset
+
+# Setup complet avec migrations
+make setup-db
+```
+
+### Ajouter une nouvelle migration
+
+1. Créer un fichier dans `infra/migrations/` avec le format : `YYYYMMDDHHMMSS_description.sql`
+   
+   Exemple : `20240115120000_add_user_preferences.sql`
+
+2. Écrire le SQL de la migration
+
+3. Relancer les services ou exécuter `make migrate`
+
+### Bonnes pratiques
+
+- ✅ Toujours créer des migrations idempotentes quand possible (`CREATE IF NOT EXISTS`)
+- ✅ Utiliser des transactions pour les migrations complexes
+- ✅ Tester les migrations sur une base de données de test avant la production
+- ❌ Ne jamais modifier une migration déjà appliquée en production
 
 ---
 

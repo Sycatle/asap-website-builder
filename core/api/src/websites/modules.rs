@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use asap_core_shared::Claims;
+use asap_core_shared::{Claims, module_catalog};
 
 #[derive(Debug, Serialize)]
 pub struct WebsiteModuleResponse {
@@ -37,25 +37,76 @@ pub struct UpdateModuleSettingsRequest {
 }
 
 /// Resolve a module identifier (UUID or slug) to a module UUID
+/// 
+/// This function first checks the module catalog (source of truth),
+/// then ensures the module exists in the database, creating it if needed.
 pub(crate) async fn resolve_module_id(pool: &PgPool, module_id_or_slug: &str) -> Result<Uuid, String> {
     // First try to parse as UUID
     if let Ok(uuid) = Uuid::parse_str(module_id_or_slug) {
         return Ok(uuid);
     }
     
-    // Otherwise, look up by slug
-    let result = sqlx::query_as::<_, (Uuid,)>(
-        "SELECT id FROM modules WHERE slug = $1 AND enabled = true"
-    )
-    .bind(module_id_or_slug)
-    .fetch_optional(pool)
-    .await;
+    // Look up in the module catalog (source of truth)
+    let module_def = module_catalog::get_module_by_slug(module_id_or_slug)
+        .ok_or_else(|| format!("Module not found: {}", module_id_or_slug))?;
     
-    match result {
-        Ok(Some((id,))) => Ok(id),
-        Ok(None) => Err(format!("Module not found: {}", module_id_or_slug)),
-        Err(e) => Err(format!("Database error: {}", e)),
+    // Check if module exists in database
+    let existing = sqlx::query_as::<_, (Uuid,)>(
+        "SELECT id FROM modules WHERE slug = $1"
+    )
+    .bind(&module_def.slug)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| format!("Database error: {}", e))?;
+    
+    if let Some((id,)) = existing {
+        return Ok(id);
     }
+    
+    // Module not in DB, insert it from the catalog
+    let new_id = Uuid::new_v4();
+    sqlx::query(
+        r#"
+        INSERT INTO modules (id, name, slug, version, description, category, icon, default_settings, config_schema, sidebar_order, sidebar_label, enabled)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true)
+        ON CONFLICT (slug) DO UPDATE SET
+            name = EXCLUDED.name,
+            version = EXCLUDED.version,
+            description = EXCLUDED.description,
+            category = EXCLUDED.category,
+            icon = EXCLUDED.icon,
+            default_settings = EXCLUDED.default_settings,
+            config_schema = EXCLUDED.config_schema,
+            sidebar_order = EXCLUDED.sidebar_order,
+            sidebar_label = EXCLUDED.sidebar_label
+        RETURNING id
+        "#
+    )
+    .bind(new_id)
+    .bind(&module_def.name)
+    .bind(&module_def.slug)
+    .bind(&module_def.version)
+    .bind(&module_def.description)
+    .bind(&module_def.category)
+    .bind(&module_def.icon)
+    .bind(&module_def.default_settings)
+    .bind(module_def.config_schema.as_ref().map(|s| serde_json::to_value(s).ok()).flatten())
+    .bind(module_def.sidebar_order)
+    .bind(&module_def.sidebar_label)
+    .execute(pool)
+    .await
+    .map_err(|e| format!("Failed to insert module: {}", e))?;
+    
+    // Fetch the actual ID (might be different if ON CONFLICT was triggered)
+    let result = sqlx::query_as::<_, (Uuid,)>(
+        "SELECT id FROM modules WHERE slug = $1"
+    )
+    .bind(&module_def.slug)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| format!("Database error: {}", e))?;
+    
+    Ok(result.0)
 }
 
 pub async fn list_website_modules(
