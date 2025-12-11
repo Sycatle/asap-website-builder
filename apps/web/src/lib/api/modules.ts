@@ -7,7 +7,7 @@ export interface Module {
   version: string;
   description: string;
   enabled: boolean;
-  configured?: boolean; // True si le module est configuré pour ce website
+  configured?: boolean; // True if the module is configured for this website
 }
 
 export interface WebsiteModule {
@@ -31,27 +31,27 @@ export interface UpdateModuleSettingsRequest {
 }
 
 export const modulesAPI = {
-  // Liste tous les modules disponibles (catalogue)
+  // List all available modules (catalog)
   async catalog(): Promise<Module[]> {
     return apiClient.get<Module[]>('/modules/catalog');
   },
   
-  // Liste les modules activés pour un website
+  // List activated modules for a website
   async listForWebsite(websiteId: string): Promise<WebsiteModule[]> {
     return apiClient.get<WebsiteModule[]>(`/websites/${websiteId}/modules`);
   },
   
-  // Active un module pour un website
+  // Activate a module for a website
   async activate(websiteId: string, data: ActivateModuleRequest): Promise<WebsiteModule> {
     return apiClient.post<WebsiteModule>(`/websites/${websiteId}/modules`, data);
   },
   
-  // Met à jour les settings d'un module activé
+  // Update settings for an activated module
   async updateSettings(websiteId: string, moduleId: string, data: UpdateModuleSettingsRequest): Promise<WebsiteModule> {
     return apiClient.patch<WebsiteModule>(`/websites/${websiteId}/modules/${moduleId}`, data);
   },
   
-  // Désactive un module pour un website
+  // Deactivate a module for a website
   async deactivate(websiteId: string, moduleId: string): Promise<void> {
     return apiClient.delete<void>(`/websites/${websiteId}/modules/${moduleId}`);
   },

@@ -28,17 +28,17 @@ export interface CreateWebsiteFromPresetResponse {
 }
 
 export const presetsAPI = {
-  // Liste tous les presets disponibles
+  // List all available presets
   async list(): Promise<Preset[]> {
     return apiClient.get<Preset[]>('/presets');
   },
   
-  // Récupère un preset par ID
+  // Get a preset by ID
   async get(id: string): Promise<Preset> {
     return apiClient.get<Preset>(`/presets/${id}`);
   },
   
-  // Crée un website à partir d'un preset
+  // Create a website from a preset
   async createWebsiteFromPreset(data: CreateWebsiteFromPresetRequest): Promise<CreateWebsiteFromPresetResponse> {
     return apiClient.post<CreateWebsiteFromPresetResponse>('/websites/from-preset', data);
   },

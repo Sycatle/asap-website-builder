@@ -27,27 +27,27 @@ export interface UpdateWebsiteRequest {
 }
 
 export const websitesAPI = {
-  // Liste tous les websites du tenant
+  // List all websites for the current tenant
   async list(): Promise<Website[]> {
     return apiClient.get<Website[]>('/websites');
   },
   
-  // Récupère un website par ID
+  // Get a website by ID
   async get(id: string): Promise<Website> {
     return apiClient.get<Website>(`/websites/${id}`);
   },
   
-  // Met à jour un website (title, tagline, metadata)
+  // Update a website (title, tagline, metadata)
   async update(id: string, data: UpdateWebsiteRequest): Promise<Website> {
     return apiClient.put<Website>(`/websites/${id}`, data);
   },
   
-  // Publie un website (change status draft → published)
+  // Publish a website (change status from draft to published)
   async publish(id: string): Promise<{ status: string; public_url: string }> {
     return apiClient.post<{ status: string; public_url: string }>(`/websites/${id}/publish`);
   },
   
-  // Supprime un website
+  // Delete a website
   async delete(id: string): Promise<void> {
     return apiClient.delete<void>(`/websites/${id}`);
   },

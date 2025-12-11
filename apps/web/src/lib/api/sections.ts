@@ -38,32 +38,32 @@ export interface ReorderSectionsRequest {
 }
 
 export const sectionsAPI = {
-  // Liste les sections d'un website
+  // List sections for a website
   async list(websiteId: string): Promise<Section[]> {
     return apiClient.get<Section[]>(`/websites/${websiteId}/sections`);
   },
   
-  // Récupère une section par ID
+  // Get a section by ID
   async get(websiteId: string, sectionId: string): Promise<Section> {
     return apiClient.get<Section>(`/websites/${websiteId}/sections/${sectionId}`);
   },
   
-  // Crée une nouvelle section
+  // Create a new section
   async create(websiteId: string, data: CreateSectionRequest): Promise<Section> {
     return apiClient.post<Section>(`/websites/${websiteId}/sections`, data);
   },
   
-  // Met à jour une section
+  // Update a section
   async update(websiteId: string, sectionId: string, data: UpdateSectionRequest): Promise<Section> {
     return apiClient.patch<Section>(`/websites/${websiteId}/sections/${sectionId}`, data);
   },
   
-  // Supprime une section
+  // Delete a section
   async delete(websiteId: string, sectionId: string): Promise<void> {
     return apiClient.delete<void>(`/websites/${websiteId}/sections/${sectionId}`);
   },
   
-  // Réordonne les sections (drag & drop)
+  // Reorder sections (drag & drop)
   async reorder(websiteId: string, data: ReorderSectionsRequest): Promise<void> {
     return apiClient.post<void>(`/websites/${websiteId}/sections/reorder`, data);
   },
