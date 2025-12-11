@@ -1,5 +1,6 @@
 ---
 import BaseLayout from './BaseLayout.astro';
+import DynamicSidebar from '../components/DynamicSidebar.tsx';
 
 interface Props {
   title: string;
@@ -10,8 +11,8 @@ const { title } = Astro.props;
 
 <BaseLayout title={title}>
   <div class="min-h-screen bg-gray-50">
-    <!-- Top Nav -->
-    <nav class="bg-white border-b border-gray-200">
+    <!-- Top Nav (Fixed) -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200">
       <div class="px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
           <div class="flex items-center">
@@ -29,9 +30,9 @@ const { title } = Astro.props;
       </div>
     </nav>
 
-    <div class="flex">
-      <!-- Sidebar -->
-      <aside class="w-64 bg-white border-r border-gray-200 min-h-[calc(100vh-4rem)]">
+    <div class="flex pt-16">
+      <!-- Sidebar (Fixed, Scrollable) -->
+      <aside class="fixed top-16 left-0 bottom-0 w-64 bg-white border-r border-gray-200 overflow-y-auto">
         <nav class="p-4 space-y-1">
           <a
             href="/app/dashboard"
@@ -64,13 +65,13 @@ const { title } = Astro.props;
           </a>
 
           <a
-            href="/app/integrations"
+            href="/app/modules"
             class="flex items-center gap-3 px-4 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
             </svg>
-            Intégrations
+            Modules
           </a>
 
           <a
@@ -84,10 +85,15 @@ const { title } = Astro.props;
             Paramètres
           </a>
         </nav>
+        
+        <!-- Dynamic Modules Section -->
+        <div class="px-4 pb-4">
+          <DynamicSidebar client:load />
+        </div>
       </aside>
 
-      <!-- Main Content -->
-      <main class="flex-1 p-8">
+      <!-- Main Content (with left margin for fixed sidebar) -->
+      <main class="flex-1 ml-64 p-8 min-h-[calc(100vh-4rem)]">
         <slot />
       </main>
     </div>
