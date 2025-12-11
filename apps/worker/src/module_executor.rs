@@ -74,41 +74,87 @@ impl GitHubIntegrationExecutor {
 #[async_trait::async_trait]
 impl ModuleExecutor for GitHubIntegrationExecutor {
     fn can_handle(&self, event_type: &EventType) -> bool {
-        matches!(event_type, EventType::UserIntegrationAdded | EventType::ModuleActivated)
+        matches!(event_type, EventType::UserIntegrationAdded | EventType::ModuleActivated | EventType::GitHubSyncRequested)
     }
 
     async fn execute(&self, event: &Event) -> Result<()> {
         tracing::info!("Processing GitHub integration for event {}", event.id);
 
-        // Check if this is a GitHub integration event
-        let integration_type = event.payload.get("integration_type")
-            .and_then(|v| v.as_str());
-        
-        if integration_type != Some("github") {
-            tracing::debug!("Skipping non-GitHub integration event");
-            return Ok(());
+        // For GitHubSyncRequested, we always process it
+        if event.event_type != EventType::GitHubSyncRequested {
+            // Check if this is a GitHub integration event
+            let integration_type = event.payload.get("integration_type")
+                .and_then(|v| v.as_str());
+            
+            if integration_type != Some("github") {
+                tracing::debug!("Skipping non-GitHub integration event");
+                return Ok(());
+            }
         }
 
-        // Extract user_id from the event payload
+        // Extract GitHub username - try different sources depending on event type
+        let github_username = if event.event_type == EventType::GitHubSyncRequested {
+            // For sync requests, first check payload, then fetch from tenant_modules settings
+            let from_payload = event.payload["github_username"]
+                .as_str()
+                .map(|s| s.to_string())
+                .filter(|s| !s.is_empty());
+            
+            match from_payload {
+                Some(username) => username,
+                None => {
+                    // Fetch from tenant_modules settings
+                    let settings: Option<(serde_json::Value,)> = sqlx::query_as(
+                        r#"
+                        SELECT tm.settings 
+                        FROM tenant_modules tm
+                        JOIN modules m ON tm.module_id = m.id
+                        WHERE tm.tenant_id = $1 AND m.slug = 'github-sync'
+                        "#
+                    )
+                    .bind(event.tenant_id)
+                    .fetch_optional(&self.pool)
+                    .await?;
+
+                    settings
+                        .and_then(|(s,)| s.get("github_username").and_then(|v| v.as_str()).map(|s| s.to_string()))
+                        .ok_or_else(|| anyhow::anyhow!("GitHub username not configured"))?
+                }
+            }
+        } else {
+            // For other events, get from payload
+            event.payload["username"]
+                .as_str()
+                .ok_or_else(|| anyhow::anyhow!("Missing username in event payload"))?
+                .to_string()
+        };
+
+        // Extract user_id from the event payload (optional for sync requests)
         let user_id = event.payload["user_id"]
             .as_str()
-            .ok_or_else(|| anyhow::anyhow!("Missing user_id in event payload"))?;
-
-        // Extract GitHub username directly from event payload
-        let github_username = event.payload["username"]
-            .as_str()
-            .ok_or_else(|| anyhow::anyhow!("Missing username in event payload"))?;
+            .or_else(|| event.payload["requested_by"].as_str())
+            .unwrap_or("unknown");
 
         tracing::info!("Fetching GitHub repos for user: {} (user_id: {})", github_username, user_id);
 
         // Fetch repos from GitHub (using the github-generator module)
         let github_client = asap_github_generator::GitHubClient::new()?;
-        let repos = github_client.fetch_repos(github_username).await?;
+        
+        // Fetch user profile, organizations and repos in parallel
+        let (user_result, orgs_result, repos) = tokio::join!(
+            github_client.fetch_user(&github_username),
+            github_client.fetch_orgs(&github_username),
+            github_client.fetch_repos(&github_username)
+        );
+
+        let repos = repos?;
+        let user = user_result.ok();
+        let orgs = orgs_result.ok();
 
         tracing::info!("Fetched {} repositories from GitHub", repos.len());
 
-        // Generate website content from repos
-        let website_content = asap_github_generator::generate_portfolio_content(repos).await?;
+        // Generate website content from repos, user profile and orgs
+        let website_content = asap_github_generator::generate_portfolio_content(repos, user, orgs).await?;
 
         tracing::debug!("Generated website content");
 
