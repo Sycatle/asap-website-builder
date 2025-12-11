@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { websitesAPI, integrationsAPI, authAPI, type Website, type GitHubProject, type IntegrationConfig } from '../lib/api';
+import { useAccordion, AccordionHeader, AccordionContent } from './ui/Accordion';
 
 interface GitHubStats {
   totalProjects: number;
@@ -20,6 +21,12 @@ export default function IntegrationsManager() {
   const [newGitHubUsername, setNewGitHubUsername] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [stats, setStats] = useState<GitHubStats | null>(null);
+  
+  // Accordion states
+  const githubAccordion = useAccordion(false);
+  const linkedinAccordion = useAccordion(false);
+  const twitterAccordion = useAccordion(false);
+  const dribbbleAccordion = useAccordion(false);
 
   useEffect(() => {
     loadData();
@@ -161,39 +168,87 @@ export default function IntegrationsManager() {
         </div>
       )}
 
-      {/* GitHub Integration Card */}
+      {/* GitHub Integration Accordion */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center">
-                <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
-                </svg>
+        <AccordionHeader isOpen={githubAccordion.isOpen} onToggle={githubAccordion.toggle}>
+          <div className="flex flex-col gap-3 pr-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center">
+                  <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">GitHub</h2>
+                  <p className="text-sm text-gray-600">
+                    {integrationConfig.github?.username 
+                      ? `@${integrationConfig.github.username}`
+                      : projects.length > 0 
+                        ? 'Repositories synchronisés'
+                        : 'Synchronisez vos repositories publics'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">GitHub</h2>
-                <p className="text-sm text-gray-600">
-                  Synchronisez vos repositories publics
-                </p>
+              <div className="flex items-center gap-2">
+                {(integrationConfig.github?.username || projects.length > 0) ? (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                    Connecté
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+                    Non configuré
+                  </span>
+                )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {integrationConfig.github?.username ? (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                  Connecté
-                </span>
-              ) : (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
-                  Non configuré
-                </span>
-              )}
-            </div>
+            {/* Summary stats visible when closed */}
+            {stats && stats.totalProjects > 0 && (
+              <div className="flex items-center gap-6 ml-16 text-sm">
+                <div className="flex items-center gap-1.5 text-gray-600">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                  </svg>
+                  <span className="font-medium">{stats.totalProjects}</span> projets
+                </div>
+                <div className="flex items-center gap-1.5 text-gray-600">
+                  <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                  </svg>
+                  <span className="font-medium">{stats.totalStars}</span> stars
+                </div>
+                <div className="flex items-center gap-1.5 text-gray-600">
+                  <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                  </svg>
+                  <span className="font-medium">{stats.totalForks}</span> forks
+                </div>
+                {Object.keys(stats.languages).length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    {Object.entries(stats.languages)
+                      .sort((a, b) => b[1] - a[1])
+                      .slice(0, 3)
+                      .map(([lang]) => (
+                        <span
+                          key={lang}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-100"
+                        >
+                          <span className={`w-2 h-2 rounded-full ${getLanguageColor(lang)}`}></span>
+                          {lang}
+                        </span>
+                      ))}
+                    {Object.keys(stats.languages).length > 3 && (
+                      <span className="text-xs text-gray-500">+{Object.keys(stats.languages).length - 3}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        </div>
+        </AccordionHeader>
 
-        {/* GitHub Config Section */}
+        <AccordionContent isOpen={githubAccordion.isOpen}>
         <div className="p-6 bg-gray-50 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div>
@@ -386,57 +441,160 @@ export default function IntegrationsManager() {
             </button>
           </div>
         )}
+        </AccordionContent>
       </div>
 
-      {/* Future Integrations Placeholder */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Autres intégrations</h2>
-        <div className="grid md:grid-cols-3 gap-4">
-          {/* LinkedIn */}
-          <div className="p-4 border border-gray-200 rounded-lg opacity-60">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+      {/* LinkedIn Integration Accordion */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <AccordionHeader isOpen={linkedinAccordion.isOpen} onToggle={linkedinAccordion.toggle}>
+          <div className="flex flex-col gap-3 pr-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">LinkedIn</h2>
+                  <p className="text-sm text-gray-600">Importez votre profil professionnel</p>
+                </div>
+              </div>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
+                Bientôt disponible
+              </span>
+            </div>
+            {/* Preview of features */}
+            <div className="flex items-center gap-4 ml-16 text-sm text-gray-500">
+              <span className="inline-flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                 </svg>
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-900">LinkedIn</h3>
-                <p className="text-sm text-gray-500">Bientôt disponible</p>
-              </div>
+                Expériences
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                </svg>
+                Formations
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+                Compétences
+              </span>
             </div>
           </div>
+        </AccordionHeader>
+        <AccordionContent isOpen={linkedinAccordion.isOpen}>
+          <div className="p-6 text-center text-gray-600">
+            <p>L'intégration LinkedIn vous permettra d'importer automatiquement vos expériences professionnelles, formations et compétences.</p>
+            <p className="mt-2 text-sm text-gray-500">Cette fonctionnalité sera disponible prochainement.</p>
+          </div>
+        </AccordionContent>
+      </div>
 
-          {/* Twitter/X */}
-          <div className="p-4 border border-gray-200 rounded-lg opacity-60">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+      {/* X (Twitter) Integration Accordion */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <AccordionHeader isOpen={twitterAccordion.isOpen} onToggle={twitterAccordion.toggle}>
+          <div className="flex flex-col gap-3 pr-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">X (Twitter)</h2>
+                  <p className="text-sm text-gray-600">Affichez vos derniers tweets</p>
+                </div>
+              </div>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
+                Bientôt disponible
+              </span>
+            </div>
+            {/* Preview of features */}
+            <div className="flex items-center gap-4 ml-16 text-sm text-gray-500">
+              <span className="inline-flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                 </svg>
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-900">X (Twitter)</h3>
-                <p className="text-sm text-gray-500">Bientôt disponible</p>
-              </div>
+                Tweets
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                </svg>
+                Likes
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+                Followers
+              </span>
             </div>
           </div>
+        </AccordionHeader>
+        <AccordionContent isOpen={twitterAccordion.isOpen}>
+          <div className="p-6 text-center text-gray-600">
+            <p>L'intégration X vous permettra d'afficher vos derniers tweets et statistiques sur votre portfolio.</p>
+            <p className="mt-2 text-sm text-gray-500">Cette fonctionnalité sera disponible prochainement.</p>
+          </div>
+        </AccordionContent>
+      </div>
 
-          {/* Dribbble */}
-          <div className="p-4 border border-gray-200 rounded-lg opacity-60">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-pink-500 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M12 24C5.372 24 0 18.627 0 12S5.372 0 12 0s12 5.373 12 12-5.372 12-12 12zm9.885-11.441c-.354-.115-3.195-.95-6.435-.438 1.35 3.71 1.9 6.732 2.006 7.38A10.22 10.22 0 0021.885 12.56zm-2.965 8.452c-.153-.946-.765-4.09-2.205-7.864-.02.007-.04.012-.06.018-5.825 2.03-7.92 6.075-8.108 6.464A10.15 10.15 0 0012 22.11c1.62 0 3.15-.38 4.51-1.055l-.59-1.044zM5.19 18.142c.236-.42 3.065-5.315 8.383-7.115.134-.045.27-.085.406-.124-.26-.59-.54-1.18-.832-1.762-5.075 1.52-9.994 1.46-10.444 1.45-.002.136-.005.273-.005.41a10.15 10.15 0 002.492 7.14zM2.073 9.392c.46.007 4.59.046 9.352-1.278a66.125 66.125 0 00-3.752-5.85 10.17 10.17 0 00-5.6 7.128zm7.83-8.268a54.622 54.622 0 013.773 5.932c3.78-1.42 5.384-3.574 5.58-3.856A10.1 10.1 0 0012 1.89c-.74 0-1.462.08-2.158.232l.06.002zm10.122 3.45c-.235.31-2.043 2.63-5.986 4.266.225.46.44.93.64 1.404.07.166.135.333.2.5 3.454-.434 6.885.265 7.227.34-.022-2.42-.89-4.643-2.08-6.51z"/>
+      {/* Dribbble Integration Accordion */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <AccordionHeader isOpen={dribbbleAccordion.isOpen} onToggle={dribbbleAccordion.toggle}>
+          <div className="flex flex-col gap-3 pr-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-pink-500 rounded-lg flex items-center justify-center">
+                  <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M12 24C5.372 24 0 18.627 0 12S5.372 0 12 0s12 5.373 12 12-5.372 12-12 12zm9.885-11.441c-.354-.115-3.195-.95-6.435-.438 1.35 3.71 1.9 6.732 2.006 7.38A10.22 10.22 0 0021.885 12.56zm-2.965 8.452c-.153-.946-.765-4.09-2.205-7.864-.02.007-.04.012-.06.018-5.825 2.03-7.92 6.075-8.108 6.464A10.15 10.15 0 0012 22.11c1.62 0 3.15-.38 4.51-1.055l-.59-1.044zM5.19 18.142c.236-.42 3.065-5.315 8.383-7.115.134-.045.27-.085.406-.124-.26-.59-.54-1.18-.832-1.762-5.075 1.52-9.994 1.46-10.444 1.45-.002.136-.005.273-.005.41a10.15 10.15 0 002.492 7.14zM2.073 9.392c.46.007 4.59.046 9.352-1.278a66.125 66.125 0 00-3.752-5.85 10.17 10.17 0 00-5.6 7.128zm7.83-8.268a54.622 54.622 0 013.773 5.932c3.78-1.42 5.384-3.574 5.58-3.856A10.1 10.1 0 0012 1.89c-.74 0-1.462.08-2.158.232l.06.002zm10.122 3.45c-.235.31-2.043 2.63-5.986 4.266.225.46.44.93.64 1.404.07.166.135.333.2.5 3.454-.434 6.885.265 7.227.34-.022-2.42-.89-4.643-2.08-6.51z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Dribbble</h2>
+                  <p className="text-sm text-gray-600">Montrez vos créations design</p>
+                </div>
+              </div>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
+                Bientôt disponible
+              </span>
+            </div>
+            {/* Preview of features */}
+            <div className="flex items-center gap-4 ml-16 text-sm text-gray-500">
+              <span className="inline-flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-900">Dribbble</h3>
-                <p className="text-sm text-gray-500">Bientôt disponible</p>
-              </div>
+                Shots
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                </svg>
+                Collections
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                </svg>
+                Likes
+              </span>
             </div>
           </div>
-        </div>
+        </AccordionHeader>
+        <AccordionContent isOpen={dribbbleAccordion.isOpen}>
+          <div className="p-6 text-center text-gray-600">
+            <p>L'intégration Dribbble vous permettra d'afficher vos créations et shots directement sur votre portfolio.</p>
+            <p className="mt-2 text-sm text-gray-500">Cette fonctionnalité sera disponible prochainement.</p>
+          </div>
+        </AccordionContent>
       </div>
     </div>
   );
