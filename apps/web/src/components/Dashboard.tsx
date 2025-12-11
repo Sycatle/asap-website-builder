@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
-import { portfoliosAPI, filesAPI, type Portfolio, type QuotaUsage } from '../lib/api';
+import { websitesAPI, filesAPI, type Website, type QuotaUsage } from '../lib/api';
 import { formatBytes } from '../lib/utils/formatters';
 
 export default function Dashboard() {
-  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+  const [portfolio, setPortfolio] = useState<Website | null>(null);
   const [quota, setQuota] = useState<QuotaUsage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const portfolios = await portfoliosAPI.list();
-        if (portfolios.length > 0) {
-          setPortfolio(portfolios[0]);
+        const websites = await websitesAPI.list();
+        if (websites.length > 0) {
+          setPortfolio(websites[0]);
         }
         
         const quotaData = await filesAPI.getQuota();

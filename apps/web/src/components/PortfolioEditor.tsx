@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { portfoliosAPI, type Portfolio, type UpdatePortfolioRequest } from '../lib/api';
+import { websitesAPI, authAPI, type Website, type UpdateWebsiteRequest } from '../lib/api';
 
 export default function PortfolioEditor() {
-  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+  const [portfolio, setPortfolio] = useState<Website | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -18,9 +18,9 @@ export default function PortfolioEditor() {
 
   const loadPortfolio = async () => {
     try {
-      const portfolios = await portfoliosAPI.list();
-      if (portfolios.length > 0) {
-        const p = portfolios[0];
+      const websites = await websitesAPI.list();
+      if (websites.length > 0) {
+        const p = websites[0];
         setPortfolio(p);
         setTitle(p.title || '');
         setTagline(p.tagline || '');
@@ -41,8 +41,8 @@ export default function PortfolioEditor() {
     setMessage(null);
 
     try {
-      const data: UpdatePortfolioRequest = { title, tagline };
-      await portfoliosAPI.update(portfolio.id, data);
+      const data: UpdateWebsiteRequest = { title, tagline };
+      await websitesAPI.update(portfolio.id, data);
       setMessage({ type: 'success', text: 'Portfolio mis à jour avec succès !' });
       
       // Reload portfolio
@@ -62,7 +62,7 @@ export default function PortfolioEditor() {
     setMessage(null);
 
     try {
-      await portfoliosAPI.publish(portfolio.id);
+      await websitesAPI.publish(portfolio.id);
       setMessage({ type: 'success', text: 'Portfolio publié avec succès !' });
       await loadPortfolio();
     } catch (error) {
@@ -85,7 +85,7 @@ export default function PortfolioEditor() {
       const token = localStorage.getItem('auth_token');
       if (token) {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        await portfoliosAPI.updateGitHubIntegration(payload.sub, {
+        await authAPI.updateGitHubIntegration(payload.sub, {
           github_username: githubUsername.trim(),
         });
         setMessage({ type: 'success', text: 'GitHub connecté ! Vos projets seront synchronisés.' });
