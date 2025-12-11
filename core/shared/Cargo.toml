@@ -6,12 +6,14 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
+asap-core-domain = { path = "../domain" }
 anyhow.workspace = true
 thiserror.workspace = true
 dotenv.workspace = true
 jsonwebtoken.workspace = true
 chrono.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
