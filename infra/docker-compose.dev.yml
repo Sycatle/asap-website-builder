@@ -1,0 +1,31 @@
+# Development override configuration
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  # Web application in dev mode with hot reload
+  web:
+    image: node:20-alpine
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ../apps/web:/app
+      - /app/node_modules
+    # Remove build configuration inherited from base
+    build: null
+
+  # API in dev mode (optional: add volume mount for Rust hot reload with cargo-watch)
+  # Uncomment if you want to enable Rust hot reload
+  # api:
+  #   volumes:
+  #     - ../apps/api:/app/apps/api
+  #     - ../core:/app/core
+  #     - ../modules:/app/modules
+  #   command: cargo watch -x run
+
+  # Worker in dev mode (optional)
+  # worker:
+  #   volumes:
+  #     - ../apps/worker:/app/apps/worker
+  #     - ../core:/app/core
+  #     - ../modules:/app/modules

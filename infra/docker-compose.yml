@@ -82,18 +82,22 @@ services:
     networks:
       - asap-network
 
-  # Web application (Astro)
+  # Web application (Astro) - Dev mode with hot reload
   web:
-    build:
-      context: ..
-      dockerfile: infra/Dockerfile.web
+    image: node:20-alpine
     container_name: asap-web
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     ports:
       - "4321:4321"
     environment:
       HOST: 0.0.0.0
       PORT: 4321
-      PUBLIC_API_URL: http://api:3000
+      PUBLIC_API_URL: http://localhost:3000/api
+      NODE_ENV: development
+    volumes:
+      - ../apps/web:/app
+      - /app/node_modules
     depends_on:
       api:
         condition: service_healthy
