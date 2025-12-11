@@ -80,27 +80,26 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
     async fn execute(&self, event: &Event) -> Result<()> {
         tracing::info!("Processing GitHub integration for event {}", event.id);
 
+        // Check if this is a GitHub integration event
+        let integration_type = event.payload.get("integration_type")
+            .and_then(|v| v.as_str());
+        
+        if integration_type != Some("github") {
+            tracing::debug!("Skipping non-GitHub integration event");
+            return Ok(());
+        }
+
         // Extract user_id from the event payload
         let user_id = event.payload["user_id"]
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("Missing user_id in event payload"))?;
 
-        tracing::debug!("Fetching GitHub username for user {}", user_id);
-
-        // Fetch user data from the database to get GitHub username
-        let user_data: (serde_json::Value,) = sqlx::query_as(
-            "SELECT data FROM user_data WHERE user_id = $1"
-        )
-        .bind(uuid::Uuid::parse_str(user_id)?)
-        .fetch_one(&self.pool)
-        .await?;
-
-        // Extract GitHub username from user data
-        let github_username = user_data.0["integrations"]["github"]["username"]
+        // Extract GitHub username directly from event payload
+        let github_username = event.payload["username"]
             .as_str()
-            .ok_or_else(|| anyhow::anyhow!("GitHub username not found in user data"))?;
+            .ok_or_else(|| anyhow::anyhow!("Missing username in event payload"))?;
 
-        tracing::info!("Fetching GitHub repos for user: {}", github_username);
+        tracing::info!("Fetching GitHub repos for user: {} (user_id: {})", github_username, user_id);
 
         // Fetch repos from GitHub (using the github-generator module)
         let github_client = asap_github_generator::GitHubClient::new()?;
@@ -163,10 +162,15 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
 }
 
 /// Website Module Executor - handles website-related events
+/// 
+/// NOTE: Prepared for handling website lifecycle events.
+/// Will be fully integrated when website event processing is implemented.
+#[allow(dead_code)]
 pub struct WebsiteModuleExecutor {
     pool: PgPool,
 }
 
+#[allow(dead_code)]
 impl WebsiteModuleExecutor {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
