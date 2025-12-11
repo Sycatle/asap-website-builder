@@ -138,18 +138,25 @@ export default function ModulesManager() {
     }
   };
 
-  // Check if a module is active
-  const isModuleActive = (moduleId: string) => {
-    return activeModules.some(m => m.module_id === moduleId && m.enabled);
+  // Check if a module is active (compare by slug since catalog now uses slug as id)
+  const isModuleActive = (moduleIdOrSlug: string) => {
+    return activeModules.some(m => 
+      (m.module_slug === moduleIdOrSlug || m.module_id === moduleIdOrSlug) && m.enabled
+    );
   };
 
-  // Get active module by module_id
-  const getActiveModule = (moduleId: string) => {
-    return activeModules.find(m => m.module_id === moduleId && m.enabled);
+  // Get active module by module_id or slug
+  const getActiveModule = (moduleIdOrSlug: string) => {
+    return activeModules.find(m => 
+      (m.module_slug === moduleIdOrSlug || m.module_id === moduleIdOrSlug) && m.enabled
+    );
   };
 
   // Get suggested modules (catalog modules that are not active)
-  const suggestedModules = catalogModules.filter(m => !isModuleActive(m.id));
+  // Compare using both id and slug for compatibility
+  const suggestedModules = catalogModules.filter(m => 
+    !isModuleActive(m.id) && !isModuleActive(m.slug)
+  );
 
   if (isLoading) {
     return (
