@@ -11,7 +11,7 @@
 
 #### Phase 1 : Infrastructure de Base - ✅ TERMINÉE (100%)
 - ✅ Structure Monorepo complète
-- ✅ Domain Models (User, Tenant, Portfolio, Event)
+- ✅ Domain Models (User, Tenant, Website, Event)
 - ✅ API Routes (stubs → implémentation complète)
 - ✅ Database Schema & Migrations
 - ✅ Docker Infrastructure
@@ -22,7 +22,7 @@
 - ✅ Authentification JWT + bcrypt
 - ✅ Gestion Utilisateurs complète
 - ✅ Gestion Intégrations (GitHub)
-- ✅ Gestion Portfolios (CRUD + publish)
+- ✅ Gestion Websites (CRUD + publish)
 - ✅ Système d'Événements
 - ✅ Gestion Modules (registry + config)
 - ✅ Middleware JWT
@@ -39,7 +39,7 @@
 
 #### Optimisations Avancées - ✅ PARTIELLEMENT COMPLÉTÉES (60%)
 - ✅ File Storage System (upload, compression, quotas)
-- ✅ Redis Caching pour portfolios publics
+- ✅ Redis Caching pour websites publics
 - ✅ Parallel Event Processing (4x speedup)
 - ✅ Query Optimization (indexes)
 - ✅ Compression API (gzip, brotli, zstd)
@@ -55,9 +55,9 @@
 - ❌ Pages publiques (landing, [slug])
 - ❌ Dashboard privé
 - ❌ Formulaires signup/login
-- ❌ Gestion portfolios UI
+- ❌ Gestion websites UI
 - ❌ Upload fichiers UI
-- ❌ Preview portfolio
+- ❌ Preview website
 
 #### Phase 5 : Tests E2E et CI/CD - ❌ NON DÉMARRÉE (0%)
 - ❌ Tests end-to-end avec Playwright
@@ -89,7 +89,7 @@
 #### 2. Client API TypeScript (2 jours)
 - [ ] `lib/api/client.ts` - Wrapper fetch avec JWT
 - [ ] `lib/api/auth.ts` - Signup, login, me
-- [ ] `lib/api/portfolios.ts` - CRUD portfolios
+- [ ] `lib/api/websites.ts` - CRUD websites
 - [ ] `lib/api/files.ts` - Upload, list, delete
 - [ ] `lib/api/integrations.ts` - GitHub config
 - [ ] Gestion erreurs et retry
@@ -101,7 +101,7 @@
   - [ ] Features principales
   - [ ] Pricing (si applicable)
   - [ ] Footer avec liens
-- [ ] `pages/[slug].astro` - Portfolio public
+- [ ] `pages/[slug].astro` - Website public
   - [ ] SSG avec getStaticPaths
   - [ ] Lecture projection JSON
   - [ ] Fallback API si projection absente
@@ -111,7 +111,7 @@
 #### 4. Authentification (2 jours)
 - [ ] `pages/signup.astro` - Formulaire inscription
   - [ ] Validation email/password
-  - [ ] Création portfolio initial
+  - [ ] Création website initial
   - [ ] Redirection après signup
 - [ ] `pages/login.astro` - Formulaire connexion
   - [ ] Validation credentials
@@ -125,12 +125,12 @@
   - [ ] Sidebar navigation
   - [ ] Stats overview (quotas, usage)
   - [ ] Actions rapides
-- [ ] `pages/app/portfolio.astro` - Gestion portfolio
+- [ ] `pages/app/website.astro` - Gestion website
   - [ ] Formulaire édition (title, tagline)
   - [ ] Configuration GitHub username
   - [ ] Bouton "Générer depuis GitHub"
-  - [ ] Bouton "Publier portfolio"
-  - [ ] Preview portfolio
+  - [ ] Bouton "Publier website"
+  - [ ] Preview website
 - [ ] `pages/app/files.astro` - Gestion fichiers
   - [ ] Liste fichiers uploadés
   - [ ] Upload avec drag & drop
@@ -180,15 +180,15 @@
 - [ ] **Test: Signup → Dashboard**
   - [ ] Créer compte
   - [ ] Vérifier tenant créé
-  - [ ] Vérifier portfolio par défaut
+  - [ ] Vérifier website par défaut
   - [ ] Accéder dashboard
 - [ ] **Test: Configure GitHub → Generate**
   - [ ] Configurer GitHub username
   - [ ] Déclencher génération
   - [ ] Vérifier event créé
-  - [ ] Vérifier portfolio_data mis à jour
+  - [ ] Vérifier website_data mis à jour
 - [ ] **Test: Publish → Public Access**
-  - [ ] Publier portfolio
+  - [ ] Publier website
   - [ ] Vérifier status = published
   - [ ] Accéder page publique
   - [ ] Vérifier contenu affiché
@@ -319,8 +319,8 @@
 - [x] GitHub import fonctionne
 - [x] File storage opérationnel
 - [ ] **Frontend permet signup/login**
-- [ ] **Dashboard affiche portfolio**
-- [ ] **Page publique render portfolio**
+- [ ] **Dashboard affiche website**
+- [ ] **Page publique render website**
 - [ ] **Upload fichiers via UI**
 - [ ] **Tests E2E passent**
 - [ ] **Déployable en production**
@@ -366,7 +366,7 @@
   - ✅ Persistence facile
   - ✅ DevTools
 
-**Recommandation:** **Zustand** pour gestion état global (auth, portfolio)
+**Recommandation:** **Zustand** pour gestion état global (auth, website)
 
 ### Hosting Frontend
 - **Option 1:** Vercel
@@ -428,7 +428,7 @@
 ```
 asap-v2/
 ├── core/
-│   ├── domain/          # ✅ Models Rust (User, Portfolio, Event)
+│   ├── domain/          # ✅ Models Rust (User, Website, Event)
 │   ├── api/             # ✅ Routes HTTP (stubs)
 │   └── schemas/         # ⏳ JSON schemas (à venir)
 ├── modules/
@@ -452,7 +452,7 @@ asap-v2/
 
 #### Domain Core
 - ✅ User, Tenant, UserData
-- ✅ Portfolio, PortfolioData, PortfolioStatus
+- ✅ Website, WebsiteData, WebsiteStatus
 - ✅ Event, EventType
 - ✅ Integration (GitHub)
 - ✅ DomainError (gestion erreurs)
@@ -461,14 +461,14 @@ asap-v2/
 - ✅ Auth: /auth/signup, /auth/login, /auth/me
 - ✅ Users: /users/:id
 - ✅ Integrations: /users/:id/integrations/github
-- ✅ Portfolios: /portfolios/:id, /portfolios/:id/publish
+- ✅ Websites: /websites/:id, /websites/:id/publish
 - ✅ Events: /events
 - ✅ Modules: /modules, /modules/:id/config
-- ✅ Public: /public/portfolios/:slug
+- ✅ Public: /public/websites/:slug
 
 #### Base de Données
 - ✅ Tables: users, tenants, user_data
-- ✅ Tables: portfolios, portfolio_data
+- ✅ Tables: websites, website_data
 - ✅ Tables: events, modules, module_configs
 - ✅ Indexes pour performance
 - ✅ RLS (Row Level Security) activé
@@ -490,7 +490,7 @@ asap-v2/
 ## Phase 2 : Core API Complet (Sprint 1-2 semaines)
 
 ### Objectifs
-Implémenter l'API Core avec authentification, gestion utilisateurs et portfolios fonctionnels.
+Implémenter l'API Core avec authentification, gestion utilisateurs et websites fonctionnels.
 
 ### Tâches Détaillées
 
@@ -506,7 +506,7 @@ Implémenter l'API Core avec authentification, gestion utilisateurs et portfolio
 
 #### 2.2 Authentification (JWT + bcrypt)
 - [ ] `core/api/src/auth.rs` - Implémentation complète
-  - [ ] `signup()`: créer user + tenant + portfolio par défaut
+  - [ ] `signup()`: créer user + tenant + website par défaut
   - [ ] `login()`: vérifier credentials, générer JWT
   - [ ] `me()`: retourner utilisateur courant depuis token
 - [ ] Middleware JWT
@@ -528,14 +528,14 @@ Implémenter l'API Core avec authentification, gestion utilisateurs et portfolio
   - [ ] `update_github_integration()`: stocker GitHub username/token
   - [ ] Émettre événement USER_INTEGRATION_ADDED
 
-#### 2.5 Gestion Portfolios
-- [ ] `core/api/src/portfolios.rs` - Implémentation
-  - [ ] `list_portfolios()`: lister portfolios du tenant
-  - [ ] `get_portfolio()`: récupérer un portfolio + data
-  - [ ] `update_portfolio()`: modifier structure (titre, tagline)
-  - [ ] `patch_portfolio_data()`: modules modifient contenu
-  - [ ] `publish_portfolio()`: changer status, émettre événement
-  - [ ] `get_public_portfolio()`: fallback public (sans auth)
+#### 2.5 Gestion Websites
+- [ ] `core/api/src/websites.rs` - Implémentation
+  - [ ] `list_websites()`: lister websites du tenant
+  - [ ] `get_website()`: récupérer un website + data
+  - [ ] `update_website()`: modifier structure (titre, tagline)
+  - [ ] `patch_website_data()`: modules modifient contenu
+  - [ ] `publish_website()`: changer status, émettre événement
+  - [ ] `get_public_website()`: fallback public (sans auth)
 
 #### 2.6 Système d'Événements
 - [ ] `core/api/src/events.rs` - Implémentation
@@ -594,7 +594,7 @@ Implémenter le worker qui consomme les événements du core et exécute les mod
 ## Phase 4 : Module GitHub Generator (Sprint 1 semaine)
 
 ### Objectifs
-Implémenter le module qui récupère les repos GitHub et génère le contenu portfolio.
+Implémenter le module qui récupère les repos GitHub et génère le contenu website.
 
 ### Tâches Détaillées
 
@@ -608,7 +608,7 @@ Implémenter le module qui récupère les repos GitHub et génère le contenu po
 
 #### 4.2 Content Processor
 - [ ] `modules/github-generator/src/processor.rs`
-  - [ ] Transformer repos en structure portfolio
+  - [ ] Transformer repos en structure website
   - [ ] Extraire: name, description, url, language, stars
   - [ ] Trier par date/stars
   - [ ] Détecter repos pinned (metadata GitHub)
@@ -618,7 +618,7 @@ Implémenter le module qui récupère les repos GitHub et génère le contenu po
   - [ ] Écouter événement USER_INTEGRATION_ADDED
   - [ ] Appeler Core API pour récupérer username
   - [ ] Fetch repos GitHub
-  - [ ] PATCH portfolio_data via Core API
+  - [ ] PATCH website_data via Core API
   - [ ] Émettre GITHUB_REPOS_SYNCED
 
 #### Tests Phase 4
@@ -638,20 +638,20 @@ Implémenter le rendu de thème et la génération de projections JSON statiques
 #### 5.1 Theme Renderer
 - [ ] `modules/themes/src/default.rs`
   - [ ] Template thème par défaut
-  - [ ] Mapping portfolio_data vers template
+  - [ ] Mapping website_data vers template
   - [ ] Générer structure HTML/JSON
   - [ ] Support métadonnées SEO
 
 #### 5.2 Projections Generator
 - [ ] `modules/projections/src/lib.rs`
-  - [ ] Écouter événement PORTFOLIO_PUBLISHED
-  - [ ] Récupérer portfolio complet depuis Core
+  - [ ] Écouter événement WEBSITE_PUBLISHED
+  - [ ] Récupérer website complet depuis Core
   - [ ] Appliquer thème
   - [ ] Générer `data/sites/{slug}.json`
   - [ ] Validation fichier généré
 
 #### 5.3 Event Handlers
-- [ ] Handler pour PORTFOLIO_PUBLISHED
+- [ ] Handler pour WEBSITE_PUBLISHED
 - [ ] Handler pour GITHUB_REPOS_SYNCED (re-render)
 - [ ] Gérer projections stale (cleanup)
 
@@ -665,7 +665,7 @@ Implémenter le rendu de thème et la génération de projections JSON statiques
 ## Phase 6 : Frontend Astro (Sprint 2 semaines)
 
 ### Objectifs
-Créer le frontend avec dashboard privé et pages publiques de portfolios.
+Créer le frontend avec dashboard privé et pages publiques de websites.
 
 ### Tâches Détaillées
 
@@ -676,7 +676,7 @@ Créer le frontend avec dashboard privé et pages publiques de portfolios.
 - [ ] Client API TypeScript
 
 #### 6.2 Pages Publiques
-- [ ] `pages/[slug].astro` - Page portfolio publique
+- [ ] `pages/[slug].astro` - Page website publique
   - [ ] Lire projection `data/sites/{slug}.json`
   - [ ] Fallback API si projection absente
   - [ ] Rendu SSG pour performance
@@ -691,11 +691,11 @@ Créer le frontend avec dashboard privé et pages publiques de portfolios.
 #### 6.4 Dashboard Privé
 - [ ] `pages/app/dashboard.astro`
   - [ ] Formulaire login/signup
-  - [ ] Afficher user et portfolio
+  - [ ] Afficher user et website
   - [ ] Formulaire configuration GitHub
   - [ ] Bouton "Générer depuis GitHub"
-  - [ ] Bouton "Publier portfolio"
-  - [ ] Preview portfolio
+  - [ ] Bouton "Publier website"
+  - [ ] Preview website
 
 #### 6.5 Client API
 - [ ] `lib/core-client.ts`
@@ -721,8 +721,8 @@ Valider le flux complet et finaliser la documentation.
 - [ ] Scénario complet:
   1. Signup utilisateur
   2. Configuration GitHub username
-  3. Génération automatique portfolio
-  4. Publication portfolio
+  3. Génération automatique website
+  4. Publication website
   5. Accès public
 - [ ] Tests isolation multi-tenant
 - [ ] Tests gestion erreurs
@@ -770,9 +770,9 @@ Valider le flux complet et finaliser la documentation.
 - [ ] Un utilisateur peut s'inscrire
 - [ ] Un utilisateur peut se connecter
 - [ ] Un utilisateur peut configurer GitHub
-- [ ] Le portfolio est généré automatiquement
-- [ ] Le portfolio peut être publié
-- [ ] Le portfolio est accessible publiquement
+- [ ] Le website est généré automatiquement
+- [ ] Le website peut être publié
+- [ ] Le website est accessible publiquement
 - [ ] Temps de génération < 30 secondes
 - [ ] TTFB page publique < 100ms
 
@@ -789,7 +789,7 @@ Valider le flux complet et finaliser la documentation.
 ### Décisions Importantes
 1. **Projections locales** plutôt que lecture direct PostgreSQL → TTFB optimal
 2. **Event-driven** plutôt que appels directs → découplage modules
-3. **JSONB** pour user_data et portfolio_data → flexibilité
+3. **JSONB** pour user_data et website_data → flexibilité
 4. **RLS PostgreSQL** pour isolation → sécurité native
 
 ### Points d'Attention

@@ -11,7 +11,7 @@ User signup form
     ↓
 POST /auth/signup
     ↓
-Core crée : users, tenants, portfolios
+Core crée : users, tenants, websites
     ↓
 Émet : USER_CREATED
     ↓
@@ -46,8 +46,8 @@ Module GitHubGenerator démarré
 1. GET /auth/me (Core API)
 2. Lit user_data.integrations.github.username
 3. Appelle GitHub API → récupère repos
-4. PATCH /portfolios/:id/data
-5. Stocke les projets dans portfolio_data
+4. PATCH /websites/:id/data
+5. Stocke les projets dans website_data
     ↓
 Émet : GITHUB_REPOS_SYNCED
 ```
@@ -70,26 +70,26 @@ Core met à jour module_configs
 
 ## 4. Générer le Rendu (Theme Module)
 
-### Scénario 1 : User valide le portfolio
+### Scénario 1 : User valide le website
 
 ```
 User clique "Publier"
     ↓
-POST /portfolios/:id/publish
+POST /websites/:id/publish
     ↓
 Core met status = "published"
     ↓
-Émet : PORTFOLIO_PUBLISHED
+Émet : WEBSITE_PUBLISHED
     ↓
 Worker reçoit l'événement
     ↓
 Theme module (default-theme) démarré :
-    1. GET /portfolios/:id
-    2. Lit portfolio.data (contenu généré)
+    1. GET /websites/:id
+    2. Lit website.data (contenu généré)
     3. Applique le thème
-    4. Génère data/sites/mon-portfolio.json
+    4. Génère data/sites/mon-website.json
     ↓
-Émet : PORTFOLIO_RENDERED
+Émet : WEBSITE_RENDERED
 ```
 
 ### Scénario 2 : Module autonome
@@ -101,7 +101,7 @@ Module détecte : GITHUB_REPOS_SYNCED (non traité)
     ↓
 Theme module redéclenche rendu
     ↓
-Génère data/sites/mon-portfolio.json
+Génère data/sites/mon-website.json
     ↓
 Marque comme processed
 ```
@@ -111,11 +111,11 @@ Marque comme processed
 ## 5. Affichage Public (Frontend)
 
 ```
-Visiteur : GET mon-portfolio.asap.cool
+Visiteur : GET mon-website.asap.cool
     ↓
-Astro lit data/sites/mon-portfolio.json
+Astro lit data/sites/mon-website.json
     ↓ (si absent)
-GET /public/portfolios/mon-portfolio (fallback Core)
+GET /public/websites/mon-website (fallback Core)
     ↓
 Rendu HTML
 ```
@@ -137,15 +137,15 @@ Worker exécute GitHubGenerator
     ↓
 Récupère les nouveaux repos
     ↓
-PATCH /portfolios/:id/data (met à jour contenu)
+PATCH /websites/:id/data (met à jour contenu)
     ↓
 Émet : GITHUB_REPOS_SYNCED
     ↓
 Worker exécute Theme module
     ↓
-Régénère data/sites/mon-portfolio.json
+Régénère data/sites/mon-website.json
     ↓
-Portfolio à jour automatiquement
+Website à jour automatiquement
 ```
 
 ---
@@ -159,8 +159,8 @@ Portfolio à jour automatiquement
 │ • USER_CREATED                      │
 │ • USER_INTEGRATION_ADDED            │
 │ • USER_INTEGRATION_UPDATED          │
-│ • PORTFOLIO_CREATED                 │
-│ • PORTFOLIO_PUBLISHED               │
+│ • WEBSITE_CREATED                 │
+│ • WEBSITE_PUBLISHED               │
 │ • MODULE_CONFIG_CHANGED             │
 │                                     │
 └─────────────────────────────────────┘

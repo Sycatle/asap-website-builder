@@ -26,16 +26,16 @@ Phase 3 has been successfully implemented. The Worker system with event processi
   - Pagination support (per_page=100)
   - Filtering of forks and archived repos
   - Error handling for API failures
-- ✅ Portfolio content processor (`modules/github-generator/src/processor.rs`)
-  - Transform repos into portfolio structure
+- ✅ Website content processor (`modules/github-generator/src/processor.rs`)
+  - Transform repos into website structure
   - Extract: name, description, url, language, stars, forks
   - Sort by stars (descending)
   - Add metadata (generated_at, source)
 - ✅ Event handler for USER_INTEGRATION_ADDED
   - Fetch GitHub username from Core database
   - Call GitHub API
-  - Generate portfolio content
-  - Update portfolio_data via database
+  - Generate website content
+  - Update website_data via database
   - Emit GITHUB_REPOS_SYNCED event
 
 ### 3.4 Worker Configuration
@@ -60,7 +60,7 @@ Phase 3 has been successfully implemented. The Worker system with event processi
    POST /api/auth/signup
    → Created user 5122d2ad-a824-4f05-8045-44062bc1d568
    → Created tenant 7bace68e-ec3a-4c38-9a5c-8a92a234a47e
-   → Created portfolio with slug "testuser2"
+   → Created website with slug "testuser2"
    ```
 
 2. **GitHub Integration**
@@ -136,7 +136,7 @@ WHERE user_id = ...;
 - `apps/worker/src/main.rs` - Main worker loop
 - `apps/worker/Cargo.toml` - Dependencies
 - `modules/github-generator/src/client.rs` - GitHub API implementation
-- `modules/github-generator/src/processor.rs` - Portfolio content generation
+- `modules/github-generator/src/processor.rs` - Website content generation
 - `Cargo.toml` - Added async-trait to workspace
 
 ## Build Status

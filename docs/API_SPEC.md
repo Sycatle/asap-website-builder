@@ -17,7 +17,7 @@ Ce document décrit les routes HTTP exposées par le **Core API** (pas les modul
 
 ### `POST /auth/signup`
 
-Crée un utilisateur, un tenant et un portfolio par défaut.
+Crée un utilisateur, un tenant et un website par défaut.
 
 **Corps JSON :**
 
@@ -25,7 +25,7 @@ Crée un utilisateur, un tenant et un portfolio par défaut.
 {
   "email": "dev@example.com",
   "password": "securepassword",
-  "portfolio_slug": "mon-portfolio"
+  "website_slug": "mon-website"
 }
 ```
 
@@ -40,7 +40,7 @@ Crée un utilisateur, un tenant et un portfolio par défaut.
   },
   "tenant": {
     "id": "uuid",
-    "slug": "mon-portfolio"
+    "slug": "mon-website"
   }
 }
 ```
@@ -398,8 +398,8 @@ Liste les presets (templates) disponibles.
 [
   {
     "id": "uuid",
-    "name": "Developer Portfolio",
-    "slug": "developer-portfolio",
+    "name": "Developer Website",
+    "slug": "developer-website",
     "description": "Perfect for developers",
     "category": "professional",
     "thumbnail_url": "https://..."

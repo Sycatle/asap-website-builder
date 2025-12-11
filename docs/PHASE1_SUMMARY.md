@@ -33,7 +33,7 @@ Analyse complète de la documentation existante et lancement de la première pha
 
 5. **docs/API_SPEC.md**
    - Contrat d'API complet
-   - Routes d'authentification, users, portfolios
+   - Routes d'authentification, users, websites
    - Système d'événements
 
 6. **docs/FLOWS.md**
@@ -102,7 +102,7 @@ asap-v2/
 
 **Core Domain (6 fichiers)**
 - `users.rs` - User, Tenant, UserData models
-- `portfolios.rs` - Portfolio, PortfolioData models
+- `websites.rs` - Website, WebsiteData models
 - `events.rs` - Event system avec EventType enum
 - `integrations.rs` - GitHub integration
 - `errors.rs` - DomainError types
@@ -113,7 +113,7 @@ asap-v2/
 - `auth.rs` - Signup/login/me endpoints (stubs)
 - `users.rs` - User management (stubs)
 - `integrations.rs` - GitHub integration (stubs)
-- `portfolios.rs` - Portfolio CRUD + publish (stubs)
+- `websites.rs` - Website CRUD + publish (stubs)
 - `events.rs` - Event publishing/polling (stubs)
 - `modules.rs` - Module registry (stubs)
 - `lib.rs` - Public exports
@@ -171,7 +171,7 @@ cargo check
 - Configuration et database pool
 - Authentification (JWT + bcrypt)
 - Gestion utilisateurs et intégrations
-- Gestion portfolios complète
+- Gestion websites complète
 - Système d'événements
 - Tests unitaires et d'intégration
 
@@ -201,8 +201,8 @@ cargo check
 
 - [ ] Signup/login fonctionnel
 - [ ] Configuration GitHub
-- [ ] Génération automatique portfolio
-- [ ] Publication portfolio
+- [ ] Génération automatique website
+- [ ] Publication website
 - [ ] Accès public
 - [ ] Temps génération < 30s
 - [ ] TTFB < 100ms
@@ -222,7 +222,7 @@ cargo check
 
 **Domain Models:** 100%
 - [x] User, Tenant, UserData
-- [x] Portfolio, PortfolioData
+- [x] Website, WebsiteData
 - [x] Event, EventType
 - [x] Integration (GitHub)
 - [x] Error handling
@@ -231,7 +231,7 @@ cargo check
 - [x] All routes defined
 - [x] Auth endpoints
 - [x] User endpoints
-- [x] Portfolio endpoints
+- [x] Website endpoints
 - [x] Event endpoints
 - [x] Module endpoints
 

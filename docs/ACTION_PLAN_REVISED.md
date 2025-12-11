@@ -55,7 +55,7 @@ apps/web/
 │   │   ├── api/
 │   │   │   ├── client.ts       # Wrapper fetch avec JWT
 │   │   │   ├── auth.ts         # Signup, login, me
-│   │   │   ├── portfolios.ts  # CRUD portfolios
+│   │   │   ├── websites.ts  # CRUD websites
 │   │   │   └── files.ts        # Upload, list, delete
 │   │   ├── store/
 │   │   │   └── authStore.ts    # Zustand store pour auth
@@ -117,7 +117,7 @@ class APIClient {
 **Checklist Jour 3-4:**
 - [ ] Client API avec gestion JWT
 - [ ] Méthodes auth (signup, login, me)
-- [ ] Méthodes portfolios (CRUD)
+- [ ] Méthodes websites (CRUD)
 - [ ] Méthodes files (upload, list, delete)
 - [ ] Gestion erreurs HTTP
 - [ ] Types TypeScript complets
@@ -131,9 +131,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Button from '../components/Button.astro';
 ---
 
-<BaseLayout title="ASAP - Portfolio en 5 minutes">
+<BaseLayout title="ASAP - Website en 5 minutes">
   <section class="hero">
-    <h1>Créez votre portfolio professionnel en 5 minutes</h1>
+    <h1>Créez votre website professionnel en 5 minutes</h1>
     <p>Importez vos projets GitHub, publiez, c'est fait.</p>
     <Button href="/signup">Commencer gratuitement</Button>
   </section>
@@ -147,20 +147,20 @@ import Button from '../components/Button.astro';
 **Fichier: `src/pages/[slug].astro`**
 ```astro
 ---
-import { getPublicPortfolio } from '../lib/api/portfolios';
+import { getPublicWebsite } from '../lib/api/websites';
 
 const { slug } = Astro.params;
-const portfolio = await getPublicPortfolio(slug);
+const website = await getPublicWebsite(slug);
 ---
 
-<div class="portfolio">
+<div class="website">
   <header>
-    <h1>{portfolio.title}</h1>
-    <p>{portfolio.tagline}</p>
+    <h1>{website.title}</h1>
+    <p>{website.tagline}</p>
   </header>
   
   <section class="projects">
-    {portfolio.data.projects.map(project => (
+    {website.data.projects.map(project => (
       <ProjectCard project={project} />
     ))}
   </section>
@@ -169,7 +169,7 @@ const portfolio = await getPublicPortfolio(slug);
 
 **Checklist Jour 5-7:**
 - [ ] Landing page avec hero + features
-- [ ] Page portfolio public ([slug])
+- [ ] Page website public ([slug])
 - [ ] SSG avec getStaticPaths
 - [ ] Design responsive
 - [ ] SEO meta tags
@@ -186,7 +186,7 @@ import AuthLayout from '../layouts/AuthLayout.astro';
   <form id="signup-form">
     <Input type="email" name="email" label="Email" />
     <Input type="password" name="password" label="Mot de passe" />
-    <Input type="text" name="slug" label="Slug portfolio" />
+    <Input type="text" name="slug" label="Slug website" />
     <Button type="submit">Créer mon compte</Button>
   </form>
   
@@ -215,14 +215,14 @@ import AuthLayout from '../layouts/AuthLayout.astro';
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
 import { getMe } from '../../lib/api/auth';
-import { getPortfolio } from '../../lib/api/portfolios';
+import { getWebsite } from '../../lib/api/websites';
 
 // Auth guard
 const token = Astro.cookies.get('auth_token');
 if (!token) return Astro.redirect('/login');
 
 const user = await getMe();
-const portfolio = await getPortfolio(user.portfolio_id);
+const website = await getWebsite(user.website_id);
 ---
 
 <AppLayout user={user}>
@@ -230,7 +230,7 @@ const portfolio = await getPortfolio(user.portfolio_id);
     <aside class="sidebar">
       <nav>
         <a href="/app/dashboard">Dashboard</a>
-        <a href="/app/portfolio">Mon Portfolio</a>
+        <a href="/app/website">Mon Website</a>
         <a href="/app/files">Fichiers</a>
         <a href="/app/settings">Paramètres</a>
       </nav>
@@ -240,14 +240,14 @@ const portfolio = await getPortfolio(user.portfolio_id);
       <h1>Bienvenue {user.email}</h1>
       
       <div class="stats">
-        <Card title="Portfolio" value={portfolio.status} />
+        <Card title="Website" value={website.status} />
         <Card title="Fichiers" value={`${files.length} / 100`} />
         <Card title="Quota" value={`${quota.used} / ${quota.total}`} />
       </div>
       
       <div class="quick-actions">
-        <Button href="/app/portfolio">Éditer Portfolio</Button>
-        <Button href={`/${portfolio.slug}`}>Voir Public</Button>
+        <Button href="/app/website">Éditer Website</Button>
+        <Button href={`/${website.slug}`}>Voir Public</Button>
       </div>
     </main>
   </div>
@@ -265,13 +265,13 @@ const portfolio = await getPortfolio(user.portfolio_id);
 
 ### Sprint 3 (Semaine 3) : Dashboard Complet
 
-#### Jour 15-17 : Gestion Portfolio
+#### Jour 15-17 : Gestion Website
 
-**Fichier: `src/pages/app/portfolio.astro`**
+**Fichier: `src/pages/app/website.astro`**
 ```astro
-<form id="portfolio-form">
-  <Input name="title" label="Titre" value={portfolio.title} />
-  <Input name="tagline" label="Tagline" value={portfolio.tagline} />
+<form id="website-form">
+  <Input name="title" label="Titre" value={website.title} />
+  <Input name="tagline" label="Tagline" value={website.tagline} />
   <Input name="github_username" label="GitHub Username" />
   
   <Button type="button" id="generate-btn">
@@ -281,17 +281,17 @@ const portfolio = await getPortfolio(user.portfolio_id);
   <Button type="submit">Sauvegarder</Button>
   
   <Button type="button" id="publish-btn" variant="primary">
-    Publier Portfolio
+    Publier Website
   </Button>
 </form>
 
 <div class="preview">
-  <iframe src={`/preview/${portfolio.slug}`}></iframe>
+  <iframe src={`/preview/${website.slug}`}></iframe>
 </div>
 ```
 
 **Checklist Jour 15-17:**
-- [ ] Formulaire édition portfolio
+- [ ] Formulaire édition website
 - [ ] Configuration GitHub username
 - [ ] Bouton génération avec loading
 - [ ] Bouton publication avec confirmation
@@ -428,8 +428,8 @@ jobs:
 - [ ] Utilisateur peut s'inscrire via web
 - [ ] Utilisateur peut se connecter via web
 - [ ] Utilisateur peut configurer GitHub
-- [ ] Portfolio généré automatiquement
-- [ ] Portfolio publié visible publiquement
+- [ ] Website généré automatiquement
+- [ ] Website publié visible publiquement
 - [ ] Upload fichiers fonctionne
 - [ ] Quotas affichés correctement
 
@@ -479,7 +479,7 @@ jobs:
 
 ### Cette Semaine
 - [ ] Landing page complète
-- [ ] Page portfolio public
+- [ ] Page website public
 - [ ] Pages signup/login
 - [ ] Client API TypeScript
 
