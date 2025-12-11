@@ -3,10 +3,13 @@
 //! This module provides reusable helper functions to reduce code duplication
 //! and apply DRY (Don't Repeat Yourself) principle across handlers.
 
-use axum::{response::IntoResponse, http::StatusCode, Json};
+use axum::{response::{IntoResponse, Response}, http::StatusCode, Json};
 use uuid::Uuid;
 
 use asap_core_shared::Claims;
+
+/// Type alias for JSON error response tuple
+pub type JsonErrorResponse = (StatusCode, Json<serde_json::Value>);
 
 /// Parse a UUID from a string, returning an appropriate error response if invalid.
 ///
@@ -16,12 +19,12 @@ use asap_core_shared::Claims;
 ///
 /// # Returns
 /// * `Ok(Uuid)` - Successfully parsed UUID
-/// * `Err(impl IntoResponse)` - Error response with BAD_REQUEST status
-pub fn parse_uuid(id: &str, field_name: &str) -> Result<Uuid, impl IntoResponse> {
+/// * `Err(Response)` - Error response with BAD_REQUEST status
+pub fn parse_uuid(id: &str, field_name: &str) -> Result<Uuid, Response> {
     Uuid::parse_str(id).map_err(|_| {
         (StatusCode::BAD_REQUEST, Json(serde_json::json!({
             "error": format!("Invalid {} format", field_name)
-        })))
+        }))).into_response()
     })
 }
 
@@ -32,12 +35,12 @@ pub fn parse_uuid(id: &str, field_name: &str) -> Result<Uuid, impl IntoResponse>
 ///
 /// # Returns
 /// * `Ok(Uuid)` - Successfully parsed tenant UUID
-/// * `Err(impl IntoResponse)` - Error response with UNAUTHORIZED status
-pub fn parse_tenant_id(claims: &Claims) -> Result<Uuid, impl IntoResponse> {
+/// * `Err(Response)` - Error response with UNAUTHORIZED status
+pub fn parse_tenant_id(claims: &Claims) -> Result<Uuid, Response> {
     Uuid::parse_str(&claims.tenant_id).map_err(|_| {
         (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-            "error": "Invalid token"
-        })))
+            "error": "Invalid tenant ID in token"
+        }))).into_response()
     })
 }
 
@@ -46,10 +49,10 @@ pub fn parse_tenant_id(claims: &Claims) -> Result<Uuid, impl IntoResponse> {
 /// # Arguments
 /// * `status` - HTTP status code
 /// * `message` - Error message to include in response
-pub fn error_response(status: StatusCode, message: &str) -> impl IntoResponse {
+pub fn error_response(status: StatusCode, message: &str) -> Response {
     (status, Json(serde_json::json!({
         "error": message
-    })))
+    }))).into_response()
 }
 
 /// Create a standard JSON success response
@@ -57,19 +60,19 @@ pub fn error_response(status: StatusCode, message: &str) -> impl IntoResponse {
 /// # Arguments
 /// * `status` - HTTP status code
 /// * `message` - Success message to include in response
-pub fn success_response(status: StatusCode, message: &str) -> impl IntoResponse {
+pub fn success_response(status: StatusCode, message: &str) -> Response {
     (status, Json(serde_json::json!({
         "message": message
-    })))
+    }))).into_response()
 }
 
 /// Create a "not found" error response
-pub fn not_found_response(resource: &str) -> impl IntoResponse {
+pub fn not_found_response(resource: &str) -> Response {
     error_response(StatusCode::NOT_FOUND, &format!("{} not found", resource))
 }
 
 /// Create an internal server error response (also logs the error)
-pub fn internal_error_response(context: &str, error: impl std::fmt::Display) -> impl IntoResponse {
+pub fn internal_error_response(context: &str, error: impl std::fmt::Display) -> Response {
     tracing::error!("{}: {}", context, error);
     error_response(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
 }

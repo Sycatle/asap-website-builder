@@ -4,6 +4,12 @@ use sqlx::PgPool;
 use uuid::Uuid;
 use asap_core_shared::{SharedConfig, generate_token, Claims};
 
+/// Default creation mode for websites created during signup
+const DEFAULT_CREATION_MODE: &str = "from_scratch";
+
+/// Default tagline for new websites
+const DEFAULT_TAGLINE: &str = "";
+
 #[derive(Debug, Deserialize)]
 pub struct SignupRequest {
     pub email: String,
@@ -356,13 +362,16 @@ pub async fn signup(
 
     // Create default website
     let website_id = Uuid::new_v4();
-    if let Err(e) = sqlx::query!(
-        "INSERT INTO websites (id, tenant_id, slug, title, tagline, status, creation_mode) VALUES ($1, $2, $3, $4, '', 'draft', 'from_scratch')",
-        website_id,
-        tenant_id,
-        slug, // Use sanitized slug, not raw payload
-        payload.email.split('@').next().unwrap_or("User")
+    let default_title = payload.email.split('@').next().unwrap_or("User");
+    if let Err(e) = sqlx::query(
+        "INSERT INTO websites (id, tenant_id, slug, title, tagline, status, creation_mode) VALUES ($1, $2, $3, $4, $5, 'draft', $6)"
     )
+    .bind(website_id)
+    .bind(tenant_id)
+    .bind(&slug)
+    .bind(default_title)
+    .bind(DEFAULT_TAGLINE)
+    .bind(DEFAULT_CREATION_MODE)
     .execute(&mut *tx)
     .await {
         tracing::error!("Failed to create website: {}", e);
@@ -373,10 +382,10 @@ pub async fn signup(
     }
 
     // Create website_data entry
-    if let Err(e) = sqlx::query!(
-        "INSERT INTO website_data (website_id, data) VALUES ($1, '{}'::jsonb)",
-        website_id
+    if let Err(e) = sqlx::query(
+        "INSERT INTO website_data (website_id, data) VALUES ($1, '{}'::jsonb)"
     )
+    .bind(website_id)
     .execute(&mut *tx)
     .await {
         tracing::error!("Failed to create website_data: {}", e);

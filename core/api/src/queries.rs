@@ -951,7 +951,12 @@ pub async fn create_website_from_preset(
 
 /// Batch insert events (optimized for high volume)
 /// 
-/// Uses multi-row INSERT for better performance than individual inserts
+/// Uses multi-row INSERT for better performance than individual inserts.
+/// 
+/// # Safety
+/// The format! macro is only used to generate parameter placeholders ($1, $2, etc.),
+/// not to interpolate user data. All user data is properly bound via `.bind()` calls,
+/// making this safe from SQL injection.
 pub async fn batch_insert_events(
     pool: &PgPool,
     events: &[BatchEvent],
@@ -970,6 +975,7 @@ pub async fn batch_insert_events(
         if idx > 0 {
             query.push_str(", ");
         }
+        // Only generating placeholder indices, not interpolating user data
         query.push_str(&format!("(${}, ${}, ${})", idx * 3 + 1, idx * 3 + 2, idx * 3 + 3));
         bindings.push((event.tenant_id, event.event_type.clone(), event.payload.clone()));
     }
