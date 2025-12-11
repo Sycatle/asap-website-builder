@@ -21,7 +21,7 @@ pub struct Projection {
     pub data: serde_json::Value,
 }
 
-/// Generate a static JSON projection file for a portfolio
+/// Generate a static JSON projection file for a website
 pub async fn generate_projection(slug: &str, data: serde_json::Value) -> anyhow::Result<()> {
     tracing::info!("Generating projection for slug: {}", slug);
     
@@ -72,9 +72,9 @@ pub async fn delete_projection(slug: &str) -> anyhow::Result<()> {
 mod tests {
     #[tokio::test]
     async fn test_generate_projection_simple() {
-        let _slug = "test-portfolio";
+        let _slug = "test-website";
         let _data = serde_json::json!({
-            "title": "Test Portfolio",
+            "title": "Test Website",
             "bio": "A test"
         });
 
@@ -90,8 +90,8 @@ mod tests {
     #[test]
     fn test_generate_projection_slug_validation() {
         let valid_slugs = vec![
-            "my-portfolio",
-            "portfolio-123",
+            "my-website",
+            "website-123",
             "test",
             "a-b-c-d",
         ];
@@ -105,7 +105,7 @@ mod tests {
     #[test]
     fn test_generate_projection_data_serialization() {
         let data = serde_json::json!({
-            "title": "Portfolio",
+            "title": "Website",
             "sections": ["about", "projects"],
             "projects": [
                 {"id": 1, "name": "Project 1"},
@@ -118,16 +118,16 @@ mod tests {
         
         // Verify it can be parsed back
         let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
-        assert_eq!(parsed["title"], "Portfolio");
+        assert_eq!(parsed["title"], "Website");
         assert_eq!(parsed["projects"].as_array().unwrap().len(), 2);
     }
 
     #[test]
     fn test_path_construction() {
-        let slug = "my-portfolio";
+        let slug = "my-website";
         let path = format!("data/sites/{}.json", slug);
         
-        assert_eq!(path, "data/sites/my-portfolio.json");
+        assert_eq!(path, "data/sites/my-website.json");
         assert!(path.ends_with(".json"));
         assert!(path.contains("data/sites/"));
     }
@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn test_multiple_slugs_different_paths() {
-        let slugs = vec!["portfolio-1", "portfolio-2", "portfolio-3"];
+        let slugs = vec!["website-1", "website-2", "website-3"];
         let paths: Vec<String> = slugs
             .iter()
             .map(|slug| format!("data/sites/{}.json", slug))
@@ -164,9 +164,9 @@ mod tests {
 
         // All paths should be unique
         assert_eq!(paths.len(), 3);
-        assert!(paths[0].contains("portfolio-1"));
-        assert!(paths[1].contains("portfolio-2"));
-        assert!(paths[2].contains("portfolio-3"));
+        assert!(paths[0].contains("website-1"));
+        assert!(paths[1].contains("website-2"));
+        assert!(paths[2].contains("website-3"));
     }
 
     #[test]
@@ -181,7 +181,7 @@ mod tests {
     fn test_projection_with_complex_data() {
         let data = serde_json::json!({
             "site": {
-                "title": "John's Portfolio",
+                "title": "John's Website",
                 "theme": "dark",
                 "sections": [
                     {
@@ -210,7 +210,7 @@ mod tests {
         let json = serde_json::to_string_pretty(&data).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
         
-        assert_eq!(parsed["site"]["title"], "John's Portfolio");
+        assert_eq!(parsed["site"]["title"], "John's Website");
         assert_eq!(parsed["site"]["sections"][0]["id"], "about");
         assert!(parsed["site"]["sections"][1]["items"][0]["tags"].is_array());
     }

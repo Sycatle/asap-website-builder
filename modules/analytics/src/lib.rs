@@ -8,17 +8,17 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalyticsEvent {
     pub event_type: String,
-    pub portfolio_slug: Option<String>,
+    pub website_slug: Option<String>,
     pub user_id: Option<String>,
     pub timestamp: String,
     pub metadata: serde_json::Value,
 }
 
 impl AnalyticsEvent {
-    pub fn new(event_type: &str, portfolio_slug: Option<String>, user_id: Option<String>) -> Self {
+    pub fn new(event_type: &str, website_slug: Option<String>, user_id: Option<String>) -> Self {
         Self {
             event_type: event_type.to_string(),
-            portfolio_slug,
+            website_slug,
             user_id,
             timestamp: Utc::now().to_rfc3339(),
             metadata: serde_json::json!({}),
@@ -52,9 +52,9 @@ pub fn track_event(event_type: &str) -> anyhow::Result<()> {
 /// Track a detailed analytics event with full context
 pub fn track_detailed_event(event: AnalyticsEvent) -> anyhow::Result<()> {
     tracing::info!(
-        "Tracking detailed event: {} for portfolio {:?} at {}",
+        "Tracking detailed event: {} for website {:?} at {}",
         event.event_type,
-        event.portfolio_slug,
+        event.website_slug,
         event.timestamp
     );
     
@@ -69,18 +69,18 @@ pub fn track_detailed_event(event: AnalyticsEvent) -> anyhow::Result<()> {
 }
 
 /// Track a page view
-pub fn track_page_view(portfolio_slug: &str, user_id: Option<String>) -> anyhow::Result<()> {
-    let event = AnalyticsEvent::new("page_view", Some(portfolio_slug.to_string()), user_id);
+pub fn track_page_view(website_slug: &str, user_id: Option<String>) -> anyhow::Result<()> {
+    let event = AnalyticsEvent::new("page_view", Some(website_slug.to_string()), user_id);
     track_detailed_event(event)
 }
 
 /// Track a button click
-pub fn track_click(button_id: &str, portfolio_slug: Option<String>) -> anyhow::Result<()> {
+pub fn track_click(button_id: &str, website_slug: Option<String>) -> anyhow::Result<()> {
     let metadata = serde_json::json!({
         "button_id": button_id
     });
     
-    let event = AnalyticsEvent::new("click", portfolio_slug, None)
+    let event = AnalyticsEvent::new("click", website_slug, None)
         .with_metadata(metadata);
     
     track_detailed_event(event)

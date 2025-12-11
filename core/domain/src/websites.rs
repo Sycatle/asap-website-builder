@@ -473,8 +473,8 @@ mod tests {
     fn test_preset_creation() {
         let preset = Preset {
             id: Uuid::new_v4(),
-            name: "Developer Portfolio".to_string(),
-            slug: "developer-portfolio".to_string(),
+            name: "Developer Website".to_string(),
+            slug: "developer-website".to_string(),
             description: "Perfect for developers to showcase their work".to_string(),
             category: "professional".to_string(),
             config: PresetConfig {
@@ -505,7 +505,7 @@ mod tests {
             updated_at: Utc::now(),
         };
 
-        assert_eq!(preset.name, "Developer Portfolio");
+        assert_eq!(preset.name, "Developer Website");
         assert_eq!(preset.config.modules.len(), 2);
         assert_eq!(preset.config.sections.len(), 2);
         assert!(preset.enabled);

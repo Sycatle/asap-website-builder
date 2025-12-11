@@ -1,13 +1,13 @@
 use anyhow::Result;
 
-pub async fn generate_portfolio_content(
+pub async fn generate_website_content(
     repos: Vec<serde_json::Value>,
     user: Option<serde_json::Value>,
     orgs: Option<Vec<serde_json::Value>>,
 ) -> Result<serde_json::Value> {
     tracing::info!("Processing {} repositories", repos.len());
     
-    // Transform repos into portfolio projects
+    // Transform repos into website projects
     let mut projects: Vec<serde_json::Value> = repos
         .into_iter()
         .map(|repo| {
@@ -31,7 +31,7 @@ pub async fn generate_portfolio_content(
         stars_b.cmp(&stars_a)
     });
 
-    tracing::info!("Generated portfolio content with {} projects", projects.len());
+    tracing::info!("Generated website content with {} projects", projects.len());
 
     // Build profile from user data
     let profile = user.map(|u| {
@@ -78,9 +78,9 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_generate_portfolio_content_empty() {
+    async fn test_generate_website_content_empty() {
         let repos: Vec<serde_json::Value> = vec![];
-        let result = generate_portfolio_content(repos, None, None).await.unwrap();
+        let result = generate_website_content(repos, None, None).await.unwrap();
 
         assert_eq!(result["projects"].as_array().unwrap().len(), 0);
         assert_eq!(result["source"], "github");
@@ -88,7 +88,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_generate_portfolio_content_single_repo() {
+    async fn test_generate_website_content_single_repo() {
         let repos = vec![serde_json::json!({
             "name": "my-project",
             "description": "A test project",
@@ -100,7 +100,7 @@ mod tests {
             "updated_at": "2024-01-01T00:00:00Z",
         })];
 
-        let result = generate_portfolio_content(repos, None, None).await.unwrap();
+        let result = generate_website_content(repos, None, None).await.unwrap();
         let projects = result["projects"].as_array().unwrap();
 
         assert_eq!(projects.len(), 1);
@@ -110,7 +110,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_generate_portfolio_content_multiple_repos() {
+    async fn test_generate_website_content_multiple_repos() {
         let repos = vec![
             serde_json::json!({
                 "name": "project-a",
@@ -134,7 +134,7 @@ mod tests {
             }),
         ];
 
-        let result = generate_portfolio_content(repos, None, None).await.unwrap();
+        let result = generate_website_content(repos, None, None).await.unwrap();
         let projects = result["projects"].as_array().unwrap();
 
         assert_eq!(projects.len(), 2);
@@ -146,7 +146,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_generate_portfolio_content_sorting() {
+    async fn test_generate_website_content_sorting() {
         let repos = vec![
             serde_json::json!({
                 "name": "low-stars",
@@ -180,7 +180,7 @@ mod tests {
             }),
         ];
 
-        let result = generate_portfolio_content(repos, None, None).await.unwrap();
+        let result = generate_website_content(repos, None, None).await.unwrap();
         let projects = result["projects"].as_array().unwrap();
 
         assert_eq!(projects[0]["stars"], 100);
@@ -189,7 +189,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_generate_portfolio_content_missing_fields() {
+    async fn test_generate_website_content_missing_fields() {
         let repos = vec![serde_json::json!({
             "name": "minimal-repo",
             // Missing description, language, etc.
@@ -200,7 +200,7 @@ mod tests {
             "updated_at": "2024-01-01T00:00:00Z",
         })];
 
-        let result = generate_portfolio_content(repos, None, None).await.unwrap();
+        let result = generate_website_content(repos, None, None).await.unwrap();
         let projects = result["projects"].as_array().unwrap();
 
         assert_eq!(projects[0]["name"], "minimal-repo");
@@ -209,7 +209,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_generate_portfolio_content_structure() {
+    async fn test_generate_website_content_structure() {
         let repos = vec![serde_json::json!({
             "name": "test-repo",
             "description": "A test",
@@ -221,7 +221,7 @@ mod tests {
             "updated_at": "2024-01-01T00:00:00Z",
         })];
 
-        let result = generate_portfolio_content(repos, None, None).await.unwrap();
+        let result = generate_website_content(repos, None, None).await.unwrap();
 
         // Verify structure
         assert!(result["projects"].is_array());
@@ -231,7 +231,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_generate_portfolio_content_with_profile() {
+    async fn test_generate_website_content_with_profile() {
         let repos: Vec<serde_json::Value> = vec![];
         let user = Some(serde_json::json!({
             "login": "testuser",
@@ -253,7 +253,7 @@ mod tests {
             "description": "A test org",
         })]);
 
-        let result = generate_portfolio_content(repos, user, orgs).await.unwrap();
+        let result = generate_website_content(repos, user, orgs).await.unwrap();
         
         let profile = &result["profile"];
         assert_eq!(profile["username"], "testuser");

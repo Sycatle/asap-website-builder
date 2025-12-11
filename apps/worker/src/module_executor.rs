@@ -166,7 +166,7 @@ impl ModuleInfo for GitHubIntegrationExecutor {
     }
 
     fn description(&self) -> &'static str {
-        "Syncs GitHub repositories and profile data to generate portfolio content"
+        "Syncs GitHub repositories and profile data to generate website content"
     }
 
     fn handled_events(&self) -> Vec<EventType> {
@@ -325,7 +325,7 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
         tracing::info!("Fetched {} repositories from GitHub", repos.len());
 
         // Generate website content from repos, user profile and orgs
-        let website_content = asap_github_generator::generate_portfolio_content(repos, user, orgs).await?;
+        let website_content = asap_github_generator::generate_website_content(repos, user, orgs).await?;
 
         tracing::debug!("Generated website content");
 
