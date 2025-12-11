@@ -130,7 +130,7 @@ Le core gère la **structure** du website :
 
 - `hero` - Section d'accueil principale
 - `about` - Présentation personnelle/entreprise
-- `projects` - Portfolio de projets
+- `projects` - Website de projets
 - `skills` - Compétences techniques
 - `experience` - Parcours professionnel
 - `education` - Formation
@@ -165,7 +165,7 @@ Le core centralise les données utilisateur :
 ## API Endpoints Implémentés
 
 ### Authentification (Public)
-- ✅ `POST /api/auth/signup` - Créer compte + tenant + portfolio
+- ✅ `POST /api/auth/signup` - Créer compte + tenant + website
 - ✅ `POST /api/auth/login` - Login avec JWT
 - ✅ `GET /api/auth/me` - Utilisateur actuel (authentifié)
 
@@ -177,15 +177,15 @@ Le core centralise les données utilisateur :
 - ✅ `GET /api/users/:id/integrations` - Lister intégrations
 - ✅ `PUT /api/users/:id/integrations/github` - Configurer GitHub
 
-### Portfolios (Authentifié)
-- ✅ `GET /api/portfolios` - Lister portfolios tenant
-- ✅ `GET /api/portfolios/:id` - Récupérer portfolio
-- ✅ `PUT /api/portfolios/:id` - Mettre à jour structure
-- ✅ `PATCH /api/portfolios/:id/data` - Mettre à jour contenu (modules)
-- ✅ `POST /api/portfolios/:id/publish` - Publier portfolio
+### Websites (Authentifié)
+- ✅ `GET /api/websites` - Lister websites tenant
+- ✅ `GET /api/websites/:id` - Récupérer website
+- ✅ `PUT /api/websites/:id` - Mettre à jour structure
+- ✅ `PATCH /api/websites/:id/data` - Mettre à jour contenu (modules)
+- ✅ `POST /api/websites/:id/publish` - Publier website
 
 ### Public
-- ✅ `GET /api/public/portfolios/:slug` - Portfolio publié (fallback API)
+- ✅ `GET /api/public/websites/:slug` - Website publié (fallback API)
 
 ### Événements (Authentifié)
 - ✅ `GET /api/events` - Lister événements (avec filtres)
@@ -207,12 +207,12 @@ Le core centralise les données utilisateur :
 
 ## Flux MVP Implémenté (Backend)
 
-### Flux 1: Signup → Portfolio Initial ✅
+### Flux 1: Signup → Website Initial ✅
 ```
 1. POST /api/auth/signup
    → Core crée user
    → Core crée tenant
-   → Core crée portfolio par défaut (status: draft)
+   → Core crée website par défaut (status: draft)
    → Retourne JWT token
 ```
 
@@ -224,19 +224,19 @@ Le core centralise les données utilisateur :
 2. Worker poll événement
    → GitHubGenerator module exécuté
    → Fetch repos GitHub API
-   → Génère contenu portfolio
-   → PATCH /api/portfolios/:id/data
+   → Génère contenu website
+   → PATCH /api/websites/:id/data
    → Émet GITHUB_REPOS_SYNCED
 ```
 
-### Flux 3: Publication Portfolio ✅
+### Flux 3: Publication Website ✅
 ```
-1. POST /api/portfolios/:id/publish
+1. POST /api/websites/:id/publish
    → Core change status: draft → published
-   → Core émet événement PORTFOLIO_PUBLISHED
+   → Core émet événement WEBSITE_PUBLISHED
 2. Worker poll événement
    → Theme module exécuté
-   → Applique thème sur portfolio_data
+   → Applique thème sur website_data
    → Génère data/sites/<slug>.json (projection)
 ```
 
@@ -244,7 +244,7 @@ Le core centralise les données utilisateur :
 ```
 1. Frontend lit data/sites/<slug>.json
    OU
-2. Fallback: GET /api/public/portfolios/:slug
+2. Fallback: GET /api/public/websites/:slug
 ```
 
 ### Flux 5: Upload Fichier ✅
@@ -262,7 +262,7 @@ Le core centralise les données utilisateur :
 ## Contraintes MVP
 
 ### ✅ Implémenté
-- ✅ Un seul portfolio par tenant (MVP)
+- ✅ Un seul website par tenant (MVP)
 - ✅ Thème par défaut uniquement
 - ✅ GitHub intégration publique (pas OAuth)
 - ✅ Quotas fichiers (1GB par défaut)
@@ -271,7 +271,7 @@ Le core centralise les données utilisateur :
 ### ❌ Hors Scope MVP (Prévu mais pas fait)
 - ❌ Personnalisation CSS avancée (module Theme futur)
 - ❌ Multi-langues
-- ❌ Plusieurs portfolios par tenant
+- ❌ Plusieurs websites par tenant
 - ❌ Commerce/Stripe
 - ❌ Analytics avancées (page views, heatmaps)
 - ❌ Module IA (text/image generation)
@@ -325,7 +325,7 @@ Le core centralise les données utilisateur :
    - Landing page
    - Signup/Login UI
    - Dashboard privé
-   - Pages publiques portfolios
+   - Pages publiques websites
    - Gestion fichiers UI
 
 ### 🟡 Important (Post-launch rapide)
@@ -362,9 +362,9 @@ Le core centralise les données utilisateur :
 
 ### Semaine Prochaine
 1. [ ] Dashboard principal avec navigation
-2. [ ] Gestion portfolio (édition, GitHub, publish)
+2. [ ] Gestion website (édition, GitHub, publish)
 3. [ ] Gestion fichiers (upload, list, delete)
-4. [ ] Preview portfolio
+4. [ ] Preview website
 
 ### Dans 2 Semaines
 1. [ ] Tests E2E avec Playwright
@@ -387,8 +387,8 @@ Le core centralise les données utilisateur :
 - [ ] Landing page accessible
 - [ ] Signup/Login fonctionnels
 - [ ] Dashboard utilisable
-- [ ] Portfolio éditable via UI
-- [ ] Page publique render portfolio
+- [ ] Website éditable via UI
+- [ ] Page publique render website
 - [ ] Upload fichiers fonctionne
 - [ ] Design responsive
 

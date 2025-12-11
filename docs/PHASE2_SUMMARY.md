@@ -17,7 +17,7 @@ Phase 2 has been successfully completed. All Core API endpoints have been implem
 
 ### Authentication System (2.2)
 - ✅ Complete JWT-based authentication
-  - `signup()` - Creates user, tenant, and default portfolio in a single transaction
+  - `signup()` - Creates user, tenant, and default website in a single transaction
   - `login()` - Validates credentials and issues JWT tokens
   - `me()` - Returns current user information from JWT
 - ✅ Security features
@@ -36,13 +36,13 @@ Phase 2 has been successfully completed. All Core API endpoints have been implem
 - ✅ `update_github_integration()` - Store GitHub username/token
 - ✅ Event emission (USER_INTEGRATION_ADDED)
 
-### Portfolio Management (2.5)
-- ✅ `list_portfolios()` - List all portfolios for tenant
-- ✅ `get_portfolio()` - Get single portfolio with data
-- ✅ `update_portfolio()` - Update title, tagline, metadata
-- ✅ `patch_portfolio_data()` - Partial update of portfolio data
-- ✅ `publish_portfolio()` - Publish portfolio and emit event
-- ✅ `get_public_portfolio()` - Public access to published portfolios
+### Website Management (2.5)
+- ✅ `list_websites()` - List all websites for tenant
+- ✅ `get_website()` - Get single website with data
+- ✅ `update_website()` - Update title, tagline, metadata
+- ✅ `patch_website_data()` - Partial update of website data
+- ✅ `publish_website()` - Publish website and emit event
+- ✅ `get_public_website()` - Public access to published websites
 
 ### Event System (2.6)
 - ✅ `create_event()` - Create new events
@@ -71,7 +71,7 @@ Response: {"database": "ok", "service": "asap-api", "status": "ok", "version": "
 ```bash
 # Signup
 POST /api/auth/signup
-Body: {"email": "john@example.com", "password": "securepass123", "portfolio_slug": "john-doe"}
+Body: {"email": "john@example.com", "password": "securepass123", "website_slug": "john-doe"}
 Response: User created with JWT token
 
 # Login
@@ -84,24 +84,24 @@ GET /api/auth/me (with Bearer token)
 Response: User details with tenant_id
 ```
 
-### Portfolio Management
+### Website Management
 ```bash
-# List portfolios
-GET /api/portfolios (authenticated)
-Response: Array of portfolios with data
+# List websites
+GET /api/websites (authenticated)
+Response: Array of websites with data
 
-# Update portfolio
-PUT /api/portfolios/{id} (authenticated)
+# Update website
+PUT /api/websites/{id} (authenticated)
 Body: {"title": "John Doe", "tagline": "Full Stack Developer"}
 Response: Success message
 
-# Publish portfolio
-POST /api/portfolios/{id}/publish (authenticated)
-Response: Portfolio published, event created
+# Publish website
+POST /api/websites/{id}/publish (authenticated)
+Response: Website published, event created
 
-# Get public portfolio
-GET /api/public/portfolios/{slug} (no auth required)
-Response: Published portfolio data
+# Get public website
+GET /api/public/websites/{slug} (no auth required)
+Response: Published website data
 ```
 
 ### Integration & Events
@@ -122,8 +122,8 @@ Response: Array of events including USER_INTEGRATION_ADDED
 2. **Event-Driven Design**: Events are created for important actions (integrations, publishing)
 3. **Deferred Foreign Keys**: Resolved circular dependency between users and tenants
 4. **JWT Middleware**: Proper authentication on protected routes
-5. **Dynamic Query Building**: Flexible portfolio updates with optional fields
-6. **JSONB Support**: Flexible data storage for user_data and portfolio_data
+5. **Dynamic Query Building**: Flexible website updates with optional fields
+6. **JSONB Support**: Flexible data storage for user_data and website_data
 7. **Health Monitoring**: Database connectivity check in health endpoint
 
 ## Database Schema
@@ -131,8 +131,8 @@ Response: Array of events including USER_INTEGRATION_ADDED
 The migration includes:
 - Users table with password hashing
 - Tenants table for multi-tenancy
-- Portfolios with draft/published status
-- Portfolio data (JSONB for flexible content)
+- Websites with draft/published status
+- Website data (JSONB for flexible content)
 - Events table for event-driven architecture
 - Modules and module_configs for extensibility
 - Proper indexes for performance
@@ -144,7 +144,7 @@ The migration includes:
 2. **JWT Authentication**: Stateless authentication with 24-hour expiration
 3. **bcrypt Hashing**: Secure password storage with default cost
 4. **Middleware Pattern**: Centralized authentication logic
-5. **JSONB for Flexibility**: user_data and portfolio_data use JSONB for schema flexibility
+5. **JSONB for Flexibility**: user_data and website_data use JSONB for schema flexibility
 6. **Event Sourcing**: Events table captures important domain events for worker processing
 
 ## Known Limitations
@@ -175,7 +175,7 @@ According to the plan, Phase 3 will implement:
 - `core/api/src/auth.rs` - Complete authentication implementation
 - `core/api/src/users.rs` - User management
 - `core/api/src/integrations.rs` - Integration management  
-- `core/api/src/portfolios.rs` - Portfolio CRUD
+- `core/api/src/websites.rs` - Website CRUD
 - `core/api/src/events.rs` - Event system
 - `core/api/src/modules.rs` - Module management
 - `core/api/src/routes.rs` - Router with authentication middleware

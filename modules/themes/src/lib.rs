@@ -1,9 +1,9 @@
 // Theme Module
-// Applies themes to portfolio content
+// Applies themes to website content
 
 use serde::{Deserialize, Serialize};
 
-/// Represents a portfolio theme configuration
+/// Represents a website theme configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Theme {
     pub name: String,
@@ -62,15 +62,15 @@ impl Default for Theme {
     }
 }
 
-/// Apply theme to portfolio data and generate styled HTML/JSON
-pub fn apply_theme(portfolio_data: serde_json::Value, theme: Option<Theme>) -> anyhow::Result<String> {
+/// Apply theme to website data and generate styled HTML/JSON
+pub fn apply_theme(website_data: serde_json::Value, theme: Option<Theme>) -> anyhow::Result<String> {
     let theme = theme.unwrap_or_default();
     
-    tracing::info!("Applying theme '{}' to portfolio", theme.name);
+    tracing::info!("Applying theme '{}' to website", theme.name);
     
-    // Create a themed portfolio output with metadata
+    // Create a themed website output with metadata
     let themed_output = serde_json::json!({
-        "portfolio": portfolio_data,
+        "website": website_data,
         "theme": {
             "name": theme.name,
             "colors": theme.colors,
@@ -96,14 +96,14 @@ mod tests {
         let result = apply_theme(data, None);
         assert!(result.is_ok());
         let rendered = result.unwrap();
-        assert!(rendered.contains("portfolio"));
+        assert!(rendered.contains("website"));
         assert!(rendered.contains("theme"));
     }
 
     #[test]
-    fn test_apply_theme_with_portfolio_data() {
+    fn test_apply_theme_with_website_data() {
         let data = serde_json::json!({
-            "title": "My Portfolio",
+            "title": "My Website",
             "bio": "A developer",
             "projects": [
                 {"name": "Project 1"},
@@ -112,7 +112,7 @@ mod tests {
         });
 
         let result = apply_theme(data, None).unwrap();
-        assert!(result.contains("My Portfolio"));
+        assert!(result.contains("My Website"));
         assert!(result.contains("A developer"));
     }
 
@@ -158,14 +158,14 @@ mod tests {
         let result = apply_theme(data, None).unwrap();
         // Should be valid JSON
         let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
-        assert_eq!(parsed["portfolio"]["name"], "John");
-        assert_eq!(parsed["portfolio"]["age"], 30);
+        assert_eq!(parsed["website"]["name"], "John");
+        assert_eq!(parsed["website"]["age"], 30);
     }
 
     #[test]
     fn test_apply_theme_with_null_values() {
         let data = serde_json::json!({
-            "title": "Portfolio",
+            "title": "Website",
             "subtitle": null,
             "image": null
         });
@@ -234,7 +234,7 @@ mod tests {
     #[test]
     fn test_apply_custom_theme() {
         let data = serde_json::json!({
-            "title": "My Portfolio"
+            "title": "My Website"
         });
 
         let custom_theme = Theme {

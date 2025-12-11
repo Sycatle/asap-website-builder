@@ -53,7 +53,7 @@ pub struct GitHubClient {
 impl GitHubClient {
     pub fn new() -> Result<Self> {
         let client = reqwest::Client::builder()
-            .user_agent("asap-portfolio-generator/0.1")
+            .user_agent("asap-website-generator/0.1")
             .build()?;
         
         Ok(Self { client })

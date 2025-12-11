@@ -1,8 +1,8 @@
 // GitHub Generator Module
-// Fetches GitHub repositories and generates portfolio content
+// Fetches GitHub repositories and generates website content
 
 pub mod client;
 pub mod processor;
 
 pub use client::GitHubClient;
-pub use processor::generate_portfolio_content;
+pub use processor::generate_website_content;

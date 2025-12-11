@@ -143,7 +143,7 @@ Un endroit unique pour :
 |---------|-------------|---------------------|
 | **Hero** | Section d'accueil principale | Full |
 | **About** | Présentation personnelle/entreprise | Split, Full |
-| **Projects** | Portfolio de projets | Grid, Cards |
+| **Projects** | Galerie de projets | Grid, Cards |
 | **Skills** | Compétences techniques | Grid, List |
 | **Experience** | Parcours professionnel | Timeline, List |
 | **Education** | Formation | Timeline, List |
@@ -162,7 +162,7 @@ Un endroit unique pour :
 
 ASAP adopte une architecture **Core + Modules** où :
 
-- **Core API** = gestion centralisée des utilisateurs, données, portfolios
+- **Core API** = gestion centralisée des utilisateurs, données, sites web
 - **Modules** = implémentent toutes les fonctionnalités (GitHub import, rendering, analytics, etc.)
 - **Workers** = exécutent les tâches des modules en réponse aux événements
 
@@ -233,7 +233,7 @@ Frontend (Astro)
 | Décision | Contexte | Alternative rejetée |
 |----------|----------|---------------------|
 | **Rust backend** | Performances et sécurité mémoire critiques | Node.js (CPU), Go (typage), PHP (async) |
-| **Architecture Website/Sections** | Flexibilité et modularité du contenu | Structure portfolio rigide |
+| **Architecture Website/Sections** | Flexibilité et modularité du contenu | Structure monolithique rigide |
 | **Projections locales** | Milliers de sites à servir rapidement | Lecture directe PostgreSQL |
 | **Monorepo open-core** | Contributions externes + modules premium | Multi-repos (complexité) |
 
@@ -505,8 +505,8 @@ Liste les templates disponibles.
 [
   {
     "id": "uuid",
-    "name": "Developer Portfolio",
-    "slug": "developer-portfolio",
+    "name": "Developer Website",
+    "slug": "developer-website",
     "description": "Perfect for developers",
     "category": "professional"
   }
@@ -557,7 +557,7 @@ Redirige vers dashboard
 ### 2. Choix du Preset (Core)
 
 ```
-User sélectionne un preset (Developer Portfolio, Blog, etc.)
+User sélectionne un preset (Developer Website, Blog, etc.)
     ↓
 POST /websites/from-preset
     ↓

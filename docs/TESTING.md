@@ -70,23 +70,23 @@ Tests cover:
 - ✅ UserData JSONB storage
 - ✅ Serialization round-trip
 
-#### Portfolios Module (7 tests)
-- `test_portfolio_status_default` - Default status is Draft
-- `test_portfolio_status_serialization` - Enum serialization
-- `test_portfolio_creation` - Portfolio initialization
-- `test_portfolio_status_transitions` - Status changes
-- `test_portfolio_with_metadata` - JSONB metadata
-- `test_portfolio_data_creation` - Portfolio data init
-- `test_portfolio_data_with_content` - Complex data storage
-- `test_portfolio_data_serialization` - JSON round-trip
-- `test_portfolio_clone` - Portfolio cloning
+#### Websites Module (7 tests)
+- `test_website_status_default` - Default status is Draft
+- `test_website_status_serialization` - Enum serialization
+- `test_website_creation` - Website initialization
+- `test_website_status_transitions` - Status changes
+- `test_website_with_metadata` - JSONB metadata
+- `test_website_data_creation` - Website data init
+- `test_website_data_with_content` - Complex data storage
+- `test_website_data_serialization` - JSON round-trip
+- `test_website_clone` - Website cloning
 
-**File:** `core/domain/src/portfolios.rs`
+**File:** `core/domain/src/websites.rs`
 
 Tests cover:
-- ✅ Portfolio status enumeration (Draft/Published)
-- ✅ Portfolio metadata storage (JSONB)
-- ✅ Portfolio data content management
+- ✅ Website status enumeration (Draft/Published)
+- ✅ Website metadata storage (JSONB)
+- ✅ Website data content management
 - ✅ Serialization compatibility
 
 #### Events Module (8 tests)
@@ -102,7 +102,7 @@ Tests cover:
 **File:** `core/domain/src/events.rs`
 
 Tests cover:
-- ✅ Event type enumeration (UserCreated, PortfolioPublished, etc.)
+- ✅ Event type enumeration (UserCreated, WebsitePublished, etc.)
 - ✅ Event creation with payload
 - ✅ Event processing state management
 - ✅ Event serialization for storage
@@ -146,7 +146,7 @@ Tests cover:
 
 #### Themes Module (10 tests)
 - `test_apply_theme_empty_data` - Empty data handling
-- `test_apply_theme_with_portfolio_data` - Portfolio theming
+- `test_apply_theme_with_website_data` - Website theming
 - `test_apply_theme_with_complex_structure` - Complex JSON
 - `test_apply_theme_returns_valid_json_string` - Output validation
 - `test_apply_theme_with_null_values` - Null handling
@@ -176,13 +176,13 @@ Tests cover:
 - `test_multiple_repos_filtering` - Batch filtering
 
 **Processor Tests (7 tests):**
-- `test_generate_portfolio_content_empty` - Empty repo list
-- `test_generate_portfolio_content_single_repo` - Single repo
-- `test_generate_portfolio_content_multiple_repos` - Multiple repos
-- `test_generate_portfolio_content_sorting` - Star sorting
-- `test_generate_portfolio_content_missing_fields` - Missing data
-- `test_generate_portfolio_content_structure` - Output structure
-- `test_generate_portfolio_content_missing_fields` - Fallback values
+- `test_generate_website_content_empty` - Empty repo list
+- `test_generate_website_content_single_repo` - Single repo
+- `test_generate_website_content_multiple_repos` - Multiple repos
+- `test_generate_website_content_sorting` - Star sorting
+- `test_generate_website_content_missing_fields` - Missing data
+- `test_generate_website_content_structure` - Output structure
+- `test_generate_website_content_missing_fields` - Fallback values
 
 **Files:** 
 - `modules/github-generator/src/client.rs`
@@ -191,7 +191,7 @@ Tests cover:
 Tests cover:
 - ✅ GitHub repository data structures
 - ✅ Fork and archive filtering
-- ✅ Portfolio content generation
+- ✅ Website content generation
 - ✅ Sorting by popularity (stars)
 - ✅ Missing field handling
 
@@ -252,12 +252,12 @@ Tests cover:
 - `test_public_routes` - Public routes
 - `test_route_parameter_patterns` - Parameter syntax
 - `test_api_version_format` - Version format
-- `test_portfolio_crud_routes` - Portfolio routes
+- `test_website_crud_routes` - Website routes
 - `test_event_routes` - Event routes
 - `test_module_configuration_routes` - Module routes
 - `test_auth_routes` - Auth routes
 - `test_user_integration_routes` - Integration routes
-- `test_public_portfolio_routes` - Public routes
+- `test_public_website_routes` - Public routes
 
 **File:** `core/api/src/routes.rs`
 
@@ -277,7 +277,7 @@ Compile tests
 Run test modules:
     ├── core/domain
     │   ├── users::tests (5)
-    │   ├── portfolios::tests (7)
+    │   ├── websites::tests (7)
     │   ├── events::tests (8)
     │   └── integrations::tests (11)
     ├── core/shared

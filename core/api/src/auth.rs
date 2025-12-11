@@ -4,11 +4,18 @@ use sqlx::PgPool;
 use uuid::Uuid;
 use asap_core_shared::{SharedConfig, generate_token, Claims};
 
+/// Default creation mode for websites created during signup
+const DEFAULT_CREATION_MODE: &str = "from_scratch";
+
+/// Default tagline for new websites
+const DEFAULT_TAGLINE: &str = "";
+
 #[derive(Debug, Deserialize)]
 pub struct SignupRequest {
     pub email: String,
     pub password: String,
-    pub portfolio_slug: String,
+    #[serde(alias = "portfolio_slug")]  // Backward compatibility
+    pub website_slug: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -110,12 +117,12 @@ mod password_tests {
         let req = SignupRequest {
             email: "user@example.com".to_string(),
             password: "password123".to_string(),
-            portfolio_slug: "my-portfolio".to_string(),
+            website_slug: "my-website".to_string(),
         };
 
         assert_eq!(req.email, "user@example.com");
         assert_eq!(req.password, "password123");
-        assert_eq!(req.portfolio_slug, "my-portfolio");
+        assert_eq!(req.website_slug, "my-website");
     }
 
     #[test]
@@ -188,7 +195,7 @@ mod password_tests {
 
     #[test]
     fn test_slug_validation() {
-        let valid_slugs = vec!["my-portfolio", "portfolio123", "a-b-c"];
+        let valid_slugs = vec!["my-website", "website123", "a-b-c"];
         
         for slug in valid_slugs {
             assert!(!slug.is_empty());
@@ -198,7 +205,7 @@ mod password_tests {
 
     #[test]
     fn test_invalid_slug() {
-        let invalid_slugs = vec!["my portfolio", "portfolio@123", "portfolio#1"];
+        let invalid_slugs = vec!["my website", "website@123", "website#1"];
         
         for slug in invalid_slugs {
             assert!(!slug.chars().all(|c| c.is_alphanumeric() || c == '-'));
@@ -232,32 +239,32 @@ pub async fn signup(
     }
 
     // Validate slug format (strict security rules)
-    let slug = payload.portfolio_slug.trim().to_lowercase();
+    let slug = payload.website_slug.trim().to_lowercase();
     if slug.is_empty() {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "Portfolio slug is required"
+            "error": "Website slug is required"
         }))).into_response();
     }
     if slug.len() < 3 || slug.len() > 50 {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "Portfolio slug must be between 3 and 50 characters"
+            "error": "Website slug must be between 3 and 50 characters"
         }))).into_response();
     }
     if !slug.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-') {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "Portfolio slug can only contain lowercase letters, numbers, and hyphens"
+            "error": "Website slug can only contain lowercase letters, numbers, and hyphens"
         }))).into_response();
     }
     if slug.starts_with('-') || slug.ends_with('-') || slug.contains("--") {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "Portfolio slug cannot start/end with hyphen or contain consecutive hyphens"
+            "error": "Website slug cannot start/end with hyphen or contain consecutive hyphens"
         }))).into_response();
     }
     // Reserved slugs that could conflict with routes
     let reserved_slugs = ["api", "admin", "auth", "login", "signup", "public", "private", "health", "static", "assets", "www", "app"];
     if reserved_slugs.contains(&slug.as_str()) {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "This portfolio slug is reserved"
+            "error": "This website slug is reserved"
         }))).into_response();
     }
     let slug = slug; // Use sanitized slug
@@ -301,7 +308,7 @@ pub async fn signup(
         tracing::error!("Failed to create tenant: {}", e);
         let _ = tx.rollback().await;
         return (StatusCode::CONFLICT, Json(serde_json::json!({
-            "error": "Portfolio slug already exists"
+            "error": "Website slug already exists"
         }))).into_response();
     }
 
@@ -353,32 +360,35 @@ pub async fn signup(
         }))).into_response();
     }
 
-    // Create default portfolio
-    let portfolio_id = Uuid::new_v4();
-    if let Err(e) = sqlx::query!(
-        "INSERT INTO portfolios (id, tenant_id, slug, title, tagline, status) VALUES ($1, $2, $3, $4, '', 'draft')",
-        portfolio_id,
-        tenant_id,
-        slug, // Use sanitized slug, not raw payload
-        payload.email.split('@').next().unwrap_or("User")
+    // Create default website
+    let website_id = Uuid::new_v4();
+    let default_title = payload.email.split('@').next().unwrap_or("User");
+    if let Err(e) = sqlx::query(
+        "INSERT INTO websites (id, tenant_id, slug, title, tagline, status, creation_mode) VALUES ($1, $2, $3, $4, $5, 'draft', $6)"
     )
+    .bind(website_id)
+    .bind(tenant_id)
+    .bind(&slug)
+    .bind(default_title)
+    .bind(DEFAULT_TAGLINE)
+    .bind(DEFAULT_CREATION_MODE)
     .execute(&mut *tx)
     .await {
-        tracing::error!("Failed to create portfolio: {}", e);
+        tracing::error!("Failed to create website: {}", e);
         let _ = tx.rollback().await;
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
             "error": "Internal server error"
         }))).into_response();
     }
 
-    // Create portfolio_data entry
-    if let Err(e) = sqlx::query!(
-        "INSERT INTO portfolio_data (portfolio_id, data) VALUES ($1, '{}'::jsonb)",
-        portfolio_id
+    // Create website_data entry
+    if let Err(e) = sqlx::query(
+        "INSERT INTO website_data (website_id, data) VALUES ($1, '{}'::jsonb)"
     )
+    .bind(website_id)
     .execute(&mut *tx)
     .await {
-        tracing::error!("Failed to create portfolio_data: {}", e);
+        tracing::error!("Failed to create website_data: {}", e);
         let _ = tx.rollback().await;
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
             "error": "Internal server error"

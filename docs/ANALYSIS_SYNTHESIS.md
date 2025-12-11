@@ -100,7 +100,7 @@
 **Ce qui était prévu:**
 - Landing page
 - Dashboard privé
-- Pages publiques portfolios
+- Pages publiques websites
 - Client API TypeScript
 
 **Ce qui a été fait:**

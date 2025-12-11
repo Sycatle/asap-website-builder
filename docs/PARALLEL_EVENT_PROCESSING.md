@@ -223,7 +223,7 @@ DATABASE_URL=postgres://...
 [INFO] Parallel event processing enabled with max 4 concurrent tasks
 [DEBUG] Polling for unprocessed events...
 [DEBUG] Processing event 550e8400-e29b-41d4-a716-446655440000 (type: USER_INTEGRATION_ADDED)
-[DEBUG] Processing event 550e8400-e29b-41d4-a716-446655440001 (type: PORTFOLIO_PUBLISHED)
+[DEBUG] Processing event 550e8400-e29b-41d4-a716-446655440001 (type: WEBSITE_PUBLISHED)
 [DEBUG] Event 550e8400-e29b-41d4-a716-446655440000 processed successfully
 [DEBUG] Processing event 550e8400-e29b-41d4-a716-446655440002 (type: USER_CREATED)
 [INFO] Parallel processing complete: 10 events, 9 successful, 1 failed in 2523ms (90%)

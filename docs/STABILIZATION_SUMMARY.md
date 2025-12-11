@@ -39,7 +39,7 @@ Successfully stabilized the ASAP v2 codebase, completed all TODO items, improved
 5. **Analytics Module** (modules/analytics)
    - Event tracking system
    - Detailed event structure with metadata
-   - Portfolio-specific tracking
+   - Website-specific tracking
    - 7 unit tests for various event types
 
 ### ✅ Modular Organization Improvements

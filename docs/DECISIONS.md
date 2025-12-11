@@ -45,7 +45,7 @@ Utiliser **Rust** avec le framework **Axum** pour exposer l'API HTTP, et **Postg
 
 ### Contexte
 
-Nous devons servir potentiellement des milliers de portfolios avec des temps de chargement très bas sans surcharger la base de données.
+Nous devons servir potentiellement des milliers de websites avec des temps de chargement très bas sans surcharger la base de données.
 
 ### Décision
 

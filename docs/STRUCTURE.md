@@ -36,7 +36,7 @@ Le core expose une API centralisée pour :
 - Centraliser les **données utilisateur** (profil, intégrations, préférences)
 - Gérer l'**isolation multi-tenant**
 - Émettre des **événements** pour les modules
-- Fournir une **structure unifiée** pour les portfolios
+- Fournir une **structure unifiée** pour les sites web
 
 ```
 core/
@@ -45,7 +45,7 @@ core/
 │   └── src/
 │       ├── lib.rs
 │       ├── users.rs         # User, Tenant, UserData structs
-│       ├── portfolios.rs    # Portfolio structure
+│       ├── websites.rs      # Website structure
 │       ├── events.rs        # Event definitions
 │       ├── integrations.rs  # GitHub, etc.
 │       └── errors.rs        # Error types
@@ -58,13 +58,26 @@ core/
 │       ├── auth.rs
 │       ├── users.rs         # GET/PUT /users/:id
 │       ├── integrations.rs  # GET/PUT /users/:id/integrations
-│       ├── portfolios.rs    # GET/PUT /portfolios/:id
+│       ├── websites/        # Modular website handlers
+│       │   ├── mod.rs
+│       │   ├── core.rs      # Core CRUD operations
+│       │   ├── modules.rs   # Website module management
+│       │   ├── sections.rs  # Section management
+│       │   ├── presets.rs   # Preset templates
+│       │   └── catalog.rs   # Module catalog
+│       ├── queries/         # Modular database queries
+│       │   ├── mod.rs
+│       │   ├── types.rs
+│       │   ├── websites.rs
+│       │   ├── modules.rs
+│       │   ├── sections.rs
+│       │   └── presets.rs
 │       ├── events.rs        # POST /events (publish)
 │       └── modules.rs       # GET /modules, /modules/:id/config
 │
 └── schemas/
     ├── user.schema.json
-    ├── portfolio.schema.json
+    ├── website.schema.json
     └── events.schema.json
 ```
 
@@ -81,8 +94,8 @@ PUT    /users/:id
 GET    /users/:id/integrations        # GitHub username, tokens, etc.
 PUT    /users/:id/integrations/{type}
 
-GET    /portfolios/:id       # Structure portfolio
-PUT    /portfolios/:id       # Titre, tagline, slug
+GET    /websites/:id         # Structure website
+PUT    /websites/:id         # Titre, tagline, slug
 
 POST   /events               # Publish événement (modules → core)
 GET    /events               # Lire événements (modules → core)
@@ -101,7 +114,7 @@ Chaque module implémente une fonctionnalité spécifique. Les modules :
 - **Lisent** les données utilisateur du core via l'API
 - **Écoutent** les événements du core
 - **Émettent** des événements après traitement
-- **Stockent** leurs résultats dans `portfolio_data` (JSONB du core)
+- **Stockent** leurs résultats dans `website_data` (JSONB du core)
 
 ```
 modules/
@@ -110,7 +123,7 @@ modules/
 │   ├── src/
 │   │   ├── lib.rs
 │   │   ├── client.rs       # Appels GitHub API
-│   │   ├── processor.rs    # Transforme repos → portfolio data
+│   │   ├── processor.rs    # Transforme repos → website data
 │   │   └── events.rs       # Écoute USER_INTEGRATION_ADDED
 │   └── manifest.toml       # Infos du module
 │
@@ -141,7 +154,7 @@ modules/
 [module]
 name = "github-generator"
 version = "1.0.0"
-description = "Import GitHub repositories into portfolio"
+description = "Import GitHub repositories into website"
 
 [triggers]
 on_event = ["USER_INTEGRATION_ADDED"]
@@ -167,7 +180,7 @@ apps/
 │       └── handlers/
 │           ├── auth.rs
 │           ├── users.rs
-│           ├── portfolios.rs
+│           ├── websites/     # Modular website handlers
 │           ├── integrations.rs
 │           └── modules.rs
 │
@@ -203,7 +216,7 @@ infra/
 │
 ├── migrations/
 │   ├── 001_core_users.sql
-│   ├── 002_core_portfolios.sql
+│   ├── 002_core_websites.sql
 │   ├── 003_core_events.sql
 │   └── 004_core_modules.sql
 │
@@ -238,7 +251,7 @@ CREATE TABLE user_data (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE portfolios (
+CREATE TABLE websites (
   id UUID PRIMARY KEY,
   tenant_id UUID NOT NULL REFERENCES tenants(id),
   slug TEXT UNIQUE NOT NULL,
@@ -250,8 +263,8 @@ CREATE TABLE portfolios (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE portfolio_data (
-  portfolio_id UUID PRIMARY KEY REFERENCES portfolios(id),
+CREATE TABLE website_data (
+  website_id UUID PRIMARY KEY REFERENCES websites(id),
   data JSONB NOT NULL DEFAULT '{}',    -- Contenu généré par modules
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -307,7 +320,7 @@ Frontend (Astro)
 │         Core API (Rust)                 │
 │  ├─ Auth                                │
 │  ├─ Users & Integrations                │
-│  ├─ Portfolios                          │
+│  ├─ Websites                            │
 │  ├─ Events (publish/subscribe)          │
 │  └─ Module Registry                     │
 └─────────────────────────────────────────┘
@@ -321,5 +334,5 @@ Frontend (Astro)
     │ • themes                  ├─→ theme renderer
     │ • analytics               └─→ analytics processor
     │
-    └─→ Résultats stockés dans portfolio_data (JSONB)
+    └─→ Résultats stockés dans website_data (JSONB)
 ```

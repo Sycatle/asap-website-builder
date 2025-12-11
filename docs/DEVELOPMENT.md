@@ -67,7 +67,7 @@ The API will be available at `http://localhost:3000`.
 ```
 asap-v2/
 ├── core/                   # Core domain and API
-│   ├── domain/            # Domain models (User, Portfolio, Event, etc.)
+│   ├── domain/            # Domain models (User, Website, Event, etc.)
 │   └── api/               # HTTP routes and handlers
 ├── modules/               # Feature modules
 │   ├── github-generator/  # Import GitHub repos
@@ -129,7 +129,7 @@ cargo test --lib -p asap-module-projections
 
 - **Core Domain**: 31 tests
   - Users (5 tests): creation, cloning, serialization
-  - Portfolios (7 tests): status, metadata, data
+  - Websites (7 tests): status, metadata, data
   - Events (8 tests): creation, processing, serialization
   - Integrations (11 tests): GitHub integration, token management
 
@@ -212,8 +212,8 @@ DATABASE_URL=postgresql://asap:asap@localhost:5432/asap
 - `users` - User accounts with email and password hash
 - `tenants` - Isolated workspaces (multi-tenancy)
 - `user_data` - Extended user info (JSONB format)
-- `portfolios` - User portfolio records
-- `portfolio_data` - Portfolio content (JSONB format)
+- `websites` - User website records
+- `website_data` - Website content (JSONB format)
 - `events` - System events for event-driven architecture
 - `modules` - Available modules
 - `module_configs` - Per-tenant module configuration
@@ -411,7 +411,7 @@ cargo clippy
 - [x] Authentication (JWT, bcrypt)
 - [x] Database integration (SQLx)
 - [x] User management endpoints
-- [x] Portfolio management endpoints
+- [x] Website management endpoints
 - [x] Worker event processor
 - [x] GitHub Generator module
 - [x] Theme rendering module

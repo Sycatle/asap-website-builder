@@ -4,7 +4,7 @@ use tracing::{debug, warn};
 
 /// CacheService handles Redis caching for public data
 /// 
-/// NOTE: This service is prepared for future use in caching public portfolios/websites.
+/// NOTE: This service is prepared for future use in caching public websites.
 /// Currently not integrated into the main API routes but kept for upcoming features.
 #[allow(dead_code)]
 #[derive(Clone)]

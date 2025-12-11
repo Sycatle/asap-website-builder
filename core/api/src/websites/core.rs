@@ -1,3 +1,5 @@
+//! Core website CRUD operations
+
 use axum::{
     extract::{Path, State, Extension},
     response::IntoResponse,
@@ -11,30 +13,42 @@ use uuid::Uuid;
 use asap_core_shared::Claims;
 
 #[derive(Debug, Serialize)]
-pub struct Portfolio {
+pub struct Website {
     pub id: String,
     pub tenant_id: String,
     pub slug: String,
     pub title: String,
     pub tagline: String,
     pub status: String,
+    pub creation_mode: String,
+    pub preset_id: Option<String>,
     pub metadata: serde_json::Value,
     pub data: serde_json::Value,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct UpdatePortfolioRequest {
+pub struct CreateWebsiteRequest {
+    pub slug: String,
+    pub title: String,
+    pub tagline: Option<String>,
+    pub creation_mode: Option<String>,
+    pub preset_id: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateWebsiteRequest {
     pub title: Option<String>,
     pub tagline: Option<String>,
     pub metadata: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct PatchPortfolioDataRequest {
+pub struct PatchWebsiteDataRequest {
     pub data: serde_json::Value,
 }
 
-pub async fn list_portfolios(
+pub async fn list_websites(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
@@ -47,31 +61,32 @@ pub async fn list_portfolios(
         }
     };
 
-    // Use optimized prepared statement
     use crate::queries;
     
-    let result = queries::list_portfolios_with_data(&pool, tenant_id).await;
+    let result = queries::list_websites_with_data(&pool, tenant_id).await;
 
     match result {
-        Ok(portfolios) => {
-            let portfolios: Vec<Portfolio> = portfolios
+        Ok(websites) => {
+            let websites: Vec<Website> = websites
                 .into_iter()
-                .map(|p| Portfolio {
-                    id: p.id.to_string(),
-                    tenant_id: p.tenant_id.to_string(),
-                    slug: p.slug,
-                    title: p.title,
-                    tagline: p.tagline,
-                    status: p.status,
-                    metadata: p.metadata,
-                    data: p.data.unwrap_or_else(|| serde_json::json!({})),
+                .map(|w| Website {
+                    id: w.id.to_string(),
+                    tenant_id: w.tenant_id.to_string(),
+                    slug: w.slug,
+                    title: w.title,
+                    tagline: w.tagline,
+                    status: w.status,
+                    creation_mode: w.creation_mode,
+                    preset_id: w.preset_id.map(|id| id.to_string()),
+                    metadata: w.metadata,
+                    data: w.data.unwrap_or_else(|| serde_json::json!({})),
                 })
                 .collect();
 
-            (StatusCode::OK, Json(portfolios)).into_response()
+            (StatusCode::OK, Json(websites)).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error listing portfolios: {}", e);
+            tracing::error!("Database error listing websites: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()
@@ -79,16 +94,16 @@ pub async fn list_portfolios(
     }
 }
 
-pub async fn get_portfolio(
+pub async fn get_website(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let portfolio_id = match Uuid::parse_str(&id) {
+    let website_id = match Uuid::parse_str(&id) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid portfolio ID format"
+                "error": "Invalid website ID format"
             }))).into_response();
         }
     };
@@ -102,31 +117,32 @@ pub async fn get_portfolio(
         }
     };
 
-    // Use optimized prepared statement
     use crate::queries;
     
-    let result = queries::get_portfolio_with_data(&pool, portfolio_id, tenant_id).await;
+    let result = queries::get_website_with_data(&pool, website_id, tenant_id).await;
 
     match result {
-        Ok(Some(p)) => {
-            (StatusCode::OK, Json(Portfolio {
-                id: p.id.to_string(),
-                tenant_id: p.tenant_id.to_string(),
-                slug: p.slug,
-                title: p.title,
-                tagline: p.tagline,
-                status: p.status,
-                metadata: p.metadata,
-                data: p.data.unwrap_or_else(|| serde_json::json!({})),
+        Ok(Some(w)) => {
+            (StatusCode::OK, Json(Website {
+                id: w.id.to_string(),
+                tenant_id: w.tenant_id.to_string(),
+                slug: w.slug,
+                title: w.title,
+                tagline: w.tagline,
+                status: w.status,
+                creation_mode: w.creation_mode,
+                preset_id: w.preset_id.map(|id| id.to_string()),
+                metadata: w.metadata,
+                data: w.data.unwrap_or_else(|| serde_json::json!({})),
             })).into_response()
         }
         Ok(None) => {
             (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Portfolio not found"
+                "error": "Website not found"
             }))).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error fetching portfolio: {}", e);
+            tracing::error!("Database error fetching website: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()
@@ -134,17 +150,17 @@ pub async fn get_portfolio(
     }
 }
 
-pub async fn update_portfolio(
+pub async fn update_website(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<String>,
-    Json(payload): Json<UpdatePortfolioRequest>,
+    Json(payload): Json<UpdateWebsiteRequest>,
 ) -> impl IntoResponse {
-    let portfolio_id = match Uuid::parse_str(&id) {
+    let website_id = match Uuid::parse_str(&id) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid portfolio ID format"
+                "error": "Invalid website ID format"
             }))).into_response();
         }
     };
@@ -158,19 +174,17 @@ pub async fn update_portfolio(
         }
     };
 
-    // Check if there are any fields to update
     if payload.title.is_none() && payload.tagline.is_none() && payload.metadata.is_none() {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
             "error": "No fields to update"
         }))).into_response();
     }
 
-    // Use prepared statements from queries module for type-safe updates
     use crate::queries;
 
-    let result = queries::update_portfolio_batch_fields(
+    let result = queries::update_website_batch_fields(
         &pool,
-        portfolio_id,
+        website_id,
         tenant_id,
         payload.title.as_deref(),
         payload.tagline.as_deref(),
@@ -180,11 +194,11 @@ pub async fn update_portfolio(
     match result {
         Ok(_) => {
             (StatusCode::OK, Json(serde_json::json!({
-                "message": "Portfolio updated successfully"
+                "message": "Website updated successfully"
             }))).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error updating portfolio: {}", e);
+            tracing::error!("Database error updating website: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()
@@ -192,17 +206,17 @@ pub async fn update_portfolio(
     }
 }
 
-pub async fn patch_portfolio_data(
+pub async fn patch_website_data(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<String>,
-    Json(payload): Json<PatchPortfolioDataRequest>,
+    Json(payload): Json<PatchWebsiteDataRequest>,
 ) -> impl IntoResponse {
-    let portfolio_id = match Uuid::parse_str(&id) {
+    let website_id = match Uuid::parse_str(&id) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid portfolio ID format"
+                "error": "Invalid website ID format"
             }))).into_response();
         }
     };
@@ -216,43 +230,33 @@ pub async fn patch_portfolio_data(
         }
     };
 
-    // Verify portfolio belongs to tenant
-    let verify_result = sqlx::query!(
-        "SELECT id FROM portfolios WHERE id = $1 AND tenant_id = $2",
-        portfolio_id,
-        tenant_id
-    )
-    .fetch_optional(&pool)
-    .await;
-
-    match verify_result {
-        Ok(None) => {
+    use crate::queries;
+    
+    match queries::verify_website_ownership(&pool, website_id, tenant_id).await {
+        Ok(true) => {}
+        Ok(false) => {
             return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Portfolio not found"
+                "error": "Website not found"
             }))).into_response();
         }
         Err(e) => {
-            tracing::error!("Database error verifying portfolio: {}", e);
+            tracing::error!("Database error verifying website: {}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response();
         }
-        _ => {}
     }
 
-    // Use optimized prepared statement for upsert
-    use crate::queries;
-    
-    let result = queries::upsert_portfolio_data(&pool, portfolio_id, &payload.data).await;
+    let result = queries::upsert_website_data(&pool, website_id, &payload.data).await;
 
     match result {
         Ok(_) => {
             (StatusCode::OK, Json(serde_json::json!({
-                "message": "Portfolio data updated successfully"
+                "message": "Website data updated successfully"
             }))).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error updating portfolio data: {}", e);
+            tracing::error!("Database error updating website data: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()
@@ -260,16 +264,16 @@ pub async fn patch_portfolio_data(
     }
 }
 
-pub async fn publish_portfolio(
+pub async fn publish_website(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let portfolio_id = match Uuid::parse_str(&id) {
+    let website_id = match Uuid::parse_str(&id) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid portfolio ID format"
+                "error": "Invalid website ID format"
             }))).into_response();
         }
     };
@@ -283,49 +287,45 @@ pub async fn publish_portfolio(
         }
     };
 
-    // Use optimized prepared statement
     use crate::queries;
     
-    // Update portfolio status to published
-    let result = queries::update_portfolio_status(&pool, portfolio_id, tenant_id, "published").await;
+    let result = queries::update_website_status(&pool, website_id, tenant_id, "published").await;
 
     match result {
         Ok(result) if result.rows_affected() > 0 => {
-            // Create PORTFOLIO_PUBLISHED event
             let event_payload = serde_json::json!({
-                "portfolio_id": portfolio_id.to_string()
+                "website_id": website_id.to_string()
             });
 
-            let event_result = sqlx::query!(
+            let event_result = sqlx::query(
                 r#"
                 INSERT INTO events (tenant_id, event_type, payload)
-                VALUES ($1, 'PORTFOLIO_PUBLISHED', $2)
-                "#,
-                tenant_id,
-                event_payload
+                VALUES ($1, 'WEBSITE_PUBLISHED', $2)
+                "#
             )
+            .bind(tenant_id)
+            .bind(&event_payload)
             .execute(&pool)
             .await;
 
             if let Err(e) = event_result {
-                tracing::error!("Failed to create PORTFOLIO_PUBLISHED event: {}", e);
-                // Don't fail the request if event creation fails
+                tracing::error!("Failed to create WEBSITE_PUBLISHED event: {}", e);
             }
 
-            tracing::info!("Portfolio published: {}", portfolio_id);
+            tracing::info!("Website published: {}", website_id);
 
             (StatusCode::OK, Json(serde_json::json!({
-                "message": "Portfolio published successfully",
+                "message": "Website published successfully",
                 "status": "published"
             }))).into_response()
         }
         Ok(_) => {
             (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Portfolio not found"
+                "error": "Website not found"
             }))).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error publishing portfolio: {}", e);
+            tracing::error!("Database error publishing website: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()
@@ -333,35 +333,36 @@ pub async fn publish_portfolio(
     }
 }
 
-pub async fn get_public_portfolio(
+pub async fn get_public_website(
     State(pool): State<PgPool>,
     Path(slug): Path<String>,
 ) -> impl IntoResponse {
-    // Use optimized prepared statement
     use crate::queries;
     
-    let result = queries::get_public_portfolio(&pool, &slug).await;
+    let result = queries::get_public_website(&pool, &slug).await;
 
     match result {
-        Ok(Some(p)) => {
-            (StatusCode::OK, Json(Portfolio {
-                id: p.id.to_string(),
-                tenant_id: p.tenant_id.to_string(),
-                slug: p.slug,
-                title: p.title,
-                tagline: p.tagline,
-                status: p.status,
-                metadata: p.metadata,
-                data: p.data.unwrap_or_else(|| serde_json::json!({})),
+        Ok(Some(w)) => {
+            (StatusCode::OK, Json(Website {
+                id: w.id.to_string(),
+                tenant_id: w.tenant_id.to_string(),
+                slug: w.slug,
+                title: w.title,
+                tagline: w.tagline,
+                status: w.status,
+                creation_mode: w.creation_mode,
+                preset_id: w.preset_id.map(|id| id.to_string()),
+                metadata: w.metadata,
+                data: w.data.unwrap_or_else(|| serde_json::json!({})),
             })).into_response()
         }
         Ok(None) => {
             (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Portfolio not found or not published"
+                "error": "Website not found or not published"
             }))).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error fetching public portfolio: {}", e);
+            tracing::error!("Database error fetching public website: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()

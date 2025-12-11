@@ -148,8 +148,8 @@ JWT_SECRET=dev_secret_key_change_in_production_12345
 - `users` - User accounts
 - `tenants` - Isolated workspaces
 - `user_data` - Extended user information (JSONB)
-- `portfolios` - User portfolios
-- `portfolio_data` - Portfolio content (JSONB)
+- `websites` - User websites
+- `website_data` - Website content (JSONB)
 - `events` - System events
 - `modules` - Available modules
 - `module_configs` - Module configuration per tenant
@@ -234,8 +234,8 @@ Indexes are created on:
 - `users.email` (unique)
 - `users.tenant_id`
 - `tenants.slug` (unique)
-- `portfolios.tenant_id`
-- `portfolios.slug` (unique per tenant)
+- `websites.tenant_id`
+- `websites.slug` (unique per tenant)
 
 ### Connection Pooling
 

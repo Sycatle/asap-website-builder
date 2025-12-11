@@ -4,7 +4,7 @@
 
 Ce document cadre :
 
-- La **vision produit** (pas juste un portfolio builder)
+- La **vision produit** (pas juste un website builder)
 - Les **segments de marché**
 - Le **business model** multi-produit
 - La **monétisation**
@@ -15,7 +15,7 @@ Ce document cadre :
 
 ### Ce qu'est ASAP
 
-ASAP n'est **pas** un simple générateur de portfolios. C'est une **plateforme multi-produits** avec :
+ASAP n'est **pas** un simple générateur de websites. C'est une **plateforme multi-produits** avec :
 
 - Un **dashboard central** pour gérer tout son écosystème
 - Une **API Core** pour isoler et monétiser les ressources
@@ -70,7 +70,7 @@ Les utilisateurs gèrent tout au même endroit :
 │     ├── Créer, inviter, gérer permissions      │
 │     └── Assigner quotas et budgets             │
 │                                                 │
-│  📊 Sites & Portfolios                          │
+│  📊 Sites & Websites                          │
 │     ├── Créer, publier, personnaliser          │
 │     └── Domaine, intégrations, modules         │
 │                                                 │
@@ -121,7 +121,7 @@ ASAP fournit une liste de **produits/modules** :
 | **Intégrations** | GitHub, Zapier, API access | Core |
 | **(Futurs modules)** | E-commerce, Forum, CMS, Marketplace | À définir |
 
-**Point clé** : les sites ne sont qu'**1 produit parmi d'autres**. ASAP n'est pas un portfolio builder, c'est un **ecosystem builder**.
+**Point clé** : les sites ne sont qu'**1 produit parmi d'autres**. ASAP n'est pas un website builder, c'est un **ecosystem builder**.
 
 ### 3.3. Système de quotas & budgets
 
@@ -313,11 +313,11 @@ Les utilisateurs payent la **consommation** en plus de leur plan :
 
 #### Phase 1 : Indépendants & Étudiants (mois 1-6)
 
-- **Partenariats éducatifs** : 3W Academy, Wildcode School → portfolio tool officiel
+- **Partenariats éducatifs** : 3W Academy, Wildcode School → website tool officiel
 - **GitHub** : Open-core ASAP Core sur GitHub → stars, contributions, viralité
 - **Product Hunt** : lancer en public, teaser vidéo
 - **Communities** : dev.to, IndieHackers, subreddits
-- **Content** : blog "Comment créer un portfolio en 5 min"
+- **Content** : blog "Comment créer un website en 5 min"
 
 **Target** : 1000 utilisateurs Free, 50 utilisateurs Pro
 
@@ -387,7 +387,7 @@ Les utilisateurs payent la **consommation** en plus de leur plan :
 
 ## 10. Conclusion
 
-**ASAP n'est pas un portfolio builder. C'est une plateforme SaaS multi-produit** avec :
+**ASAP n'est pas un website builder. C'est une plateforme SaaS multi-produit** avec :
 
 - ✅ Dashboard central pour tout gérer
 - ✅ Modules intégrés (Sites, IA, Analytics, etc.)
@@ -395,6 +395,6 @@ Les utilisateurs payent la **consommation** en plus de leur plan :
 - ✅ Pricing flexible (freemium + usage-based)
 - ✅ Marché large (indépendants, agences, creators)
 
-Le **repositionnement clé** : plutôt que de vendre "un portfolio en 5 min", on vend **"tous les outils d'un créateur en un seul dashboard"**.
+Le **repositionnement clé** : plutôt que de vendre "un website en 5 min", on vend **"tous les outils d'un créateur en un seul dashboard"**.
 
 Ça change la TAM, la proposition de valeur, et la stratégie d'acquisition. Mais techniquement, c'est exactement ce que nous construisons.

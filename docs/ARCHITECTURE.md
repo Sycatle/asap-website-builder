@@ -2,7 +2,7 @@
 
 ## Contexte global
 
-ASAP est une plateforme de génération de portfolios ultra-rapides basée sur une architecture **core + modules**. Le core expose une API unifiée de gestion des utilisateurs et des données, tandis que les modules implémentent toutes les fonctionnalités (générateurs, rendus, analytics, etc.).
+ASAP est une plateforme de génération de sites web ultra-rapides basée sur une architecture **core + modules**. Le core expose une API unifiée de gestion des utilisateurs et des données, tandis que les modules implémentent toutes les fonctionnalités (générateurs, rendus, analytics, etc.).
 
 Cette approche permet :
 
@@ -20,7 +20,7 @@ Le core expose une API centralisée qui :
 
 - Gère l'**authentification** et l'**isolation multi-tenant**
 - Centralise les **données utilisateur** (profil, paramètres, intégrations GitHub, etc.)
-- Fournit une **structure unifiée** pour les projets/portfolios
+- Fournit une **structure unifiée** pour les projets/sites web
 - Émet des **événements métier** pour les modules
 - Gère les **droits d'accès** via tenant_id
 
@@ -28,7 +28,7 @@ Le core expose une API centralisée qui :
 
 Chaque module implémente une fonctionnalité spécifique :
 
-- **Générateur GitHub** : récupère les données utilisateur du core → génère la structure du portfolio
+- **Générateur GitHub** : récupère les données utilisateur du core → génère la structure du site
 - **Générateur IA** : utilise les données du core → génère du contenu avancé
 - **Themes** : appliquent des styles sur la structure du core
 - **Analytics** : consomment les événements du core
@@ -66,7 +66,7 @@ L'API expose deux catégories de routes :
 
 - **Authentification** : signup, login, refresh token
 - **Profil utilisateur** : récupérer/modifier profil, intégrations
-- **Données métier** : créer/lire/modifier les projets et portfolios
+- **Données métier** : créer/lire/modifier les projets et websites
 - **Événements** : publier des événements pour les modules
 
 #### B. Routes Modules - Enregistrement et configuration
@@ -81,7 +81,7 @@ L'API expose deux catégories de routes :
 
 Les workers consomment les événements émis par le core et exécutent les tâches des modules :
 
-- **Event processing** : à la réception d'événements (ex. `USER_UPDATED`, `PORTFOLIO_GENERATED`), les workers distribuent ces événements aux modules abonnés
+- **Event processing** : à la réception d'événements (ex. `USER_UPDATED`, `WEBSITE_PUBLISHED`), les workers distribuent ces événements aux modules abonnés
 
 - **Module tasks** : chaque module enregistré peut avoir des tâches background :
   - `GitHubGenerator::sync_repos()` - récupère les repos GitHub
@@ -96,7 +96,7 @@ Les workers consomment les événements émis par le core et exécutent les tâc
 
 Le rendu des pages est assuré par **Astro**, un générateur de sites orienté contenu :
 
-- **Dashboard (privé)** : pages `/app/*` pour éditer le portfolio, qui consomment l'API Rust protégée par JWT/cookies.
+- **Dashboard (privé)** : pages `/app/*` pour éditer le site web, qui consomment l'API Rust protégée par JWT/cookies.
 
 - **Pages publiques** : les pages accessibles via `{slug}.asap.cool` lisent en priorité les fichiers projetés (`data/sites/<slug>.json`) et n'appellent l'API qu'en dernier recours. Cela permet des temps de chargement (TTFB et LCP) très bas même sans CDN.
 

@@ -27,16 +27,16 @@ Le projet ASAP v2 a **dépassé les objectifs initiaux du MVP**. Non seulement l
 ### ✅ Core API - 100% Complet
 
 **Authentification & Utilisateurs**
-- ✅ Signup avec création automatique tenant + portfolio
+- ✅ Signup avec création automatique tenant + website
 - ✅ Login avec JWT (24h expiration)
 - ✅ Middleware d'authentification
 - ✅ Gestion utilisateurs (get, update)
 - ✅ Isolation multi-tenant stricte
 
-**Portfolios**
+**Websites**
 - ✅ CRUD complet (list, get, update, delete)
 - ✅ Publication avec changement de statut
-- ✅ Accès public pour portfolios publiés
+- ✅ Accès public pour websites publiés
 - ✅ Données JSONB flexibles
 - ✅ Configuration et metadata
 
@@ -79,7 +79,7 @@ Le projet ASAP v2 a **dépassé les objectifs initiaux du MVP**. Non seulement l
 - ✅ Récupération repos publics
 - ✅ Filtrage (forks, archived)
 - ✅ Tri par stars
-- ✅ Génération portfolio_data
+- ✅ Génération website_data
 - ✅ Émission GITHUB_REPOS_SYNCED
 
 **Themes Module**
@@ -97,7 +97,7 @@ Le projet ASAP v2 a **dépassé les objectifs initiaux du MVP**. Non seulement l
 **Analytics Module**
 - ✅ Système de tracking d'événements
 - ✅ Structure d'événements détaillée
-- ✅ Tracking par portfolio
+- ✅ Tracking par website
 - ✅ 7 tests unitaires
 
 ### ✅ Optimisations Avancées (Non planifiées initialement)
@@ -121,7 +121,7 @@ GET    /api/files/quota    - Quota usage
 
 #### 2. **Redis Caching** ⚡
 - ✅ CacheService avec ConnectionManager
-- ✅ PortfolioCacheService pour portfolios publics
+- ✅ WebsiteCacheService pour websites publics
 - ✅ TTL configurable (1h par défaut)
 - ✅ Invalidation automatique à la publication
 - ✅ Fallback gracieux si Redis indisponible
@@ -158,12 +158,12 @@ GET    /api/files/quota    - Quota usage
 ### ❌ Non Implémenté (Prévu mais pas encore fait)
 
 #### Frontend Astro (Phase 5)
-- ❌ Pages publiques portfolios
+- ❌ Pages publiques websites
 - ❌ Landing page
 - ❌ Dashboard privé
 - ❌ Client API TypeScript
 - ❌ Formulaires signup/login
-- ❌ Preview portfolio
+- ❌ Preview website
 
 #### Tests E2E (Phase 6)
 - ❌ Tests end-to-end complets
@@ -221,8 +221,8 @@ GET    /api/files/quota    - Quota usage
 | `users` | Authentification (email, password_hash) | ✅ |
 | `tenants` | Multi-tenancy | ✅ |
 | `user_data` | Données étendues (JSONB) | ✅ |
-| `portfolios` | Structure portfolio | ✅ |
-| `portfolio_data` | Contenu (JSONB) | ✅ |
+| `websites` | Structure website | ✅ |
+| `website_data` | Contenu (JSONB) | ✅ |
 | `events` | Événements système | ✅ |
 | `modules` | Registry modules | ✅ |
 | `module_configs` | Config per-tenant | ✅ |
@@ -299,15 +299,15 @@ GET    /api/files/quota    - Quota usage
 - ✅ S'inscrire via API
 - ✅ Se connecter via API
 - ✅ Configurer GitHub via API
-- ✅ Générer portfolio via API
-- ✅ Publier portfolio via API
+- ✅ Générer website via API
+- ✅ Publier website via API
 - ✅ Uploader fichiers via API
 - ❌ Utiliser une interface web
 
 ### Ce qu'un utilisateur NE PEUT PAS faire
 - ❌ S'inscrire via interface web
 - ❌ Voir son dashboard
-- ❌ Prévisualiser son portfolio
+- ❌ Prévisualiser son website
 - ❌ Gérer ses fichiers visuellement
 - ❌ Voir ses quotas graphiquement
 
@@ -325,14 +325,14 @@ GET    /api/files/quota    - Quota usage
 3. [ ] Client API TypeScript
 4. [ ] Pages publiques
    - [ ] Landing page (index)
-   - [ ] Portfolio public ([slug].astro)
+   - [ ] Website public ([slug].astro)
 5. [ ] Dashboard privé
    - [ ] Login/Signup forms
    - [ ] Dashboard utilisateur
    - [ ] Configuration GitHub
-   - [ ] Gestion portfolios
+   - [ ] Gestion websites
    - [ ] Upload fichiers
-   - [ ] Preview portfolio
+   - [ ] Preview website
 6. [ ] Déploiement static + SSR
 
 ### Priorité 2: Tests E2E (🟡 Important)
@@ -417,11 +417,11 @@ GET    /api/files/quota    - Quota usage
 - [x] Backend API fonctionnel
 - [x] Worker traite événements
 - [x] GitHub import fonctionne
-- [x] Portfolios publiés accessibles via API
+- [x] Websites publiés accessibles via API
 - [x] File storage opérationnel
 - [ ] **Frontend permet signup/login**
-- [ ] **Dashboard affiche portfolio**
-- [ ] **Page publique affiche portfolio**
+- [ ] **Dashboard affiche website**
+- [ ] **Page publique affiche website**
 - [ ] **Tests E2E passent**
 
 ### Performance Targets (Actuels)
