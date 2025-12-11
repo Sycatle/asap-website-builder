@@ -11,11 +11,99 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U asap"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - asap-network
+
+  # Redis cache
+  redis:
+    image: redis:7-alpine
+    container_name: asap-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - asap-network
+
+  # API server
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.api
+    container_name: asap-api
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://asap:asap_dev_password@postgres:5432/asap
+      REDIS_URL: redis://redis:6379
+      RUST_LOG: asap_api=info,asap_core_api=info,tower_http=info,sqlx=warn
+      ASAP_API_PORT: 3000
+      ASAP_API_HOST: 0.0.0.0
+      JWT_SECRET: ${JWT_SECRET:-dev_secret_key_change_in_production_12345}
+      CORS_ALLOWED_ORIGINS: http://localhost:4321,http://web:4321
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - asap-network
+
+  # Worker service
+  worker:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.worker
+    container_name: asap-worker
+    environment:
+      DATABASE_URL: postgresql://asap:asap_dev_password@postgres:5432/asap
+      RUST_LOG: asap_worker=info,sqlx=warn
+      POLL_INTERVAL_SECONDS: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - asap-network
+
+  # Web application (Astro)
+  web:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.web
+    container_name: asap-web
+    ports:
+      - "4321:4321"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 4321
+      PUBLIC_API_URL: http://api:3000
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - asap-network
+
+networks:
+  asap-network:
+    driver: bridge
 
 volumes:
   postgres_data:
+  redis_data:

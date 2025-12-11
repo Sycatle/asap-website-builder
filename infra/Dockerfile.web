@@ -1,0 +1,36 @@
+FROM node:20-alpine as builder
+
+WORKDIR /app
+
+# Copy package files
+COPY apps/web/package.json apps/web/package-lock.json* ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY apps/web/ ./
+
+# Build the application
+RUN npm run build
+
+# Runtime stage
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy built assets
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package.json ./
+
+# Install only production dependencies
+RUN npm ci --omit=dev 2>/dev/null || npm install --omit=dev || true
+
+# Environment variables
+ENV HOST=0.0.0.0
+ENV PORT=4321
+ENV NODE_ENV=production
+
+EXPOSE 4321
+
+CMD ["node", "./dist/server/entry.mjs"]

@@ -1,4 +1,4 @@
-FROM rust:1.75-slim as builder
+FROM rustlang/rust:nightly-slim AS builder
 
 WORKDIR /app
 
@@ -8,12 +8,26 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy workspace files
-COPY Cargo.toml .
-COPY core ./core
-COPY apps/api ./apps/api
+# Copy workspace Cargo files first for better caching
+COPY Cargo.toml Cargo.lock ./
+COPY core/shared/Cargo.toml ./core/shared/
+COPY core/domain/Cargo.toml ./core/domain/
+COPY core/api/Cargo.toml ./core/api/
+COPY apps/api/Cargo.toml ./apps/api/
+COPY apps/worker/Cargo.toml ./apps/worker/
+COPY modules/analytics/Cargo.toml ./modules/analytics/
+COPY modules/github-generator/Cargo.toml ./modules/github-generator/
+COPY modules/projections/Cargo.toml ./modules/projections/
+COPY modules/themes/Cargo.toml ./modules/themes/
 
-# Build the API
+# Copy all source code (workspace needs all members)
+COPY core ./core
+COPY apps ./apps
+COPY modules ./modules
+COPY .sqlx ./.sqlx
+
+# Build the API with SQLx offline mode
+ENV SQLX_OFFLINE=true
 RUN cargo build --release --bin asap-api
 
 # Runtime stage
@@ -22,6 +36,7 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/target/release/asap-api /usr/local/bin/asap-api
