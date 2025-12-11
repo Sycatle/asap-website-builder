@@ -1,11 +1,63 @@
 import { useEffect, useState } from 'react';
-import { modulesAPI, websitesAPI, authAPI } from '../lib/api';
-import type { Module, TenantModule, ModuleData, ConfigSchema } from '../lib/api/modules';
+import { modulesAPI } from '../lib/api';
+import type { Module, TenantModule, ConfigSchema, ConfigAction } from '../lib/api/modules';
+import { Tabs, type Tab } from './ui/Tabs';
 import SchemaRenderer from './SchemaRenderer';
 
 interface ModuleConfigProps {
   slug: string;
 }
+
+// Icons
+const Icons = {
+  settings: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  ),
+  data: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+    </svg>
+  ),
+  history: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  sync: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+  ),
+  power: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a5 5 0 01-7.072 0l2.829-2.829m2.829 2.829L9 9m0 0L6.172 6.172" />
+    </svg>
+  ),
+  back: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+    </svg>
+  ),
+  check: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+    </svg>
+  ),
+  spinner: (
+    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+  ),
+  error: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+};
 
 // Default schema for modules without config_schema (fallback)
 const getDefaultSchema = (module: Module): ConfigSchema => {
@@ -21,17 +73,88 @@ const getDefaultSchema = (module: Module): ConfigSchema => {
   return { fields };
 };
 
+// Category helpers
+const getCategoryColor = (category: string) => {
+  const colors: Record<string, string> = {
+    'integration': 'bg-gray-900',
+    'content': 'bg-indigo-600',
+    'engagement': 'bg-green-600',
+    'analytics': 'bg-purple-600',
+    'appearance': 'bg-pink-600',
+  };
+  return colors[category] || 'bg-blue-600';
+};
+
+const getCategoryLabel = (category: string) => {
+  const labels: Record<string, string> = {
+    'integration': 'Intégration',
+    'content': 'Contenu',
+    'engagement': 'Engagement',
+    'analytics': 'Analytics',
+    'appearance': 'Apparence',
+  };
+  return labels[category] || category;
+};
+
+const getModuleIcon = (category: string) => {
+  const iconClass = "w-6 h-6";
+  const icons: Record<string, React.ReactNode> = {
+    'integration': (
+      <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+      </svg>
+    ),
+    'content': (
+      <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+      </svg>
+    ),
+    'engagement': (
+      <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+      </svg>
+    ),
+    'analytics': (
+      <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+      </svg>
+    ),
+    'appearance': (
+      <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+      </svg>
+    ),
+  };
+  return icons[category] || (
+    <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+    </svg>
+  );
+};
+
+// Changelog entry type (mocked for now, should come from API)
+interface ChangelogEntry {
+  id: string;
+  action: 'sync' | 'settings_updated' | 'enabled' | 'disabled' | 'action_executed';
+  description: string;
+  timestamp: string;
+  user?: string;
+  details?: Record<string, any>;
+}
+
 export default function ModuleConfig({ slug }: ModuleConfigProps) {
   const [module, setModule] = useState<Module | null>(null);
   const [tenantModule, setTenantModule] = useState<TenantModule | null>(null);
   const [isModuleEnabled, setIsModuleEnabled] = useState(false);
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [moduleData, setModuleData] = useState<Record<string, any>>({});
+  const [changelog, setChangelog] = useState<ChangelogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [executingAction, setExecutingAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [pendingConfirm, setPendingConfirm] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -82,15 +205,37 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       // Try to load module-specific data
       try {
         const data = await modulesAPI.getTenantModuleData(slug);
+        console.log('Module data response:', data);
         setModuleData(data.data || {});
-        // Update enabled status from API response
         if (data.enabled !== undefined) {
           setIsModuleEnabled(data.enabled);
         }
-      } catch {
-        // Module data endpoint may not exist yet
+      } catch (err) {
+        console.error('Failed to load module data:', err);
         setModuleData({});
       }
+
+      // Mock changelog data (should be fetched from API in production)
+      setChangelog([
+        {
+          id: '1',
+          action: 'sync',
+          description: 'Synchronisation des données',
+          timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+        },
+        {
+          id: '2',
+          action: 'settings_updated',
+          description: 'Configuration mise à jour',
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+        },
+        {
+          id: '3',
+          action: 'enabled',
+          description: 'Module activé',
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+        },
+      ]);
     } catch (err) {
       console.error('Failed to load module config:', err);
       setError('Erreur lors du chargement de la configuration');
@@ -108,17 +253,16 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       setSuccess(null);
 
       if (tenantModule) {
-        // Update existing tenant module
         await modulesAPI.updateTenantModuleSettings(slug, { settings });
       } else {
-        // Activate module for tenant
         await modulesAPI.activateForTenant({
           module_id: module.id,
           settings,
         });
       }
 
-      setSuccess('Configuration enregistrée avec succès');
+      setSuccess('Configuration enregistrée');
+      setTimeout(() => setSuccess(null), 3000);
       await loadData();
     } catch (err) {
       console.error('Failed to save settings:', err);
@@ -131,6 +275,13 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
   const handleAction = async (actionKey: string) => {
     const action = module?.config_schema?.actions?.find(a => a.key === actionKey);
     
+    // Handle confirmation
+    if (action?.confirm && pendingConfirm !== actionKey) {
+      setPendingConfirm(actionKey);
+      return;
+    }
+    setPendingConfirm(null);
+    
     try {
       setExecutingAction(actionKey);
       setError(null);
@@ -138,9 +289,9 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
 
       await modulesAPI.executeTenantAction(slug, actionKey, settings);
       
-      setSuccess(`Action "${action?.label || actionKey}" exécutée avec succès`);
+      setSuccess(`Action "${action?.label || actionKey}" exécutée`);
+      setTimeout(() => setSuccess(null), 3000);
       
-      // Reload data if action requires refresh
       if (action?.refreshAfter !== false) {
         setTimeout(loadData, 2000);
       }
@@ -152,86 +303,92 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
     }
   };
 
-  const handleDeactivate = async () => {
+  const handleToggleModule = async () => {
     if (!module) return;
     
-    if (!confirm('Êtes-vous sûr de vouloir désactiver ce module ?')) return;
-
-    try {
-      await modulesAPI.updateTenantModuleSettings(slug, {
-        settings: {},
-        enabled: false,
-      });
-      window.location.href = '/app/modules';
-    } catch (err) {
-      setError('Erreur lors de la désactivation');
+    if (isModuleEnabled) {
+      if (!confirm('Êtes-vous sûr de vouloir désactiver ce module ?')) return;
+      
+      try {
+        await modulesAPI.updateTenantModuleSettings(slug, {
+          settings: {},
+          enabled: false,
+        });
+        setSuccess('Module désactivé');
+        setTimeout(() => setSuccess(null), 3000);
+        await loadData();
+      } catch (err) {
+        setError('Erreur lors de la désactivation');
+      }
+    } else {
+      try {
+        await modulesAPI.activateForTenant({
+          module_id: module.id,
+          settings: module.default_settings || {},
+        });
+        setSuccess('Module activé');
+        setTimeout(() => setSuccess(null), 3000);
+        await loadData();
+      } catch (err) {
+        setError('Erreur lors de l\'activation');
+      }
     }
   };
 
-  // Get category helpers
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      'integration': 'bg-gray-900',
-      'content': 'bg-indigo-600',
-      'engagement': 'bg-green-600',
-      'analytics': 'bg-purple-600',
-      'appearance': 'bg-pink-600',
-    };
-    return colors[category] || 'bg-blue-600';
-  };
-
-  const getCategoryLabel = (category: string) => {
-    const labels: Record<string, string> = {
-      'integration': 'Intégration',
-      'content': 'Contenu',
-      'engagement': 'Engagement',
-      'analytics': 'Analytics',
-      'appearance': 'Apparence',
-    };
-    return labels[category] || category;
-  };
-
-  const getModuleIcon = (category: string) => {
-    const iconClass = "w-8 h-8";
-    const icons: Record<string, React.ReactNode> = {
-      'integration': (
-        <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
-        </svg>
-      ),
-      'content': (
-        <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-        </svg>
-      ),
-      'engagement': (
-        <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-        </svg>
-      ),
-      'analytics': (
-        <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-        </svg>
-      ),
-      'appearance': (
-        <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
-        </svg>
-      ),
-    };
-    return icons[category] || (
-      <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
-      </svg>
+  // Find sync action from schema
+  const getSyncAction = (): ConfigAction | undefined => {
+    return module?.config_schema?.actions?.find(
+      a => a.key === 'sync' || a.key.includes('sync')
     );
+  };
+
+  // Get other actions (non-sync)
+  const getOtherActions = (): ConfigAction[] => {
+    return module?.config_schema?.actions?.filter(
+      a => a.key !== 'sync' && !a.key.includes('sync')
+    ) || [];
+  };
+
+  // Format relative time
+  const formatRelativeTime = (isoString: string) => {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    
+    const minutes = Math.floor(diff / (1000 * 60));
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (minutes < 60) return `Il y a ${minutes} min`;
+    if (hours < 24) return `Il y a ${hours}h`;
+    if (days < 7) return `Il y a ${days}j`;
+    return date.toLocaleDateString('fr-FR');
+  };
+
+  // Get action icon based on type
+  const getActionIcon = (action: ChangelogEntry['action']) => {
+    switch (action) {
+      case 'sync':
+        return Icons.sync;
+      case 'settings_updated':
+        return Icons.settings;
+      case 'enabled':
+        return Icons.check;
+      case 'disabled':
+        return Icons.power;
+      default:
+        return Icons.history;
+    }
   };
 
   // Loading state
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
+          <p className="text-sm text-gray-500">Chargement...</p>
+        </div>
       </div>
     );
   }
@@ -239,120 +396,300 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
   // Module not found
   if (!module) {
     return (
-      <div className="text-center py-12">
-        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <h3 className="mt-4 text-lg font-medium text-gray-900">Module non trouvé</h3>
-        <p className="mt-2 text-gray-500">Le module "{slug}" n'existe pas.</p>
-        <a href="/app/modules" className="mt-4 inline-block text-primary-600 hover:text-primary-700">
-          ← Retour aux modules
+      <div className="max-w-2xl mx-auto text-center py-16">
+        <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
+          {Icons.error}
+        </div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">Module non trouvé</h3>
+        <p className="text-gray-500 mb-6">Le module "{slug}" n'existe pas ou n'est pas disponible.</p>
+        <a 
+          href="/app/modules" 
+          className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-medium"
+        >
+          {Icons.back}
+          Retour aux modules
         </a>
       </div>
     );
   }
 
-  // Get schema (from module or generate default)
   const schema = module.config_schema || getDefaultSchema(module);
+  const syncAction = getSyncAction();
+  const hasData = schema.dataDisplay && schema.dataDisplay.length > 0;
+  const hasConfig = schema.fields && schema.fields.length > 0;
+
+  // Build tabs
+  const tabs: Tab[] = [
+    ...(hasConfig ? [{
+      id: 'config',
+      label: 'Configuration',
+      icon: Icons.settings,
+    }] : []),
+    ...(hasData ? [{
+      id: 'data',
+      label: 'Données',
+      icon: Icons.data,
+      badge: Object.keys(moduleData).length > 0 ? Object.values(moduleData).flat().length : undefined,
+    }] : []),
+    {
+      id: 'changelog',
+      label: 'Historique',
+      icon: Icons.history,
+      badge: changelog.length,
+    },
+  ];
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto">
       {/* Back link */}
-      <a href="/app/modules" className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
-        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-        </svg>
-        Retour aux modules
+      <a 
+        href="/app/modules" 
+        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6 transition-colors"
+      >
+        {Icons.back}
+        Modules
       </a>
 
-      {/* Module Header */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-start gap-4">
-          <div className={`w-16 h-16 ${getCategoryColor(module.category)} rounded-xl flex items-center justify-center text-white`}>
-            {getModuleIcon(module.category)}
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900">{module.name}</h1>
-              {isModuleEnabled ? (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  Actif
-                </span>
-              ) : (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                  Non activé
-                </span>
-              )}
+      {/* Header Card */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+        <div className="p-6">
+          <div className="flex items-start justify-between gap-4">
+            {/* Module info */}
+            <div className="flex items-start gap-4 flex-1 min-w-0">
+              <div className={`w-12 h-12 ${getCategoryColor(module.category)} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
+                {getModuleIcon(module.category)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-xl font-bold text-gray-900">{module.name}</h1>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                    isModuleEnabled 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {isModuleEnabled ? 'Actif' : 'Inactif'}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-gray-600 line-clamp-2">{module.description}</p>
+                <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
+                  <span className="inline-flex items-center gap-1">
+                    {getCategoryLabel(module.category)}
+                  </span>
+                  <span>•</span>
+                  <span>v{module.version}</span>
+                </div>
+              </div>
             </div>
-            <p className="mt-1 text-gray-600">{module.description}</p>
-            <div className="mt-3 flex items-center gap-3">
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getCategoryColor(module.category)} bg-opacity-10 text-gray-700`}>
-                {getCategoryLabel(module.category)}
-              </span>
-              <span className="text-xs text-gray-500">v{module.version}</span>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Sync button */}
+              {syncAction && isModuleEnabled && (
+                <button
+                  onClick={() => handleAction(syncAction.key)}
+                  disabled={executingAction === syncAction.key}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {executingAction === syncAction.key ? Icons.spinner : Icons.sync}
+                  Synchroniser
+                </button>
+              )}
+              
+              {/* Enable/Disable toggle */}
+              <button
+                onClick={handleToggleModule}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  isModuleEnabled
+                    ? 'text-red-600 bg-red-50 border border-red-200 hover:bg-red-100'
+                    : 'text-white bg-primary-600 hover:bg-primary-700'
+                }`}
+              >
+                {Icons.power}
+                {isModuleEnabled ? 'Désactiver' : 'Activer'}
+              </button>
             </div>
           </div>
         </div>
+
+        {/* Success/Error messages */}
+        {(error || success) && (
+          <div className={`px-6 py-3 border-t ${error ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-sm ${error ? 'text-red-700' : 'text-green-700'}`}>
+                {error || success}
+              </span>
+              <button 
+                onClick={() => { setError(null); setSuccess(null); }}
+                className={`text-sm ${error ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700'}`}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation dialog */}
+        {pendingConfirm && (
+          <div className="px-6 py-4 border-t bg-amber-50 border-amber-100">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-amber-700">
+                {module.config_schema?.actions?.find(a => a.key === pendingConfirm)?.confirm || 'Confirmer cette action ?'}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPendingConfirm(null)}
+                  className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={() => handleAction(pendingConfirm)}
+                  className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+                >
+                  Confirmer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Messages */}
-      {error && (
-        <div className="p-4 rounded-lg bg-red-50 text-red-700 flex items-center justify-between">
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">✕</button>
-        </div>
-      )}
+      {/* Tabs Content */}
+      {isModuleEnabled && tabs.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <div className="px-6 pt-4">
+            <Tabs tabs={tabs} defaultTab={tabs[0]?.id}>
+              {(activeTab) => (
+                <div className="pb-6">
+                  {/* Configuration Tab */}
+                  {activeTab === 'config' && hasConfig && (
+                    <div className="space-y-6">
+                      {/* Schema-driven fields */}
+                      <SchemaRenderer
+                        schema={{ ...schema, actions: [], dataDisplay: [] }}
+                        settings={settings}
+                        data={moduleData}
+                        onSettingsChange={setSettings}
+                        onAction={handleAction}
+                        isExecutingAction={executingAction}
+                      />
+                      
+                      {/* Other actions */}
+                      {getOtherActions().length > 0 && (
+                        <div className="border-t border-gray-200 pt-6">
+                          <h3 className="text-sm font-medium text-gray-900 mb-3">Actions</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {getOtherActions().map((action) => (
+                              <button
+                                key={action.key}
+                                onClick={() => handleAction(action.key)}
+                                disabled={executingAction === action.key}
+                                className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                                  action.style === 'danger'
+                                    ? 'text-red-600 bg-red-50 border border-red-200 hover:bg-red-100'
+                                    : action.style === 'secondary'
+                                    ? 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                                    : 'text-white bg-primary-600 hover:bg-primary-700'
+                                }`}
+                              >
+                                {executingAction === action.key && Icons.spinner}
+                                {action.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
-      {success && (
-        <div className="p-4 rounded-lg bg-green-50 text-green-700 flex items-center justify-between">
-          <span>{success}</span>
-          <button onClick={() => setSuccess(null)} className="text-green-500 hover:text-green-700">✕</button>
-        </div>
-      )}
+                      {/* Save button */}
+                      <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+                        <button
+                          onClick={() => loadData()}
+                          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          onClick={handleSaveSettings}
+                          disabled={isSaving}
+                          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isSaving ? Icons.spinner : Icons.check}
+                          Enregistrer
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
-      {/* Schema-driven UI */}
-      <SchemaRenderer
-        schema={schema}
-        settings={settings}
-        data={moduleData}
-        onSettingsChange={setSettings}
-        onAction={handleAction}
-        isExecutingAction={executingAction}
-      />
+                  {/* Data Tab */}
+                  {activeTab === 'data' && hasData && (
+                    <SchemaRenderer
+                      schema={{ dataDisplay: schema.dataDisplay }}
+                      settings={settings}
+                      data={moduleData}
+                      onSettingsChange={setSettings}
+                      onAction={handleAction}
+                      isExecutingAction={executingAction}
+                    />
+                  )}
 
-      {/* Save Button */}
-      {schema.fields && schema.fields.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-end gap-3">
-            <a
-              href="/app/modules"
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Annuler
-            </a>
-            <button
-              onClick={handleSaveSettings}
-              disabled={isSaving}
-              className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSaving ? 'Enregistrement...' : 'Enregistrer'}
-            </button>
+                  {/* Changelog Tab */}
+                  {activeTab === 'changelog' && (
+                    <div>
+                      {changelog.length === 0 ? (
+                        <div className="text-center py-12">
+                          <div className="w-12 h-12 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                            {Icons.history}
+                          </div>
+                          <p className="text-gray-500">Aucun historique disponible</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          {changelog.map((entry, index) => (
+                            <div 
+                              key={entry.id}
+                              className={`flex items-start gap-3 py-3 ${
+                                index !== changelog.length - 1 ? 'border-b border-gray-100' : ''
+                              }`}
+                            >
+                              <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 text-gray-500">
+                                {getActionIcon(entry.action)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-gray-900">{entry.description}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  {formatRelativeTime(entry.timestamp)}
+                                  {entry.user && ` • ${entry.user}`}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Tabs>
           </div>
         </div>
       )}
 
-      {/* Danger Zone */}
-      {isModuleEnabled && (
-        <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6">
-          <h2 className="text-lg font-semibold text-red-600 mb-2">Zone dangereuse</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            La désactivation du module supprimera toutes ses données et configurations.
+      {/* Not enabled state */}
+      {!isModuleEnabled && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+          <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400">
+            {Icons.power}
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Module désactivé</h3>
+          <p className="text-gray-500 mb-6 max-w-md mx-auto">
+            Activez ce module pour accéder à sa configuration et ses fonctionnalités.
           </p>
           <button
-            onClick={handleDeactivate}
-            className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+            onClick={handleToggleModule}
+            className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
           >
-            Désactiver le module
+            {Icons.check}
+            Activer le module
           </button>
         </div>
       )}
