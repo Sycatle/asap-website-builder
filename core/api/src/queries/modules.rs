@@ -1,0 +1,128 @@
+//! Website module queries
+
+use sqlx::PgPool;
+use uuid::Uuid;
+use serde_json::Value as JsonValue;
+use chrono::{DateTime, Utc};
+
+use super::types::WebsiteModuleRow;
+
+/// List modules activated for a website
+pub async fn list_website_modules(
+    pool: &PgPool,
+    website_id: Uuid,
+) -> Result<Vec<WebsiteModuleRow>, Box<dyn std::error::Error + Send + Sync>> {
+    let rows = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, JsonValue, bool, DateTime<Utc>)>(
+        r#"
+        SELECT 
+            wm.id, wm.website_id, wm.module_id, 
+            m.name as module_name, m.slug as module_slug,
+            wm.settings, wm.enabled, wm.activated_at
+        FROM website_modules wm
+        JOIN modules m ON wm.module_id = m.id
+        WHERE wm.website_id = $1
+        ORDER BY wm.activated_at
+        "#
+    )
+    .bind(website_id)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows.into_iter().map(|(id, website_id, module_id, module_name, module_slug, settings, enabled, activated_at)| {
+        WebsiteModuleRow {
+            id,
+            website_id,
+            module_id,
+            module_name,
+            module_slug,
+            settings,
+            enabled,
+            activated_at,
+        }
+    }).collect())
+}
+
+/// Activate a module for a website
+pub async fn activate_website_module(
+    pool: &PgPool,
+    website_id: Uuid,
+    module_id: Uuid,
+    tenant_id: Uuid,
+    settings: JsonValue,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // Verify website belongs to tenant
+    let count: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM websites WHERE id = $1 AND tenant_id = $2"
+    )
+    .bind(website_id)
+    .bind(tenant_id)
+    .fetch_one(pool)
+    .await?;
+
+    if count.0 == 0 {
+        return Err("Website not found".into());
+    }
+
+    // Insert or update module activation
+    sqlx::query(
+        r#"
+        INSERT INTO website_modules (website_id, module_id, settings, enabled)
+        VALUES ($1, $2, $3, true)
+        ON CONFLICT (website_id, module_id)
+        DO UPDATE SET settings = $3, enabled = true, updated_at = now()
+        "#
+    )
+    .bind(website_id)
+    .bind(module_id)
+    .bind(&settings)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+/// Update a website module
+pub async fn update_website_module(
+    pool: &PgPool,
+    website_id: Uuid,
+    module_id: Uuid,
+    tenant_id: Uuid,
+    settings: &JsonValue,
+    enabled: Option<bool>,
+) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    // Verify website belongs to tenant
+    let count: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM websites WHERE id = $1 AND tenant_id = $2"
+    )
+    .bind(website_id)
+    .bind(tenant_id)
+    .fetch_one(pool)
+    .await?;
+
+    if count.0 == 0 {
+        return Ok(false);
+    }
+
+    let result = if let Some(en) = enabled {
+        sqlx::query(
+            "UPDATE website_modules SET settings = $1, enabled = $2, updated_at = now() WHERE website_id = $3 AND module_id = $4"
+        )
+        .bind(settings)
+        .bind(en)
+        .bind(website_id)
+        .bind(module_id)
+        .execute(pool)
+        .await?
+    } else {
+        sqlx::query(
+            "UPDATE website_modules SET settings = $1, updated_at = now() WHERE website_id = $2 AND module_id = $3"
+        )
+        .bind(settings)
+        .bind(website_id)
+        .bind(module_id)
+        .execute(pool)
+        .await?
+    };
+
+    Ok(result.rows_affected() > 0)
+}

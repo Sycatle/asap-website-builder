@@ -1,0 +1,178 @@
+//! Website CRUD queries
+
+use sqlx::PgPool;
+use uuid::Uuid;
+use serde_json::Value as JsonValue;
+
+use super::types::WebsiteWithData;
+
+/// Verify that a website belongs to the specified tenant
+/// Returns Ok(true) if website exists and belongs to tenant, Ok(false) otherwise
+pub async fn verify_website_ownership(
+    pool: &PgPool,
+    website_id: Uuid,
+    tenant_id: Uuid,
+) -> Result<bool, sqlx::Error> {
+    let count: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM websites WHERE id = $1 AND tenant_id = $2"
+    )
+    .bind(website_id)
+    .bind(tenant_id)
+    .fetch_one(pool)
+    .await?;
+
+    Ok(count.0 > 0)
+}
+
+/// Get website by ID with data
+pub async fn get_website_with_data(
+    pool: &PgPool,
+    website_id: Uuid,
+    tenant_id: Uuid,
+) -> Result<Option<WebsiteWithData>, sqlx::Error> {
+    sqlx::query_as::<_, WebsiteWithData>(
+        r#"
+        SELECT 
+            w.id, w.tenant_id, w.slug, w.title, w.tagline, w.status, 
+            w.creation_mode, w.preset_id, w.metadata, w.created_at, w.updated_at,
+            COALESCE(wd.data, '{}'::jsonb) as data
+        FROM websites w
+        LEFT JOIN website_data wd ON w.id = wd.website_id
+        WHERE w.id = $1 AND w.tenant_id = $2
+        "#
+    )
+    .bind(website_id)
+    .bind(tenant_id)
+    .fetch_optional(pool)
+    .await
+}
+
+/// List websites for tenant with data
+pub async fn list_websites_with_data(
+    pool: &PgPool,
+    tenant_id: Uuid,
+) -> Result<Vec<WebsiteWithData>, sqlx::Error> {
+    sqlx::query_as::<_, WebsiteWithData>(
+        r#"
+        SELECT 
+            w.id, w.tenant_id, w.slug, w.title, w.tagline, w.status, 
+            w.creation_mode, w.preset_id, w.metadata, w.created_at, w.updated_at,
+            COALESCE(wd.data, '{}'::jsonb) as data
+        FROM websites w
+        LEFT JOIN website_data wd ON w.id = wd.website_id
+        WHERE w.tenant_id = $1
+        ORDER BY w.created_at DESC
+        "#
+    )
+    .bind(tenant_id)
+    .fetch_all(pool)
+    .await
+}
+
+/// Get public website by slug
+pub async fn get_public_website(
+    pool: &PgPool,
+    slug: &str,
+) -> Result<Option<WebsiteWithData>, sqlx::Error> {
+    sqlx::query_as::<_, WebsiteWithData>(
+        r#"
+        SELECT 
+            w.id, w.tenant_id, w.slug, w.title, w.tagline, w.status, 
+            w.creation_mode, w.preset_id, w.metadata, w.created_at, w.updated_at,
+            COALESCE(wd.data, '{}'::jsonb) as data
+        FROM websites w
+        LEFT JOIN website_data wd ON w.id = wd.website_id
+        WHERE w.slug = $1 AND w.status = 'published'
+        "#
+    )
+    .bind(slug)
+    .fetch_optional(pool)
+    .await
+}
+
+/// Update website status
+pub async fn update_website_status(
+    pool: &PgPool,
+    website_id: Uuid,
+    tenant_id: Uuid,
+    status: &str,
+) -> Result<sqlx::postgres::PgQueryResult, sqlx::Error> {
+    sqlx::query(
+        "UPDATE websites SET status = $1, updated_at = now() WHERE id = $2 AND tenant_id = $3"
+    )
+    .bind(status)
+    .bind(website_id)
+    .bind(tenant_id)
+    .execute(pool)
+    .await
+}
+
+/// Update website batch fields
+pub async fn update_website_batch_fields(
+    pool: &PgPool,
+    website_id: Uuid,
+    tenant_id: Uuid,
+    title: Option<&str>,
+    tagline: Option<&str>,
+    metadata: Option<&JsonValue>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let mut tx = pool.begin().await?;
+
+    if let Some(t) = title {
+        sqlx::query(
+            "UPDATE websites SET title = $1, updated_at = now() WHERE id = $2 AND tenant_id = $3"
+        )
+        .bind(t)
+        .bind(website_id)
+        .bind(tenant_id)
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    if let Some(tl) = tagline {
+        sqlx::query(
+            "UPDATE websites SET tagline = $1, updated_at = now() WHERE id = $2 AND tenant_id = $3"
+        )
+        .bind(tl)
+        .bind(website_id)
+        .bind(tenant_id)
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    if let Some(m) = metadata {
+        sqlx::query(
+            "UPDATE websites SET metadata = $1, updated_at = now() WHERE id = $2 AND tenant_id = $3"
+        )
+        .bind(m)
+        .bind(website_id)
+        .bind(tenant_id)
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Upsert website data with JSONB merge
+pub async fn upsert_website_data(
+    pool: &PgPool,
+    website_id: Uuid,
+    data: &JsonValue,
+) -> Result<sqlx::postgres::PgQueryResult, sqlx::Error> {
+    sqlx::query(
+        r#"
+        INSERT INTO website_data (website_id, data)
+        VALUES ($1, $2)
+        ON CONFLICT (website_id)
+        DO UPDATE SET 
+            data = website_data.data || $2,
+            updated_at = now()
+        "#
+    )
+    .bind(website_id)
+    .bind(data)
+    .execute(pool)
+    .await
+}
