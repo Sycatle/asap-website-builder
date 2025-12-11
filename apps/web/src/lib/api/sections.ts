@@ -39,26 +39,32 @@ export interface ReorderSectionsRequest {
 
 export const sectionsAPI = {
   // Liste les sections d'un website
-  list: (websiteId: string) => 
-    apiClient.get<Section[]>(`/websites/${websiteId}/sections`),
+  async list(websiteId: string): Promise<Section[]> {
+    return apiClient.get<Section[]>(`/websites/${websiteId}/sections`);
+  },
   
   // Récupère une section par ID
-  get: (websiteId: string, sectionId: string) => 
-    apiClient.get<Section>(`/websites/${websiteId}/sections/${sectionId}`),
+  async get(websiteId: string, sectionId: string): Promise<Section> {
+    return apiClient.get<Section>(`/websites/${websiteId}/sections/${sectionId}`);
+  },
   
   // Crée une nouvelle section
-  create: (websiteId: string, data: CreateSectionRequest) => 
-    apiClient.post<Section>(`/websites/${websiteId}/sections`, data),
+  async create(websiteId: string, data: CreateSectionRequest): Promise<Section> {
+    return apiClient.post<Section>(`/websites/${websiteId}/sections`, data);
+  },
   
   // Met à jour une section
-  update: (websiteId: string, sectionId: string, data: UpdateSectionRequest) => 
-    apiClient.patch<Section>(`/websites/${websiteId}/sections/${sectionId}`, data),
+  async update(websiteId: string, sectionId: string, data: UpdateSectionRequest): Promise<Section> {
+    return apiClient.patch<Section>(`/websites/${websiteId}/sections/${sectionId}`, data);
+  },
   
   // Supprime une section
-  delete: (websiteId: string, sectionId: string) => 
-    apiClient.delete<void>(`/websites/${websiteId}/sections/${sectionId}`),
+  async delete(websiteId: string, sectionId: string): Promise<void> {
+    return apiClient.delete<void>(`/websites/${websiteId}/sections/${sectionId}`);
+  },
   
   // Réordonne les sections (drag & drop)
-  reorder: (websiteId: string, data: ReorderSectionsRequest) => 
-    apiClient.post<void>(`/websites/${websiteId}/sections/reorder`, data),
+  async reorder(websiteId: string, data: ReorderSectionsRequest): Promise<void> {
+    return apiClient.post<void>(`/websites/${websiteId}/sections/reorder`, data);
+  },
 };

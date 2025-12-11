@@ -32,21 +32,27 @@ export interface UpdateModuleSettingsRequest {
 
 export const modulesAPI = {
   // Liste tous les modules disponibles (catalogue)
-  catalog: () => apiClient.get<Module[]>('/modules/catalog'),
+  async catalog(): Promise<Module[]> {
+    return apiClient.get<Module[]>('/modules/catalog');
+  },
   
   // Liste les modules activés pour un website
-  listForWebsite: (websiteId: string) => 
-    apiClient.get<WebsiteModule[]>(`/websites/${websiteId}/modules`),
+  async listForWebsite(websiteId: string): Promise<WebsiteModule[]> {
+    return apiClient.get<WebsiteModule[]>(`/websites/${websiteId}/modules`);
+  },
   
   // Active un module pour un website
-  activate: (websiteId: string, data: ActivateModuleRequest) => 
-    apiClient.post<WebsiteModule>(`/websites/${websiteId}/modules`, data),
+  async activate(websiteId: string, data: ActivateModuleRequest): Promise<WebsiteModule> {
+    return apiClient.post<WebsiteModule>(`/websites/${websiteId}/modules`, data);
+  },
   
   // Met à jour les settings d'un module activé
-  updateSettings: (websiteId: string, moduleId: string, data: UpdateModuleSettingsRequest) => 
-    apiClient.patch<WebsiteModule>(`/websites/${websiteId}/modules/${moduleId}`, data),
+  async updateSettings(websiteId: string, moduleId: string, data: UpdateModuleSettingsRequest): Promise<WebsiteModule> {
+    return apiClient.patch<WebsiteModule>(`/websites/${websiteId}/modules/${moduleId}`, data);
+  },
   
   // Désactive un module pour un website
-  deactivate: (websiteId: string, moduleId: string) => 
-    apiClient.delete<void>(`/websites/${websiteId}/modules/${moduleId}`),
+  async deactivate(websiteId: string, moduleId: string): Promise<void> {
+    return apiClient.delete<void>(`/websites/${websiteId}/modules/${moduleId}`);
+  },
 };
