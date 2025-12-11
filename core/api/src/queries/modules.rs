@@ -4,8 +4,58 @@ use sqlx::PgPool;
 use uuid::Uuid;
 use serde_json::Value as JsonValue;
 use chrono::{DateTime, Utc};
+use asap_core_shared::module_catalog;
 
 use super::types::WebsiteModuleRow;
+
+/// Sync all modules from the catalog to the database
+/// 
+/// This should be called at startup to ensure all modules defined in code
+/// exist in the database with their latest metadata.
+pub async fn sync_modules_catalog(pool: &PgPool) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
+    let modules = module_catalog::get_module_catalog();
+    let mut synced = 0;
+    
+    for module in modules {
+        let config_schema = module.config_schema.as_ref()
+            .and_then(|s| serde_json::to_value(s).ok());
+        
+        let result = sqlx::query(
+            r#"
+            INSERT INTO modules (id, name, slug, version, description, category, icon, default_settings, config_schema, sidebar_order, sidebar_label, enabled)
+            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true)
+            ON CONFLICT (slug) DO UPDATE SET
+                name = EXCLUDED.name,
+                version = EXCLUDED.version,
+                description = EXCLUDED.description,
+                category = EXCLUDED.category,
+                icon = EXCLUDED.icon,
+                default_settings = EXCLUDED.default_settings,
+                config_schema = EXCLUDED.config_schema,
+                sidebar_order = EXCLUDED.sidebar_order,
+                sidebar_label = EXCLUDED.sidebar_label
+            "#
+        )
+        .bind(&module.name)
+        .bind(&module.slug)
+        .bind(&module.version)
+        .bind(&module.description)
+        .bind(&module.category)
+        .bind(&module.icon)
+        .bind(&module.default_settings)
+        .bind(&config_schema)
+        .bind(module.sidebar_order)
+        .bind(&module.sidebar_label)
+        .execute(pool)
+        .await?;
+        
+        if result.rows_affected() > 0 {
+            synced += 1;
+        }
+    }
+    
+    Ok(synced)
+}
 
 /// List modules activated for a website
 pub async fn list_website_modules(
