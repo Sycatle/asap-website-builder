@@ -89,20 +89,6 @@ pub struct PresetRow {
     pub thumbnail_url: Option<String>,
 }
 
-/// Module catalog response
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModuleCatalogRow {
-    pub id: Uuid,
-    pub name: String,
-    pub slug: String,
-    pub version: String,
-    pub description: String,
-    pub category: String,
-    pub default_settings: JsonValue,
-    pub config_schema: Option<JsonValue>,
-    pub icon: Option<String>,
-}
-
 /// Tenant module response (modules linked to tenant, not website)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TenantModuleRow {
@@ -1230,40 +1216,6 @@ pub async fn create_website_from_preset(
     Ok(website_id)
 }
 
-// ============================================================================
-// Module Catalog Queries
-// ============================================================================
-
-/// List available modules from the catalog
-pub async fn list_available_modules(
-    pool: &PgPool,
-) -> Result<Vec<ModuleCatalogRow>, Box<dyn std::error::Error + Send + Sync>> {
-    let rows = sqlx::query_as::<_, (Uuid, String, String, String, String, String, JsonValue, Option<JsonValue>, Option<String>)>(
-        r#"
-        SELECT id, name, slug, version, description, category, default_settings, config_schema, icon
-        FROM modules
-        WHERE enabled = true
-        ORDER BY category, name
-        "#
-    )
-    .fetch_all(pool)
-    .await?;
-
-    Ok(rows.into_iter().map(|(id, name, slug, version, description, category, default_settings, config_schema, icon)| {
-        ModuleCatalogRow {
-            id,
-            name,
-            slug,
-            version,
-            description,
-            category,
-            default_settings,
-            config_schema,
-            icon,
-        }
-    }).collect())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1377,22 +1329,5 @@ mod tests {
         let json = serde_json::to_string(&preset).unwrap();
         assert!(json.contains("developer-portfolio"));
         assert!(json.contains("professional"));
-    }
-
-    #[test]
-    fn test_module_catalog_row_serialization() {
-        let module = ModuleCatalogRow {
-            id: Uuid::new_v4(),
-            name: "Blog Engine".to_string(),
-            slug: "blog-engine".to_string(),
-            version: "1.0.0".to_string(),
-            description: "Full-featured blog engine".to_string(),
-            category: "content".to_string(),
-            default_settings: serde_json::json!({"posts_per_page": 10}),
-        };
-
-        let json = serde_json::to_string(&module).unwrap();
-        assert!(json.contains("blog-engine"));
-        assert!(json.contains("content"));
     }
 }

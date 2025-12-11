@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use asap_core_shared::Claims;
+use asap_core_shared::{Claims, module_catalog};
 
 #[derive(Debug, Serialize)]
 pub struct Website {
@@ -396,7 +396,7 @@ pub struct WebsiteModuleResponse {
 
 #[derive(Debug, Deserialize)]
 pub struct ActivateModuleRequest {
-    pub module_id: String,
+    pub module_id: String,  // Can be UUID or slug
     pub settings: Option<serde_json::Value>,
 }
 
@@ -404,6 +404,28 @@ pub struct ActivateModuleRequest {
 pub struct UpdateModuleSettingsRequest {
     pub settings: serde_json::Value,
     pub enabled: Option<bool>,
+}
+
+/// Resolve a module identifier (UUID or slug) to a module UUID
+async fn resolve_module_id(pool: &PgPool, module_id_or_slug: &str) -> Result<Uuid, String> {
+    // First try to parse as UUID
+    if let Ok(uuid) = Uuid::parse_str(module_id_or_slug) {
+        return Ok(uuid);
+    }
+    
+    // Otherwise, look up by slug
+    let result = sqlx::query_as::<_, (Uuid,)>(
+        "SELECT id FROM modules WHERE slug = $1 AND enabled = true"
+    )
+    .bind(module_id_or_slug)
+    .fetch_optional(pool)
+    .await;
+    
+    match result {
+        Ok(Some((id,))) => Ok(id),
+        Ok(None) => Err(format!("Module not found: {}", module_id_or_slug)),
+        Err(e) => Err(format!("Database error: {}", e)),
+    }
 }
 
 pub async fn list_website_modules(
@@ -477,11 +499,12 @@ pub async fn activate_module(
         }
     };
 
-    let module_uuid = match Uuid::parse_str(&payload.module_id) {
+    // Resolve module_id (can be UUID or slug)
+    let module_uuid = match resolve_module_id(&pool, &payload.module_id).await {
         Ok(id) => id,
-        Err(_) => {
+        Err(e) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid module ID format"
+                "error": e
             }))).into_response();
         }
     };
@@ -548,11 +571,12 @@ pub async fn update_website_module(
         }
     };
 
-    let module_uuid = match Uuid::parse_str(&module_id) {
+    // Resolve module_id (can be UUID or slug)
+    let module_uuid = match resolve_module_id(&pool, &module_id).await {
         Ok(id) => id,
-        Err(_) => {
+        Err(e) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid module ID format"
+                "error": e
             }))).into_response();
         }
     };
@@ -664,11 +688,12 @@ pub async fn activate_tenant_module(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ActivateModuleRequest>,
 ) -> impl IntoResponse {
-    let module_uuid = match Uuid::parse_str(&payload.module_id) {
+    // Resolve module_id (can be UUID or slug)
+    let module_uuid = match resolve_module_id(&pool, &payload.module_id).await {
         Ok(id) => id,
-        Err(_) => {
+        Err(e) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid module ID format"
+                "error": e
             }))).into_response();
         }
     };
@@ -802,16 +827,23 @@ pub async fn get_tenant_module_data(
         }
     };
 
-    // Get module info and settings
-    let result = sqlx::query_as::<_, (Uuid, String, String, String, String, String, serde_json::Value, Option<serde_json::Value>, Option<String>, Option<serde_json::Value>, Option<bool>)>(
+    // Get module info from code-defined catalog
+    let module_def = match module_catalog::get_module_by_slug(&module_slug) {
+        Some(m) => m,
+        None => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Module not found"
+            }))).into_response();
+        }
+    };
+
+    // Get tenant-specific settings from database
+    let tenant_module = sqlx::query_as::<_, (serde_json::Value, bool)>(
         r#"
-        SELECT 
-            m.id, m.name, m.slug, m.version, m.description, m.category, 
-            m.default_settings, m.config_schema, m.icon,
-            tm.settings, tm.enabled
-        FROM modules m
-        LEFT JOIN tenant_modules tm ON m.id = tm.module_id AND tm.tenant_id = $1
-        WHERE m.slug = $2 AND m.enabled = true
+        SELECT tm.settings, tm.enabled
+        FROM tenant_modules tm
+        INNER JOIN modules m ON m.id = tm.module_id
+        WHERE tm.tenant_id = $1 AND m.slug = $2
         "#
     )
     .bind(tenant_id)
@@ -819,15 +851,11 @@ pub async fn get_tenant_module_data(
     .fetch_optional(&pool)
     .await;
 
-    let (module_id, name, slug, version, description, category, default_settings, config_schema, icon, settings, enabled) = match result {
-        Ok(Some(row)) => row,
-        Ok(None) => {
-            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Module not found"
-            }))).into_response();
-        }
+    let (settings, enabled) = match tenant_module {
+        Ok(Some((s, e))) => (s, e),
+        Ok(None) => (module_def.default_settings.clone(), false),
         Err(e) => {
-            tracing::error!("Database error getting module data: {}", e);
+            tracing::error!("Database error getting tenant module: {}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response();
@@ -838,7 +866,7 @@ pub async fn get_tenant_module_data(
     let mut data = serde_json::json!({});
     
     // For github-sync module, load projects from websites (first website for now)
-    if slug == "github-sync" {
+    if module_slug == "github-sync" {
         let website_data = sqlx::query_as::<_, (Option<serde_json::Value>, Option<chrono::DateTime<chrono::Utc>>)>(
             r#"
             SELECT wd.data, wd.updated_at 
@@ -865,21 +893,21 @@ pub async fn get_tenant_module_data(
         }
     }
 
-    // Build response
+    // Build response with module info from catalog and settings from DB
     (StatusCode::OK, Json(serde_json::json!({
         "module": {
-            "id": module_id.to_string(),
-            "name": name,
-            "slug": slug,
-            "version": version,
-            "description": description,
-            "category": category,
-            "default_settings": default_settings,
-            "config_schema": config_schema,
-            "icon": icon
+            "id": module_def.slug.clone(),
+            "name": module_def.name,
+            "slug": module_def.slug,
+            "version": module_def.version,
+            "description": module_def.description,
+            "category": module_def.category,
+            "default_settings": module_def.default_settings,
+            "config_schema": module_def.config_schema,
+            "icon": module_def.icon
         },
-        "settings": settings.unwrap_or(default_settings.clone()),
-        "enabled": enabled.unwrap_or(false),
+        "settings": settings,
+        "enabled": enabled,
         "data": data
     }))).into_response()
 }
@@ -1441,66 +1469,53 @@ pub async fn create_website_from_preset(
 // Available Modules API (Module Catalog)
 // ============================================================================
 
+/// List available modules from the code-defined catalog
+/// Modules are no longer stored in database - schemas are defined in code
 pub async fn list_available_modules(
-    State(pool): State<PgPool>,
     Extension(_claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    use crate::queries;
-    let result = queries::list_available_modules(&pool).await;
-
-    match result {
-        Ok(modules) => {
-            (StatusCode::OK, Json(modules)).into_response()
-        }
-        Err(e) => {
-            tracing::error!("Database error listing available modules: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
-        }
-    }
+    let modules = module_catalog::get_user_modules();
+    
+    // Transform to API response format
+    let response: Vec<serde_json::Value> = modules.into_iter().map(|m| {
+        serde_json::json!({
+            "id": m.slug.clone(), // Use slug as ID since no DB UUID
+            "name": m.name,
+            "slug": m.slug,
+            "version": m.version,
+            "description": m.description,
+            "category": m.category,
+            "default_settings": m.default_settings,
+            "config_schema": m.config_schema,
+            "icon": m.icon
+        })
+    }).collect();
+    
+    (StatusCode::OK, Json(response)).into_response()
 }
 
-/// Get a single module by slug
+/// Get a single module by slug from the code-defined catalog
 pub async fn get_module_by_slug(
-    State(pool): State<PgPool>,
     Extension(_claims): Extension<Claims>,
     Path(slug): Path<String>,
 ) -> impl IntoResponse {
-    let result = sqlx::query_as::<_, (Uuid, String, String, String, String, String, serde_json::Value, Option<serde_json::Value>, Option<String>)>(
-        r#"
-        SELECT id, name, slug, version, description, category, default_settings, config_schema, icon
-        FROM modules
-        WHERE slug = $1 AND enabled = true
-        "#
-    )
-    .bind(&slug)
-    .fetch_optional(&pool)
-    .await;
-
-    match result {
-        Ok(Some((id, name, slug, version, description, category, default_settings, config_schema, icon))) => {
+    match module_catalog::get_module_by_slug(&slug) {
+        Some(m) => {
             (StatusCode::OK, Json(serde_json::json!({
-                "id": id.to_string(),
-                "name": name,
-                "slug": slug,
-                "version": version,
-                "description": description,
-                "category": category,
-                "default_settings": default_settings,
-                "config_schema": config_schema,
-                "icon": icon
+                "id": m.slug.clone(),
+                "name": m.name,
+                "slug": m.slug,
+                "version": m.version,
+                "description": m.description,
+                "category": m.category,
+                "default_settings": m.default_settings,
+                "config_schema": m.config_schema,
+                "icon": m.icon
             }))).into_response()
         }
-        Ok(None) => {
+        None => {
             (StatusCode::NOT_FOUND, Json(serde_json::json!({
                 "error": "Module not found"
-            }))).into_response()
-        }
-        Err(e) => {
-            tracing::error!("Database error getting module: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
             }))).into_response()
         }
     }
@@ -1552,16 +1567,23 @@ pub async fn get_website_module_data(
         }))).into_response();
     }
 
-    // Get module info and settings
-    let result = sqlx::query_as::<_, (Uuid, String, String, String, String, String, serde_json::Value, Option<serde_json::Value>, Option<String>, Option<serde_json::Value>, Option<bool>)>(
+    // Get module info from code-defined catalog
+    let module_def = match module_catalog::get_module_by_slug(&module_slug) {
+        Some(m) => m,
+        None => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Module not found"
+            }))).into_response();
+        }
+    };
+
+    // Get website-specific settings from database
+    let website_module = sqlx::query_as::<_, (serde_json::Value, bool)>(
         r#"
-        SELECT 
-            m.id, m.name, m.slug, m.version, m.description, m.category, 
-            m.default_settings, m.config_schema, m.icon,
-            wm.settings, wm.enabled
-        FROM modules m
-        LEFT JOIN website_modules wm ON m.id = wm.module_id AND wm.website_id = $1
-        WHERE m.slug = $2 AND m.enabled = true
+        SELECT wm.settings, wm.enabled
+        FROM website_modules wm
+        INNER JOIN modules m ON m.id = wm.module_id
+        WHERE wm.website_id = $1 AND m.slug = $2
         "#
     )
     .bind(website_uuid)
@@ -1569,15 +1591,11 @@ pub async fn get_website_module_data(
     .fetch_optional(&pool)
     .await;
 
-    let (module_id, name, slug, version, description, category, default_settings, config_schema, icon, settings, enabled) = match result {
-        Ok(Some(row)) => row,
-        Ok(None) => {
-            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Module not found"
-            }))).into_response();
-        }
+    let (settings, enabled) = match website_module {
+        Ok(Some((s, e))) => (s, e),
+        Ok(None) => (module_def.default_settings.clone(), false),
         Err(e) => {
-            tracing::error!("Database error getting module data: {}", e);
+            tracing::error!("Database error getting website module: {}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response();
@@ -1588,7 +1606,7 @@ pub async fn get_website_module_data(
     let mut data = serde_json::json!({});
     
     // For github-sync module, load projects from website_data
-    if slug == "github-sync" {
+    if module_slug == "github-sync" {
         let website_data = sqlx::query_as::<_, (Option<serde_json::Value>, Option<chrono::DateTime<chrono::Utc>>)>(
             r#"SELECT data, generated_at FROM website_data WHERE website_id = $1"#
         )
@@ -1606,21 +1624,21 @@ pub async fn get_website_module_data(
         }
     }
 
-    // Build response
+    // Build response with module info from catalog and settings from DB
     (StatusCode::OK, Json(serde_json::json!({
         "module": {
-            "id": module_id.to_string(),
-            "name": name,
-            "slug": slug,
-            "version": version,
-            "description": description,
-            "category": category,
-            "default_settings": default_settings,
-            "config_schema": config_schema,
-            "icon": icon
+            "id": module_def.slug.clone(),
+            "name": module_def.name,
+            "slug": module_def.slug,
+            "version": module_def.version,
+            "description": module_def.description,
+            "category": module_def.category,
+            "default_settings": module_def.default_settings,
+            "config_schema": module_def.config_schema,
+            "icon": module_def.icon
         },
-        "settings": settings.unwrap_or(default_settings.clone()),
-        "enabled": enabled.unwrap_or(false),
+        "settings": settings,
+        "enabled": enabled,
         "data": data
     }))).into_response()
 }
