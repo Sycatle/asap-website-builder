@@ -3,7 +3,7 @@ import { apiClient } from './client';
 export interface SignupRequest {
   email: string;
   password: string;
-  portfolio_slug: string;
+  portfolio_slug: string;  // Backend still uses 'portfolio_slug'
 }
 
 export interface SignupResponse {
@@ -31,6 +31,11 @@ export interface MeResponse {
   id: string;
   email: string;
   tenant_id: string;
+}
+
+export interface UpdateGitHubIntegrationRequest {
+  github_username: string;
+  github_token?: string | null;
 }
 
 export const authAPI = {
@@ -63,5 +68,9 @@ export const authAPI = {
     if (typeof window !== 'undefined') {
       localStorage.setItem('auth_token', token);
     }
+  },
+
+  async updateGitHubIntegration(userId: string, data: UpdateGitHubIntegrationRequest): Promise<void> {
+    return apiClient.put<void>(`/users/${userId}/integrations/github`, data);
   },
 };

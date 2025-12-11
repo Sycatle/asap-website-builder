@@ -18,6 +18,34 @@ pub struct GitHubRepo {
     pub archived: bool,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct GitHubUser {
+    pub login: String,
+    pub id: u64,
+    pub avatar_url: String,
+    pub html_url: String,
+    pub name: Option<String>,
+    pub company: Option<String>,
+    pub blog: Option<String>,
+    pub location: Option<String>,
+    pub email: Option<String>,
+    pub bio: Option<String>,
+    pub twitter_username: Option<String>,
+    pub public_repos: u64,
+    pub public_gists: u64,
+    pub followers: u64,
+    pub following: u64,
+    pub created_at: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct GitHubOrg {
+    pub login: String,
+    pub id: u64,
+    pub avatar_url: String,
+    pub description: Option<String>,
+}
+
 pub struct GitHubClient {
     client: reqwest::Client,
 }
@@ -78,6 +106,67 @@ impl GitHubClient {
             .collect::<Result<Vec<_>, _>>()?;
             
         Ok(json_repos)
+    }
+
+    /// Fetch user profile for a given GitHub username
+    pub async fn fetch_user(&self, username: &str) -> Result<serde_json::Value> {
+        tracing::info!("Fetching user profile for: {}", username);
+        
+        let url = format!("https://api.github.com/users/{}", username);
+        
+        let response = self
+            .client
+            .get(&url)
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            anyhow::bail!(
+                "GitHub API request failed with status {}: {}",
+                status,
+                body
+            );
+        }
+
+        let user: GitHubUser = response.json().await?;
+        tracing::info!("Fetched user profile: {}", user.login);
+        
+        Ok(serde_json::to_value(user)?)
+    }
+
+    /// Fetch organizations for a given GitHub username
+    pub async fn fetch_orgs(&self, username: &str) -> Result<Vec<serde_json::Value>> {
+        tracing::info!("Fetching organizations for: {}", username);
+        
+        let url = format!("https://api.github.com/users/{}/orgs", username);
+        
+        let response = self
+            .client
+            .get(&url)
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            anyhow::bail!(
+                "GitHub API request failed with status {}: {}",
+                status,
+                body
+            );
+        }
+
+        let orgs: Vec<GitHubOrg> = response.json().await?;
+        tracing::info!("Fetched {} organizations", orgs.len());
+        
+        let json_orgs: Vec<serde_json::Value> = orgs
+            .into_iter()
+            .map(|org| serde_json::to_value(org))
+            .collect::<Result<Vec<_>, _>>()?;
+            
+        Ok(json_orgs)
     }
 }
 

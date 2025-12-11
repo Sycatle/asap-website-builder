@@ -3,12 +3,17 @@ use std::time::Duration;
 use tracing::{debug, warn};
 
 /// CacheService handles Redis caching for public data
+/// 
+/// NOTE: This service is prepared for future use in caching public portfolios/websites.
+/// Currently not integrated into the main API routes but kept for upcoming features.
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct CacheService {
     client: ConnectionManager,
     default_ttl: Duration,
 }
 
+#[allow(dead_code)]
 impl CacheService {
     /// Create a new cache service
     pub async fn new(redis_url: &str) -> Result<Self, RedisError> {
@@ -74,7 +79,7 @@ impl CacheService {
         let mut conn = self.client.clone();
         let ttl_secs = ttl.as_secs();
         
-        conn.set_ex(key, value, ttl_secs).await?;
+        conn.set_ex::<_, _, ()>(key, value, ttl_secs).await?;
         debug!("Cache SET: {} (TTL: {} secs)", key, ttl_secs);
         
         Ok(())
@@ -83,7 +88,7 @@ impl CacheService {
     /// Delete a cached value
     pub async fn delete(&self, key: &str) -> Result<(), RedisError> {
         let mut conn = self.client.clone();
-        conn.del(key).await?;
+        conn.del::<_, ()>(key).await?;
         debug!("Cache DELETE: {}", key);
         Ok(())
     }
@@ -95,7 +100,7 @@ impl CacheService {
         }
         
         let mut conn = self.client.clone();
-        conn.del(keys).await?;
+        conn.del::<_, ()>(keys).await?;
         debug!("Cache DELETE: {:?}", keys);
         Ok(())
     }

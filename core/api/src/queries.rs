@@ -99,6 +99,24 @@ pub struct ModuleCatalogRow {
     pub description: String,
     pub category: String,
     pub default_settings: JsonValue,
+    pub config_schema: Option<JsonValue>,
+    pub icon: Option<String>,
+}
+
+/// Tenant module response (modules linked to tenant, not website)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TenantModuleRow {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub module_id: Uuid,
+    pub module_name: String,
+    pub module_slug: String,
+    pub module_icon: Option<String>,
+    pub settings: JsonValue,
+    pub enabled: bool,
+    pub activated_at: DateTime<Utc>,
+    pub sidebar_label: Option<String>,
+    pub sidebar_order: i32,
 }
 
 /// Portfolio event for batch operations
@@ -664,6 +682,158 @@ pub async fn update_website_module(
 }
 
 // ============================================================================
+// Tenant Modules Queries (NEW: modules linked to tenant, not websites)
+// ============================================================================
+
+/// List modules activated for a tenant
+pub async fn list_tenant_modules(
+    pool: &PgPool,
+    tenant_id: Uuid,
+) -> Result<Vec<TenantModuleRow>, Box<dyn std::error::Error + Send + Sync>> {
+    let rows = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, Option<String>, JsonValue, bool, DateTime<Utc>, Option<String>, i32)>(
+        r#"
+        SELECT 
+            tm.id, tm.tenant_id, tm.module_id, 
+            m.name as module_name, m.slug as module_slug, m.icon,
+            tm.settings, tm.enabled, tm.activated_at, 
+            m.sidebar_label, COALESCE(m.sidebar_order, 100) as sidebar_order
+        FROM tenant_modules tm
+        JOIN modules m ON tm.module_id = m.id
+        WHERE tm.tenant_id = $1
+        ORDER BY m.sidebar_order, tm.activated_at
+        "#
+    )
+    .bind(tenant_id)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows.into_iter().map(|(id, tenant_id, module_id, module_name, module_slug, module_icon, settings, enabled, activated_at, sidebar_label, sidebar_order)| {
+        TenantModuleRow {
+            id,
+            tenant_id,
+            module_id,
+            module_name,
+            module_slug,
+            module_icon,
+            settings,
+            enabled,
+            activated_at,
+            sidebar_label,
+            sidebar_order,
+        }
+    }).collect())
+}
+
+/// Activate a module for a tenant
+pub async fn activate_tenant_module(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    module_id: Uuid,
+    settings: JsonValue,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // Verify module exists
+    let count: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM modules WHERE id = $1 AND enabled = true"
+    )
+    .bind(module_id)
+    .fetch_one(pool)
+    .await?;
+
+    if count.0 == 0 {
+        return Err("Module not found".into());
+    }
+
+    // Insert or update module activation
+    sqlx::query(
+        r#"
+        INSERT INTO tenant_modules (tenant_id, module_id, settings, enabled)
+        VALUES ($1, $2, $3, true)
+        ON CONFLICT (tenant_id, module_id)
+        DO UPDATE SET settings = $3, enabled = true, updated_at = now()
+        "#
+    )
+    .bind(tenant_id)
+    .bind(module_id)
+    .bind(&settings)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+/// Update a tenant module settings
+pub async fn update_tenant_module(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    module_id: Uuid,
+    settings: &JsonValue,
+    enabled: Option<bool>,
+) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    let result = if let Some(en) = enabled {
+        sqlx::query(
+            "UPDATE tenant_modules SET settings = $1, enabled = $2, updated_at = now() WHERE tenant_id = $3 AND module_id = $4"
+        )
+        .bind(settings)
+        .bind(en)
+        .bind(tenant_id)
+        .bind(module_id)
+        .execute(pool)
+        .await?
+    } else {
+        sqlx::query(
+            "UPDATE tenant_modules SET settings = $1, updated_at = now() WHERE tenant_id = $2 AND module_id = $3"
+        )
+        .bind(settings)
+        .bind(tenant_id)
+        .bind(module_id)
+        .execute(pool)
+        .await?
+    };
+
+    Ok(result.rows_affected() > 0)
+}
+
+/// Get a tenant module by slug
+pub async fn get_tenant_module_by_slug(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    module_slug: &str,
+) -> Result<Option<TenantModuleRow>, Box<dyn std::error::Error + Send + Sync>> {
+    let row = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, Option<String>, JsonValue, bool, DateTime<Utc>, Option<String>, i32)>(
+        r#"
+        SELECT 
+            tm.id, tm.tenant_id, tm.module_id, 
+            m.name as module_name, m.slug as module_slug, m.icon,
+            tm.settings, tm.enabled, tm.activated_at, 
+            m.sidebar_label, COALESCE(m.sidebar_order, 100) as sidebar_order
+        FROM tenant_modules tm
+        JOIN modules m ON tm.module_id = m.id
+        WHERE tm.tenant_id = $1 AND m.slug = $2
+        "#
+    )
+    .bind(tenant_id)
+    .bind(module_slug)
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(row.map(|(id, tenant_id, module_id, module_name, module_slug, module_icon, settings, enabled, activated_at, sidebar_label, sidebar_order)| {
+        TenantModuleRow {
+            id,
+            tenant_id,
+            module_id,
+            module_name,
+            module_slug,
+            module_icon,
+            settings,
+            enabled,
+            activated_at,
+            sidebar_label,
+            sidebar_order,
+        }
+    }))
+}
+
+// ============================================================================
 // Website Sections Queries
 // ============================================================================
 
@@ -1068,9 +1238,9 @@ pub async fn create_website_from_preset(
 pub async fn list_available_modules(
     pool: &PgPool,
 ) -> Result<Vec<ModuleCatalogRow>, Box<dyn std::error::Error + Send + Sync>> {
-    let rows = sqlx::query_as::<_, (Uuid, String, String, String, String, String, JsonValue)>(
+    let rows = sqlx::query_as::<_, (Uuid, String, String, String, String, String, JsonValue, Option<JsonValue>, Option<String>)>(
         r#"
-        SELECT id, name, slug, version, description, category, default_settings
+        SELECT id, name, slug, version, description, category, default_settings, config_schema, icon
         FROM modules
         WHERE enabled = true
         ORDER BY category, name
@@ -1079,7 +1249,7 @@ pub async fn list_available_modules(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows.into_iter().map(|(id, name, slug, version, description, category, default_settings)| {
+    Ok(rows.into_iter().map(|(id, name, slug, version, description, category, default_settings, config_schema, icon)| {
         ModuleCatalogRow {
             id,
             name,
@@ -1088,6 +1258,8 @@ pub async fn list_available_modules(
             description,
             category,
             default_settings,
+            config_schema,
+            icon,
         }
     }).collect())
 }

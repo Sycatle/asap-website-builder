@@ -178,6 +178,9 @@ impl From<EventRow> for Event {
             "MODULE_DEACTIVATED" => EventType::ModuleDeactivated,
             "MODULE_CONFIGURED" => EventType::ModuleConfigured,
             
+            // GitHub events
+            "GITHUB_SYNC_REQUESTED" => EventType::GitHubSyncRequested,
+            
             // Section events
             "SECTION_CREATED" => EventType::SectionCreated,
             "SECTION_UPDATED" => EventType::SectionUpdated,

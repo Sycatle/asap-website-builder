@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+target/
+apps/web/node_modules/
+apps/web/dist/
+apps/web/.astro/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Data and logs
+data/
+*.log
+
+# Environment files (use docker-compose env instead)
+.env*
+!.env.example
+
+# Scripts
+scripts/

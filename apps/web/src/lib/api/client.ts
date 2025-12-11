@@ -17,6 +17,8 @@ export class APIClient {
 
   constructor() {
     this.baseURL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
+    console.log('🔧 API Client - Base URL:', this.baseURL);
+    console.log('🔧 API Client - Env PUBLIC_API_URL:', import.meta.env.PUBLIC_API_URL);
     
     this.client = axios.create({
       baseURL: this.baseURL,

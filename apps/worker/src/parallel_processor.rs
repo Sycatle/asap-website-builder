@@ -174,6 +174,9 @@ async fn process_single_event(
 /// 
 /// This is exported for users who want more fine-grained control
 /// over the concurrency limit.
+/// 
+/// NOTE: Can be used externally for custom parallelism tuning.
+#[allow(dead_code)]
 pub fn get_optimal_concurrency() -> usize {
     (num_cpus::get() * 2).max(4)
 }

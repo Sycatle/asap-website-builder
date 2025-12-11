@@ -4,6 +4,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 /// Configuration for database pool
+/// 
+/// NOTE: Comprehensive pool configuration for different deployment scenarios.
+/// Some fields like `enable_stats` are prepared for future metrics integration.
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct PoolConfig {
     /// Minimum connections to maintain
@@ -16,7 +20,7 @@ pub struct PoolConfig {
     pub idle_timeout: Duration,
     /// Connection lifetime
     pub max_lifetime: Duration,
-    /// Enable pool statistics tracking
+    /// Enable pool statistics tracking (prepared for metrics integration)
     pub enable_stats: bool,
 }
 
@@ -47,6 +51,7 @@ impl PoolConfig {
     }
 
     /// Create config optimized for worker
+    #[allow(dead_code)]
     pub fn for_worker() -> Self {
         Self {
             min_connections: 5,
@@ -60,6 +65,9 @@ impl PoolConfig {
 }
 
 /// Pool statistics for monitoring
+/// 
+/// NOTE: Atomic counters for tracking pool health metrics.
+/// Prepared for future Prometheus/metrics integration.
 #[derive(Clone)]
 pub struct PoolStats {
     /// Total connections created
@@ -86,6 +94,7 @@ impl Default for PoolStats {
     }
 }
 
+#[allow(dead_code)]
 impl PoolStats {
     pub fn increment_connections(&self) {
         self.total_connections.fetch_add(1, Ordering::Relaxed);
@@ -158,6 +167,9 @@ pub async fn create_api_pool(database_url: &str) -> anyhow::Result<PgPool> {
 }
 
 /// Create pool optimized for worker
+/// 
+/// NOTE: Prepared for worker service integration.
+#[allow(dead_code)]
 pub async fn create_worker_pool(database_url: &str) -> anyhow::Result<PgPool> {
     create_pool_with_config(database_url, PoolConfig::for_worker()).await
 }
@@ -203,6 +215,10 @@ async fn warmup_pool(pool: &PgPool) -> anyhow::Result<()> {
 }
 
 /// Health check with timeout
+/// 
+/// NOTE: Health check function with configurable timeout.
+/// Can be used for /health endpoint or readiness probes.
+#[allow(dead_code)]
 pub async fn health_check(pool: &PgPool) -> anyhow::Result<()> {
     let timeout_result = tokio::time::timeout(
         Duration::from_secs(5),

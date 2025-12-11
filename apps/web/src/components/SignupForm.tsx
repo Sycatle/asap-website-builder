@@ -71,7 +71,7 @@ export default function SignupForm() {
 
       <div>
         <label htmlFor="slug" className="block text-sm font-medium text-gray-700 mb-1">
-          URL de votre portfolio <span className="text-red-500">*</span>
+          URL de votre site <span className="text-red-500">*</span>
         </label>
         <div className="flex">
           <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
@@ -85,7 +85,7 @@ export default function SignupForm() {
             required
             pattern="[a-z0-9-]+"
             className="flex-1 px-3 py-2 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            placeholder="mon-portfolio"
+            placeholder="mon-site"
           />
         </div>
         <p className="mt-1 text-sm text-gray-500">
