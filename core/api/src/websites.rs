@@ -841,11 +841,11 @@ pub async fn get_tenant_module_data(
     if slug == "github-sync" {
         let website_data = sqlx::query_as::<_, (Option<serde_json::Value>, Option<chrono::DateTime<chrono::Utc>>)>(
             r#"
-            SELECT wd.data, wd.generated_at 
+            SELECT wd.data, wd.updated_at 
             FROM website_data wd
             JOIN websites w ON w.id = wd.website_id
             WHERE w.tenant_id = $1
-            ORDER BY wd.generated_at DESC
+            ORDER BY wd.updated_at DESC
             LIMIT 1
             "#
         )
@@ -853,11 +853,13 @@ pub async fn get_tenant_module_data(
         .fetch_optional(&pool)
         .await;
 
-        if let Ok(Some((wd_data, generated_at))) = website_data {
+        if let Ok(Some((wd_data, updated_at))) = website_data {
             if let Some(wd_data) = wd_data {
                 data = serde_json::json!({
+                    "profile": wd_data.get("profile").cloned().unwrap_or(serde_json::json!(null)),
+                    "organizations": wd_data.get("organizations").cloned().unwrap_or(serde_json::json!([])),
                     "projects": wd_data.get("projects").cloned().unwrap_or(serde_json::json!([])),
-                    "lastSync": generated_at.map(|dt| dt.to_rfc3339())
+                    "lastSync": updated_at.map(|dt| dt.to_rfc3339())
                 });
             }
         }
