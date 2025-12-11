@@ -597,6 +597,369 @@ pub async fn update_website_module(
 }
 
 // ============================================================================
+// Tenant Modules API (NEW: modules linked to tenant, not websites)
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+pub struct TenantModuleResponse {
+    pub id: String,
+    pub tenant_id: String,
+    pub module_id: String,
+    pub module_name: String,
+    pub module_slug: String,
+    pub module_icon: Option<String>,
+    pub settings: serde_json::Value,
+    pub enabled: bool,
+    pub activated_at: String,
+    pub sidebar_label: Option<String>,
+    pub sidebar_order: i32,
+}
+
+/// List all modules activated for a tenant
+pub async fn list_tenant_modules(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    use crate::queries;
+    let result = queries::list_tenant_modules(&pool, tenant_id).await;
+
+    match result {
+        Ok(modules) => {
+            let response: Vec<TenantModuleResponse> = modules.into_iter().map(|m| TenantModuleResponse {
+                id: m.id.to_string(),
+                tenant_id: m.tenant_id.to_string(),
+                module_id: m.module_id.to_string(),
+                module_name: m.module_name,
+                module_slug: m.module_slug,
+                module_icon: m.module_icon,
+                settings: m.settings,
+                enabled: m.enabled,
+                activated_at: m.activated_at.to_rfc3339(),
+                sidebar_label: m.sidebar_label,
+                sidebar_order: m.sidebar_order,
+            }).collect();
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Database error listing tenant modules: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response()
+        }
+    }
+}
+
+/// Activate a module for a tenant
+pub async fn activate_tenant_module(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<ActivateModuleRequest>,
+) -> impl IntoResponse {
+    let module_uuid = match Uuid::parse_str(&payload.module_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid module ID format"
+            }))).into_response();
+        }
+    };
+
+    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    use crate::queries;
+    let result = queries::activate_tenant_module(
+        &pool,
+        tenant_id,
+        module_uuid,
+        payload.settings.unwrap_or(serde_json::json!({})),
+    ).await;
+
+    match result {
+        Ok(_) => {
+            // Create MODULE_ACTIVATED event
+            let event_payload = serde_json::json!({
+                "tenant_id": tenant_id.to_string(),
+                "module_id": payload.module_id
+            });
+
+            let _ = sqlx::query(
+                "INSERT INTO events (tenant_id, event_type, payload) VALUES ($1, 'MODULE_ACTIVATED', $2)"
+            )
+            .bind(tenant_id)
+            .bind(&event_payload)
+            .execute(&pool)
+            .await;
+
+            (StatusCode::OK, Json(serde_json::json!({
+                "message": "Module activated successfully"
+            }))).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Database error activating module: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response()
+        }
+    }
+}
+
+/// Update a tenant module settings
+pub async fn update_tenant_module(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Path(module_slug): Path<String>,
+    Json(payload): Json<UpdateModuleSettingsRequest>,
+) -> impl IntoResponse {
+    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    // First get module_id from slug
+    let module_row = sqlx::query_as::<_, (Uuid,)>(
+        "SELECT id FROM modules WHERE slug = $1 AND enabled = true"
+    )
+    .bind(&module_slug)
+    .fetch_optional(&pool)
+    .await;
+
+    let module_id = match module_row {
+        Ok(Some((id,))) => id,
+        Ok(None) => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Module not found"
+            }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Database error finding module: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    use crate::queries;
+    let result = queries::update_tenant_module(
+        &pool,
+        tenant_id,
+        module_id,
+        &payload.settings,
+        payload.enabled,
+    ).await;
+
+    match result {
+        Ok(updated) if updated => {
+            (StatusCode::OK, Json(serde_json::json!({
+                "message": "Module updated successfully"
+            }))).into_response()
+        }
+        Ok(_) => {
+            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Module not activated for this tenant"
+            }))).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Database error updating module: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response()
+        }
+    }
+}
+
+/// Get tenant module data (includes settings, module info, and dynamic data)
+pub async fn get_tenant_module_data(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Path(module_slug): Path<String>,
+) -> impl IntoResponse {
+    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    // Get module info and settings
+    let result = sqlx::query_as::<_, (Uuid, String, String, String, String, String, serde_json::Value, Option<serde_json::Value>, Option<String>, Option<serde_json::Value>, Option<bool>)>(
+        r#"
+        SELECT 
+            m.id, m.name, m.slug, m.version, m.description, m.category, 
+            m.default_settings, m.config_schema, m.icon,
+            tm.settings, tm.enabled
+        FROM modules m
+        LEFT JOIN tenant_modules tm ON m.id = tm.module_id AND tm.tenant_id = $1
+        WHERE m.slug = $2 AND m.enabled = true
+        "#
+    )
+    .bind(tenant_id)
+    .bind(&module_slug)
+    .fetch_optional(&pool)
+    .await;
+
+    let (module_id, name, slug, version, description, category, default_settings, config_schema, icon, settings, enabled) = match result {
+        Ok(Some(row)) => row,
+        Ok(None) => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Module not found"
+            }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Database error getting module data: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    // Get dynamic data based on module type
+    let mut data = serde_json::json!({});
+    
+    // For github-sync module, load projects from websites (first website for now)
+    if slug == "github-sync" {
+        let website_data = sqlx::query_as::<_, (Option<serde_json::Value>, Option<chrono::DateTime<chrono::Utc>>)>(
+            r#"
+            SELECT wd.data, wd.generated_at 
+            FROM website_data wd
+            JOIN websites w ON w.id = wd.website_id
+            WHERE w.tenant_id = $1
+            ORDER BY wd.generated_at DESC
+            LIMIT 1
+            "#
+        )
+        .bind(tenant_id)
+        .fetch_optional(&pool)
+        .await;
+
+        if let Ok(Some((wd_data, generated_at))) = website_data {
+            if let Some(wd_data) = wd_data {
+                data = serde_json::json!({
+                    "projects": wd_data.get("projects").cloned().unwrap_or(serde_json::json!([])),
+                    "lastSync": generated_at.map(|dt| dt.to_rfc3339())
+                });
+            }
+        }
+    }
+
+    // Build response
+    (StatusCode::OK, Json(serde_json::json!({
+        "module": {
+            "id": module_id.to_string(),
+            "name": name,
+            "slug": slug,
+            "version": version,
+            "description": description,
+            "category": category,
+            "default_settings": default_settings,
+            "config_schema": config_schema,
+            "icon": icon
+        },
+        "settings": settings.unwrap_or(default_settings.clone()),
+        "enabled": enabled.unwrap_or(false),
+        "data": data
+    }))).into_response()
+}
+
+/// Execute a tenant module action (e.g., sync GitHub)
+pub async fn execute_tenant_module_action(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Path((module_slug, action_key)): Path<(String, String)>,
+    Json(payload): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    // Handle actions based on module and action key
+    match (module_slug.as_str(), action_key.as_str()) {
+        ("github-sync", "sync") => {
+            // Get github_username from settings or payload
+            let github_username = payload.get("github_username")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+
+            // Get first website for this tenant (for now)
+            let website_id = sqlx::query_as::<_, (Uuid,)>(
+                "SELECT id FROM websites WHERE tenant_id = $1 ORDER BY created_at LIMIT 1"
+            )
+            .bind(tenant_id)
+            .fetch_optional(&pool)
+            .await;
+
+            let website_id_str = match website_id {
+                Ok(Some((id,))) => id.to_string(),
+                _ => "".to_string(),
+            };
+
+            // Create GITHUB_SYNC_REQUESTED event
+            let event_payload = serde_json::json!({
+                "tenant_id": tenant_id.to_string(),
+                "website_id": website_id_str,
+                "github_username": github_username,
+                "requested_by": claims.sub
+            });
+
+            let event_result = sqlx::query(
+                "INSERT INTO events (tenant_id, event_type, payload) VALUES ($1, 'GITHUB_SYNC_REQUESTED', $2)"
+            )
+            .bind(tenant_id)
+            .bind(&event_payload)
+            .execute(&pool)
+            .await;
+
+            match event_result {
+                Ok(_) => {
+                    tracing::info!("GitHub sync requested for tenant {}", tenant_id);
+                    (StatusCode::OK, Json(serde_json::json!({
+                        "message": "Synchronisation GitHub lancée",
+                        "status": "pending"
+                    }))).into_response()
+                }
+                Err(e) => {
+                    tracing::error!("Failed to create sync event: {}", e);
+                    (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                        "error": "Failed to start synchronization"
+                    }))).into_response()
+                }
+            }
+        }
+        _ => {
+            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": format!("Action '{}' not found for module '{}'", action_key, module_slug)
+            }))).into_response()
+        }
+    }
+}
+
+// ============================================================================
 // Website Sections API
 // ============================================================================
 
@@ -1091,6 +1454,264 @@ pub async fn list_available_modules(
             tracing::error!("Database error listing available modules: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
+            }))).into_response()
+        }
+    }
+}
+
+/// Get a single module by slug
+pub async fn get_module_by_slug(
+    State(pool): State<PgPool>,
+    Extension(_claims): Extension<Claims>,
+    Path(slug): Path<String>,
+) -> impl IntoResponse {
+    let result = sqlx::query_as::<_, (Uuid, String, String, String, String, String, serde_json::Value, Option<serde_json::Value>, Option<String>)>(
+        r#"
+        SELECT id, name, slug, version, description, category, default_settings, config_schema, icon
+        FROM modules
+        WHERE slug = $1 AND enabled = true
+        "#
+    )
+    .bind(&slug)
+    .fetch_optional(&pool)
+    .await;
+
+    match result {
+        Ok(Some((id, name, slug, version, description, category, default_settings, config_schema, icon))) => {
+            (StatusCode::OK, Json(serde_json::json!({
+                "id": id.to_string(),
+                "name": name,
+                "slug": slug,
+                "version": version,
+                "description": description,
+                "category": category,
+                "default_settings": default_settings,
+                "config_schema": config_schema,
+                "icon": icon
+            }))).into_response()
+        }
+        Ok(None) => {
+            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Module not found"
+            }))).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Database error getting module: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response()
+        }
+    }
+}
+
+/// Get module data for a website (includes settings, module info, and dynamic data)
+pub async fn get_website_module_data(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Path((website_id, module_slug)): Path<(String, String)>,
+) -> impl IntoResponse {
+    let website_uuid = match Uuid::parse_str(&website_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid website ID format"
+            }))).into_response();
+        }
+    };
+
+    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    // Verify website belongs to tenant
+    let website_check = sqlx::query_as::<_, (Uuid,)>(
+        "SELECT id FROM websites WHERE id = $1 AND tenant_id = $2"
+    )
+    .bind(website_uuid)
+    .bind(tenant_id)
+    .fetch_optional(&pool)
+    .await;
+
+    if let Err(e) = website_check {
+        tracing::error!("Database error checking website: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+            "error": "Internal server error"
+        }))).into_response();
+    }
+
+    if website_check.unwrap().is_none() {
+        return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+            "error": "Website not found"
+        }))).into_response();
+    }
+
+    // Get module info and settings
+    let result = sqlx::query_as::<_, (Uuid, String, String, String, String, String, serde_json::Value, Option<serde_json::Value>, Option<String>, Option<serde_json::Value>, Option<bool>)>(
+        r#"
+        SELECT 
+            m.id, m.name, m.slug, m.version, m.description, m.category, 
+            m.default_settings, m.config_schema, m.icon,
+            wm.settings, wm.enabled
+        FROM modules m
+        LEFT JOIN website_modules wm ON m.id = wm.module_id AND wm.website_id = $1
+        WHERE m.slug = $2 AND m.enabled = true
+        "#
+    )
+    .bind(website_uuid)
+    .bind(&module_slug)
+    .fetch_optional(&pool)
+    .await;
+
+    let (module_id, name, slug, version, description, category, default_settings, config_schema, icon, settings, enabled) = match result {
+        Ok(Some(row)) => row,
+        Ok(None) => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Module not found"
+            }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Database error getting module data: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    // Get dynamic data based on module type
+    let mut data = serde_json::json!({});
+    
+    // For github-sync module, load projects from website_data
+    if slug == "github-sync" {
+        let website_data = sqlx::query_as::<_, (Option<serde_json::Value>, Option<chrono::DateTime<chrono::Utc>>)>(
+            r#"SELECT data, generated_at FROM website_data WHERE website_id = $1"#
+        )
+        .bind(website_uuid)
+        .fetch_optional(&pool)
+        .await;
+
+        if let Ok(Some((wd_data, generated_at))) = website_data {
+            if let Some(wd_data) = wd_data {
+                data = serde_json::json!({
+                    "projects": wd_data.get("projects").cloned().unwrap_or(serde_json::json!([])),
+                    "lastSync": generated_at.map(|dt| dt.to_rfc3339())
+                });
+            }
+        }
+    }
+
+    // Build response
+    (StatusCode::OK, Json(serde_json::json!({
+        "module": {
+            "id": module_id.to_string(),
+            "name": name,
+            "slug": slug,
+            "version": version,
+            "description": description,
+            "category": category,
+            "default_settings": default_settings,
+            "config_schema": config_schema,
+            "icon": icon
+        },
+        "settings": settings.unwrap_or(default_settings.clone()),
+        "enabled": enabled.unwrap_or(false),
+        "data": data
+    }))).into_response()
+}
+
+/// Execute a module action (e.g., sync GitHub)
+pub async fn execute_module_action(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Path((website_id, module_slug, action_key)): Path<(String, String, String)>,
+    Json(payload): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let website_uuid = match Uuid::parse_str(&website_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid website ID format"
+            }))).into_response();
+        }
+    };
+
+    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    // Verify website belongs to tenant
+    let website_check = sqlx::query_as::<_, (Uuid,)>(
+        "SELECT id FROM websites WHERE id = $1 AND tenant_id = $2"
+    )
+    .bind(website_uuid)
+    .bind(tenant_id)
+    .fetch_optional(&pool)
+    .await;
+
+    if let Err(e) = website_check {
+        tracing::error!("Database error checking website: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+            "error": "Internal server error"
+        }))).into_response();
+    }
+
+    if website_check.unwrap().is_none() {
+        return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+            "error": "Website not found"
+        }))).into_response();
+    }
+
+    // Handle actions based on module and action key
+    match (module_slug.as_str(), action_key.as_str()) {
+        ("github-sync", "sync") => {
+            // Get github_username from settings or payload
+            let github_username = payload.get("github_username")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+
+            // Create GITHUB_SYNC_REQUESTED event
+            let event_payload = serde_json::json!({
+                "website_id": website_id,
+                "github_username": github_username,
+                "requested_by": claims.sub
+            });
+
+            let event_result = sqlx::query(
+                "INSERT INTO events (tenant_id, event_type, payload) VALUES ($1, 'GITHUB_SYNC_REQUESTED', $2)"
+            )
+            .bind(tenant_id)
+            .bind(&event_payload)
+            .execute(&pool)
+            .await;
+
+            match event_result {
+                Ok(_) => {
+                    tracing::info!("GitHub sync requested for website {}", website_id);
+                    (StatusCode::OK, Json(serde_json::json!({
+                        "message": "Synchronisation GitHub lancée",
+                        "status": "pending"
+                    }))).into_response()
+                }
+                Err(e) => {
+                    tracing::error!("Failed to create sync event: {}", e);
+                    (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                        "error": "Failed to start synchronization"
+                    }))).into_response()
+                }
+            }
+        }
+        _ => {
+            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": format!("Action '{}' not found for module '{}'", action_key, module_slug)
             }))).into_response()
         }
     }

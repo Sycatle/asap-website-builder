@@ -35,10 +35,16 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
         .route("/websites/:id", put(crate::websites::update_website))
         .route("/websites/:id/data", patch(crate::websites::patch_website_data))
         .route("/websites/:id/publish", post(crate::websites::publish_website))
-        // Website modules routes
+        // Website modules routes (LEGACY - kept for backward compatibility)
         .route("/websites/:id/modules", get(crate::websites::list_website_modules))
         .route("/websites/:id/modules", post(crate::websites::activate_module))
         .route("/websites/:id/modules/:module_id", patch(crate::websites::update_website_module))
+        // Tenant modules routes (modules linked to tenant)
+        .route("/modules/activated", get(crate::websites::list_tenant_modules))
+        .route("/modules/activate", post(crate::websites::activate_tenant_module))
+        .route("/modules/:module_slug/settings", patch(crate::websites::update_tenant_module))
+        .route("/modules/:module_slug/data", get(crate::websites::get_tenant_module_data))
+        .route("/modules/:module_slug/actions/:action_key", post(crate::websites::execute_tenant_module_action))
         // Website sections routes
         .route("/websites/:id/sections", get(crate::websites::list_website_sections))
         .route("/websites/:id/sections", post(crate::websites::create_section))
@@ -50,6 +56,10 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
         .route("/websites/from-preset", post(crate::websites::create_website_from_preset))
         // Module catalog routes
         .route("/modules/catalog", get(crate::websites::list_available_modules))
+        .route("/modules/:slug", get(crate::websites::get_module_by_slug))
+        // Website module data and actions
+        .route("/websites/:id/modules/:module_slug/data", get(crate::websites::get_website_module_data))
+        .route("/websites/:id/modules/:module_slug/actions/:action_key", post(crate::websites::execute_module_action))
         // Events routes
         .route("/events", get(crate::events::get_events))
         .route("/events", post(crate::events::create_event))
