@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../lib/store/authStore';
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
 
-export default function LoginForm() {
+export default function LoginForm({
+  className,
+  ...props
+}: React.ComponentPropsWithoutRef<"div">) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login, isLoading, error } = useAuthStore();
@@ -17,57 +26,73 @@ export default function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
+    <div className={cn("flex flex-col gap-6", className)} {...props}>
+      <form onSubmit={handleSubmit}>
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col items-center gap-2">
+            <a
+              href="/"
+              className="flex flex-col items-center gap-2 font-medium"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold text-xl">
+                A
+              </div>
+              <span className="sr-only">ASAP</span>
+            </a>
+            <h1 className="text-xl font-bold">Bienvenue sur ASAP</h1>
+            <p className="text-center text-sm text-muted-foreground">
+              Connectez-vous pour gérer vos sites
+            </p>
+          </div>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex flex-col gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="vous@exemple.com"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="password">Mot de passe</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Connexion...
+                </>
+              ) : (
+                'Se connecter'
+              )}
+            </Button>
+          </div>
         </div>
-      )}
-
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-          Email <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="email"
-          id="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          placeholder="vous@exemple.com"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-          Mot de passe <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="password"
-          id="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          placeholder="••••••••"
-        />
-      </div>
-
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isLoading ? 'Connexion...' : 'Se connecter'}
-      </button>
-
-      <p className="text-center text-sm text-gray-600">
+      </form>
+      <div className="text-center text-sm text-muted-foreground">
         Pas encore de compte?{' '}
-        <a href="/signup" className="text-primary-600 hover:text-primary-700 font-medium">
+        <a href="/signup" className="underline underline-offset-4 hover:text-primary font-medium">
           Créer un compte
         </a>
-      </p>
-    </form>
+      </div>
+    </div>
   );
 }

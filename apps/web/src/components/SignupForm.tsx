@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../lib/store/authStore';
 import { slugify } from '../lib/utils/formatters';
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
 
-export default function SignupForm() {
+export default function SignupForm({
+  className,
+  ...props
+}: React.ComponentPropsWithoutRef<"div">) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [slug, setSlug] = useState('');
@@ -30,83 +39,96 @@ export default function SignupForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
+    <div className={cn("flex flex-col gap-6", className)} {...props}>
+      <form onSubmit={handleSubmit}>
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col items-center gap-2">
+            <a
+              href="/"
+              className="flex flex-col items-center gap-2 font-medium"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold text-xl">
+                A
+              </div>
+              <span className="sr-only">ASAP</span>
+            </a>
+            <h1 className="text-xl font-bold">Créer votre compte</h1>
+            <p className="text-center text-sm text-muted-foreground">
+              Lancez votre site en quelques minutes
+            </p>
+          </div>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex flex-col gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={handleEmailChange}
+                placeholder="vous@exemple.com"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="password">Mot de passe</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                minLength={8}
+              />
+              <p className="text-xs text-muted-foreground">Minimum 8 caractères</p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="slug">URL de votre site</Label>
+              <div className="flex">
+                <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
+                  asap.cool/
+                </span>
+                <Input
+                  id="slug"
+                  type="text"
+                  value={slug}
+                  onChange={(e) => setSlug(slugify(e.target.value))}
+                  required
+                  pattern="[a-z0-9-]+"
+                  className="rounded-l-none"
+                  placeholder="mon-site"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Lettres minuscules, chiffres et tirets uniquement
+              </p>
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Création...
+                </>
+              ) : (
+                'Créer mon compte'
+              )}
+            </Button>
+          </div>
         </div>
-      )}
-
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-          Email <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="email"
-          id="email"
-          value={email}
-          onChange={handleEmailChange}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          placeholder="vous@exemple.com"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-          Mot de passe <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="password"
-          id="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={8}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          placeholder="••••••••"
-        />
-        <p className="mt-1 text-sm text-gray-500">Minimum 8 caractères</p>
-      </div>
-
-      <div>
-        <label htmlFor="slug" className="block text-sm font-medium text-gray-700 mb-1">
-          URL de votre site <span className="text-red-500">*</span>
-        </label>
-        <div className="flex">
-          <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
-            asap.cool/
-          </span>
-          <input
-            type="text"
-            id="slug"
-            value={slug}
-            onChange={(e) => setSlug(slugify(e.target.value))}
-            required
-            pattern="[a-z0-9-]+"
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            placeholder="mon-site"
-          />
-        </div>
-        <p className="mt-1 text-sm text-gray-500">
-          Utilisez uniquement des lettres minuscules, chiffres et tirets
-        </p>
-      </div>
-
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isLoading ? 'Création...' : 'Créer mon compte'}
-      </button>
-
-      <p className="text-center text-sm text-gray-600">
+      </form>
+      <div className="text-center text-sm text-muted-foreground">
         Déjà un compte?{' '}
-        <a href="/login" className="text-primary-600 hover:text-primary-700 font-medium">
+        <a href="/login" className="underline underline-offset-4 hover:text-primary font-medium">
           Se connecter
         </a>
-      </p>
-    </form>
+      </div>
+    </div>
   );
 }
