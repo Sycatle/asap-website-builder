@@ -8,18 +8,11 @@ use axum::{
 use serde::Serialize;
 use sqlx::PgPool;
 use uuid::Uuid;
-use sha2::{Sha256, Digest};
 use asap_core_payments::PaymentGateway;
 
 #[derive(Debug, Serialize)]
 pub struct WebhookResponse {
     pub received: bool,
-}
-
-fn compute_payload_hash(payload: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(payload.as_bytes());
-    format!("{:x}", hasher.finalize())
 }
 
 /// POST /api/payments/webhook/stripe
@@ -67,7 +60,8 @@ pub async fn stripe_webhook(
 
     let event_id = event["id"].as_str().unwrap_or("unknown");
     let event_type = event["type"].as_str().unwrap_or("unknown");
-    let payload_hash = compute_payload_hash(&payload);
+    // Use event_id as unique identifier (Stripe guarantees uniqueness)
+    let payload_hash = event_id.to_string();
 
     // Check if event already processed (idempotency)
     let existing = sqlx::query_scalar::<_, Uuid>(
@@ -87,13 +81,18 @@ pub async fn stripe_webhook(
     }
 
     // Extract customer ID to find tenant
-    let customer_id = event["data"]["object"]["customer"]
-        .as_str()
-        .or_else(|| event["data"]["object"]["id"].as_str())
-        .ok_or_else(|| {
-            tracing::error!("No customer ID in event");
-            (StatusCode::BAD_REQUEST, "No customer ID").into_response()
-        })?;
+    // For most events, customer ID is in data.object.customer
+    // For customer events, it's in data.object.id
+    let customer_id = if event_type.starts_with("customer.") {
+        event["data"]["object"]["id"].as_str()
+    } else {
+        event["data"]["object"]["customer"].as_str()
+    };
+
+    let Some(customer_id) = customer_id else {
+        tracing::error!("No customer ID in event type: {}", event_type);
+        return Err((StatusCode::BAD_REQUEST, "No customer ID").into_response());
+    };
 
     // Find tenant by customer ID
     let tenant_id = sqlx::query_scalar::<_, Uuid>(

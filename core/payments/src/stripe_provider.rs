@@ -57,12 +57,13 @@ impl StripeProvider {
             .map_err(|_| PaymentError::InvalidSignature)?;
         mac.update(signed_payload.as_bytes());
         
-        // Compare signatures
-        let expected_sig = hex::encode(mac.finalize().into_bytes());
+        // Decode the provided signature from hex
+        let sig_bytes = hex::decode(signature)
+            .map_err(|_| PaymentError::InvalidSignature)?;
         
-        if &expected_sig != signature {
-            return Err(PaymentError::InvalidSignature);
-        }
+        // Use constant-time comparison to prevent timing attacks
+        mac.verify_slice(&sig_bytes)
+            .map_err(|_| PaymentError::InvalidSignature)?;
 
         Ok(())
     }
@@ -136,10 +137,15 @@ impl PaymentGateway for StripeProvider {
         let status = PlanStatus::from_str(status_str);
 
         let customer_id = subscription["customer"].as_str().unwrap_or_default().to_string();
-        let plan_id = subscription["items"]["data"][0]["price"]["id"]
-            .as_str()
+        
+        // Safely get plan_id from first item if available
+        let plan_id = subscription["items"]["data"]
+            .as_array()
+            .and_then(|arr| arr.first())
+            .and_then(|item| item["price"]["id"].as_str())
             .unwrap_or_default()
             .to_string();
+        
         let current_period_end_ts = subscription["current_period_end"].as_i64().unwrap_or(0);
 
         Ok(SubscriptionInfo {

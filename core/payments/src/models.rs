@@ -13,6 +13,7 @@ pub enum PlanStatus {
     PastDue,
     Trialing,
     Unpaid,
+    Inactive,
 }
 
 impl PlanStatus {
@@ -25,7 +26,8 @@ impl PlanStatus {
             "past_due" => PlanStatus::PastDue,
             "trialing" => PlanStatus::Trialing,
             "unpaid" => PlanStatus::Unpaid,
-            _ => PlanStatus::Canceled,
+            "inactive" => PlanStatus::Inactive,
+            _ => PlanStatus::Inactive,
         }
     }
     
@@ -38,6 +40,7 @@ impl PlanStatus {
             PlanStatus::PastDue => "past_due",
             PlanStatus::Trialing => "trialing",
             PlanStatus::Unpaid => "unpaid",
+            PlanStatus::Inactive => "inactive",
         }
     }
 }
@@ -101,7 +104,8 @@ mod tests {
         assert_eq!(PlanStatus::from_str("active"), PlanStatus::Active);
         assert_eq!(PlanStatus::from_str("canceled"), PlanStatus::Canceled);
         assert_eq!(PlanStatus::from_str("trialing"), PlanStatus::Trialing);
-        assert_eq!(PlanStatus::from_str("unknown"), PlanStatus::Canceled);
+        assert_eq!(PlanStatus::from_str("inactive"), PlanStatus::Inactive);
+        assert_eq!(PlanStatus::from_str("unknown"), PlanStatus::Inactive);
     }
 
     #[test]
@@ -109,6 +113,7 @@ mod tests {
         assert_eq!(PlanStatus::Active.as_str(), "active");
         assert_eq!(PlanStatus::Canceled.as_str(), "canceled");
         assert_eq!(PlanStatus::Trialing.as_str(), "trialing");
+        assert_eq!(PlanStatus::Inactive.as_str(), "inactive");
     }
 
     #[test]
