@@ -99,21 +99,18 @@ mod tests {
 
     #[test]
     fn test_claims_structure() {
-        let user_id = "test-user";
-        let tenant_id = "test-tenant";
+        let account_id = "test-account";
         let expiration = Utc::now()
             .checked_add_signed(Duration::hours(24))
             .expect("valid timestamp")
             .timestamp();
 
         let claims = Claims {
-            sub: user_id.to_string(),
-            tenant_id: tenant_id.to_string(),
+            sub: account_id.to_string(),
             exp: expiration,
         };
 
-        assert_eq!(claims.sub, user_id);
-        assert_eq!(claims.tenant_id, tenant_id);
+        assert_eq!(claims.sub, account_id);
         assert!(claims.exp > Utc::now().timestamp());
     }
 }

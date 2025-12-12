@@ -6,18 +6,18 @@ use serde_json::Value as JsonValue;
 
 use super::types::WebsiteWithData;
 
-/// Verify that a website belongs to the specified tenant
-/// Returns Ok(true) if website exists and belongs to tenant, Ok(false) otherwise
+/// Verify that a website belongs to the specified account
+/// Returns Ok(true) if website exists and belongs to account, Ok(false) otherwise
 pub async fn verify_website_ownership(
     pool: &PgPool,
     website_id: Uuid,
-    tenant_id: Uuid,
+    account_id: Uuid,
 ) -> Result<bool, sqlx::Error> {
     let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND tenant_id = $2"
+        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
     )
     .bind(website_id)
-    .bind(tenant_id)
+    .bind(account_id)
     .fetch_one(pool)
     .await?;
 
@@ -28,43 +28,43 @@ pub async fn verify_website_ownership(
 pub async fn get_website_with_data(
     pool: &PgPool,
     website_id: Uuid,
-    tenant_id: Uuid,
+    account_id: Uuid,
 ) -> Result<Option<WebsiteWithData>, sqlx::Error> {
     sqlx::query_as::<_, WebsiteWithData>(
         r#"
         SELECT 
-            w.id, w.tenant_id, w.slug, w.title, w.tagline, w.status, 
+            w.id, w.account_id, w.slug, w.title, w.tagline, w.status, 
             w.creation_mode, w.preset_id, w.metadata, w.created_at, w.updated_at,
             COALESCE(wd.data, '{}'::jsonb) as data
         FROM websites w
         LEFT JOIN website_data wd ON w.id = wd.website_id
-        WHERE w.id = $1 AND w.tenant_id = $2
+        WHERE w.id = $1 AND w.account_id = $2
         "#
     )
     .bind(website_id)
-    .bind(tenant_id)
+    .bind(account_id)
     .fetch_optional(pool)
     .await
 }
 
-/// List websites for tenant with data
+/// List websites for account with data
 pub async fn list_websites_with_data(
     pool: &PgPool,
-    tenant_id: Uuid,
+    account_id: Uuid,
 ) -> Result<Vec<WebsiteWithData>, sqlx::Error> {
     sqlx::query_as::<_, WebsiteWithData>(
         r#"
         SELECT 
-            w.id, w.tenant_id, w.slug, w.title, w.tagline, w.status, 
+            w.id, w.account_id, w.slug, w.title, w.tagline, w.status, 
             w.creation_mode, w.preset_id, w.metadata, w.created_at, w.updated_at,
             COALESCE(wd.data, '{}'::jsonb) as data
         FROM websites w
         LEFT JOIN website_data wd ON w.id = wd.website_id
-        WHERE w.tenant_id = $1
+        WHERE w.account_id = $1
         ORDER BY w.created_at DESC
         "#
     )
-    .bind(tenant_id)
+    .bind(account_id)
     .fetch_all(pool)
     .await
 }
@@ -77,7 +77,7 @@ pub async fn get_public_website(
     sqlx::query_as::<_, WebsiteWithData>(
         r#"
         SELECT 
-            w.id, w.tenant_id, w.slug, w.title, w.tagline, w.status, 
+            w.id, w.account_id, w.slug, w.title, w.tagline, w.status, 
             w.creation_mode, w.preset_id, w.metadata, w.created_at, w.updated_at,
             COALESCE(wd.data, '{}'::jsonb) as data
         FROM websites w
@@ -94,15 +94,15 @@ pub async fn get_public_website(
 pub async fn update_website_status(
     pool: &PgPool,
     website_id: Uuid,
-    tenant_id: Uuid,
+    account_id: Uuid,
     status: &str,
 ) -> Result<sqlx::postgres::PgQueryResult, sqlx::Error> {
     sqlx::query(
-        "UPDATE websites SET status = $1, updated_at = now() WHERE id = $2 AND tenant_id = $3"
+        "UPDATE websites SET status = $1, updated_at = now() WHERE id = $2 AND account_id = $3"
     )
     .bind(status)
     .bind(website_id)
-    .bind(tenant_id)
+    .bind(account_id)
     .execute(pool)
     .await
 }
@@ -111,7 +111,7 @@ pub async fn update_website_status(
 pub async fn update_website_batch_fields(
     pool: &PgPool,
     website_id: Uuid,
-    tenant_id: Uuid,
+    account_id: Uuid,
     title: Option<&str>,
     tagline: Option<&str>,
     metadata: Option<&JsonValue>,
@@ -120,33 +120,33 @@ pub async fn update_website_batch_fields(
 
     if let Some(t) = title {
         sqlx::query(
-            "UPDATE websites SET title = $1, updated_at = now() WHERE id = $2 AND tenant_id = $3"
+            "UPDATE websites SET title = $1, updated_at = now() WHERE id = $2 AND account_id = $3"
         )
         .bind(t)
         .bind(website_id)
-        .bind(tenant_id)
+        .bind(account_id)
         .execute(&mut *tx)
         .await?;
     }
 
     if let Some(tl) = tagline {
         sqlx::query(
-            "UPDATE websites SET tagline = $1, updated_at = now() WHERE id = $2 AND tenant_id = $3"
+            "UPDATE websites SET tagline = $1, updated_at = now() WHERE id = $2 AND account_id = $3"
         )
         .bind(tl)
         .bind(website_id)
-        .bind(tenant_id)
+        .bind(account_id)
         .execute(&mut *tx)
         .await?;
     }
 
     if let Some(m) = metadata {
         sqlx::query(
-            "UPDATE websites SET metadata = $1, updated_at = now() WHERE id = $2 AND tenant_id = $3"
+            "UPDATE websites SET metadata = $1, updated_at = now() WHERE id = $2 AND account_id = $3"
         )
         .bind(m)
         .bind(website_id)
-        .bind(tenant_id)
+        .bind(account_id)
         .execute(&mut *tx)
         .await?;
     }
