@@ -7,14 +7,12 @@ import { Loader2 } from "lucide-react"
 const Dashboard = lazy(() => import("@/components/Dashboard"))
 const ModulesManager = lazy(() => import("@/components/ModulesManager"))
 const ModuleConfig = lazy(() => import("@/components/ModuleConfig"))
-const WebsiteEditor = lazy(() => import("@/components/WebsiteEditor"))
 const CloudManager = lazy(() => import("@/components/CloudManager"))
 
 type Route = 
   | { page: "dashboard" }
   | { page: "modules" }
   | { page: "module-config"; moduleSlug: string }
-  | { page: "website" }
   | { page: "cloud" }
   | { page: "not-found" }
 
@@ -38,8 +36,9 @@ function parseRoute(pathname: string): Route {
     return { page: "module-config", moduleSlug: moduleMatch[1] }
   }
   
+  // Website page merged into dashboard
   if (path === "/app/website") {
-    return { page: "website" }
+    return { page: "dashboard" }
   }
   
   if (path === "/app/cloud") {
@@ -62,8 +61,6 @@ function getPageTitle(route: Route): string {
       return "Modules"
     case "module-config":
       return "Configuration du module"
-    case "website":
-      return "Mon site"
     case "cloud":
       return "Fichiers"
     default:
@@ -82,8 +79,6 @@ function getBreadcrumbs(route: Route): { label: string; href?: string }[] {
         { label: "Modules", href: "/app/modules" },
         { label: route.moduleSlug }
       ]
-    case "website":
-      return [{ label: "Mon site" }]
     case "cloud":
       return [{ label: "Fichiers" }]
     default:
@@ -129,8 +124,6 @@ function PageContent({ route }: { route: Route }) {
       return <ModulesManager />
     case "module-config":
       return <ModuleConfig slug={route.moduleSlug} />
-    case "website":
-      return <WebsiteEditor />
     case "cloud":
       return <CloudManager />
     case "not-found":
