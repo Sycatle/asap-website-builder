@@ -32,7 +32,7 @@ impl EventProcessor {
         // our calculate_backoff_seconds function (BASE_BACKOFF_SECONDS * 2^retry_count)
         let events: Vec<EventRow> = sqlx::query_as(
             r#"
-            SELECT id, tenant_id, event_type, payload, created_at, processed_at, retry_count, failed_at, error_message
+            SELECT id, account_id, event_type, payload, created_at, processed_at, retry_count, failed_at, error_message
             FROM events 
             WHERE processed_at IS NULL 
               AND (
@@ -143,7 +143,7 @@ impl EventProcessor {
 #[allow(dead_code)]
 struct EventRow {
     id: Uuid,
-    tenant_id: Uuid,
+    account_id: Uuid,
     event_type: String,
     payload: serde_json::Value,
     created_at: chrono::DateTime<Utc>,
@@ -198,7 +198,7 @@ impl From<EventRow> for Event {
 
         Event {
             id: row.id,
-            tenant_id: row.tenant_id,
+            account_id: row.account_id,
             event_type,
             payload: row.payload,
             created_at: row.created_at,

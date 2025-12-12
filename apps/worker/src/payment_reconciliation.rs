@@ -26,28 +26,28 @@ impl PaymentReconciliation {
         })
     }
 
-    /// Reconcile all tenants with active Stripe customers
+    /// Reconcile all accounts with active Stripe customers
     pub async fn reconcile_all(&self) -> anyhow::Result<ReconciliationStats> {
-        tracing::info!("Starting payment reconciliation for all tenants");
+        tracing::info!("Starting payment reconciliation for all accounts");
 
         let mut stats = ReconciliationStats::default();
 
-        // Fetch all tenants with Stripe customer IDs
-        let tenants = sqlx::query_scalar::<_, Uuid>(
-            "SELECT id FROM tenants WHERE stripe_customer_id IS NOT NULL"
+        // Fetch all accounts with Stripe customer IDs
+        let accounts = sqlx::query_scalar::<_, Uuid>(
+            "SELECT id FROM accounts WHERE stripe_customer_id IS NOT NULL"
         )
         .fetch_all(&self.pool)
         .await?;
 
-        stats.total_tenants = tenants.len();
+        stats.total_tenants = accounts.len();
 
-        for tenant_id in tenants {
-            match self.reconcile_tenant(tenant_id).await {
+        for account_id in accounts {
+            match self.reconcile_account(account_id).await {
                 Ok(_) => {
                     stats.successful += 1;
                 }
                 Err(e) => {
-                    tracing::error!("Failed to reconcile tenant {}: {}", tenant_id, e);
+                    tracing::error!("Failed to reconcile account {}: {}", account_id, e);
                     stats.failed += 1;
                 }
             }
@@ -63,20 +63,20 @@ impl PaymentReconciliation {
         Ok(stats)
     }
 
-    /// Reconcile a specific tenant's subscription status
-    pub async fn reconcile_tenant(&self, tenant_id: Uuid) -> anyhow::Result<()> {
-        tracing::debug!("Reconciling tenant: {}", tenant_id);
+    /// Reconcile a specific account's subscription status
+    pub async fn reconcile_account(&self, account_id: Uuid) -> anyhow::Result<()> {
+        tracing::debug!("Reconciling account: {}", account_id);
 
-        // Get tenant with customer ID
+        // Get account with customer ID
         let customer_id = sqlx::query_scalar::<_, Option<String>>(
-            "SELECT stripe_customer_id FROM tenants WHERE id = $1"
+            "SELECT stripe_customer_id FROM accounts WHERE id = $1"
         )
-        .bind(tenant_id)
+        .bind(account_id)
         .fetch_optional(&self.pool)
         .await?;
 
         let Some(Some(customer_id)) = customer_id else {
-            tracing::debug!("Tenant {} not found or has no Stripe customer", tenant_id);
+            tracing::debug!("Account {} not found or has no Stripe customer", account_id);
             return Ok(());
         };
 
@@ -88,14 +88,14 @@ impl PaymentReconciliation {
         Ok(())
     }
 
-    /// Check if a tenant needs reconciliation (dubious status)
-    pub async fn needs_reconciliation(&self, tenant_id: Uuid) -> anyhow::Result<bool> {
+    /// Check if an account needs reconciliation (dubious status)
+    pub async fn needs_reconciliation(&self, account_id: Uuid) -> anyhow::Result<bool> {
         let result = sqlx::query_as::<_, (Option<String>, Option<chrono::DateTime<chrono::Utc>>)>(
             "SELECT plan_status, current_period_end 
-             FROM tenants 
+             FROM accounts 
              WHERE id = $1 AND stripe_customer_id IS NOT NULL"
         )
-        .bind(tenant_id)
+        .bind(account_id)
         .fetch_optional(&self.pool)
         .await?;
 
