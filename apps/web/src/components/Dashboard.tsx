@@ -65,8 +65,13 @@ export default function Dashboard() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const websites = await websitesAPI.list();
-        const quotaData = await filesAPI.getQuota();
+        // Load websites and quota in parallel
+        const [websites, quotaData] = await Promise.all([
+          websitesAPI.list(),
+          filesAPI.getQuota(),
+        ]);
+        
+        setQuota(quotaData);
         
         if (websites.length > 0) {
           const w = websites[0];
@@ -83,7 +88,6 @@ export default function Dashboard() {
             setModules([]);
           }
         }
-        setQuota(quotaData);
       } catch (error) {
         console.error('Failed to load data:', error);
       } finally {

@@ -109,9 +109,12 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
   const loadData = async () => {
     setIsLoading(true)
     try {
-      const quotaData = await filesAPI.getQuota().catch(() => null)
-      const filesData = await filesAPI.list().catch(() => [])
-      const websitesData = await websitesAPI.list().catch(() => [])
+      // Load independent data in parallel
+      const [quotaData, filesData, websitesData] = await Promise.all([
+        filesAPI.getQuota().catch(() => null),
+        filesAPI.list().catch(() => []),
+        websitesAPI.list().catch(() => []),
+      ])
       
       // Load modules for the first website
       let modulesData: WebsiteModule[] = []
