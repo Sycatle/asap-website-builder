@@ -1,22 +1,58 @@
+"use client"
+
 import { useEffect, useState } from 'react';
-import { websitesAPI, filesAPI, type Website, type QuotaUsage } from '../lib/api';
+import { websitesAPI, filesAPI, modulesAPI, type Website, type QuotaUsage, type TenantModule } from '../lib/api';
 import { formatBytes } from '../lib/utils/formatters';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import { 
+  ChartContainer,
+} from "@/components/ui/chart";
+import type { ChartConfig } from "@/components/ui/chart";
+import { 
+  Label,
+  PolarGrid,
+  PolarRadiusAxis,
+  RadialBar,
+  RadialBarChart,
+} from "recharts";
+import { 
+  Globe, 
+  Edit, 
+  Upload, 
+  ExternalLink, 
+  Puzzle, 
+  HardDrive,
+  TrendingUp,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  Sparkles
+} from "lucide-react";
 
 export default function Dashboard() {
   const [website, setWebsite] = useState<Website | null>(null);
   const [quota, setQuota] = useState<QuotaUsage | null>(null);
+  const [modules, setModules] = useState<TenantModule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const websites = await websitesAPI.list();
+        const [websites, quotaData, modulesData] = await Promise.all([
+          websitesAPI.list(),
+          filesAPI.getQuota(),
+          modulesAPI.listForTenant()
+        ]);
+        
         if (websites.length > 0) {
           setWebsite(websites[0]);
         }
-        
-        const quotaData = await filesAPI.getQuota();
         setQuota(quotaData);
+        setModules(modulesData);
       } catch (error) {
         console.error('Failed to load data:', error);
       } finally {
@@ -27,10 +63,41 @@ export default function Dashboard() {
     loadData();
   }, []);
 
+  const enabledModulesCount = modules.filter(m => m.enabled).length;
+
+  // Chart configuration for storage
+  const storageChartConfig = {
+    used: {
+      label: "Utilisé",
+      color: "hsl(var(--primary))",
+    },
+  } satisfies ChartConfig;
+
+  const storagePercentage = quota?.usage_percentage || 0;
+  const storageChartData = [
+    { 
+      name: "storage", 
+      value: storagePercentage, 
+      fill: storagePercentage > 80 ? "hsl(var(--destructive))" : "hsl(var(--primary))" 
+    }
+  ];
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="space-y-8">
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-5 w-96" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <Skeleton className="col-span-4 h-80" />
+          <Skeleton className="col-span-3 h-80" />
+        </div>
       </div>
     );
   }
@@ -38,172 +105,359 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       {/* Welcome Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">
-          Bienvenue ! 👋
-        </h1>
-        <p className="mt-2 text-gray-600">
-          Gérez votre site et vos fichiers depuis un seul endroit
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">
+            {website?.title || 'Mon Dashboard'}
+          </h1>
+          {website?.status === 'published' && (
+            <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20">
+              <CheckCircle2 className="w-3 h-3 mr-1" />
+              En ligne
+            </Badge>
+          )}
+        </div>
+        <p className="text-muted-foreground">
+          Bienvenue ! Voici un aperçu de votre site et de son activité.
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid md:grid-cols-3 gap-6">
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Site Status */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Site</p>
-              <p className="mt-2 text-3xl font-bold text-gray-900">
-                {website?.status === 'published' ? (
-                  <span className="text-green-600">Publié</span>
-                ) : (
-                  <span className="text-yellow-600">Brouillon</span>
-                )}
-              </p>
+        <Card className="relative overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Statut du site</CardTitle>
+            <Globe className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              {website?.status === 'published' ? (
+                <>
+                  <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-2xl font-bold">Publié</span>
+                </>
+              ) : (
+                <>
+                  <div className="h-2 w-2 rounded-full bg-amber-500" />
+                  <span className="text-2xl font-bold">Brouillon</span>
+                </>
+              )}
             </div>
-            <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-              </svg>
-            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {website?.slug ? `asap.cool/${website.slug}` : 'Configurez votre site'}
+            </p>
+          </CardContent>
+          <div className="absolute right-0 bottom-0 opacity-5">
+            <Globe className="h-24 w-24 -mr-6 -mb-6" />
           </div>
-          <div className="mt-4">
+        </Card>
+
+        {/* Storage */}
+        <Card className="relative overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Stockage</CardTitle>
+            <HardDrive className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {quota ? formatBytes(quota.total_size_used) : '0 B'}
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <Progress 
+                value={storagePercentage} 
+                className="h-2 flex-1"
+              />
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {storagePercentage.toFixed(0)}%
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              sur {quota ? formatBytes(quota.quota_limit) : '50 MB'} disponibles
+            </p>
+          </CardContent>
+          <div className="absolute right-0 bottom-0 opacity-5">
+            <HardDrive className="h-24 w-24 -mr-6 -mb-6" />
+          </div>
+        </Card>
+
+        {/* Modules */}
+        <Card className="relative overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Modules actifs</CardTitle>
+            <Puzzle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{enabledModulesCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              sur {modules.length} modules disponibles
+            </p>
+            <div className="flex gap-1 mt-2">
+              {modules.slice(0, 5).map((m) => (
+                <div
+                  key={m.module_id}
+                  className={`h-2 w-2 rounded-full ${m.enabled ? 'bg-primary' : 'bg-muted'}`}
+                  title={m.module_slug}
+                />
+              ))}
+              {modules.length > 5 && (
+                <span className="text-xs text-muted-foreground">+{modules.length - 5}</span>
+              )}
+            </div>
+          </CardContent>
+          <div className="absolute right-0 bottom-0 opacity-5">
+            <Puzzle className="h-24 w-24 -mr-6 -mb-6" />
+          </div>
+        </Card>
+
+        {/* Files */}
+        <Card className="relative overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Fichiers</CardTitle>
+            <Upload className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {quota ? formatBytes(quota.total_size_used) : '0 B'}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              de fichiers uploadés
+            </p>
+            <div className="flex items-center gap-1 mt-2 text-xs text-green-600">
+              <TrendingUp className="h-3 w-3" />
+              <span>Prêt pour plus</span>
+            </div>
+          </CardContent>
+          <div className="absolute right-0 bottom-0 opacity-5">
+            <Upload className="h-24 w-24 -mr-6 -mb-6" />
+          </div>
+        </Card>
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        {/* Storage Chart */}
+        <Card className="col-span-4 lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Utilisation du stockage</CardTitle>
+            <CardDescription>
+              Espace disque utilisé par vos fichiers
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center pb-0">
+            <ChartContainer
+              config={storageChartConfig}
+              className="mx-auto aspect-square max-h-[200px]"
+            >
+              <RadialBarChart
+                data={storageChartData}
+                startAngle={90}
+                endAngle={90 - (storagePercentage / 100) * 360}
+                innerRadius={60}
+                outerRadius={85}
+              >
+                <PolarGrid
+                  gridType="circle"
+                  radialLines={false}
+                  stroke="none"
+                  className="first:fill-muted last:fill-background"
+                  polarRadius={[66, 54]}
+                />
+                <RadialBar 
+                  dataKey="value" 
+                  background 
+                  cornerRadius={10}
+                  fill={storageChartData[0].fill}
+                />
+                <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
+                  <Label
+                    content={({ viewBox }) => {
+                      if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                        return (
+                          <text
+                            x={viewBox.cx}
+                            y={viewBox.cy}
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                          >
+                            <tspan
+                              x={viewBox.cx}
+                              y={viewBox.cy}
+                              className="fill-foreground text-3xl font-bold"
+                            >
+                              {storagePercentage.toFixed(0)}%
+                            </tspan>
+                            <tspan
+                              x={viewBox.cx}
+                              y={(viewBox.cy || 0) + 20}
+                              className="fill-muted-foreground text-sm"
+                            >
+                              utilisé
+                            </tspan>
+                          </text>
+                        )
+                      }
+                    }}
+                  />
+                </PolarRadiusAxis>
+              </RadialBarChart>
+            </ChartContainer>
+          </CardContent>
+          <CardFooter className="flex-col gap-2 text-sm pt-4">
+            <div className="flex items-center justify-between w-full">
+              <span className="text-muted-foreground">Utilisé</span>
+              <span className="font-medium">{quota ? formatBytes(quota.total_size_used) : '0 B'}</span>
+            </div>
+            <div className="flex items-center justify-between w-full">
+              <span className="text-muted-foreground">Disponible</span>
+              <span className="font-medium">
+                {quota ? formatBytes(quota.quota_limit - quota.total_size_used) : '50 MB'}
+              </span>
+            </div>
+          </CardFooter>
+        </Card>
+
+        {/* Quick Actions */}
+        <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Actions rapides
+            </CardTitle>
+            <CardDescription>
+              Accédez rapidement aux fonctionnalités principales
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
             <a
               href="/app/website"
-              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+              className="group flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50"
             >
-              Gérer le site →
+              <div className="flex items-center gap-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                  <Edit className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Éditer mon site</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Modifier le contenu et le design
+                  </p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
             </a>
-          </div>
-        </div>
 
-        {/* Storage Quota */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Stockage</p>
-              <p className="mt-2 text-3xl font-bold text-gray-900">
-                {quota ? `${quota.usage_percentage.toFixed(0)}%` : '0%'}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
-              </svg>
-            </div>
-          </div>
-          <div className="mt-2">
-            <p className="text-sm text-gray-600">
-              {quota ? formatBytes(quota.total_size_used) : '0 Bytes'} / {quota ? formatBytes(quota.quota_limit) : '50 MB'}
-            </p>
-          </div>
-          <div className="mt-4">
+            <a
+              href="/app/modules"
+              className="group flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50"
+            >
+              <div className="flex items-center gap-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 group-hover:bg-violet-500 group-hover:text-white transition-colors">
+                  <Puzzle className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Gérer les modules</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {enabledModulesCount} module{enabledModulesCount > 1 ? 's' : ''} actif{enabledModulesCount > 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-violet-600 transition-colors" />
+            </a>
+
             <a
               href="/app/cloud"
-              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+              className="group flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50"
             >
-              Gérer les fichiers →
+              <div className="flex items-center gap-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                  <Upload className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Mes fichiers</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {quota ? formatBytes(quota.total_size_used) : '0 B'} utilisés
+                  </p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-emerald-600 transition-colors" />
             </a>
-          </div>
-        </div>
 
-        {/* URL du site */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">URL publique</p>
-              <p className="mt-2 text-lg font-semibold text-gray-900 truncate">
-                {website?.slug || 'N/A'}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
-              </svg>
-            </div>
-          </div>
-          <div className="mt-4">
             {website && (
               <a
                 href={`/${website.slug}`}
                 target="_blank"
-                className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                rel="noopener noreferrer"
+                className="group flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50"
               >
-                Voir le site →
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                    <ExternalLink className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Voir mon site</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {website.slug}.asap.cool
+                    </p>
+                  </div>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-amber-600 transition-colors" />
               </a>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Actions rapides</h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          <a
-            href="/app/website"
-            className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors"
-          >
-            <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-medium text-gray-900">Éditer mon site</h3>
-              <p className="text-sm text-gray-600">Mettre à jour les informations</p>
-            </div>
-          </a>
-
-          <a
-            href="/app/cloud"
-            className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors"
-          >
-            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-medium text-gray-900">Upload des fichiers</h3>
-              <p className="text-sm text-gray-600">Ajouter des images et documents</p>
-            </div>
-          </a>
-        </div>
-      </div>
-
-      {/* Informations du site */}
+      {/* Site Info Card */}
       {website && (
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Informations du site</h2>
-          <dl className="grid md:grid-cols-2 gap-4">
-            <div>
-              <dt className="text-sm font-medium text-gray-600">Titre</dt>
-              <dd className="mt-1 text-sm text-gray-900">{website.title || 'Non défini'}</dd>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Informations du site</CardTitle>
+                <CardDescription>Détails de configuration de votre site</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <a href="/app/website">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Modifier
+                </a>
+              </Button>
             </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-600">Tagline</dt>
-              <dd className="mt-1 text-sm text-gray-900">{website.tagline || 'Non défini'}</dd>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Titre</p>
+                <p className="font-medium">{website.title || 'Non défini'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Tagline</p>
+                <p className="font-medium">{website.tagline || 'Non défini'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">URL</p>
+                <p className="font-medium font-mono text-sm">{website.slug}.asap.cool</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Statut</p>
+                <div className="flex items-center gap-2">
+                  {website.status === 'published' ? (
+                    <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      Publié
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">
+                      <Clock className="w-3 h-3 mr-1" />
+                      Brouillon
+                    </Badge>
+                  )}
+                </div>
+              </div>
             </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-600">Slug</dt>
-              <dd className="mt-1 text-sm text-gray-900">{website.slug}</dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-600">Statut</dt>
-              <dd className="mt-1">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  website.status === 'published' 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-yellow-100 text-yellow-800'
-                }`}>
-                  {website.status === 'published' ? 'Publié' : 'Brouillon'}
-                </span>
-              </dd>
-            </div>
-          </dl>
-        </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

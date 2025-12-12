@@ -1,25 +1,22 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import LoginForm from '../components/LoginForm';
+import { Card, CardContent } from '@/components/ui/card';
 ---
 
 <BaseLayout title="Se connecter - ASAP">
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full">
-      <!-- Logo/Header -->
-      <div class="text-center mb-8">
-        <a href="/" class="text-3xl font-bold text-primary-600">ASAP</a>
-        <h2 class="mt-6 text-3xl font-bold text-gray-900">
-          Connexion à votre compte
-        </h2>
-        <p class="mt-2 text-sm text-gray-600">
-          Gérez vos sites et modules
-        </p>
-      </div>
-
-      <!-- Login Form Card -->
-      <div class="bg-white py-8 px-6 shadow-lg rounded-lg border border-gray-200">
-        <LoginForm client:load />
+  <div class="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
+    <div class="flex w-full max-w-sm flex-col gap-6">
+      <Card className="overflow-hidden">
+        <CardContent className="p-6 md:p-8">
+          <LoginForm client:load />
+        </CardContent>
+      </Card>
+      <div class="text-balance text-center text-xs text-muted-foreground">
+        En continuant, vous acceptez nos{' '}
+        <a href="#" class="underline underline-offset-4 hover:text-primary">Conditions d'utilisation</a>
+        {' '}et notre{' '}
+        <a href="#" class="underline underline-offset-4 hover:text-primary">Politique de confidentialité</a>.
       </div>
     </div>
   </div>

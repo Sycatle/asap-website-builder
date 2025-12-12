@@ -1,0 +1,41 @@
+[package]
+name = "asap-core-payments"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+asap-core-domain = { path = "../domain" }
+asap-core-shared = { path = "../shared" }
+
+# Async runtime
+tokio = { workspace = true }
+async-trait = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# UUID & time
+uuid = { workspace = true }
+chrono = { workspace = true }
+
+# Crypto for webhook signature verification
+hmac = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+
+# HTTP client
+reqwest = { workspace = true }
+
+# Utilities
+tracing = { workspace = true }
+
+[dev-dependencies]
+mockall = { workspace = true }
+tokio-test = { workspace = true }

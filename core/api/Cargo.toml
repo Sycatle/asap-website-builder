@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 asap-core-domain = { path = "../domain" }
 asap-core-shared = { path = "../shared" }
+asap-core-payments = { path = "../payments" }
 
 # Async runtime
 tokio = { workspace = true }
