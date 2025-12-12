@@ -75,7 +75,7 @@ export function AsapSidebar({ modules = [], user }: AsapSidebarProps) {
     },
   ]
 
-  // Filter enabled modules (website modules don't have sidebar_order)
+  // Filter enabled modules
   const enabledModules = modules.filter(m => m.enabled)
 
   return (

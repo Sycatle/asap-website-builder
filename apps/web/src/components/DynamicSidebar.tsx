@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { modulesAPI, websitesAPI } from '../lib/api/modules';
+import { modulesAPI, websitesAPI, type WebsiteModule } from '../lib/api/modules';
 
 // Icon mapping for common module icons
 const moduleIcons: Record<string, React.ReactNode> = {
@@ -45,13 +45,6 @@ function getModuleIcon(moduleSlug: string): React.ReactNode {
   if (moduleSlug.includes('theme')) return moduleIcons['theme'];
   
   return moduleIcons['default'];
-}
-
-interface WebsiteModule {
-  id: string
-  module_slug: string
-  module_name: string
-  enabled: boolean
 }
 
 export default function DynamicSidebar() {

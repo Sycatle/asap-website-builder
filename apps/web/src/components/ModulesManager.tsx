@@ -122,10 +122,10 @@ export default function ModulesManager() {
     return <IconComponent className="h-5 w-5" />;
   };
 
-  // Check if a module is active (compare by slug or id)
+  // Check if a module is active (compare by slug)
   const isModuleActive = (moduleIdOrSlug: string) => {
     return activeModules.some(m => 
-      (m.module_slug === moduleIdOrSlug || m.module_id === moduleIdOrSlug) && m.enabled
+      m.module_slug === moduleIdOrSlug && m.enabled
     );
   };
 
