@@ -67,19 +67,14 @@ export function AsapSidebar({ modules = [], user }: AsapSidebarProps) {
       icon: Home,
     },
     {
-      title: "Mon Site",
-      url: "/app/website",
-      icon: FileText,
+      title: "Modules",
+      url: "/app/modules",
+      icon: Puzzle,
     },
     {
       title: "Cloud",
       url: "/app/cloud",
       icon: Cloud,
-    },
-    {
-      title: "Modules",
-      url: "/app/modules",
-      icon: Puzzle,
     },
   ]
 
