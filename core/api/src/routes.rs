@@ -22,6 +22,19 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
     // Initialize file storage service
     let storage_service = std::sync::Arc::new(crate::storage::FileStorageService::new(pool.clone()));
 
+    // Initialize payment gateway (Stripe)
+    let payment_gateway: std::sync::Arc<dyn asap_core_payments::PaymentGateway> = {
+        let stripe_api_key = std::env::var("STRIPE_API_KEY")
+            .unwrap_or_else(|_| "sk_test_placeholder".to_string());
+        let stripe_webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET")
+            .unwrap_or_else(|_| "whsec_placeholder".to_string());
+        
+        std::sync::Arc::new(
+            asap_core_payments::StripeProvider::new(stripe_api_key, stripe_webhook_secret)
+                .expect("Failed to initialize Stripe provider")
+        )
+    };
+
     // Authenticated routes (require JWT)
     let authenticated_routes = Router::new()
         .route("/auth/me", get(crate::auth::me))
@@ -73,7 +86,10 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
         .route("/files", get(crate::files::list_files))
         .route("/files/:file_id", delete(crate::files::delete_file))
         .route("/files/quota/usage", get(crate::files::get_quota))
+        // Billing routes (authenticated)
+        .route("/billing/checkout-session", post(crate::billing::create_checkout_session))
         .layer(Extension(storage_service.clone()))
+        .layer(Extension(payment_gateway.clone()))
         .layer(Extension(config.clone()))
         .with_state(pool.clone())
         .layer(middleware::from_fn_with_state(config.clone(), crate::middleware::auth_middleware));
@@ -87,7 +103,10 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
         .route("/public/websites/:slug", get(crate::websites::get_public_website))
         // File download (auth via query param for media embeds)
         .route("/files/:file_id", get(crate::files::download_file))
+        // Webhook routes (public but signature verified)
+        .route("/payments/webhook/stripe", post(crate::webhooks::stripe_webhook))
         .layer(Extension(storage_service))
+        .layer(Extension(payment_gateway))
         .layer(Extension(config))
         .with_state(pool);
 

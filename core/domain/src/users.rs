@@ -20,6 +20,10 @@ pub struct Tenant {
     pub slug: String,
     pub plan: String,
     pub created_at: DateTime<Utc>,
+    // Payment fields
+    pub stripe_customer_id: Option<String>,
+    pub plan_status: Option<String>,
+    pub current_period_end: Option<DateTime<Utc>>,
 }
 
 /// UserData stores extended user information in JSONB format
@@ -93,6 +97,9 @@ mod tests {
             slug: slug.clone(),
             plan: plan.clone(),
             created_at: Utc::now(),
+            stripe_customer_id: None,
+            plan_status: None,
+            current_period_end: None,
         };
 
         assert_eq!(tenant.id, id);
