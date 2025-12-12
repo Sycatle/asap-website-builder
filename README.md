@@ -826,6 +826,66 @@ Site Public
 
 ---
 
+## 💳 Payment System
+
+**ASAP** intègre un système de paiement natif relié à Stripe.
+
+### Fonctionnalités
+
+- **Balance utilisateur** : Chaque utilisateur a sa propre balance en euros accessible depuis son dashboard
+- **Paiements sécurisés** : Intégration Stripe avec Stripe Elements pour une collecte sécurisée des paiements
+- **Historique des transactions** : Suivi complet de tous les dépôts et retraits
+- **Webhooks** : Confirmation automatique des paiements via webhooks Stripe
+
+### Architecture
+
+```
+User Dashboard → API ASAP → Stripe API
+                  ↓
+           user_balances (DB)
+           payment_transactions (DB)
+           stripe_customers (DB)
+                  ↑
+           Stripe Webhook → API ASAP
+```
+
+### Configuration
+
+Pour activer le système de paiement, configurez les variables d'environnement :
+
+```bash
+# API Backend (apps/api/.env)
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Frontend (apps/web/.env)
+PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
+```
+
+### Endpoints API
+
+| Endpoint | Méthode | Description |
+|----------|---------|-------------|
+| `/payments/balance` | GET | Récupère la balance de l'utilisateur |
+| `/payments/payment-intent` | POST | Crée un PaymentIntent Stripe |
+| `/payments/transactions` | GET | Liste l'historique des transactions |
+| `/payments/webhook` | POST | Webhook Stripe pour confirmation |
+
+### Sécurité
+
+- ✅ **Signature webhook** : Vérification HMAC-SHA256 avec validation temporelle (anti-replay)
+- ✅ **Authentification** : JWT requis pour tous les endpoints (sauf webhook)
+- ✅ **Précision** : Balance stockée en centimes pour éviter les erreurs d'arrondis
+- ✅ **Atomicité** : Transactions SQL pour garantir la cohérence des données
+- ✅ **Validation** : Montants min/max, contraintes de non-négativité
+
+### Pages utilisateur
+
+- `/app/dashboard` : Affiche la balance avec lien vers les paiements
+- `/app/payments` : Gestion des crédits et historique des transactions
+
+---
+
 ## 🤝 Contributing
 
 ASAP suit un modèle **open-core**. Le cœur (`core/`) est open-source, les modules premium (`modules/`) sont privés.
