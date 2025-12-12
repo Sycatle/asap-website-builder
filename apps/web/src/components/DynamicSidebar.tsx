@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { modulesAPI, websitesAPI, type WebsiteModule } from '../lib/api/modules';
+import { modulesAPI, websitesAPI, type WebsiteModule } from '../lib/api';
 
 // Icon mapping for common module icons
 const moduleIcons: Record<string, React.ReactNode> = {

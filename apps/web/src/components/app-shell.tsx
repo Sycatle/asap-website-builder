@@ -11,7 +11,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { modulesAPI, websitesAPI, type WebsiteModule } from "@/lib/api/modules"
+import { modulesAPI, websitesAPI, type WebsiteModule } from "@/lib/api"
 
 interface AppShellProps {
   children: React.ReactNode
