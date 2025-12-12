@@ -5,6 +5,7 @@ pub mod integrations;
 pub mod errors;
 pub mod storage;
 pub mod module_schema;
+pub mod payments;
 
 pub use users::{User, Tenant, UserData};
 pub use websites::{
@@ -21,4 +22,8 @@ pub use module_schema::{
     DataDisplay, DataDisplayField, FieldType, FieldValidation,
     ActionStyle, HttpMethod, DataDisplayType, DisplayFieldType,
     SelectOption, StatItem,
+};
+pub use payments::{
+    UserBalance, StripeCustomer, PaymentTransaction,
+    TransactionType, TransactionStatus,
 };

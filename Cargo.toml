@@ -67,6 +67,9 @@ futures = "0.3"
 # Caching
 redis = { version = "0.24", features = ["aio", "tokio-comp", "connection-manager"] }
 
+# Payment processing (using reqwest directly for Stripe API)
+hmac = "0.12"
+
 # Testing
 mockall = "0.12"
 tokio-test = "0.4"

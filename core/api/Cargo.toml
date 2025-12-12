@@ -43,3 +43,7 @@ flate2 = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }
 futures = { workspace = true }
+
+# Payment processing (using reqwest for Stripe API)
+reqwest = { workspace = true }
+hmac = { workspace = true }
