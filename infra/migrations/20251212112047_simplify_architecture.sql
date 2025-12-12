@@ -58,6 +58,7 @@ ALTER TABLE events ADD CONSTRAINT events_account_id_fkey
     FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE;
 
 -- Step 11: Update files table constraint
+-- Note: Column name stays as user_id for minimal changes, but now references accounts
 ALTER TABLE files DROP CONSTRAINT IF EXISTS files_user_id_fkey;
 ALTER TABLE files ADD CONSTRAINT files_account_id_fkey 
     FOREIGN KEY (user_id) REFERENCES accounts(id) ON DELETE CASCADE;
@@ -72,6 +73,7 @@ ALTER TABLE account_storage_quota ADD CONSTRAINT account_storage_quota_account_i
     FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE;
 
 -- Step 13: Update file_operations_audit constraint
+-- Note: Column name stays as user_id for minimal changes, but now references accounts
 ALTER TABLE file_operations_audit DROP CONSTRAINT IF EXISTS file_operations_audit_user_id_fkey;
 ALTER TABLE file_operations_audit ADD CONSTRAINT file_operations_audit_account_id_fkey 
     FOREIGN KEY (user_id) REFERENCES accounts(id) ON DELETE CASCADE;
