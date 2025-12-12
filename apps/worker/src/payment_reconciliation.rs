@@ -39,7 +39,7 @@ impl PaymentReconciliation {
         .fetch_all(&self.pool)
         .await?;
 
-        stats.total_tenants = accounts.len();
+        stats.total_accounts = accounts.len();
 
         for account_id in accounts {
             match self.reconcile_account(account_id).await {
@@ -56,7 +56,7 @@ impl PaymentReconciliation {
         tracing::info!(
             "Payment reconciliation completed: {}/{} successful, {} failed",
             stats.successful,
-            stats.total_tenants,
+            stats.total_accounts,
             stats.failed
         );
 
@@ -144,7 +144,7 @@ impl PaymentReconciliation {
 
 #[derive(Debug, Default)]
 pub struct ReconciliationStats {
-    pub total_tenants: usize,
+    pub total_accounts: usize,
     pub successful: usize,
     pub failed: usize,
 }
@@ -156,7 +156,7 @@ mod tests {
     #[test]
     fn test_reconciliation_stats_default() {
         let stats = ReconciliationStats::default();
-        assert_eq!(stats.total_tenants, 0);
+        assert_eq!(stats.total_accounts, 0);
         assert_eq!(stats.successful, 0);
         assert_eq!(stats.failed, 0);
     }
