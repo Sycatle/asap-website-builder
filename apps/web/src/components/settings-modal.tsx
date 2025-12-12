@@ -53,7 +53,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
-import { filesAPI, websitesAPI, modulesAPI, type QuotaUsage, type FileMetadata, type Website, type TenantModule } from "@/lib/api"
+import { filesAPI, websitesAPI, modulesAPI, type QuotaUsage, type FileMetadata, type Website, type WebsiteModule } from "@/lib/api"
 import { formatBytes } from "@/lib/utils/formatters"
 
 interface UserData {
@@ -96,7 +96,7 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
   const [quota, setQuota] = useState<QuotaUsage | null>(null)
   const [files, setFiles] = useState<FileMetadata[]>([])
   const [websites, setWebsites] = useState<Website[]>([])
-  const [modules, setModules] = useState<TenantModule[]>([])
+  const [modules, setModules] = useState<WebsiteModule[]>([])
 
   // Load data when modal opens
   useEffect(() => {
@@ -109,12 +109,16 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
   const loadData = async () => {
     setIsLoading(true)
     try {
-      const [quotaData, filesData, websitesData, modulesData] = await Promise.all([
-        filesAPI.getQuota().catch(() => null),
-        filesAPI.list().catch(() => []),
-        websitesAPI.list().catch(() => []),
-        modulesAPI.listForTenant().catch(() => []),
-      ])
+      const quotaData = await filesAPI.getQuota().catch(() => null)
+      const filesData = await filesAPI.list().catch(() => [])
+      const websitesData = await websitesAPI.list().catch(() => [])
+      
+      // Load modules for the first website
+      let modulesData: WebsiteModule[] = []
+      if (websitesData.length > 0) {
+        modulesData = await modulesAPI.listForWebsite(websitesData[0].id).catch(() => [])
+      }
+      
       setQuota(quotaData)
       setFiles(filesData)
       setWebsites(websitesData)
@@ -608,7 +612,7 @@ function CloudSettings({ quota, files, isLoading }: CloudSettingsProps) {
 interface PlanSettingsProps {
   quota: QuotaUsage | null
   websites: Website[]
-  modules: TenantModule[]
+  modules: WebsiteModule[]
   isLoading: boolean
 }
 

@@ -1,9 +1,6 @@
-// NOTE: This component references tenant modules which no longer exist in the new architecture.
-// Modules are now website-scoped only. This component needs refactoring to work with website modules.
-
 import { useEffect, useState } from 'react';
-import { modulesAPI } from '../lib/api';
-import type { Module, ConfigSchema, ConfigAction } from '../lib/api/modules';
+import { modulesAPI, websitesAPI } from '../lib/api';
+import type { Module, WebsiteModule, ConfigSchema, ConfigAction } from '../lib/api/modules';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import SchemaRenderer from './SchemaRenderer';
@@ -148,7 +145,8 @@ interface ChangelogEntry {
 
 export default function ModuleConfig({ slug }: ModuleConfigProps) {
   const [module, setModule] = useState<Module | null>(null);
-  const [tenantModule, setTenantModule] = useState<TenantModule | null>(null);
+  const [websiteModule, setWebsiteModule] = useState<WebsiteModule | null>(null);
+  const [websiteId, setWebsiteId] = useState<string | null>(null);
   const [isModuleEnabled, setIsModuleEnabled] = useState(false);
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [moduleData, setModuleData] = useState<Record<string, any>>({});
@@ -169,6 +167,17 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       setIsLoading(true);
       setError(null);
 
+      // Get current website
+      const websites = await websitesAPI.list();
+      if (websites.length === 0) {
+        setError('Aucun site web trouvé');
+        setIsLoading(false);
+        return;
+      }
+      
+      const currentWebsiteId = websites[0].id;
+      setWebsiteId(currentWebsiteId);
+
       // Get module by slug (includes config_schema)
       let foundModule: Module | null = null;
       
@@ -188,13 +197,13 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       
       setModule(foundModule);
 
-      // Load tenant modules to check if this one is activated
+      // Load website modules to check if this one is activated
       try {
-        const tenantModules = await modulesAPI.listForTenant();
-        const activeModule = tenantModules.find(m => m.module_slug === slug);
+        const websiteModules = await modulesAPI.listForWebsite(currentWebsiteId);
+        const activeModule = websiteModules.find(m => m.module_slug === slug);
         
         if (activeModule) {
-          setTenantModule(activeModule);
+          setWebsiteModule(activeModule);
           setIsModuleEnabled(activeModule.enabled);
           setSettings(activeModule.settings || foundModule.default_settings || {});
         } else {
@@ -208,7 +217,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
 
       // Try to load module-specific data
       try {
-        const data = await modulesAPI.getTenantModuleData(slug);
+        const data = await modulesAPI.getModuleData(currentWebsiteId, slug);
         console.log('Module data response:', data);
         setModuleData(data.data || {});
         if (data.enabled !== undefined) {
@@ -249,17 +258,17 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
   };
 
   const handleSaveSettings = async () => {
-    if (!module) return;
+    if (!module || !websiteId) return;
 
     try {
       setIsSaving(true);
       setError(null);
       setSuccess(null);
 
-      if (tenantModule) {
-        await modulesAPI.updateTenantModuleSettings(slug, { settings });
+      if (websiteModule) {
+        await modulesAPI.updateSettings(websiteId, websiteModule.id, { settings });
       } else {
-        await modulesAPI.activateForTenant({
+        await modulesAPI.activate(websiteId, {
           module_id: module.id,
           settings,
         });
@@ -277,6 +286,8 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
   };
 
   const handleAction = async (actionKey: string) => {
+    if (!websiteId) return;
+    
     const action = module?.config_schema?.actions?.find(a => a.key === actionKey);
     
     // Handle confirmation
@@ -291,7 +302,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       setError(null);
       setSuccess(null);
 
-      await modulesAPI.executeTenantAction(slug, actionKey, settings);
+      await modulesAPI.executeAction(websiteId, slug, actionKey, settings);
       
       setSuccess(`Action "${action?.label || actionKey}" exécutée`);
       setTimeout(() => setSuccess(null), 3000);
@@ -308,16 +319,15 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
   };
 
   const handleToggleModule = async () => {
-    if (!module) return;
+    if (!module || !websiteId) return;
     
     if (isModuleEnabled) {
       if (!confirm('Êtes-vous sûr de vouloir désactiver ce module ?')) return;
       
       try {
-        await modulesAPI.updateTenantModuleSettings(slug, {
-          settings: {},
-          enabled: false,
-        });
+        if (websiteModule) {
+          await modulesAPI.deactivate(websiteId, websiteModule.id);
+        }
         setSuccess('Module désactivé');
         setTimeout(() => setSuccess(null), 3000);
         await loadData();
@@ -326,7 +336,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       }
     } else {
       try {
-        await modulesAPI.activateForTenant({
+        await modulesAPI.activate(websiteId, {
           module_id: module.id,
           settings: module.default_settings || {},
         });

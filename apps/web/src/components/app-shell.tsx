@@ -11,7 +11,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { modulesAPI, type TenantModule } from "@/lib/api/modules"
+import { modulesAPI, websitesAPI, type WebsiteModule } from "@/lib/api/modules"
 
 interface AppShellProps {
   children: React.ReactNode
@@ -20,7 +20,7 @@ interface AppShellProps {
 }
 
 export function AppShell({ children, title, breadcrumbs = [] }: AppShellProps) {
-  const [modules, setModules] = useState<TenantModule[]>([])
+  const [modules, setModules] = useState<WebsiteModule[]>([])
   const [isAuthenticated, setIsAuthenticated] = useState(true)
 
   useEffect(() => {
@@ -35,8 +35,11 @@ export function AppShell({ children, title, breadcrumbs = [] }: AppShellProps) {
     // Load modules for sidebar
     const loadModules = async () => {
       try {
-        const data = await modulesAPI.listForTenant()
-        setModules(data.filter(m => m.enabled))
+        const websites = await websitesAPI.list()
+        if (websites.length > 0) {
+          const data = await modulesAPI.listForWebsite(websites[0].id)
+          setModules(data.filter(m => m.enabled))
+        }
       } catch (err) {
         console.error('Failed to load modules:', err)
       }

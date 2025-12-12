@@ -1,11 +1,6 @@
-// NOTE: This component references tenant modules which no longer exist in the new architecture.
-// Tenant modules have been removed - modules are now website-scoped only.
-// This component needs to be refactored to work with website modules instead.
-// The API calls to listForTenant(), activateForTenant(), etc. will fail.
-
 import { useEffect, useState } from 'react';
-import { modulesAPI } from '../lib/api';
-import type { Module } from '../lib/api/modules';
+import { modulesAPI, websitesAPI } from '../lib/api';
+import type { Module, WebsiteModule } from '../lib/api/modules';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,7 +40,8 @@ const categoryLabels: Record<string, string> = {
 
 export default function ModulesManager() {
   const [catalogModules, setCatalogModules] = useState<Module[]>([]);
-  const [activeModules, setActiveModules] = useState<any[]>([]);  // TODO: Use WebsiteModule type
+  const [activeModules, setActiveModules] = useState<WebsiteModule[]>([]);
+  const [currentWebsiteId, setCurrentWebsiteId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activatingModule, setActivatingModule] = useState<string | null>(null);
@@ -62,26 +58,63 @@ export default function ModulesManager() {
       const catalog = await modulesAPI.catalog();
       setCatalogModules(catalog);
 
-      // TODO: Replace with website-specific module loading
-      // Need to get current website ID first, then call modulesAPI.listForWebsite(websiteId)
-      setActiveModules([]);
+      // Get current website
+      const websites = await websitesAPI.list();
+      if (websites.length > 0) {
+        const websiteId = websites[0].id;
+        setCurrentWebsiteId(websiteId);
+        
+        // Load modules for this website
+        const websiteModules = await modulesAPI.listForWebsite(websiteId);
+        setActiveModules(websiteModules);
+      } else {
+        setError('Aucun site web trouvé. Créez un site pour gérer les modules.');
+      }
     } catch (err) {
       console.error('Failed to load modules:', err);
-      setError('Erreur lors du chargement des modules. Les modules sont maintenant liés aux sites.');
+      setError('Erreur lors du chargement des modules');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleActivateModule = async (module: Module) => {
-    setError('La gestion des modules a changé. Les modules sont maintenant liés aux sites web, pas aux comptes.');
-    // TODO: Implement website module activation
-    // Need to get current website ID, then call modulesAPI.activate(websiteId, ...)
+    if (!currentWebsiteId) {
+      setError('Aucun site web sélectionné');
+      return;
+    }
+
+    try {
+      setActivatingModule(module.id);
+      await modulesAPI.activate(currentWebsiteId, {
+        module_id: module.id,
+        settings: module.default_settings || {},
+      });
+      await loadData();
+    } catch (err) {
+      console.error('Failed to activate module:', err);
+      setError(`Erreur lors de l'activation du module ${module.name}`);
+    } finally {
+      setActivatingModule(null);
+    }
   };
 
-  const handleDeactivateModule = async (moduleSlug: string) => {
-    setError('La gestion des modules a changé. Les modules sont maintenant liés aux sites web, pas aux comptes.');
-    // TODO: Implement website module deactivation
+  const handleDeactivateModule = async (moduleId: string) => {
+    if (!currentWebsiteId) {
+      setError('Aucun site web sélectionné');
+      return;
+    }
+
+    try {
+      setActivatingModule(moduleId);
+      await modulesAPI.deactivate(currentWebsiteId, moduleId);
+      await loadData();
+    } catch (err) {
+      console.error('Failed to deactivate module:', err);
+      setError('Erreur lors de la désactivation du module');
+    } finally {
+      setActivatingModule(null);
+    }
   };
 
   const getModuleIcon = (category: string) => {
@@ -89,10 +122,11 @@ export default function ModulesManager() {
     return <IconComponent className="h-5 w-5" />;
   };
 
-  // Check if a module is active (compare by slug)
+  // Check if a module is active (compare by slug or id)
   const isModuleActive = (moduleIdOrSlug: string) => {
-    // TODO: Update to check website modules
-    return false;
+    return activeModules.some(m => 
+      (m.module_slug === moduleIdOrSlug || m.module_id === moduleIdOrSlug) && m.enabled
+    );
   };
 
   // Get suggested modules (catalog modules that are not active)
@@ -146,13 +180,68 @@ export default function ModulesManager() {
         </Alert>
       )}
 
-      {/* Active Modules - TODO: Update to show website modules */}
-      {activeModules.length > 0 && (
-        <Alert>
-          <AlertDescription>
-            Les modules sont maintenant gérés au niveau des sites web. Sélectionnez un site pour gérer ses modules.
-          </AlertDescription>
-        </Alert>
+      {/* Active Modules */}
+      {activeModules.filter(m => m.enabled).length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+            Modules activés ({activeModules.filter(m => m.enabled).length})
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {activeModules.filter(m => m.enabled).map((websiteModule) => {
+              const catalogModule = catalogModules.find(cm => cm.slug === websiteModule.module_slug);
+              if (!catalogModule) return null;
+
+              return (
+                <Card key={websiteModule.id} className="relative overflow-hidden">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        {getModuleIcon(catalogModule.category)}
+                      </div>
+                      <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+                        Actif
+                      </Badge>
+                    </div>
+                    <CardTitle className="text-base mt-3">{catalogModule.name}</CardTitle>
+                    <CardDescription className="line-clamp-2">
+                      {catalogModule.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Badge variant="outline" className="text-xs">
+                        {categoryLabels[catalogModule.category] || catalogModule.category}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">v{catalogModule.version}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button asChild variant="secondary" size="sm" className="flex-1">
+                        <a href={`/app/modules/${catalogModule.slug}`}>
+                          <Settings className="h-4 w-4 mr-1" />
+                          Configurer
+                        </a>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeactivateModule(websiteModule.id)}
+                        disabled={activatingModule === websiteModule.id}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        {activatingModule === websiteModule.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Power className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Suggested Modules */}
