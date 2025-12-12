@@ -25,6 +25,7 @@ import {
   SidebarGroupContent,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import type { WebsiteModule } from "@/lib/api"
 
 // Icon mapping for modules
 const moduleIcons: Record<string, React.ElementType> = {
@@ -38,13 +39,6 @@ const moduleIcons: Record<string, React.ElementType> = {
   'analytics-tracker': BarChart3,
   'theme': Palette,
   'theme-engine': Palette,
-}
-
-interface WebsiteModule {
-  id: string
-  module_slug: string
-  module_name: string
-  enabled: boolean
 }
 
 interface AsapSidebarProps {
