@@ -47,8 +47,15 @@ function getModuleIcon(moduleSlug: string): React.ReactNode {
   return moduleIcons['default'];
 }
 
+interface WebsiteModule {
+  id: string
+  module_slug: string
+  module_name: string
+  enabled: boolean
+}
+
 export default function DynamicSidebar() {
-  const [modules, setModules] = useState<any[]>([]);
+  const [modules, setModules] = useState<WebsiteModule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
