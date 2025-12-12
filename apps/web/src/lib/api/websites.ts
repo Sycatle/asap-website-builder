@@ -2,7 +2,7 @@ import { apiClient } from './client';
 
 export interface Website {
   id: string;
-  tenant_id: string;  // Backend includes tenant_id in response
+  account_id: string;  // Backend includes account_id in response
   slug: string;
   title: string;
   tagline: string;
@@ -28,7 +28,7 @@ export interface UpdateWebsiteRequest {
 }
 
 export const websitesAPI = {
-  // List all websites for the current tenant
+  // List all websites for the current account
   async list(): Promise<Website[]> {
     return apiClient.get<Website[]>('/websites');
   },

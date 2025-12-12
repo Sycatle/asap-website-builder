@@ -1,5 +1,8 @@
+// NOTE: This component references tenant modules which no longer exist.
+// Modules are now website-scoped. This component needs refactoring.
+
 import { useState, useEffect } from 'react';
-import { modulesAPI, type TenantModule } from '../lib/api/modules';
+import { modulesAPI } from '../lib/api/modules';
 
 // Icon mapping for common module icons
 const moduleIcons: Record<string, React.ReactNode> = {

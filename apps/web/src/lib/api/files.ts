@@ -2,7 +2,7 @@ import { apiClient } from './client';
 
 export interface FileMetadata {
   id: string;
-  tenant_id: string;
+  account_id: string;
   filename: string;
   mime_type: string;
   size_bytes: number;

@@ -32,14 +32,14 @@ export interface WebsiteData {
 }
 
 export const integrationsAPI = {
-  // Get user integrations config
-  async getConfig(userId: string): Promise<{ integrations: IntegrationConfig }> {
-    return apiClient.get<{ integrations: IntegrationConfig }>(`/users/${userId}/integrations`);
+  // Get account integrations config
+  async getConfig(accountId: string): Promise<{ integrations: IntegrationConfig }> {
+    return apiClient.get<{ integrations: IntegrationConfig }>(`/accounts/${accountId}/integrations`);
   },
 
   // Update GitHub integration
-  async updateGitHub(userId: string, data: { github_username: string; github_token?: string }): Promise<{ message: string; username: string }> {
-    return apiClient.put<{ message: string; username: string }>(`/users/${userId}/integrations/github`, data);
+  async updateGitHub(accountId: string, data: { github_username: string; github_token?: string }): Promise<{ message: string; username: string }> {
+    return apiClient.put<{ message: string; username: string }>(`/accounts/${accountId}/integrations/github`, data);
   },
 
   // Get website data (contains GitHub projects data)

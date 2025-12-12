@@ -1,6 +1,9 @@
+// NOTE: This component references tenant modules which no longer exist in the new architecture.
+// Modules are now website-scoped only. This component needs refactoring to work with website modules.
+
 import { useEffect, useState } from 'react';
 import { modulesAPI } from '../lib/api';
-import type { Module, TenantModule, ConfigSchema, ConfigAction } from '../lib/api/modules';
+import type { Module, ConfigSchema, ConfigAction } from '../lib/api/modules';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import SchemaRenderer from './SchemaRenderer';
