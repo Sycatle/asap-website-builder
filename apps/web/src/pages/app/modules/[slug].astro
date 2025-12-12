@@ -3,6 +3,10 @@ import AppLayout from '../../../layouts/AppLayout.astro';
 import ModuleConfig from '../../../components/ModuleConfig';
 
 const { slug } = Astro.params;
+
+if (!slug) {
+  return Astro.redirect('/app/modules');
+}
 ---
 
 <AppLayout title="Configuration du module - ASAP">

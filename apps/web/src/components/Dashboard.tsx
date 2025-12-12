@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { websitesAPI, filesAPI, type Website, type QuotaUsage } from '../lib/api';
 import { formatBytes } from '../lib/utils/formatters';
+import Balance from './Balance';
 
 export default function Dashboard() {
   const [website, setWebsite] = useState<Website | null>(null);
@@ -46,6 +47,9 @@ export default function Dashboard() {
           Gérez votre site et vos fichiers depuis un seul endroit
         </p>
       </div>
+
+      {/* Balance Card */}
+      <Balance />
 
       {/* Stats Grid */}
       <div className="grid md:grid-cols-3 gap-6">

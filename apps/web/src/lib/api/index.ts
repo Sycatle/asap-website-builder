@@ -7,3 +7,4 @@ export * from './sections';
 export * from './presets';
 export * from './modules';
 export * from './integrations';
+export * from './payments';
