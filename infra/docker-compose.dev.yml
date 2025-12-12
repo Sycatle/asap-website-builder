@@ -5,14 +5,13 @@ services:
   # Web application in dev mode with hot reload
   web:
     image: node:20-alpine
+    working_dir: /app
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     environment:
       NODE_ENV: development
     volumes:
       - ../apps/web:/app
       - /app/node_modules
-    # Remove build configuration inherited from base
-    build: null
 
   # API in dev mode (optional: add volume mount for Rust hot reload with cargo-watch)
   # Uncomment if you want to enable Rust hot reload
