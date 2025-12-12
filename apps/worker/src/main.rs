@@ -7,12 +7,14 @@ mod module_executor;
 mod file_cleanup;
 mod parallel_processor;
 mod registry;
+mod payment_reconciliation;
 
 use config::Config;
 use event_processor::EventProcessor;
 use registry::{ModuleRegistryConfig, register_all_modules};
 use file_cleanup::FileCleanupTask;
 use parallel_processor::{ParallelProcessorConfig, process_events_parallel};
+use payment_reconciliation::PaymentReconciliation;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -28,6 +30,12 @@ async fn main() -> anyhow::Result<()> {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
+
+    // Check for CLI commands
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() > 1 && args[1] == "payments:reconcile" {
+        return run_payment_reconciliation().await;
+    }
 
     tracing::info!("Starting ASAP Worker");
 
@@ -60,6 +68,24 @@ async fn main() -> anyhow::Result<()> {
     let _cleanup_handle = tokio::spawn(async move {
         cleanup_task.start().await;
     });
+
+    // Create payment reconciliation task
+    let _reconciliation = match PaymentReconciliation::new(pool.clone()) {
+        Ok(recon) => {
+            let recon_arc = Arc::new(recon);
+            // Start daily reconciliation task (every 24 hours)
+            let recon_clone = recon_arc.clone();
+            tokio::spawn(async move {
+                recon_clone.start_background_task(24).await;
+            });
+            tracing::info!("Payment reconciliation task started (runs every 24h)");
+            Some(recon_arc)
+        }
+        Err(e) => {
+            tracing::warn!("Failed to initialize payment reconciliation: {}. Continuing without it.", e);
+            None
+        }
+    };
 
     // Configure parallel event processing
     let parallel_config = ParallelProcessorConfig::default();
@@ -115,4 +141,28 @@ async fn process_events_parallel_wrapper(
         config.clone(),
     )
     .await
+}
+
+/// Run payment reconciliation command
+async fn run_payment_reconciliation() -> anyhow::Result<()> {
+    tracing::info!("Running payment reconciliation command");
+
+    // Load configuration
+    let config = Config::from_env()?;
+    
+    // Create database pool
+    let pool = db::create_pool(&config.database_url).await?;
+    
+    // Create reconciliation service
+    let reconciliation = PaymentReconciliation::new(pool)?;
+    
+    // Run reconciliation
+    let stats = reconciliation.reconcile_all().await?;
+    
+    println!("Payment reconciliation completed:");
+    println!("  Total tenants: {}", stats.total_tenants);
+    println!("  Successful: {}", stats.successful);
+    println!("  Failed: {}", stats.failed);
+    
+    Ok(())
 }
