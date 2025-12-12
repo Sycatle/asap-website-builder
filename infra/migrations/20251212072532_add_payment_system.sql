@@ -30,7 +30,7 @@ CREATE TABLE payment_transactions (
     amount_cents BIGINT NOT NULL,
     currency TEXT NOT NULL DEFAULT 'EUR',
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed', 'cancelled')),
-    stripe_payment_intent_id TEXT UNIQUE,
+    stripe_payment_intent_id TEXT,
     stripe_charge_id TEXT,
     description TEXT,
     metadata JSONB DEFAULT '{}',
@@ -38,6 +38,11 @@ CREATE TABLE payment_transactions (
     completed_at TIMESTAMPTZ,
     CONSTRAINT amount_positive CHECK (amount_cents > 0)
 );
+
+-- Partial unique index to allow NULL payment intent IDs
+CREATE UNIQUE INDEX idx_payment_transactions_stripe_payment_intent_unique 
+ON payment_transactions(stripe_payment_intent_id) 
+WHERE stripe_payment_intent_id IS NOT NULL;
 
 -- Indexes for performance
 CREATE INDEX idx_user_balances_user_id ON user_balances(user_id);

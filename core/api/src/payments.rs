@@ -10,11 +10,19 @@ use uuid::Uuid;
 use reqwest;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
+use hex;
 
 use asap_core_shared::Claims;
 use asap_core_domain::{UserBalance, PaymentTransaction};
 
 type HmacSha256 = Hmac<Sha256>;
+
+/// Maximum payment amount in cents (100,000 EUR)
+const MAX_PAYMENT_AMOUNT_CENTS: i64 = 100_000_00;
+/// Minimum payment amount in cents (1 EUR)
+const MIN_PAYMENT_AMOUNT_CENTS: i64 = 100;
+/// Maximum webhook age in seconds (5 minutes)
+const MAX_WEBHOOK_AGE_SECONDS: i64 = 300;
 
 /// Response for balance query
 #[derive(Debug, Serialize)]
@@ -136,21 +144,28 @@ pub async fn create_payment_intent(
     };
 
     // Validate amount
-    if payload.amount_cents < 100 {
+    if payload.amount_cents < MIN_PAYMENT_AMOUNT_CENTS {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
             "error": "Minimum amount is 1 EUR (100 cents)"
         }))).into_response();
     }
 
-    if payload.amount_cents > 100_000_00 {
+    if payload.amount_cents > MAX_PAYMENT_AMOUNT_CENTS {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
             "error": "Maximum amount is 100,000 EUR"
         }))).into_response();
     }
 
     // Get Stripe secret key from environment
-    let stripe_secret_key = std::env::var("STRIPE_SECRET_KEY")
-        .unwrap_or_else(|_| "sk_test_dummy".to_string());
+    let stripe_secret_key = match std::env::var("STRIPE_SECRET_KEY") {
+        Ok(key) if !key.is_empty() => key,
+        _ => {
+            tracing::error!("STRIPE_SECRET_KEY is not configured");
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Payment system not configured"
+            }))).into_response();
+        }
+    };
 
     // Get user email from database
     let user_email = match sqlx::query!(
@@ -310,8 +325,15 @@ pub async fn stripe_webhook(
     body: String,
 ) -> impl IntoResponse {
     // Get webhook secret from environment
-    let webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET")
-        .unwrap_or_else(|_| "whsec_dummy".to_string());
+    let webhook_secret = match std::env::var("STRIPE_WEBHOOK_SECRET") {
+        Ok(secret) if !secret.is_empty() => secret,
+        _ => {
+            tracing::error!("STRIPE_WEBHOOK_SECRET is not configured");
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Webhook secret not configured"
+            }))).into_response();
+        }
+    };
 
     // Get signature from headers
     let signature = match headers.get("stripe-signature") {
@@ -372,6 +394,17 @@ pub async fn stripe_webhook(
                 }
             };
 
+            // Use a transaction to ensure atomicity
+            let mut tx = match pool.begin().await {
+                Ok(t) => t,
+                Err(e) => {
+                    tracing::error!("Failed to begin transaction: {}", e);
+                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                        "error": "Database error"
+                    }))).into_response();
+                }
+            };
+
             // Update transaction status
             if let Err(e) = sqlx::query!(
                 r#"
@@ -381,9 +414,10 @@ pub async fn stripe_webhook(
                 "#,
                 transaction.id
             )
-            .execute(&pool)
+            .execute(&mut *tx)
             .await
             {
+                let _ = tx.rollback().await;
                 tracing::error!("Failed to update transaction: {}", e);
                 return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                     "error": "Failed to update transaction"
@@ -400,16 +434,25 @@ pub async fn stripe_webhook(
                 transaction.amount_cents,
                 transaction.user_id
             )
-            .execute(&pool)
+            .execute(&mut *tx)
             .await
             {
+                let _ = tx.rollback().await;
                 tracing::error!("Failed to update balance: {}", e);
                 return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                     "error": "Failed to update balance"
                 }))).into_response();
             }
 
-            tracing::info!("Payment succeeded for user {}: {} cents", transaction.user_id, transaction.amount_cents);
+            // Commit the transaction
+            if let Err(e) = tx.commit().await {
+                tracing::error!("Failed to commit transaction: {}", e);
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                    "error": "Failed to commit transaction"
+                }))).into_response();
+            }
+
+            tracing::info!("Payment succeeded for transaction {}", transaction.id);
         }
     }
 
@@ -535,6 +578,20 @@ fn verify_stripe_signature(payload: &str, signature: &str, secret: &str) -> bool
     }
 
     if timestamp.is_empty() || signatures.is_empty() {
+        return false;
+    }
+
+    // Validate timestamp (reject webhooks older than 5 minutes to prevent replay attacks)
+    if let Ok(timestamp_secs) = timestamp.parse::<i64>() {
+        let current_time = chrono::Utc::now().timestamp();
+        let age = current_time - timestamp_secs;
+        
+        if age > MAX_WEBHOOK_AGE_SECONDS || age < -60 {
+            tracing::warn!("Webhook timestamp outside acceptable range: {} seconds old", age);
+            return false;
+        }
+    } else {
+        tracing::error!("Failed to parse webhook timestamp");
         return false;
     }
 

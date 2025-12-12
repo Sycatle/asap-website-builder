@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
 import { paymentsAPI, type BalanceResponse, type TransactionResponse } from '../lib/api';
-import { loadStripe, type Stripe } from '@stripe/stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
-// Initialize Stripe (you'll need to set STRIPE_PUBLISHABLE_KEY in your environment)
-const stripePromise = loadStripe(import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_dummy');
+// Initialize Stripe
+const stripePublishableKey = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
+
+// Constants
+const PAYMENT_SUCCESS_REFRESH_DELAY = 1000; // 1 second delay before refreshing after successful payment
 
 function CheckoutForm({ onSuccess }: { onSuccess: () => void }) {
   const stripe = useStripe();
@@ -73,7 +77,7 @@ export default function PaymentsManager() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('success') === 'true') {
       setShowAddCredits(false);
-      setTimeout(() => loadData(), 1000);
+      setTimeout(() => loadData(), PAYMENT_SUCCESS_REFRESH_DELAY);
     }
   }, []);
 
@@ -97,11 +101,15 @@ export default function PaymentsManager() {
 
   const handleAddCredits = async () => {
     try {
-      const amountCents = Math.round(parseFloat(amount) * 100);
-      if (amountCents < 100) {
+      // Parse amount as integer to avoid floating point issues
+      const amountEuros = parseInt(amount, 10);
+      if (isNaN(amountEuros) || amountEuros < 1) {
         setError('Minimum amount is 1 EUR');
         return;
       }
+
+      // Convert to cents using integer multiplication
+      const amountCents = amountEuros * 100;
 
       const response = await paymentsAPI.createPaymentIntent(amountCents);
       setClientSecret(response.client_secret);
@@ -226,7 +234,13 @@ export default function PaymentsManager() {
           Ajouter des Crédits
         </h2>
         
-        {!showAddCredits ? (
+        {!stripePromise ? (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <p className="text-yellow-800 dark:text-yellow-200">
+              Stripe n'est pas configuré. Veuillez configurer PUBLIC_STRIPE_PUBLISHABLE_KEY.
+            </p>
+          </div>
+        ) : !showAddCredits ? (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
