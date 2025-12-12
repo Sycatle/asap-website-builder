@@ -40,7 +40,7 @@ pub enum EventType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Event {
     pub id: Uuid,
-    pub tenant_id: Uuid,
+    pub account_id: Uuid,
     pub event_type: EventType,
     pub payload: serde_json::Value,
     pub created_at: DateTime<Utc>,
@@ -48,10 +48,10 @@ pub struct Event {
 }
 
 impl Event {
-    pub fn new(tenant_id: Uuid, event_type: EventType, payload: serde_json::Value) -> Self {
+    pub fn new(account_id: Uuid, event_type: EventType, payload: serde_json::Value) -> Self {
         Self {
             id: Uuid::new_v4(),
-            tenant_id,
+            account_id,
             event_type,
             payload,
             created_at: Utc::now(),
@@ -97,19 +97,19 @@ mod tests {
 
     #[test]
     fn test_event_creation() {
-        let tenant_id = Uuid::new_v4();
+        let account_id = Uuid::new_v4();
         let payload = serde_json::json!({
             "user_id": Uuid::new_v4(),
             "email": "test@example.com"
         });
 
         let event = Event::new(
-            tenant_id,
+            account_id,
             EventType::UserCreated,
             payload.clone(),
         );
 
-        assert_eq!(event.tenant_id, tenant_id);
+        assert_eq!(event.account_id, account_id);
         assert_eq!(event.event_type, EventType::UserCreated);
         assert_eq!(event.payload, payload);
         assert!(event.processed_at.is_none());
@@ -159,9 +159,9 @@ mod tests {
 
     #[test]
     fn test_event_serialization() {
-        let tenant_id = Uuid::new_v4();
+        let account_id = Uuid::new_v4();
         let event = Event::new(
-            tenant_id,
+            account_id,
             EventType::WebsitePublished,
             serde_json::json!({
                 "website_slug": "my-website"
@@ -171,7 +171,7 @@ mod tests {
         let serialized = serde_json::to_string(&event).unwrap();
         let deserialized: Event = serde_json::from_str(&serialized).unwrap();
 
-        assert_eq!(deserialized.tenant_id, tenant_id);
+        assert_eq!(deserialized.account_id, account_id);
         assert_eq!(deserialized.event_type, EventType::WebsitePublished);
     }
 
@@ -190,30 +190,30 @@ mod tests {
 
     #[test]
     fn test_multiple_event_types() {
-        let tenant_id = Uuid::new_v4();
+        let account_id = Uuid::new_v4();
 
         let events = vec![
-            Event::new(tenant_id, EventType::UserCreated, serde_json::json!({})),
-            Event::new(tenant_id, EventType::UserIntegrationAdded, serde_json::json!({})),
-            Event::new(tenant_id, EventType::UserIntegrationUpdated, serde_json::json!({})),
-            Event::new(tenant_id, EventType::WebsiteCreated, serde_json::json!({})),
-            Event::new(tenant_id, EventType::WebsitePublished, serde_json::json!({})),
-            Event::new(tenant_id, EventType::WebsiteUpdated, serde_json::json!({})),
-            Event::new(tenant_id, EventType::WebsiteDeleted, serde_json::json!({})),
-            Event::new(tenant_id, EventType::ModuleConfigChanged, serde_json::json!({})),
-            Event::new(tenant_id, EventType::ModuleActivated, serde_json::json!({})),
-            Event::new(tenant_id, EventType::ModuleDeactivated, serde_json::json!({})),
-            Event::new(tenant_id, EventType::ModuleConfigured, serde_json::json!({})),
-            Event::new(tenant_id, EventType::SectionCreated, serde_json::json!({})),
-            Event::new(tenant_id, EventType::SectionUpdated, serde_json::json!({})),
-            Event::new(tenant_id, EventType::SectionDeleted, serde_json::json!({})),
-            Event::new(tenant_id, EventType::SectionReordered, serde_json::json!({})),
-            Event::new(tenant_id, EventType::PresetApplied, serde_json::json!({})),
+            Event::new(account_id, EventType::UserCreated, serde_json::json!({})),
+            Event::new(account_id, EventType::UserIntegrationAdded, serde_json::json!({})),
+            Event::new(account_id, EventType::UserIntegrationUpdated, serde_json::json!({})),
+            Event::new(account_id, EventType::WebsiteCreated, serde_json::json!({})),
+            Event::new(account_id, EventType::WebsitePublished, serde_json::json!({})),
+            Event::new(account_id, EventType::WebsiteUpdated, serde_json::json!({})),
+            Event::new(account_id, EventType::WebsiteDeleted, serde_json::json!({})),
+            Event::new(account_id, EventType::ModuleConfigChanged, serde_json::json!({})),
+            Event::new(account_id, EventType::ModuleActivated, serde_json::json!({})),
+            Event::new(account_id, EventType::ModuleDeactivated, serde_json::json!({})),
+            Event::new(account_id, EventType::ModuleConfigured, serde_json::json!({})),
+            Event::new(account_id, EventType::SectionCreated, serde_json::json!({})),
+            Event::new(account_id, EventType::SectionUpdated, serde_json::json!({})),
+            Event::new(account_id, EventType::SectionDeleted, serde_json::json!({})),
+            Event::new(account_id, EventType::SectionReordered, serde_json::json!({})),
+            Event::new(account_id, EventType::PresetApplied, serde_json::json!({})),
         ];
 
         assert_eq!(events.len(), 16);
         for event in events {
-            assert_eq!(event.tenant_id, tenant_id);
+            assert_eq!(event.account_id, account_id);
             assert!(!event.is_processed());
         }
     }

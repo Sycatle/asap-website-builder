@@ -6,7 +6,7 @@ pub mod errors;
 pub mod storage;
 pub mod module_schema;
 
-pub use users::{User, Tenant, UserData};
+pub use users::{Account, AccountData};
 pub use websites::{
     Website, WebsiteData, WebsiteStatus, CreationMode,
     Module, WebsiteModule, WebsiteSection, SectionType, SectionLayout,

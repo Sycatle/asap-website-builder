@@ -2,42 +2,32 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
-/// User represents a person who can authenticate
+/// Account represents a user account with authentication and billing
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct User {
+pub struct Account {
     pub id: Uuid,
     pub email: String,
     pub password_hash: String,
-    pub tenant_id: Uuid,
     pub created_at: DateTime<Utc>,
-}
-
-/// Tenant represents an isolated workspace for multi-tenancy
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Tenant {
-    pub id: Uuid,
-    pub owner_id: Uuid,
-    pub slug: String,
+    // Plan and payment fields
     pub plan: String,
-    pub created_at: DateTime<Utc>,
-    // Payment fields
     pub stripe_customer_id: Option<String>,
     pub plan_status: Option<String>,
     pub current_period_end: Option<DateTime<Utc>>,
 }
 
-/// UserData stores extended user information in JSONB format
+/// AccountData stores extended account information in JSONB format
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UserData {
-    pub user_id: Uuid,
+pub struct AccountData {
+    pub account_id: Uuid,
     pub data: serde_json::Value,
     pub updated_at: DateTime<Utc>,
 }
 
-impl UserData {
-    pub fn new(user_id: Uuid) -> Self {
+impl AccountData {
+    pub fn new(account_id: Uuid) -> Self {
         Self {
-            user_id,
+            account_id,
             data: serde_json::json!({}),
             updated_at: Utc::now(),
         }
@@ -49,87 +39,89 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_user_creation() {
+    fn test_account_creation() {
         let id = Uuid::new_v4();
-        let tenant_id = Uuid::new_v4();
         let email = "test@example.com".to_string();
         let password_hash = "hash123".to_string();
+        let plan = "free".to_string();
 
-        let user = User {
+        let account = Account {
             id,
             email: email.clone(),
             password_hash: password_hash.clone(),
-            tenant_id,
             created_at: Utc::now(),
-        };
-
-        assert_eq!(user.id, id);
-        assert_eq!(user.email, email);
-        assert_eq!(user.password_hash, password_hash);
-        assert_eq!(user.tenant_id, tenant_id);
-    }
-
-    #[test]
-    fn test_user_clone() {
-        let user = User {
-            id: Uuid::new_v4(),
-            email: "test@example.com".to_string(),
-            password_hash: "hash123".to_string(),
-            tenant_id: Uuid::new_v4(),
-            created_at: Utc::now(),
-        };
-
-        let cloned = user.clone();
-        assert_eq!(user.id, cloned.id);
-        assert_eq!(user.email, cloned.email);
-    }
-
-    #[test]
-    fn test_tenant_creation() {
-        let id = Uuid::new_v4();
-        let owner_id = Uuid::new_v4();
-        let slug = "my-workspace".to_string();
-        let plan = "pro".to_string();
-
-        let tenant = Tenant {
-            id,
-            owner_id,
-            slug: slug.clone(),
             plan: plan.clone(),
-            created_at: Utc::now(),
             stripe_customer_id: None,
             plan_status: None,
             current_period_end: None,
         };
 
-        assert_eq!(tenant.id, id);
-        assert_eq!(tenant.owner_id, owner_id);
-        assert_eq!(tenant.slug, slug);
-        assert_eq!(tenant.plan, plan);
+        assert_eq!(account.id, id);
+        assert_eq!(account.email, email);
+        assert_eq!(account.password_hash, password_hash);
+        assert_eq!(account.plan, plan);
     }
 
     #[test]
-    fn test_user_data_creation() {
-        let user_id = Uuid::new_v4();
-        let user_data = UserData::new(user_id);
+    fn test_account_clone() {
+        let account = Account {
+            id: Uuid::new_v4(),
+            email: "test@example.com".to_string(),
+            password_hash: "hash123".to_string(),
+            created_at: Utc::now(),
+            plan: "pro".to_string(),
+            stripe_customer_id: Some("cus_123".to_string()),
+            plan_status: Some("active".to_string()),
+            current_period_end: None,
+        };
 
-        assert_eq!(user_data.user_id, user_id);
-        assert_eq!(user_data.data, serde_json::json!({}));
+        let cloned = account.clone();
+        assert_eq!(account.id, cloned.id);
+        assert_eq!(account.email, cloned.email);
+        assert_eq!(account.plan, cloned.plan);
     }
 
     #[test]
-    fn test_user_data_serialization() {
-        let user_id = Uuid::new_v4();
-        let mut user_data = UserData::new(user_id);
-        user_data.data = serde_json::json!({
+    fn test_account_with_payment_info() {
+        let account = Account {
+            id: Uuid::new_v4(),
+            email: "paid@example.com".to_string(),
+            password_hash: "hash123".to_string(),
+            created_at: Utc::now(),
+            plan: "pro".to_string(),
+            stripe_customer_id: Some("cus_abc123".to_string()),
+            plan_status: Some("active".to_string()),
+            current_period_end: Some(Utc::now()),
+        };
+
+        assert_eq!(account.plan, "pro");
+        assert!(account.stripe_customer_id.is_some());
+        assert!(account.plan_status.is_some());
+        assert!(account.current_period_end.is_some());
+    }
+
+    #[test]
+    fn test_account_data_creation() {
+        let account_id = Uuid::new_v4();
+        let account_data = AccountData::new(account_id);
+
+        assert_eq!(account_data.account_id, account_id);
+        assert_eq!(account_data.data, serde_json::json!({}));
+    }
+
+    #[test]
+    fn test_account_data_serialization() {
+        let account_id = Uuid::new_v4();
+        let mut account_data = AccountData::new(account_id);
+        account_data.data = serde_json::json!({
             "name": "John Doe",
             "bio": "Software Developer"
         });
 
-        let serialized = serde_json::to_string(&user_data).unwrap();
-        let deserialized: UserData = serde_json::from_str(&serialized).unwrap();
+        let serialized = serde_json::to_string(&account_data).unwrap();
+        let deserialized: AccountData = serde_json::from_str(&serialized).unwrap();
 
-        assert_eq!(deserialized.user_id, user_id);
+        assert_eq!(deserialized.account_id, account_id);
         assert_eq!(deserialized.data["name"], "John Doe");
     }
 }

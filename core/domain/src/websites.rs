@@ -32,11 +32,11 @@ impl Default for WebsiteStatus {
     }
 }
 
-/// Website represents a user's website that can combine multiple modules
+/// Website represents an account's website that can combine multiple modules
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Website {
     pub id: Uuid,
-    pub tenant_id: Uuid,
+    pub account_id: Uuid,
     pub slug: String,
     pub title: String,
     pub tagline: String,
@@ -228,14 +228,14 @@ mod tests {
     #[test]
     fn test_website_creation() {
         let id = Uuid::new_v4();
-        let tenant_id = Uuid::new_v4();
+        let account_id = Uuid::new_v4();
         let slug = "my-website".to_string();
         let title = "My Website".to_string();
         let tagline = "A great website".to_string();
 
         let website = Website {
             id,
-            tenant_id,
+            account_id,
             slug: slug.clone(),
             title: title.clone(),
             tagline: tagline.clone(),
@@ -261,7 +261,7 @@ mod tests {
         let preset_id = Uuid::new_v4();
         let website = Website {
             id: Uuid::new_v4(),
-            tenant_id: Uuid::new_v4(),
+            account_id: Uuid::new_v4(),
             slug: "test".to_string(),
             title: "Test".to_string(),
             tagline: "Test".to_string(),
@@ -281,7 +281,7 @@ mod tests {
     fn test_website_status_transitions() {
         let mut website = Website {
             id: Uuid::new_v4(),
-            tenant_id: Uuid::new_v4(),
+            account_id: Uuid::new_v4(),
             slug: "test".to_string(),
             title: "Test".to_string(),
             tagline: "Test".to_string(),
@@ -302,7 +302,7 @@ mod tests {
     fn test_website_with_metadata() {
         let website = Website {
             id: Uuid::new_v4(),
-            tenant_id: Uuid::new_v4(),
+            account_id: Uuid::new_v4(),
             slug: "test".to_string(),
             title: "Test".to_string(),
             tagline: "Test".to_string(),
@@ -367,7 +367,7 @@ mod tests {
     fn test_website_clone() {
         let website = Website {
             id: Uuid::new_v4(),
-            tenant_id: Uuid::new_v4(),
+            account_id: Uuid::new_v4(),
             slug: "test".to_string(),
             title: "Test".to_string(),
             tagline: "Test".to_string(),
