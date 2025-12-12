@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { modulesAPI } from '../lib/api';
 import type { Module, TenantModule, ConfigSchema, ConfigAction } from '../lib/api/modules';
-import { Tabs, type Tab } from './ui/Tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import SchemaRenderer from './SchemaRenderer';
 
 interface ModuleConfigProps {
@@ -418,26 +419,8 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
   const hasData = schema.dataDisplay && schema.dataDisplay.length > 0;
   const hasConfig = schema.fields && schema.fields.length > 0;
 
-  // Build tabs
-  const tabs: Tab[] = [
-    ...(hasConfig ? [{
-      id: 'config',
-      label: 'Configuration',
-      icon: Icons.settings,
-    }] : []),
-    ...(hasData ? [{
-      id: 'data',
-      label: 'Données',
-      icon: Icons.data,
-      badge: Object.keys(moduleData).length > 0 ? Object.values(moduleData).flat().length : undefined,
-    }] : []),
-    {
-      id: 'changelog',
-      label: 'Historique',
-      icon: Icons.history,
-      badge: changelog.length,
-    },
-  ];
+  // Determine default tab
+  const defaultTab = hasConfig ? 'config' : hasData ? 'data' : 'changelog';
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -555,26 +538,54 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       </div>
 
       {/* Tabs Content */}
-      {isModuleEnabled && tabs.length > 0 && (
+      {isModuleEnabled && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="px-6 pt-4">
-            <Tabs tabs={tabs} defaultTab={tabs[0]?.id}>
-              {(activeTab) => (
-                <div className="pb-6">
-                  {/* Configuration Tab */}
-                  {activeTab === 'config' && hasConfig && (
-                    <div className="space-y-6">
-                      {/* Schema-driven fields */}
-                      <SchemaRenderer
-                        schema={{ ...schema, actions: [], dataDisplay: [] }}
-                        settings={settings}
-                        data={moduleData}
-                        onSettingsChange={setSettings}
-                        onAction={handleAction}
-                        isExecutingAction={executingAction}
-                      />
-                      
-                      {/* Other actions */}
+          <div className="p-6">
+            <Tabs defaultValue={defaultTab}>
+              <TabsList className="mb-4">
+                {hasConfig && (
+                  <TabsTrigger value="config" className="gap-2">
+                    {Icons.settings}
+                    Configuration
+                  </TabsTrigger>
+                )}
+                {hasData && (
+                  <TabsTrigger value="data" className="gap-2">
+                    {Icons.data}
+                    Données
+                    {Object.keys(moduleData).length > 0 && (
+                      <Badge variant="secondary" className="ml-1">
+                        {Object.values(moduleData).flat().length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                )}
+                <TabsTrigger value="changelog" className="gap-2">
+                  {Icons.history}
+                  Historique
+                  {changelog.length > 0 && (
+                    <Badge variant="secondary" className="ml-1">
+                      {changelog.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Configuration Tab */}
+              {hasConfig && (
+                <TabsContent value="config">
+                  <div className="space-y-6">
+                    {/* Schema-driven fields */}
+                    <SchemaRenderer
+                      schema={{ ...schema, actions: [], dataDisplay: [] }}
+                      settings={settings}
+                      data={moduleData}
+                      onSettingsChange={setSettings}
+                      onAction={handleAction}
+                      isExecutingAction={executingAction}
+                    />
+                    
+                    {/* Other actions */}
                       {getOtherActions().length > 0 && (
                         <div className="border-t border-gray-200 pt-6">
                           <h3 className="text-sm font-medium text-gray-900 mb-3">Actions</h3>
@@ -618,57 +629,58 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
                         </button>
                       </div>
                     </div>
-                  )}
+                  </TabsContent>
+                )}
 
-                  {/* Data Tab */}
-                  {activeTab === 'data' && hasData && (
-                    <SchemaRenderer
-                      schema={{ dataDisplay: schema.dataDisplay }}
-                      settings={settings}
-                      data={moduleData}
-                      onSettingsChange={setSettings}
-                      onAction={handleAction}
-                      isExecutingAction={executingAction}
-                    />
-                  )}
+              {/* Data Tab */}
+              {hasData && (
+                <TabsContent value="data">
+                  <SchemaRenderer
+                    schema={{ dataDisplay: schema.dataDisplay }}
+                    settings={settings}
+                    data={moduleData}
+                    onSettingsChange={setSettings}
+                    onAction={handleAction}
+                    isExecutingAction={executingAction}
+                  />
+                </TabsContent>
+              )}
 
-                  {/* Changelog Tab */}
-                  {activeTab === 'changelog' && (
-                    <div>
-                      {changelog.length === 0 ? (
-                        <div className="text-center py-12">
-                          <div className="w-12 h-12 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                            {Icons.history}
+              {/* Changelog Tab */}
+              <TabsContent value="changelog">
+                <div>
+                  {changelog.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="w-12 h-12 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                        {Icons.history}
+                      </div>
+                      <p className="text-gray-500">Aucun historique disponible</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {changelog.map((entry, index) => (
+                        <div 
+                          key={entry.id}
+                          className={`flex items-start gap-3 py-3 ${
+                            index !== changelog.length - 1 ? 'border-b border-gray-100' : ''
+                          }`}
+                        >
+                          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 text-gray-500">
+                            {getActionIcon(entry.action)}
                           </div>
-                          <p className="text-gray-500">Aucun historique disponible</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-900">{entry.description}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {formatRelativeTime(entry.timestamp)}
+                              {entry.user && ` • ${entry.user}`}
+                            </p>
+                          </div>
                         </div>
-                      ) : (
-                        <div className="space-y-1">
-                          {changelog.map((entry, index) => (
-                            <div 
-                              key={entry.id}
-                              className={`flex items-start gap-3 py-3 ${
-                                index !== changelog.length - 1 ? 'border-b border-gray-100' : ''
-                              }`}
-                            >
-                              <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 text-gray-500">
-                                {getActionIcon(entry.action)}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm text-gray-900">{entry.description}</p>
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                  {formatRelativeTime(entry.timestamp)}
-                                  {entry.user && ` • ${entry.user}`}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      ))}
                     </div>
                   )}
                 </div>
-              )}
+              </TabsContent>
             </Tabs>
           </div>
         </div>

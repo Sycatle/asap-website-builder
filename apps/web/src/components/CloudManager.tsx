@@ -1,6 +1,41 @@
+"use client"
+
 import { useEffect, useState, useRef } from 'react';
 import { filesAPI, type FileMetadata, type QuotaUsage } from '../lib/api';
 import { formatBytes } from '../lib/utils/formatters';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { 
+  Upload, 
+  Image, 
+  FileText, 
+  Film, 
+  Music, 
+  File,
+  Trash2,
+  Download,
+  Copy,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  LayoutGrid,
+  List,
+  HardDrive,
+  X,
+  Eye
+} from "lucide-react";
 
 type ViewMode = 'grid' | 'list';
 
@@ -12,6 +47,7 @@ export default function CloudManager() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -77,53 +113,47 @@ export default function CloudManager() {
     return `${API_URL}/files/${fileId}?token=${token}`;
   };
 
+  const copyToClipboard = async (fileId: string) => {
+    const url = getFileUrl(fileId);
+    await navigator.clipboard.writeText(url);
+    setCopiedId(fileId);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   const isImage = (mimeType: string) => mimeType.startsWith('image/');
   const isVideo = (mimeType: string) => mimeType.startsWith('video/');
   const isAudio = (mimeType: string) => mimeType.startsWith('audio/');
-  const isMedia = (mimeType: string) => isImage(mimeType) || isVideo(mimeType) || isAudio(mimeType);
+  const isPdf = (mimeType: string) => mimeType === 'application/pdf';
 
-  const getFileIcon = (mimeType: string, size: 'sm' | 'lg' = 'sm') => {
-    const sizeClass = size === 'lg' ? 'w-16 h-16' : 'w-8 h-8';
-    
-    if (isImage(mimeType)) {
-      return (
-        <svg className={`${sizeClass} text-purple-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-        </svg>
-      );
-    }
-    if (mimeType === 'application/pdf') {
-      return (
-        <svg className={`${sizeClass} text-red-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-        </svg>
-      );
-    }
-    if (isVideo(mimeType)) {
-      return (
-        <svg className={`${sizeClass} text-blue-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-        </svg>
-      );
-    }
-    if (isAudio(mimeType)) {
-      return (
-        <svg className={`${sizeClass} text-green-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
-        </svg>
-      );
-    }
-    return (
-      <svg className={`${sizeClass} text-gray-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-      </svg>
-    );
+  const getFileIcon = (mimeType: string, className = "h-5 w-5") => {
+    if (isImage(mimeType)) return <Image className={`${className} text-violet-500`} />;
+    if (isVideo(mimeType)) return <Film className={`${className} text-blue-500`} />;
+    if (isAudio(mimeType)) return <Music className={`${className} text-green-500`} />;
+    if (isPdf(mimeType)) return <FileText className={`${className} text-red-500`} />;
+    return <File className={`${className} text-muted-foreground`} />;
+  };
+
+  const getFileTypeLabel = (mimeType: string) => {
+    if (isImage(mimeType)) return 'Image';
+    if (isVideo(mimeType)) return 'Vidéo';
+    if (isAudio(mimeType)) return 'Audio';
+    if (isPdf(mimeType)) return 'PDF';
+    return 'Fichier';
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="space-y-8">
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-5 w-64" />
+        </div>
+        <Skeleton className="h-24" />
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {[...Array(8)].map((_, i) => (
+            <Skeleton key={i} className="aspect-square" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -131,344 +161,299 @@ export default function CloudManager() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Cloud</h1>
-          <p className="mt-2 text-gray-600">
-            Gérez vos fichiers et médias
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* View Toggle */}
-          <div className="flex items-center bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'}`}
-              title="Vue grille"
-            >
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
-              </svg>
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'}`}
-              title="Vue liste"
-            >
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
-              </svg>
-            </button>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Fichiers</h1>
+            <p className="text-muted-foreground mt-1">
+              Gérez vos fichiers et médias
+            </p>
           </div>
+          <div className="flex items-center gap-2">
+            {/* View Toggle */}
+            <div className="flex items-center border rounded-lg p-1">
+              <Button
+                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="h-8 w-8 p-0"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="h-8 w-8 p-0"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            onChange={handleUpload}
-            className="hidden"
-            id="file-upload"
-          />
-          <label
-            htmlFor="file-upload"
-            className={`inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 cursor-pointer transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            {isUploading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                Upload en cours...
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                </svg>
-                Upload
-              </>
-            )}
-          </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleUpload}
+              className="hidden"
+              id="file-upload"
+            />
+            <Button asChild disabled={isUploading}>
+              <label htmlFor="file-upload" className="cursor-pointer">
+                {isUploading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                {isUploading ? 'Upload...' : 'Upload'}
+              </label>
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Message */}
       {message && (
-        <div className={`p-4 rounded-lg ${
-          message.type === 'success' 
-            ? 'bg-green-50 text-green-800 border border-green-200' 
-            : 'bg-red-50 text-red-800 border border-red-200'
-        }`}>
-          {message.text}
-        </div>
+        <Alert variant={message.type === 'error' ? 'destructive' : 'default'} className={message.type === 'success' ? 'border-green-500/50 bg-green-500/10 text-green-700' : ''}>
+          {message.type === 'success' ? (
+            <CheckCircle2 className="h-4 w-4" />
+          ) : (
+            <AlertCircle className="h-4 w-4" />
+          )}
+          <AlertDescription className="flex items-center justify-between">
+            {message.text}
+            <Button variant="ghost" size="sm" onClick={() => setMessage(null)} className="h-6 w-6 p-0">
+              <X className="h-4 w-4" />
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Quota Card */}
       {quota && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Espace de stockage</h2>
-            <span className="text-sm text-gray-600">
-              {formatBytes(quota.total_size_used)} / {formatBytes(quota.quota_limit)}
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
-            <div 
-              className={`h-3 rounded-full transition-all ${
-                quota.usage_percentage > 90 ? 'bg-red-500' : 
-                quota.usage_percentage > 70 ? 'bg-yellow-500' : 'bg-primary-600'
-              }`}
-              style={{ width: `${Math.min(quota.usage_percentage, 100)}%` }}
-            ></div>
-          </div>
-          <p className="mt-2 text-sm text-gray-600">
-            {quota.usage_percentage.toFixed(1)}% utilisé · {formatBytes(quota.remaining)} restant
-          </p>
-        </div>
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <HardDrive className="h-4 w-4 text-muted-foreground" />
+                Espace de stockage
+              </CardTitle>
+              <span className="text-sm text-muted-foreground">
+                {formatBytes(quota.total_size_used)} / {formatBytes(quota.quota_limit)}
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Progress 
+              value={quota.usage_percentage} 
+              className={`h-2 ${quota.usage_percentage > 80 ? '[&>div]:bg-destructive' : ''}`}
+            />
+            <p className="mt-2 text-xs text-muted-foreground">
+              {quota.usage_percentage.toFixed(1)}% utilisé · {formatBytes(quota.remaining)} restant
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {/* Files */}
       {files.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-          <svg className="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-          </svg>
-          <h3 className="mt-4 text-lg font-medium text-gray-900">Aucun fichier</h3>
-          <p className="mt-2 text-gray-600">Commencez par uploader votre premier fichier</p>
-        </div>
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+              <Upload className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h3 className="mt-4 text-lg font-semibold">Aucun fichier</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Commencez par uploader votre premier fichier
+            </p>
+            <Button className="mt-4" asChild>
+              <label htmlFor="file-upload" className="cursor-pointer">
+                <Upload className="h-4 w-4 mr-2" />
+                Upload un fichier
+              </label>
+            </Button>
+          </CardContent>
+        </Card>
       ) : viewMode === 'grid' ? (
         /* Grid View */
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {files.map((file) => (
-            <div
+            <Card
               key={file.id}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group"
+              className="group cursor-pointer hover:shadow-md transition-all hover:border-primary/50 overflow-hidden"
               onClick={() => setPreviewFile(file)}
             >
               {/* Preview Thumbnail */}
-              <div className="aspect-square bg-gray-100 relative overflow-hidden">
+              <div className="aspect-square bg-muted relative overflow-hidden">
                 {isImage(file.mime_type) ? (
                   <img
                     src={getFileUrl(file.id)}
                     alt={file.filename}
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      // Fallback to icon if image fails to load
-                      (e.target as HTMLImageElement).style.display = 'none';
-                      (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                    }}
+                    loading="lazy"
                   />
-                ) : null}
-                {isVideo(file.mime_type) ? (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-900">
-                    <svg className="w-16 h-16 text-white opacity-80" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
-                  </div>
-                ) : null}
-                {!isImage(file.mime_type) && !isVideo(file.mime_type) && (
+                ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    {getFileIcon(file.mime_type, 'lg')}
+                    {getFileIcon(file.mime_type, "h-12 w-12")}
                   </div>
                 )}
-                {/* Fallback icon for failed images */}
-                <div className="hidden absolute inset-0 bg-gray-100 items-center justify-center" style={{ display: 'none' }}>
-                  {getFileIcon(file.mime_type, 'lg')}
-                </div>
-                {/* Hover overlay */}
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center">
-                  <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                  </svg>
+                {/* Hover Overlay */}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Eye className="h-6 w-6 text-white" />
                 </div>
               </div>
               {/* File Info */}
-              <div className="p-3">
-                <p className="text-sm font-medium text-gray-900 truncate" title={file.filename}>
-                  {file.filename}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {formatBytes(file.size_bytes)}
-                </p>
-              </div>
-            </div>
+              <CardContent className="p-3">
+                <p className="text-sm font-medium truncate">{file.filename}</p>
+                <div className="flex items-center justify-between mt-1">
+                  <Badge variant="outline" className="text-xs">
+                    {getFileTypeLabel(file.mime_type)}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {formatBytes(file.size)}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       ) : (
         /* List View */
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fichier
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Taille
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+        <Card>
+          <CardContent className="p-0">
+            <div className="divide-y">
               {files.map((file) => (
-                <tr key={file.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => setPreviewFile(file)}>
-                      {isImage(file.mime_type) ? (
-                        <img
-                          src={getFileUrl(file.id)}
-                          alt={file.filename}
-                          className="w-10 h-10 rounded object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
+                <div
+                  key={file.id}
+                  className="flex items-center gap-4 p-4 hover:bg-accent/50 cursor-pointer transition-colors"
+                  onClick={() => setPreviewFile(file)}
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                    {getFileIcon(file.mime_type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{file.filename}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatBytes(file.size)} · {new Date(file.created_at).toLocaleDateString('fr-FR')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyToClipboard(file.id);
+                      }}
+                    >
+                      {copiedId === file.id ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
                       ) : (
-                        getFileIcon(file.mime_type)
+                        <Copy className="h-4 w-4" />
                       )}
-                      <span className="text-sm font-medium text-gray-900 truncate max-w-xs hover:text-primary-600">
-                        {file.filename}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-600">{file.mime_type}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-600">{formatBytes(file.size_bytes)}</span>
-                    {file.compressed_size_bytes < file.size_bytes && (
-                      <span className="ml-2 text-xs text-green-600">
-                        ({Math.round((1 - file.compressed_size_bytes / file.size_bytes) * 100)}% compressé)
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-600">
-                      {new Date(file.uploaded_at).toLocaleDateString('fr-FR')}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right space-x-3">
-                    <button
-                      onClick={() => setPreviewFile(file)}
-                      className="text-primary-600 hover:text-primary-800 text-sm font-medium"
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(file.id, file.filename);
+                      }}
                     >
-                      Voir
-                    </button>
-                    <button
-                      onClick={() => handleDelete(file.id, file.filename)}
-                      className="text-red-600 hover:text-red-800 text-sm font-medium"
-                    >
-                      Supprimer
-                    </button>
-                  </td>
-                </tr>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Preview Modal */}
-      {previewFile && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
-          onClick={() => setPreviewFile(null)}
-        >
-          <div 
-            className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="font-semibold text-gray-900 truncate pr-4">{previewFile.filename}</h3>
-              <button
-                onClick={() => setPreviewFile(null)}
-                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="p-4 bg-gray-100 flex items-center justify-center min-h-[300px] max-h-[60vh] overflow-auto">
+      {/* Preview Dialog */}
+      <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {previewFile && getFileIcon(previewFile.mime_type)}
+              <span className="truncate">{previewFile?.filename}</span>
+            </DialogTitle>
+            <DialogDescription>
+              {previewFile && `${getFileTypeLabel(previewFile.mime_type)} · ${formatBytes(previewFile.size)}`}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {/* Preview Content */}
+          {previewFile && (
+            <div className="mt-4">
               {isImage(previewFile.mime_type) && (
                 <img
                   src={getFileUrl(previewFile.id)}
                   alt={previewFile.filename}
-                  className="max-w-full max-h-full object-contain rounded"
+                  className="max-h-[60vh] mx-auto rounded-lg"
                 />
               )}
               {isVideo(previewFile.mime_type) && (
                 <video
                   src={getFileUrl(previewFile.id)}
                   controls
-                  className="max-w-full max-h-full rounded"
-                >
-                  Votre navigateur ne supporte pas la lecture vidéo.
-                </video>
+                  className="max-h-[60vh] mx-auto rounded-lg"
+                />
               )}
               {isAudio(previewFile.mime_type) && (
-                <div className="text-center">
-                  {getFileIcon(previewFile.mime_type, 'lg')}
-                  <audio
-                    src={getFileUrl(previewFile.id)}
-                    controls
-                    className="mt-4"
-                  >
-                    Votre navigateur ne supporte pas la lecture audio.
-                  </audio>
-                </div>
+                <audio
+                  src={getFileUrl(previewFile.id)}
+                  controls
+                  className="w-full"
+                />
               )}
-              {!isMedia(previewFile.mime_type) && (
-                <div className="text-center">
-                  {getFileIcon(previewFile.mime_type, 'lg')}
-                  <p className="mt-4 text-gray-600">Aperçu non disponible pour ce type de fichier</p>
+              {!isImage(previewFile.mime_type) && !isVideo(previewFile.mime_type) && !isAudio(previewFile.mime_type) && (
+                <div className="flex flex-col items-center justify-center py-12 bg-muted rounded-lg">
+                  {getFileIcon(previewFile.mime_type, "h-16 w-16")}
+                  <p className="mt-4 text-muted-foreground">Aperçu non disponible</p>
                 </div>
               )}
             </div>
+          )}
 
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-gray-200 bg-white">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600 space-y-1">
-                  <p><strong>Type:</strong> {previewFile.mime_type}</p>
-                  <p><strong>Taille:</strong> {formatBytes(previewFile.size_bytes)}
-                    {previewFile.compressed_size_bytes < previewFile.size_bytes && (
-                      <span className="text-green-600 ml-2">
-                        (compressé: {formatBytes(previewFile.compressed_size_bytes)})
-                      </span>
-                    )}
-                  </p>
-                  <p><strong>Date:</strong> {new Date(previewFile.uploaded_at).toLocaleString('fr-FR')}</p>
-                </div>
-                <div className="flex gap-3">
-                  <a
-                    href={getFileUrl(previewFile.id)}
-                    download={previewFile.filename}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-                  >
-                    Télécharger
-                  </a>
-                  <button
-                    onClick={() => handleDelete(previewFile.id, previewFile.filename)}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                  >
-                    Supprimer
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => previewFile && copyToClipboard(previewFile.id)}
+              className="w-full sm:w-auto"
+            >
+              {copiedId === previewFile?.id ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
+                  Copié !
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copier l'URL
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              asChild
+              className="w-full sm:w-auto"
+            >
+              <a href={previewFile ? getFileUrl(previewFile.id) : '#'} download>
+                <Download className="h-4 w-4 mr-2" />
+                Télécharger
+              </a>
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => previewFile && handleDelete(previewFile.id, previewFile.filename)}
+              className="w-full sm:w-auto"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
