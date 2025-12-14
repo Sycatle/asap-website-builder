@@ -485,25 +485,25 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       {/* Back link */}
       <a 
         href="/app/modules" 
-        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6 transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-gray-500 hover:text-gray-700 mb-4 sm:mb-6 transition-colors"
       >
         {Icons.back}
         Modules
       </a>
 
       {/* Header Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-        <div className="p-6">
-          <div className="flex items-start justify-between gap-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 sm:mb-6">
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             {/* Module info */}
-            <div className="flex items-start gap-4 flex-1 min-w-0">
-              <div className={`w-12 h-12 ${getCategoryColor(module.category)} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
+            <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 ${getCategoryColor(module.category)} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
                 {getModuleIcon(module.category)}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h1 className="text-xl font-bold text-gray-900">{module.name}</h1>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <h1 className="text-lg sm:text-xl font-bold text-gray-900">{module.name}</h1>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${
                     isModuleEnabled 
                       ? 'bg-green-100 text-green-700' 
                       : 'bg-gray-100 text-gray-600'
@@ -511,8 +511,8 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
                     {isModuleEnabled ? 'Actif' : 'Inactif'}
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-gray-600 line-clamp-2">{module.description}</p>
-                <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
+                <p className="mt-1 text-xs sm:text-sm text-gray-600 line-clamp-2">{module.description}</p>
+                <div className="mt-1.5 sm:mt-2 flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-gray-500">
                   <span className="inline-flex items-center gap-1">
                     {getCategoryLabel(module.category)}
                   </span>
@@ -523,23 +523,24 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
               {/* Sync button */}
               {syncAction && isModuleEnabled && (
                 <button
                   onClick={() => handleAction(syncAction.key)}
                   disabled={executingAction === syncAction.key}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {executingAction === syncAction.key ? Icons.spinner : Icons.sync}
-                  Synchroniser
+                  <span className="hidden xs:inline">Synchroniser</span>
+                  <span className="xs:hidden">Sync</span>
                 </button>
               )}
               
               {/* Enable/Disable toggle */}
               <button
                 onClick={handleToggleModule}
-                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
                   isModuleEnabled
                     ? 'text-red-600 bg-red-50 border border-red-200 hover:bg-red-100'
                     : 'text-white bg-primary-600 hover:bg-primary-700'
@@ -554,21 +555,21 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
 
         {/* Confirmation dialog */}
         {pendingConfirm && (
-          <div className="px-6 py-4 border-t bg-amber-50 border-amber-100">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-amber-700">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-t bg-amber-50 border-amber-100">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <span className="text-xs sm:text-sm text-amber-700">
                 {module.config_schema?.actions?.find((a: ConfigAction) => a.key === pendingConfirm)?.confirm || 'Confirmer cette action ?'}
               </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setPendingConfirm(null)}
-                  className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={() => handleAction(pendingConfirm)}
-                  className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+                  className="flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
                 >
                   Confirmer
                 </button>
@@ -581,31 +582,33 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       {/* Tabs Content */}
       {isModuleEnabled && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <Tabs defaultValue={defaultTab}>
-              <TabsList className="mb-4">
+              <TabsList className="mb-4 flex flex-wrap gap-1">
                 {hasConfig && (
-                  <TabsTrigger value="config" className="gap-2">
+                  <TabsTrigger value="config" className="gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
                     {Icons.settings}
-                    Configuration
+                    <span className="hidden xs:inline">Configuration</span>
+                    <span className="xs:hidden">Config</span>
                   </TabsTrigger>
                 )}
                 {hasData && (
-                  <TabsTrigger value="data" className="gap-2">
+                  <TabsTrigger value="data" className="gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
                     {Icons.data}
                     Données
                     {Object.keys(moduleData).length > 0 && (
-                      <Badge variant="secondary" className="ml-1">
+                      <Badge variant="secondary" className="ml-1 text-[10px] sm:text-xs h-4 sm:h-5">
                         {Object.values(moduleData).flat().length}
                       </Badge>
                     )}
                   </TabsTrigger>
                 )}
-                <TabsTrigger value="changelog" className="gap-2">
+                <TabsTrigger value="changelog" className="gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
                   {Icons.history}
-                  Historique
+                  <span className="hidden xs:inline">Historique</span>
+                  <span className="xs:hidden">Hist.</span>
                   {changelog.length > 0 && (
-                    <Badge variant="secondary" className="ml-1">
+                    <Badge variant="secondary" className="ml-1 text-[10px] sm:text-xs h-4 sm:h-5">
                       {changelog.length}
                     </Badge>
                   )}
@@ -628,15 +631,15 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
                     
                     {/* Other actions */}
                       {getOtherActions().length > 0 && (
-                        <div className="border-t border-gray-200 pt-6">
-                          <h3 className="text-sm font-medium text-gray-900 mb-3">Actions</h3>
+                        <div className="border-t border-gray-200 pt-4 sm:pt-6">
+                          <h3 className="text-xs sm:text-sm font-medium text-gray-900 mb-2 sm:mb-3">Actions</h3>
                           <div className="flex flex-wrap gap-2">
                             {getOtherActions().map((action) => (
                               <button
                                 key={action.key}
                                 onClick={() => handleAction(action.key)}
                                 disabled={executingAction === action.key}
-                                className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                                className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                                   action.style === 'danger'
                                     ? 'text-red-600 bg-red-50 border border-red-200 hover:bg-red-100'
                                     : action.style === 'secondary'
@@ -653,17 +656,17 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
                       )}
 
                       {/* Save button */}
-                      <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+                      <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200">
                         <button
                           onClick={() => refreshData()}
-                          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                          className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                         >
                           Annuler
                         </button>
                         <button
                           onClick={handleSaveSettings}
                           disabled={isSaving}
-                          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {isSaving ? Icons.spinner : Icons.check}
                           Enregistrer
@@ -729,17 +732,17 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
 
       {/* Not enabled state */}
       {!isModuleEnabled && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
-          <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8 text-center">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3 sm:mb-4 text-gray-400">
             {Icons.power}
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Module désactivé</h3>
-          <p className="text-gray-500 mb-6 max-w-md mx-auto">
-            Activez ce module pour accéder à sa configuration et ses fonctionnalités.
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1.5 sm:mb-2">Module désactivé</h3>
+          <p className="text-xs sm:text-sm text-gray-500 mb-4 sm:mb-6 max-w-md mx-auto">
+            Activez ce module pour accéder à sa configuration.
           </p>
           <button
             onClick={handleToggleModule}
-            className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+            className="inline-flex items-center gap-2 px-5 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
           >
             {Icons.check}
             Activer le module

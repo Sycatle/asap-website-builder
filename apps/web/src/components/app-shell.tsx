@@ -58,35 +58,35 @@ export function AppShell({ children, title, breadcrumbs = [] }: AppShellProps) {
     <SidebarProvider>
       <AsapSidebar modules={modules} />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+        <header className="flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b px-3 sm:px-4">
           <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          <Breadcrumb className="flex-1">
+          <Separator orientation="vertical" className="mr-1 sm:mr-2 h-4" />
+          <Breadcrumb className="flex-1 min-w-0">
             <BreadcrumbList>
-              <BreadcrumbItem className="hidden md:block">
+              <BreadcrumbItem className="hidden sm:block">
                 <BreadcrumbLink href="/app/dashboard">
                   ASAP
                 </BreadcrumbLink>
               </BreadcrumbItem>
               {breadcrumbs.map((crumb, index) => (
                 <React.Fragment key={index}>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem>
+                  <BreadcrumbSeparator className="hidden sm:block" />
+                  <BreadcrumbItem className="max-w-[120px] sm:max-w-none">
                     {crumb.href ? (
-                      <BreadcrumbLink href={crumb.href}>
+                      <BreadcrumbLink href={crumb.href} className="truncate">
                         {crumb.label}
                       </BreadcrumbLink>
                     ) : (
-                      <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                      <BreadcrumbPage className="truncate">{crumb.label}</BreadcrumbPage>
                     )}
                   </BreadcrumbItem>
                 </React.Fragment>
               ))}
               {title && breadcrumbs.length === 0 && (
                 <>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>{title}</BreadcrumbPage>
+                  <BreadcrumbSeparator className="hidden sm:block" />
+                  <BreadcrumbItem className="max-w-[120px] sm:max-w-none">
+                    <BreadcrumbPage className="truncate">{title}</BreadcrumbPage>
                   </BreadcrumbItem>
                 </>
               )}
@@ -94,7 +94,7 @@ export function AppShell({ children, title, breadcrumbs = [] }: AppShellProps) {
           </Breadcrumb>
           <HeaderUser />
         </header>
-        <main className="flex-1 overflow-auto p-4 md:p-6">
+        <main className="flex-1 overflow-auto p-3 sm:p-4 md:p-6">
           {children}
         </main>
       </SidebarInset>

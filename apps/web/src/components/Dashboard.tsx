@@ -249,12 +249,12 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header with site info */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:gap-4">
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
               {website?.title || 'Mon Dashboard'}
             </h1>
             {website?.status === 'published' ? (
@@ -269,17 +269,17 @@ export default function Dashboard() {
               </Badge>
             )}
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             {website?.slug ? (
-              <span className="font-mono text-sm">{website.slug}.asap.cool</span>
+              <span className="font-mono text-xs sm:text-sm">{website.slug}.asap.cool</span>
             ) : (
               'Configurez votre site pour commencer'
             )}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           {website?.status === 'draft' && (
-            <Button onClick={handlePublish} disabled={isSaving} className="bg-green-600 hover:bg-green-700">
+            <Button onClick={handlePublish} disabled={isSaving} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
               {isSaving ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
@@ -289,7 +289,7 @@ export default function Dashboard() {
             </Button>
           )}
           {website && (
-            <Button variant="outline" asChild>
+            <Button variant="outline" asChild className="w-full sm:w-auto">
               <a href={`/${website.slug}`} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Voir le site
@@ -300,146 +300,147 @@ export default function Dashboard() {
       </div>
 
       {/* Tabs for Overview / Site Settings */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
-            <LayoutDashboard className="h-4 w-4" />
-            Vue d'ensemble
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+        <TabsList className="grid w-full grid-cols-2 h-auto">
+          <TabsTrigger value="overview" className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm py-2 sm:py-2.5">
+            <LayoutDashboard className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Vue d'ensemble</span>
+            <span className="xs:hidden">Accueil</span>
           </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
+          <TabsTrigger value="settings" className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm py-2 sm:py-2.5">
+            <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Mon Site
           </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="overview" className="space-y-4 sm:space-y-6">
           {/* Stats Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             {/* Site Status */}
             <Card className="relative overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Statut du site</CardTitle>
-                <Globe className="h-4 w-4 text-muted-foreground" />
+              <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Statut</CardTitle>
+                <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2">
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   {website?.status === 'published' ? (
                     <>
-                      <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                      <span className="text-2xl font-bold">Publié</span>
+                      <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-green-500 animate-pulse" />
+                      <span className="text-lg sm:text-2xl font-bold">Publié</span>
                     </>
                   ) : (
                     <>
-                      <div className="h-2 w-2 rounded-full bg-amber-500" />
-                      <span className="text-2xl font-bold">Brouillon</span>
+                      <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-amber-500" />
+                      <span className="text-lg sm:text-2xl font-bold">Brouillon</span>
                     </>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
                   {website?.slug ? `${website.slug}.asap.cool` : 'Configurez votre site'}
                 </p>
               </CardContent>
               <div className="absolute right-0 bottom-0 opacity-5">
-                <Globe className="h-24 w-24 -mr-6 -mb-6" />
+                <Globe className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
               </div>
             </Card>
 
             {/* Storage */}
             <Card className="relative overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Stockage</CardTitle>
-                <HardDrive className="h-4 w-4 text-muted-foreground" />
+              <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Stockage</CardTitle>
+                <HardDrive className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-lg sm:text-2xl font-bold">
                   {quota ? formatBytes(quota.total_size_used) : '0 B'}
                 </div>
-                <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2">
                   <Progress 
                     value={storagePercentage} 
-                    className="h-2 flex-1"
+                    className="h-1.5 sm:h-2 flex-1"
                   />
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
                     {storagePercentage.toFixed(0)}%
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  sur {quota ? formatBytes(quota.quota_limit) : '50 MB'} disponibles
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
+                  sur {quota ? formatBytes(quota.quota_limit) : '50 MB'}
                 </p>
               </CardContent>
               <div className="absolute right-0 bottom-0 opacity-5">
-                <HardDrive className="h-24 w-24 -mr-6 -mb-6" />
+                <HardDrive className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
               </div>
             </Card>
 
             {/* Modules */}
             <Card className="relative overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Modules actifs</CardTitle>
-                <Puzzle className="h-4 w-4 text-muted-foreground" />
+              <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Modules</CardTitle>
+                <Puzzle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{enabledModulesCount}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  sur {modules.length} modules disponibles
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-lg sm:text-2xl font-bold">{enabledModulesCount}</div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+                  sur {modules.length} disponibles
                 </p>
-                <div className="flex gap-1 mt-2">
-                  {modules.slice(0, 5).map((m) => (
+                <div className="flex gap-0.5 sm:gap-1 mt-1.5 sm:mt-2">
+                  {modules.slice(0, 4).map((m) => (
                     <div
                       key={m.module_id}
-                      className={`h-2 w-2 rounded-full ${m.enabled ? 'bg-primary' : 'bg-muted'}`}
+                      className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full ${m.enabled ? 'bg-primary' : 'bg-muted'}`}
                       title={m.module_slug}
                     />
                   ))}
-                  {modules.length > 5 && (
-                    <span className="text-xs text-muted-foreground">+{modules.length - 5}</span>
+                  {modules.length > 4 && (
+                    <span className="text-[10px] sm:text-xs text-muted-foreground">+{modules.length - 4}</span>
                   )}
                 </div>
               </CardContent>
               <div className="absolute right-0 bottom-0 opacity-5">
-                <Puzzle className="h-24 w-24 -mr-6 -mb-6" />
+                <Puzzle className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
               </div>
             </Card>
 
             {/* Files */}
             <Card className="relative overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Fichiers</CardTitle>
-                <Upload className="h-4 w-4 text-muted-foreground" />
+              <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Fichiers</CardTitle>
+                <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-lg sm:text-2xl font-bold">
                   {quota ? formatBytes(quota.total_size_used) : '0 B'}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  de fichiers uploadés
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+                  uploadés
                 </p>
-                <div className="flex items-center gap-1 mt-2 text-xs text-green-600">
-                  <TrendingUp className="h-3 w-3" />
-                  <span>Prêt pour plus</span>
+                <div className="flex items-center gap-1 mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-green-600">
+                  <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                  <span>OK</span>
                 </div>
               </CardContent>
               <div className="absolute right-0 bottom-0 opacity-5">
-                <Upload className="h-24 w-24 -mr-6 -mb-6" />
+                <Upload className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
               </div>
             </Card>
           </div>
 
           {/* Main Content Grid */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <div className="grid gap-3 sm:gap-4 lg:grid-cols-7">
             {/* Storage Chart */}
-            <Card className="col-span-4 lg:col-span-3">
-              <CardHeader>
-                <CardTitle>Utilisation du stockage</CardTitle>
-                <CardDescription>
-                  Espace disque utilisé par vos fichiers
+            <Card className="lg:col-span-3">
+              <CardHeader className="px-4 sm:px-6">
+                <CardTitle className="text-sm sm:text-base">Utilisation du stockage</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Espace disque utilisé
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex items-center justify-center pb-0">
+              <CardContent className="flex items-center justify-center pb-0 px-4 sm:px-6">
                 <ChartContainer
                   config={storageChartConfig}
-                  className="mx-auto aspect-square max-h-[200px]"
+                  className="mx-auto aspect-square max-h-[160px] sm:max-h-[200px]"
                 >
                   <RadialBarChart
                     data={storageChartData}
@@ -510,69 +511,69 @@ export default function Dashboard() {
             </Card>
 
             {/* Quick Actions */}
-            <Card className="col-span-4">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
+            <Card className="lg:col-span-4">
+              <CardHeader className="px-4 sm:px-6">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   Actions rapides
                 </CardTitle>
-                <CardDescription>
-                  Accédez rapidement aux fonctionnalités principales
+                <CardDescription className="text-xs sm:text-sm">
+                  Accédez rapidement aux fonctionnalités
                 </CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-3">
+              <CardContent className="grid gap-2 sm:gap-3 px-4 sm:px-6">
                 <button
                   onClick={() => setActiveTab('settings')}
-                  className="group flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 text-left w-full"
+                  className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 text-left w-full"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                      <Edit className="h-5 w-5" />
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                      <Edit className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">Éditer mon site</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <h3 className="font-semibold text-sm sm:text-base">Éditer mon site</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
                         Modifier le contenu et le design
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </button>
 
                 <a
                   href="/app/modules"
-                  className="group flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50"
+                  className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 group-hover:bg-violet-500 group-hover:text-white transition-colors">
-                      <Puzzle className="h-5 w-5" />
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 group-hover:bg-violet-500 group-hover:text-white transition-colors">
+                      <Puzzle className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">Gérer les modules</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <h3 className="font-semibold text-sm sm:text-base">Gérer les modules</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         {enabledModulesCount} module{enabledModulesCount > 1 ? 's' : ''} actif{enabledModulesCount > 1 ? 's' : ''}
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-violet-600 transition-colors" />
+                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-violet-600 transition-colors" />
                 </a>
 
                 <a
                   href="/app/cloud"
-                  className="group flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50"
+                  className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                      <Upload className="h-5 w-5" />
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                      <Upload className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">Mes fichiers</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <h3 className="font-semibold text-sm sm:text-base">Mes fichiers</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         {quota ? formatBytes(quota.total_size_used) : '0 B'} utilisés
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-emerald-600 transition-colors" />
+                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-emerald-600 transition-colors" />
                 </a>
 
                 {website && (
@@ -580,20 +581,20 @@ export default function Dashboard() {
                     href={`/${website.slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50"
+                    className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
-                        <ExternalLink className="h-5 w-5" />
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                        <ExternalLink className="h-4 w-4 sm:h-5 sm:w-5" />
                       </div>
                       <div>
-                        <h3 className="font-semibold">Voir mon site</h3>
-                        <p className="text-sm text-muted-foreground">
+                        <h3 className="font-semibold text-sm sm:text-base">Voir mon site</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate max-w-[150px] sm:max-w-none">
                           {website.slug}.asap.cool
                         </p>
                       </div>
                     </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-amber-600 transition-colors" />
+                    <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-amber-600 transition-colors" />
                   </a>
                 )}
               </CardContent>
@@ -602,43 +603,43 @@ export default function Dashboard() {
         </TabsContent>
 
         {/* Site Settings Tab */}
-        <TabsContent value="settings" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-2">
+        <TabsContent value="settings" className="space-y-4 sm:space-y-6">
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
             {/* Website Info Form */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Globe className="h-5 w-5 text-primary" />
+              <CardHeader className="px-4 sm:px-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   Informations générales
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   Les informations de base de votre site
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSave} className="space-y-6">
-                  <div className="space-y-2">
-                    <FormLabel htmlFor="slug" className="flex items-center gap-2">
-                      <Link2 className="h-4 w-4 text-muted-foreground" />
+              <CardContent className="px-4 sm:px-6">
+                <form onSubmit={handleSave} className="space-y-4 sm:space-y-6">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <FormLabel htmlFor="slug" className="flex items-center gap-2 text-sm">
+                      <Link2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                       URL du site
                     </FormLabel>
                     <div className="flex items-center">
-                      <span className="flex h-10 items-center rounded-l-md border border-r-0 bg-muted px-3 text-sm text-muted-foreground">
+                      <span className="flex h-9 sm:h-10 items-center rounded-l-md border border-r-0 bg-muted px-2 sm:px-3 text-xs sm:text-sm text-muted-foreground">
                         asap.cool/
                       </span>
                       <Input
                         id="slug"
                         value={website?.slug || ''}
                         disabled
-                        className="rounded-l-none bg-muted"
+                        className="rounded-l-none bg-muted h-9 sm:h-10 text-sm"
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">L'URL ne peut pas être modifiée après la création</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">L'URL ne peut pas être modifiée</p>
                   </div>
 
-                  <div className="space-y-2">
-                    <FormLabel htmlFor="title" className="flex items-center gap-2">
-                      <Type className="h-4 w-4 text-muted-foreground" />
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <FormLabel htmlFor="title" className="flex items-center gap-2 text-sm">
+                      <Type className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                       Titre
                     </FormLabel>
                     <Input
@@ -646,19 +647,21 @@ export default function Dashboard() {
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="Votre nom ou titre"
+                      className="h-9 sm:h-10 text-sm"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <FormLabel htmlFor="tagline" className="flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <FormLabel htmlFor="tagline" className="flex items-center gap-2 text-sm">
+                      <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                       Tagline
                     </FormLabel>
                     <Input
                       id="tagline"
                       value={tagline}
                       onChange={(e) => setTagline(e.target.value)}
-                      placeholder="Développeur Full Stack | Designer | ..."
+                      placeholder="Développeur | Designer | ..."
+                      className="h-9 sm:h-10 text-sm"
                     />
                   </div>
 
@@ -680,31 +683,32 @@ export default function Dashboard() {
 
             {/* GitHub Integration */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Github className="h-5 w-5" />
+              <CardHeader className="px-4 sm:px-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Github className="h-4 w-4 sm:h-5 sm:w-5" />
                   Intégration GitHub
                 </CardTitle>
-                <CardDescription>
-                  Connectez votre compte GitHub pour afficher automatiquement vos projets
+                <CardDescription className="text-xs sm:text-sm">
+                  Connectez GitHub pour afficher vos projets
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleGitHubConnect} className="space-y-4">
-                  <div className="space-y-2">
-                    <FormLabel htmlFor="github">Nom d'utilisateur GitHub</FormLabel>
-                    <div className="flex gap-2">
+              <CardContent className="px-4 sm:px-6">
+                <form onSubmit={handleGitHubConnect} className="space-y-3 sm:space-y-4">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <FormLabel htmlFor="github" className="text-sm">Nom d'utilisateur GitHub</FormLabel>
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Input
                         id="github"
                         value={githubUsername}
                         onChange={(e) => setGithubUsername(e.target.value)}
                         placeholder="votre-username"
-                        className="flex-1"
+                        className="flex-1 h-9 sm:h-10 text-sm"
                       />
                       <Button 
                         type="submit" 
                         variant="secondary"
                         disabled={isSaving || !githubUsername.trim()}
+                        className="h-9 sm:h-10 w-full sm:w-auto"
                       >
                         {isSaving ? (
                           <Loader2 className="h-4 w-4 animate-spin" />

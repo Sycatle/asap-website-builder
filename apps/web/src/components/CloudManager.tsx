@@ -200,13 +200,13 @@ export default function CloudManager() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Fichiers</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Fichiers</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
               Gérez vos fichiers et médias
             </p>
           </div>
@@ -238,14 +238,14 @@ export default function CloudManager() {
               className="hidden"
               id="file-upload"
             />
-            <Button asChild disabled={isUploading}>
+            <Button asChild disabled={isUploading} className="h-9 sm:h-10">
               <label htmlFor="file-upload" className="cursor-pointer">
                 {isUploading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-1.5 sm:mr-2 animate-spin" />
                 ) : (
-                  <Upload className="h-4 w-4 mr-2" />
+                  <Upload className="h-4 w-4 mr-1.5 sm:mr-2" />
                 )}
-                {isUploading ? 'Upload...' : 'Upload'}
+                <span className="text-sm">{isUploading ? 'Upload...' : 'Upload'}</span>
               </label>
             </Button>
           </div>
@@ -255,23 +255,24 @@ export default function CloudManager() {
       {/* Quota Card */}
       {quota && (
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 px-4 sm:px-6">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <HardDrive className="h-4 w-4 text-muted-foreground" />
-                Espace de stockage
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                <HardDrive className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+                <span className="hidden xs:inline">Espace de stockage</span>
+                <span className="xs:hidden">Stockage</span>
               </CardTitle>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-xs sm:text-sm text-muted-foreground">
                 {formatBytes(quota.total_size_used)} / {formatBytes(quota.quota_limit)}
               </span>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 sm:px-6">
             <Progress 
               value={quota.usage_percentage} 
-              className={`h-2 ${quota.usage_percentage > 80 ? '[&>div]:bg-destructive' : ''}`}
+              className={`h-1.5 sm:h-2 ${quota.usage_percentage > 80 ? '[&>div]:bg-destructive' : ''}`}
             />
-            <p className="mt-2 text-xs text-muted-foreground">
+            <p className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-muted-foreground">
               {quota.usage_percentage.toFixed(1)}% utilisé · {formatBytes(quota.remaining)} restant
             </p>
           </CardContent>
@@ -299,7 +300,7 @@ export default function CloudManager() {
         </Card>
       ) : viewMode === 'grid' ? (
         /* Grid View */
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
           {files.map((file) => (
             <Card
               key={file.id}
@@ -317,22 +318,22 @@ export default function CloudManager() {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    {getFileIcon(file.mime_type, "h-12 w-12")}
+                    {getFileIcon(file.mime_type, "h-8 w-8 sm:h-12 sm:w-12")}
                   </div>
                 )}
                 {/* Hover Overlay */}
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Eye className="h-6 w-6 text-white" />
+                  <Eye className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
               </div>
               {/* File Info */}
-              <CardContent className="p-3">
-                <p className="text-sm font-medium truncate">{file.filename}</p>
+              <CardContent className="p-2 sm:p-3">
+                <p className="text-xs sm:text-sm font-medium truncate">{file.filename}</p>
                 <div className="flex items-center justify-between mt-1">
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 sm:px-2">
                     {getFileTypeLabel(file.mime_type)}
                   </Badge>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-[10px] sm:text-xs text-muted-foreground">
                     {formatBytes(file.size)}
                   </span>
                 </div>
@@ -348,22 +349,23 @@ export default function CloudManager() {
               {files.map((file) => (
                 <div
                   key={file.id}
-                  className="flex items-center gap-4 p-4 hover:bg-accent/50 cursor-pointer transition-colors"
+                  className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-accent/50 cursor-pointer transition-colors"
                   onClick={() => setPreviewFile(file)}
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                    {getFileIcon(file.mime_type)}
+                  <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-muted shrink-0">
+                    {getFileIcon(file.mime_type, "h-4 w-4 sm:h-5 sm:w-5")}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{file.filename}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm sm:text-base font-medium truncate">{file.filename}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       {formatBytes(file.size)} · {new Date(file.created_at).toLocaleDateString('fr-FR')}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="h-8 w-8 p-0"
                       onClick={(e) => {
                         e.stopPropagation();
                         copyToClipboard(file.id);
@@ -378,6 +380,7 @@ export default function CloudManager() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="h-8 w-8 p-0"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete(file.id, file.filename);
@@ -395,32 +398,32 @@ export default function CloudManager() {
 
       {/* Preview Dialog */}
       <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-3xl p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {previewFile && getFileIcon(previewFile.mime_type)}
+            <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+              {previewFile && getFileIcon(previewFile.mime_type, "h-4 w-4 sm:h-5 sm:w-5")}
               <span className="truncate">{previewFile?.filename}</span>
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               {previewFile && `${getFileTypeLabel(previewFile.mime_type)} · ${formatBytes(previewFile.size)}`}
             </DialogDescription>
           </DialogHeader>
           
           {/* Preview Content */}
           {previewFile && (
-            <div className="mt-4">
+            <div className="mt-3 sm:mt-4">
               {isImage(previewFile.mime_type) && (
                 <img
                   src={getFileUrl(previewFile.id)}
                   alt={previewFile.filename}
-                  className="max-h-[60vh] mx-auto rounded-lg"
+                  className="max-h-[50vh] sm:max-h-[60vh] mx-auto rounded-lg"
                 />
               )}
               {isVideo(previewFile.mime_type) && (
                 <video
                   src={getFileUrl(previewFile.id)}
                   controls
-                  className="max-h-[60vh] mx-auto rounded-lg"
+                  className="max-h-[50vh] sm:max-h-[60vh] w-full mx-auto rounded-lg"
                 />
               )}
               {isAudio(previewFile.mime_type) && (
@@ -431,28 +434,28 @@ export default function CloudManager() {
                 />
               )}
               {!isImage(previewFile.mime_type) && !isVideo(previewFile.mime_type) && !isAudio(previewFile.mime_type) && (
-                <div className="flex flex-col items-center justify-center py-12 bg-muted rounded-lg">
-                  {getFileIcon(previewFile.mime_type, "h-16 w-16")}
-                  <p className="mt-4 text-muted-foreground">Aperçu non disponible</p>
+                <div className="flex flex-col items-center justify-center py-8 sm:py-12 bg-muted rounded-lg">
+                  {getFileIcon(previewFile.mime_type, "h-12 w-12 sm:h-16 sm:w-16")}
+                  <p className="mt-3 sm:mt-4 text-sm text-muted-foreground">Aperçu non disponible</p>
                 </div>
               )}
             </div>
           )}
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex-col gap-2 mt-4 sm:mt-0">
             <Button
               variant="outline"
               onClick={() => previewFile && copyToClipboard(previewFile.id)}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto h-9 text-sm"
             >
               {copiedId === previewFile?.id ? (
                 <>
-                  <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
+                  <CheckCircle2 className="h-4 w-4 mr-1.5 text-green-600" />
                   Copié !
                 </>
               ) : (
                 <>
-                  <Copy className="h-4 w-4 mr-2" />
+                  <Copy className="h-4 w-4 mr-1.5" />
                   Copier l'URL
                 </>
               )}
@@ -460,19 +463,19 @@ export default function CloudManager() {
             <Button
               variant="outline"
               asChild
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto h-9 text-sm"
             >
               <a href={previewFile ? getFileUrl(previewFile.id) : '#'} download>
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="h-4 w-4 mr-1.5" />
                 Télécharger
               </a>
             </Button>
             <Button
               variant="destructive"
               onClick={() => previewFile && handleDelete(previewFile.id, previewFile.filename)}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto h-9 text-sm"
             >
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="h-4 w-4 mr-1.5" />
               Supprimer
             </Button>
           </DialogFooter>
