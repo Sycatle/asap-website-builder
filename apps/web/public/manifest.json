@@ -2,7 +2,7 @@
   "name": "ASAP - Site web en 5 minutes",
   "short_name": "ASAP",
   "description": "Créez votre site web professionnel en 5 minutes avec ASAP",
-  "start_url": "/?source=pwa",
+  "start_url": "/app/dashboard?source=pwa",
   "id": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui", "browser"],
@@ -14,6 +14,7 @@
   "dir": "ltr",
   "categories": ["productivity", "utilities", "business"],
   "prefer_related_applications": false,
+  "iarc_rating_id": "",
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
@@ -91,8 +92,77 @@
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "Accéder au tableau de bord",
-      "url": "/dashboard",
+      "url": "/app/dashboard?source=shortcut",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Modules",
+      "short_name": "Modules",
+      "description": "Gérer vos modules",
+      "url": "/app/modules?source=shortcut",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Cloud",
+      "short_name": "Cloud",
+      "description": "Accéder à vos fichiers",
+      "url": "/app/cloud?source=shortcut",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Notifications",
+      "short_name": "Notifs",
+      "description": "Voir vos notifications",
+      "url": "/app/notifications?source=shortcut",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/app/cloud?source=share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "files",
+          "accept": ["image/*", "application/pdf", "text/*", "video/*", "audio/*"]
+        }
+      ]
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "/app/cloud?source=file-handler",
+      "accept": {
+        "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico"],
+        "application/pdf": [".pdf"],
+        "text/*": [".txt", ".md", ".json", ".xml", ".csv"],
+        "video/*": [".mp4", ".webm", ".mov"],
+        "audio/*": [".mp3", ".wav", ".ogg", ".m4a"]
+      }
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+asap",
+      "url": "/app/handle?protocol=%s"
+    }
+  ],
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "auto"]
+  },
+  "handle_links": "preferred",
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "related_applications": [],
+  "serviceworker": {
+    "src": "/sw.js",
+    "scope": "/",
+    "type": "classic",
+    "update_via_cache": "none"
+  }
 }
