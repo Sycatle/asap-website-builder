@@ -45,29 +45,33 @@ export function useGridNavigation<T>({
   const [focusedIndex, setFocusedIndex] = useState(-1)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const containerRef = useRef<HTMLDivElement>(null)
-  const itemRefs = useRef<Map<number, HTMLElement>>(new Map())
 
-  // Clear selection when items change significantly
+  // Memoize item IDs to avoid infinite loops
+  const itemIds = useMemo(() => new Set(items.map(getItemId)), [items, getItemId])
+
+  // Clear selection when items change - only remove IDs that no longer exist
   useEffect(() => {
     setSelectedIds(prev => {
+      // Check if any selected IDs are no longer in items
+      let hasRemovedIds = false
+      prev.forEach(id => {
+        if (!itemIds.has(id)) hasRemovedIds = true
+      })
+      
+      // Only create new Set if needed
+      if (!hasRemovedIds) return prev
+      
       const newSet = new Set<string>()
-      const itemIds = new Set(items.map(getItemId))
       prev.forEach(id => {
         if (itemIds.has(id)) newSet.add(id)
       })
       return newSet
     })
-  }, [items, getItemId])
+  }, [itemIds])
 
   const focusItem = useCallback((index: number) => {
     if (index < 0 || index >= items.length) return
     setFocusedIndex(index)
-    
-    // Focus the actual DOM element
-    const element = itemRefs.current.get(index)
-    if (element) {
-      element.focus()
-    }
   }, [items.length])
 
   const isSelected = useCallback((item: T) => {
@@ -251,17 +255,11 @@ export function useGridNavigation<T>({
   ])
 
   const getItemProps = useCallback((item: T, index: number) => {
+    const id = getItemId(item)
     return {
       tabIndex: focusedIndex === index || (focusedIndex === -1 && index === 0) ? 0 : -1,
       'data-focused': focusedIndex === index,
-      'data-selected': selectedIds.has(getItemId(item)),
-      ref: (el: HTMLElement | null) => {
-        if (el) {
-          itemRefs.current.set(index, el)
-        } else {
-          itemRefs.current.delete(index)
-        }
-      },
+      'data-selected': selectedIds.has(id),
       onFocus: () => setFocusedIndex(index),
       onClick: (e: React.MouseEvent) => {
         const modifier = e.ctrlKey || e.metaKey
@@ -274,7 +272,7 @@ export function useGridNavigation<T>({
           selectRange(focusedIndex, index)
         } else {
           // Clear previous selection on normal click
-          setSelectedIds(new Set([getItemId(item)]))
+          setSelectedIds(new Set([id]))
         }
         setFocusedIndex(index)
       },
@@ -298,13 +296,37 @@ export function useGridNavigation<T>({
 }
 
 // Helper component to show keyboard shortcuts hint
-export function KeyboardHint({ className = "" }: { className?: string }) {
+export function KeyboardHint({ className = "", compact = false }: { className?: string; compact?: boolean }) {
+  if (compact) {
+    return (
+      <div className={`text-[10px] sm:text-xs text-muted-foreground flex items-center gap-2 ${className}`}>
+        <kbd className="px-1.5 py-0.5 bg-muted rounded font-mono">⌘A</kbd>
+        <span>tout sélectionner</span>
+      </div>
+    )
+  }
+  
   return (
-    <div className={`text-xs text-muted-foreground ${className}`}>
-      <span className="hidden sm:inline">
-        Navigation: <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">↑↓←→</kbd>
-        {' · '}Sélection: <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">⌘A</kbd>
-        {' · '}Ouvrir: <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Entrée</kbd>
+    <div className={`text-xs text-muted-foreground flex flex-wrap items-center justify-center gap-x-4 gap-y-1 ${className}`}>
+      <span className="hidden sm:flex items-center gap-1.5">
+        <kbd className="px-1.5 py-0.5 bg-muted rounded font-mono text-[10px]">↑↓←→</kbd>
+        <span>naviguer</span>
+      </span>
+      <span className="flex items-center gap-1.5">
+        <kbd className="px-1.5 py-0.5 bg-muted rounded font-mono text-[10px]">⌘/Ctrl+clic</kbd>
+        <span>sélectionner</span>
+      </span>
+      <span className="hidden sm:flex items-center gap-1.5">
+        <kbd className="px-1.5 py-0.5 bg-muted rounded font-mono text-[10px]">Shift+clic</kbd>
+        <span>plage</span>
+      </span>
+      <span className="flex items-center gap-1.5">
+        <kbd className="px-1.5 py-0.5 bg-muted rounded font-mono text-[10px]">⌘A</kbd>
+        <span>tout</span>
+      </span>
+      <span className="hidden xs:flex items-center gap-1.5">
+        <kbd className="px-1.5 py-0.5 bg-muted rounded font-mono text-[10px]">Entrée</kbd>
+        <span>ouvrir</span>
       </span>
     </div>
   )
