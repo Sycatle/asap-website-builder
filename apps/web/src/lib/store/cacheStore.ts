@@ -626,7 +626,7 @@ export const useCacheStore = create<CacheState & CacheActions>()(
     }),
     {
       name: 'asap-dashboard-cache',
-      version: 1,
+      version: 2, // Incremented to clear stale websiteModules with old IDs
       partialize: (state) => ({
         // Only persist data entries, not loading/error states
         user: state.user,
@@ -638,6 +638,18 @@ export const useCacheStore = create<CacheState & CacheActions>()(
         quota: state.quota,
         files: state.files,
       }),
+      migrate: (persistedState: unknown, version: number) => {
+        // Migration from v1 to v2: clear websiteModules to avoid stale IDs
+        if (version < 2) {
+          const state = persistedState as Partial<CacheState>;
+          return {
+            ...state,
+            websiteModules: {}, // Clear stale modules data
+            moduleData: {}, // Clear stale module data
+          };
+        }
+        return persistedState as CacheState;
+      },
     }
   )
 );

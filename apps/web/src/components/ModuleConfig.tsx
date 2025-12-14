@@ -401,7 +401,10 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
   };
 
   const confirmDeactivateModule = async () => {
-    if (!websiteId || !websiteModule) return;
+    if (!websiteId || !websiteModule) {
+      toast.error('Données manquantes pour la désactivation');
+      return;
+    }
     
     setIsDeactivating(true);
     

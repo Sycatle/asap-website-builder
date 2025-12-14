@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { modulesAPI } from '../lib/api';
 import type { Module, WebsiteModule } from '../lib/api/modules';
 import { useWebsites, useModuleCatalog, useWebsiteModules, useCacheActions } from '../hooks/useCache';
@@ -49,7 +49,7 @@ const categoryLabels: Record<string, string> = {
 
 export default function ModulesManager() {
   // Use cached data
-  const { websites } = useWebsites();
+  const { websites, isLoading: websitesLoading } = useWebsites();
   const { modules: catalogModules, isLoading: catalogLoading } = useModuleCatalog();
   
   const currentWebsiteId = websites.length > 0 ? websites[0].id : null;
@@ -64,7 +64,7 @@ export default function ModulesManager() {
   
   const [activatingModule, setActivatingModule] = useState<string | null>(null);
   
-  const isLoading = catalogLoading || modulesLoading;
+  const isLoading = websitesLoading || catalogLoading || modulesLoading;
 
   // Filter active and suggested modules
   const enabledActiveModules = useMemo(() => 
@@ -77,12 +77,21 @@ export default function ModulesManager() {
     ), [catalogModules, activeModules]
   );
 
-  // Show error if no website
+  // Track if initial load has completed to avoid showing error toast prematurely
+  const hasLoadedOnce = useRef(false);
+  
+  // Show error if no website (only after initial load completes)
   useEffect(() => {
-    if (!catalogLoading && !modulesLoading && websites.length === 0) {
+    // Wait for loading to start at least once
+    if (websitesLoading) {
+      hasLoadedOnce.current = true;
+    }
+    
+    // Only show error after we've loaded and confirmed no websites
+    if (hasLoadedOnce.current && !websitesLoading && websites.length === 0) {
       toast.error('Aucun site web trouvé. Créez un site pour gérer les modules.');
     }
-  }, [catalogLoading, modulesLoading, websites.length]);
+  }, [websitesLoading, websites.length]);
 
   const handleActivateModule = async (module: Module) => {
     if (!currentWebsiteId) {
