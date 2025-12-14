@@ -296,3 +296,78 @@ pub async fn update_website_module(
         }
     }
 }
+
+pub async fn deactivate_module(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Path((website_id, module_id)): Path<(String, String)>,
+) -> impl IntoResponse {
+    let website_uuid = match Uuid::parse_str(&website_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid website ID format"
+            }))).into_response();
+        }
+    };
+
+    // For deactivate, we accept either the website_modules.id or the module_id
+    // Just parse as UUID directly (no slug resolution needed for delete)
+    let module_uuid = match Uuid::parse_str(&module_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid module ID format"
+            }))).into_response();
+        }
+    };
+
+    let account_id = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    use crate::queries;
+    let result = queries::deactivate_website_module(
+        &pool,
+        website_uuid,
+        module_uuid,
+        account_id,
+    ).await;
+
+    match result {
+        Ok(deleted) if deleted => {
+            let event_payload = serde_json::json!({
+                "website_id": website_id,
+                "module_id": module_id
+            });
+
+            let _ = sqlx::query(
+                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'MODULE_DEACTIVATED', $2)"
+            )
+            .bind(account_id)
+            .bind(&event_payload)
+            .execute(&pool)
+            .await;
+
+            (StatusCode::OK, Json(serde_json::json!({
+                "message": "Module deactivated successfully"
+            }))).into_response()
+        }
+        Ok(_) => {
+            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Module not found for this website"
+            }))).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Database error deactivating module: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response()
+        }
+    }
+}

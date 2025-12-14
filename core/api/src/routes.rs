@@ -54,6 +54,7 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
         .route("/websites/:id/modules", get(crate::websites::list_website_modules))
         .route("/websites/:id/modules", post(crate::websites::activate_module))
         .route("/websites/:id/modules/:module_id", patch(crate::websites::update_website_module))
+        .route("/websites/:id/modules/:module_id", delete(crate::websites::deactivate_module))
         // Website sections routes
         .route("/websites/:id/sections", get(crate::websites::list_website_sections))
         .route("/websites/:id/sections", post(crate::websites::create_section))
