@@ -306,7 +306,7 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
             .or_else(|| event.payload["requested_by"].as_str())
             .unwrap_or("unknown");
 
-        tracing::info!("Fetching GitHub repos for user: {} (user_id: {})", github_username, user_id);
+        tracing::info!("Fetching GitHub repos for account: {} (account_id: {})", github_username, account_id);
 
         // Fetch repos from GitHub (using the github-generator module)
         let github_client = asap_github_generator::GitHubClient::new()?;
