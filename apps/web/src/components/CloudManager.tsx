@@ -37,6 +37,7 @@ import {
   Copy,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Loader2,
   LayoutGrid,
   List,
@@ -61,6 +62,9 @@ export default function CloudManager() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ file: FileMetadata } | null>(null);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const gridContainerRef = useRef<HTMLDivElement>(null);
 
@@ -141,30 +145,52 @@ export default function CloudManager() {
     }
   };
 
-  const handleDelete = async (fileId: string, filename: string) => {
-    if (!confirm(`Supprimer ${filename} ?`)) return;
+  const handleDelete = async (file: FileMetadata) => {
+    setDeleteConfirm({ file });
+  };
 
-    const deletePromise = async () => {
-      await filesAPI.delete(fileId);
-      // Optimistic update: remove from cache immediately
-      removeFile(fileId);
-      setPreviewFile(null);
-      // Refetch quota (it changed after delete)
-      await refetchQuota(true);
-    };
-
-    toast.promise(deletePromise(), {
-      loading: 'Suppression en cours...',
-      success: 'Fichier supprimé',
-      error: 'Erreur lors de la suppression',
-    });
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+    
+    const { file } = deleteConfirm;
+    setIsDeleting(true);
 
     try {
-      await deletePromise();
+      await filesAPI.delete(file.id);
+      removeFile(file.id);
+      setPreviewFile(null);
+      await refetchQuota(true);
+      toast.success('Fichier supprimé');
     } catch (error) {
       console.error('Failed to delete file:', error);
-      // Refetch files on error to sync state
+      toast.error('Erreur lors de la suppression');
       await refetchFiles(true);
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirm(null);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const selectedFiles = files.filter(f => selectedIds.has(f.id));
+    if (selectedFiles.length === 0) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      await Promise.all(
+        selectedFiles.map(file => filesAPI.delete(file.id).then(() => removeFile(file.id)))
+      );
+      toast.success(`${selectedFiles.length} fichier${selectedFiles.length > 1 ? 's' : ''} supprimé${selectedFiles.length > 1 ? 's' : ''}`);
+      clearSelection();
+      await refetchQuota(true);
+    } catch (error) {
+      console.error('Failed to delete files:', error);
+      toast.error('Erreur lors de la suppression');
+      await refetchFiles(true);
+    } finally {
+      setIsDeleting(false);
+      setBulkDeleteConfirm(false);
     }
   };
 
@@ -374,8 +400,11 @@ export default function CloudManager() {
                     style={{ animationDelay: `${Math.min(index * 0.03, 0.3)}s`, animationFillMode: 'both' }}
                     onFocus={itemProps.onFocus}
                     onClick={(e) => {
-                      itemProps.onClick(e);
-                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
+                      // Only handle selection on Ctrl/Cmd+click or Shift+click
+                      if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                        itemProps.onClick(e);
+                      } else {
+                        // Normal click just opens preview
                         setPreviewFile(file);
                       }
                     }}
@@ -461,7 +490,7 @@ export default function CloudManager() {
                   <ContextMenuSeparator />
                   <ContextMenuItem 
                     className="text-destructive focus:text-destructive"
-                    onClick={() => handleDelete(file.id, file.filename)}
+                    onClick={() => handleDelete(file)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Supprimer
@@ -497,8 +526,11 @@ export default function CloudManager() {
                         style={{ animationDelay: `${index * 0.02}s`, animationFillMode: 'both' }}
                         onFocus={itemProps.onFocus}
                         onClick={(e) => {
-                          itemProps.onClick(e);
-                          if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
+                          // Only handle selection on Ctrl/Cmd+click or Shift+click
+                          if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                            itemProps.onClick(e);
+                          } else {
+                            // Normal click just opens preview
                             setPreviewFile(file);
                           }
                         }}
@@ -556,7 +588,7 @@ export default function CloudManager() {
                             className="h-8 w-8 p-0"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDelete(file.id, file.filename);
+                              handleDelete(file);
                             }}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
@@ -590,7 +622,7 @@ export default function CloudManager() {
                       <ContextMenuSeparator />
                       <ContextMenuItem 
                         className="text-destructive focus:text-destructive"
-                        onClick={() => handleDelete(file.id, file.filename)}
+                        onClick={() => handleDelete(file)}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Supprimer
@@ -657,18 +689,7 @@ export default function CloudManager() {
                   variant="ghost"
                   size="sm"
                   className="h-8 px-2 sm:px-3 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
-                  onClick={() => {
-                    const selectedFiles = files.filter(f => selectedIds.has(f.id));
-                    if (selectedFiles.length > 0 && confirm(`Supprimer ${selectedFiles.length} fichier${selectedFiles.length > 1 ? 's' : ''} ?`)) {
-                      Promise.all(
-                        selectedFiles.map(file => filesAPI.delete(file.id).then(() => removeFile(file.id)))
-                      ).then(() => {
-                        toast.success(`${selectedFiles.length} fichier${selectedFiles.length > 1 ? 's' : ''} supprimé${selectedFiles.length > 1 ? 's' : ''}`);
-                        clearSelection();
-                        refetchQuota(true);
-                      });
-                    }
-                  }}
+                  onClick={() => setBulkDeleteConfirm(true)}
                   title="Supprimer la sélection"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -774,11 +795,102 @@ export default function CloudManager() {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => previewFile && handleDelete(previewFile.id, previewFile.filename)}
+              onClick={() => {
+                if (previewFile) {
+                  setPreviewFile(null);
+                  handleDelete(previewFile);
+                }
+              }}
               className="w-full sm:w-auto h-9 text-sm"
             >
               <Trash2 className="h-4 w-4 mr-1.5" />
               Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Confirmer la suppression
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Êtes-vous sûr de vouloir supprimer <span className="font-medium text-foreground">{deleteConfirm?.file.filename}</span> ?
+              <br />
+              <span className="text-muted-foreground">Cette action est irréversible.</span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirm(null)}
+              disabled={isDeleting}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Supprimer
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Confirmer la suppression
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Êtes-vous sûr de vouloir supprimer <span className="font-medium text-foreground">{selectedIds.size} fichier{selectedIds.size > 1 ? 's' : ''}</span> ?
+              <br />
+              <span className="text-muted-foreground">Cette action est irréversible.</span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setBulkDeleteConfirm(false)}
+              disabled={isDeleting}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Supprimer {selectedIds.size} fichier{selectedIds.size > 1 ? 's' : ''}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

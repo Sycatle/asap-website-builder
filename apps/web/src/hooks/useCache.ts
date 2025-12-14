@@ -2,6 +2,13 @@ import { useEffect, useCallback, useRef } from 'react';
 import { useCacheStore, useIsLoading, CACHE_TTL } from '../lib/store/cacheStore';
 import type { Website, QuotaUsage, WebsiteModule, Module, ModuleData, FileMetadata } from '../lib/api';
 
+// Stable default values to avoid infinite loops with useSyncExternalStore
+const EMPTY_ARRAY: readonly any[] = [];
+const EMPTY_WEBSITES: Website[] = EMPTY_ARRAY as Website[];
+const EMPTY_MODULES: Module[] = EMPTY_ARRAY as Module[];
+const EMPTY_WEBSITE_MODULES: WebsiteModule[] = EMPTY_ARRAY as WebsiteModule[];
+const EMPTY_FILES: FileMetadata[] = EMPTY_ARRAY as FileMetadata[];
+
 // ============================================
 // useWebsites - Hook for websites list
 // ============================================
@@ -21,7 +28,7 @@ interface UseWebsitesReturn {
 export function useWebsites(options: UseWebsitesOptions = {}): UseWebsitesReturn {
   const { autoFetch = true } = options;
   
-  const websites = useCacheStore((state) => state.websites?.data ?? []);
+  const websites = useCacheStore((state) => state.websites?.data ?? EMPTY_WEBSITES);
   const websitesEntry = useCacheStore((state) => state.websites);
   const fetchWebsites = useCacheStore((state) => state.fetchWebsites);
   const invalidate = useCacheStore((state) => state.invalidate);
@@ -190,7 +197,7 @@ interface UseFilesReturn {
 export function useFiles(options: UseFilesOptions = {}): UseFilesReturn {
   const { autoFetch = true } = options;
   
-  const files = useCacheStore((state) => state.files?.data ?? []);
+  const files = useCacheStore((state) => state.files?.data ?? EMPTY_FILES);
   const filesEntry = useCacheStore((state) => state.files);
   const fetchFiles = useCacheStore((state) => state.fetchFiles);
   const addFileToCache = useCacheStore((state) => state.addFileToCache);
@@ -244,7 +251,7 @@ interface UseModuleCatalogReturn {
 export function useModuleCatalog(options: UseModuleCatalogOptions = {}): UseModuleCatalogReturn {
   const { autoFetch = true } = options;
   
-  const modules = useCacheStore((state) => state.moduleCatalog?.data ?? []);
+  const modules = useCacheStore((state) => state.moduleCatalog?.data ?? EMPTY_MODULES);
   const moduleCatalogEntry = useCacheStore((state) => state.moduleCatalog);
   const fetchModuleCatalog = useCacheStore((state) => state.fetchModuleCatalog);
   const isStale = useCacheStore((state) => state.isStale);
@@ -297,7 +304,7 @@ export function useWebsiteModules(
   const { autoFetch = true } = options;
   
   const modules = useCacheStore((state) => 
-    websiteId ? state.websiteModules[websiteId]?.data ?? [] : []
+    websiteId ? (state.websiteModules[websiteId]?.data ?? EMPTY_WEBSITE_MODULES) : EMPTY_WEBSITE_MODULES
   );
   const modulesEntry = useCacheStore((state) => 
     websiteId ? state.websiteModules[websiteId] : null

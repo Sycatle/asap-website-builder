@@ -656,9 +656,15 @@ export const useError = (key: string) => {
   return useCacheStore((state) => state.errors[key] ?? null);
 };
 
+// Stable default values for selectors
+const EMPTY_WEBSITES: Website[] = [];
+const EMPTY_MODULES: Module[] = [];
+const EMPTY_WEBSITE_MODULES: WebsiteModule[] = [];
+const EMPTY_FILES: FileMetadata[] = [];
+
 // Hook to get cached websites
 export const useCachedWebsites = () => {
-  return useCacheStore((state) => state.websites?.data ?? []);
+  return useCacheStore((state) => state.websites?.data ?? EMPTY_WEBSITES);
 };
 
 // Hook to get cached website by id
@@ -673,15 +679,15 @@ export const useCachedQuota = () => {
 
 // Hook to get cached module catalog
 export const useCachedModuleCatalog = () => {
-  return useCacheStore((state) => state.moduleCatalog?.data ?? []);
+  return useCacheStore((state) => state.moduleCatalog?.data ?? EMPTY_MODULES);
 };
 
 // Hook to get cached website modules
 export const useCachedWebsiteModules = (websiteId: string) => {
-  return useCacheStore((state) => state.websiteModules[websiteId]?.data ?? []);
+  return useCacheStore((state) => state.websiteModules[websiteId]?.data ?? EMPTY_WEBSITE_MODULES);
 };
 
 // Hook to get cached files
 export const useCachedFiles = () => {
-  return useCacheStore((state) => state.files?.data ?? []);
+  return useCacheStore((state) => state.files?.data ?? EMPTY_FILES);
 };

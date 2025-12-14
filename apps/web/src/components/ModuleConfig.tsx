@@ -5,6 +5,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import SchemaRenderer from './SchemaRenderer';
 import { useWebsites, useModuleCatalog, useWebsiteModules, useModuleData, useCacheActions } from '@/hooks/useCache';
@@ -179,6 +189,8 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [executingAction, setExecutingAction] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<string | null>(null);
+  const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
 
   // Combined loading state
   const isLoading = websitesLoading || catalogLoading || modulesLoading || moduleDataLoading;
@@ -363,26 +375,8 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
     if (!module || !websiteId) return;
     
     if (isModuleEnabled) {
-      if (!confirm('Êtes-vous sûr de vouloir désactiver ce module ?')) return;
-      
-      const deactivatePromise = async () => {
-        if (websiteModule) {
-          await modulesAPI.deactivate(websiteId, websiteModule.id);
-        }
-        await refreshData();
-      };
-
-      toast.promise(deactivatePromise(), {
-        loading: 'Désactivation en cours...',
-        success: 'Module désactivé',
-        error: 'Erreur lors de la désactivation',
-      });
-
-      try {
-        await deactivatePromise();
-      } catch (err) {
-        console.error('Failed to deactivate module:', err);
-      }
+      // Show confirmation dialog instead of native confirm
+      setShowDeactivateConfirm(true);
     } else {
       const activatePromise = async () => {
         await modulesAPI.activate(websiteId, {
@@ -403,6 +397,24 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       } catch (err) {
         console.error('Failed to activate module:', err);
       }
+    }
+  };
+
+  const confirmDeactivateModule = async () => {
+    if (!websiteId || !websiteModule) return;
+    
+    setIsDeactivating(true);
+    
+    try {
+      await modulesAPI.deactivate(websiteId, websiteModule.id);
+      await refreshData();
+      toast.success('Module désactivé');
+    } catch (err) {
+      console.error('Failed to deactivate module:', err);
+      toast.error('Erreur lors de la désactivation');
+    } finally {
+      setIsDeactivating(false);
+      setShowDeactivateConfirm(false);
     }
   };
 
@@ -796,6 +808,46 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
         onSave={handleSaveSettings}
         onCancel={handleCancelChanges}
       />
+
+      {/* Deactivate Module Confirmation Dialog */}
+      <Dialog open={showDeactivateConfirm} onOpenChange={setShowDeactivateConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Désactiver le module
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Êtes-vous sûr de vouloir désactiver le module <span className="font-medium text-foreground">{module?.name}</span> ?
+              <br />
+              <span className="text-muted-foreground">Vous pourrez le réactiver à tout moment.</span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeactivateConfirm(false)}
+              disabled={isDeactivating}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeactivateModule}
+              disabled={isDeactivating}
+            >
+              {isDeactivating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Désactivation...
+                </>
+              ) : (
+                'Désactiver'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
