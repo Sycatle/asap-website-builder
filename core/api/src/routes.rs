@@ -38,6 +38,7 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
     // Authenticated routes (require JWT)
     let authenticated_routes = Router::new()
         .route("/auth/me", get(crate::auth::me))
+        .route("/auth/change-password", post(crate::auth::change_password))
         // Account routes
         .route("/accounts/:id", get(crate::accounts::get_account))
         .route("/accounts/:id", put(crate::accounts::update_account))
@@ -53,6 +54,7 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
         .route("/websites/:id/modules", get(crate::websites::list_website_modules))
         .route("/websites/:id/modules", post(crate::websites::activate_module))
         .route("/websites/:id/modules/:module_id", patch(crate::websites::update_website_module))
+        .route("/websites/:id/modules/:module_id", delete(crate::websites::deactivate_module))
         // Website sections routes
         .route("/websites/:id/sections", get(crate::websites::list_website_sections))
         .route("/websites/:id/sections", post(crate::websites::create_section))
@@ -83,6 +85,20 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
         .route("/files/quota/usage", get(crate::files::get_quota))
         // Billing routes (authenticated)
         .route("/billing/checkout-session", post(crate::billing::create_checkout_session))
+        // Notifications routes
+        .route("/notifications", get(crate::notifications::list_notifications))
+        .route("/notifications/unread-count", get(crate::notifications::get_unread_count))
+        .route("/notifications/mark-read", post(crate::notifications::mark_as_read))
+        .route("/notifications/:notification_id", get(crate::notifications::get_notification))
+        .route("/notifications/:notification_id/read", post(crate::notifications::mark_notification_read))
+        .route("/notifications/:notification_id", delete(crate::notifications::delete_notification))
+        // Push notifications routes
+        .route("/notifications/push/subscribe", post(crate::notifications::subscribe_push))
+        .route("/notifications/push/unsubscribe", post(crate::notifications::unsubscribe_push))
+        .route("/notifications/push/vapid-key", get(crate::notifications::get_vapid_public_key))
+        // Notification settings routes
+        .route("/notifications/settings", get(crate::notifications::get_notification_settings))
+        .route("/notifications/settings", put(crate::notifications::update_notification_settings))
         .layer(Extension(storage_service.clone()))
         .layer(Extension(payment_gateway.clone()))
         .layer(Extension(config.clone()))

@@ -94,6 +94,10 @@ async fn main() -> anyhow::Result<()> {
         parallel_config.max_concurrency
     );
 
+    // Notification queue processing interval (every 10 seconds)
+    let notification_queue_interval = std::time::Duration::from_secs(10);
+    let mut last_notification_queue_process = std::time::Instant::now();
+
     // Main event loop
     let polling_interval = std::time::Duration::from_secs(config.polling_interval_secs);
     
@@ -115,6 +119,24 @@ async fn main() -> anyhow::Result<()> {
             Err(e) => {
                 tracing::error!("Error processing events: {}", e);
             }
+        }
+
+        // Process notification queue periodically
+        if last_notification_queue_process.elapsed() >= notification_queue_interval {
+            tracing::info!("Processing notification queue...");
+            match process_notification_queue_task(&pool).await {
+                Ok((processed, created)) => {
+                    tracing::info!(
+                        "Notification queue: {} groups processed → {} notifications created",
+                        processed,
+                        created
+                    );
+                }
+                Err(e) => {
+                    tracing::error!("Error processing notification queue: {}", e);
+                }
+            }
+            last_notification_queue_process = std::time::Instant::now();
         }
 
         tokio::time::sleep(polling_interval).await;
@@ -165,4 +187,23 @@ async fn run_payment_reconciliation() -> anyhow::Result<()> {
     println!("  Failed: {}", stats.failed);
     
     Ok(())
+}
+
+/// Process notification queue - consolidate and create final notifications
+async fn process_notification_queue_task(pool: &sqlx::PgPool) -> anyhow::Result<(i32, i32)> {
+    // Consolidation window: 30 seconds
+    let consolidation_window_seconds: i32 = 30;
+    
+    // Use query_as with a tuple instead of query! to avoid compile-time checking
+    let result: (Option<i32>, Option<i32>) = sqlx::query_as(
+        "SELECT processed_count, created_count FROM process_notification_queue($1)"
+    )
+    .bind(consolidation_window_seconds)
+    .fetch_one(pool)
+    .await?;
+    
+    let processed = result.0.unwrap_or(0);
+    let created = result.1.unwrap_or(0);
+    
+    Ok((processed, created))
 }

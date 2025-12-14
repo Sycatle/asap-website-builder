@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 export default function LoginForm({
@@ -13,16 +13,27 @@ export default function LoginForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, isLoading, error } = useAuthStore();
+  const { login, isLoading } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
+    
+    const loginPromise = async () => {
       await login(email, password);
-      window.location.href = '/app/dashboard';
-    } catch (err) {
-      // Error is handled by the store
-    }
+      return email;
+    };
+
+    toast.promise(loginPromise(), {
+      loading: 'Connexion en cours...',
+      success: () => {
+        // Redirect on success
+        setTimeout(() => {
+          window.location.href = '/app/dashboard';
+        }, 500);
+        return 'Connexion réussie !';
+      },
+      error: (err) => err.message || 'Échec de la connexion',
+    });
   };
 
   return (
@@ -44,12 +55,6 @@ export default function LoginForm({
               Connectez-vous pour gérer vos sites
             </p>
           </div>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
 
           <div className="flex flex-col gap-4">
             <div className="grid gap-2">

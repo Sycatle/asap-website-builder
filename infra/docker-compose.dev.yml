@@ -13,14 +13,12 @@ services:
       - ../apps/web:/app
       - /app/node_modules
 
-  # API in dev mode (optional: add volume mount for Rust hot reload with cargo-watch)
-  # Uncomment if you want to enable Rust hot reload
-  # api:
-  #   volumes:
-  #     - ../apps/api:/app/apps/api
-  #     - ../core:/app/core
-  #     - ../modules:/app/modules
-  #   command: cargo watch -x run
+  # API in dev mode - mount locally compiled binary
+  api:
+    volumes:
+      - ../target/debug/asap-api:/usr/local/bin/asap-api
+    environment:
+      RUST_LOG: asap_api=debug,asap_core_api=debug,tower_http=info,sqlx=warn
 
   # Worker in dev mode (optional)
   # worker:

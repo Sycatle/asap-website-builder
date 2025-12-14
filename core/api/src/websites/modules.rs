@@ -208,6 +208,16 @@ pub async fn activate_module(
 
     match result {
         Ok(_) => {
+            // Get module name for notification
+            let module_name: Option<String> = sqlx::query_scalar(
+                "SELECT name FROM modules WHERE id = $1"
+            )
+            .bind(module_uuid)
+            .fetch_optional(&pool)
+            .await
+            .ok()
+            .flatten();
+
             let event_payload = serde_json::json!({
                 "website_id": website_id,
                 "module_id": payload.module_id
@@ -220,6 +230,13 @@ pub async fn activate_module(
             .bind(&event_payload)
             .execute(&pool)
             .await;
+
+            // Create notification for module activated
+            if let Some(name) = module_name {
+                if let Err(e) = crate::notifications::create_module_activated_notification(&pool, account_id, &name).await {
+                    tracing::error!("Failed to create module activated notification: {}", e);
+                }
+            }
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Module activated successfully"
@@ -290,6 +307,105 @@ pub async fn update_website_module(
         }
         Err(e) => {
             tracing::error!("Database error updating module: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response()
+        }
+    }
+}
+
+pub async fn deactivate_module(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Path((website_id, module_id)): Path<(String, String)>,
+) -> impl IntoResponse {
+    let website_uuid = match Uuid::parse_str(&website_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid website ID format"
+            }))).into_response();
+        }
+    };
+
+    // For deactivate, we accept either the website_modules.id or the module_id
+    // Just parse as UUID directly (no slug resolution needed for delete)
+    let module_uuid = match Uuid::parse_str(&module_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid module ID format"
+            }))).into_response();
+        }
+    };
+
+    let account_id = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    use crate::queries;
+    
+    // Get module name before deletion for notification
+    // Try both wm.id (row id) and wm.module_id to match how deactivate_website_module works
+    let module_name: Option<String> = sqlx::query_scalar(
+        r#"
+        SELECT m.name FROM modules m
+        JOIN website_modules wm ON wm.module_id = m.id
+        WHERE wm.website_id = $1 AND (wm.id = $2 OR wm.module_id = $2)
+        "#
+    )
+    .bind(website_uuid)
+    .bind(module_uuid)
+    .fetch_optional(&pool)
+    .await
+    .ok()
+    .flatten();
+    
+    let result = queries::deactivate_website_module(
+        &pool,
+        website_uuid,
+        module_uuid,
+        account_id,
+    ).await;
+
+    match result {
+        Ok(deleted) if deleted => {
+            let event_payload = serde_json::json!({
+                "website_id": website_id,
+                "module_id": module_id
+            });
+
+            let _ = sqlx::query(
+                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'MODULE_DEACTIVATED', $2)"
+            )
+            .bind(account_id)
+            .bind(&event_payload)
+            .execute(&pool)
+            .await;
+
+            // Create notification for module deactivated
+            if let Some(name) = module_name {
+                if let Err(e) = crate::notifications::create_module_deactivated_notification(&pool, account_id, &name).await {
+                    tracing::error!("Failed to create module deactivated notification: {}", e);
+                }
+            }
+
+            (StatusCode::OK, Json(serde_json::json!({
+                "message": "Module deactivated successfully"
+            }))).into_response()
+        }
+        Ok(_) => {
+            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Module not found for this website"
+            }))).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Database error deactivating module: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()

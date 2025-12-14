@@ -52,9 +52,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { filesAPI, websitesAPI, modulesAPI, type QuotaUsage, type FileMetadata, type Website, type WebsiteModule } from "@/lib/api"
+import { filesAPI, websitesAPI, modulesAPI, authAPI, accountsAPI, type QuotaUsage, type FileMetadata, type Website, type WebsiteModule } from "@/lib/api"
 import { formatBytes } from "@/lib/utils/formatters"
+import { FilePickerDialog } from "@/components/file-picker-dialog"
 
 interface UserData {
   id: string
@@ -110,11 +112,20 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
     setIsLoading(true)
     try {
       // Load independent data in parallel
-      const [quotaData, filesData, websitesData] = await Promise.all([
+      const [quotaData, filesData, websitesData, accountData] = await Promise.all([
         filesAPI.getQuota().catch(() => null),
         filesAPI.list().catch(() => []),
         websitesAPI.list().catch(() => []),
+        accountsAPI.getAccount(user.id).catch(() => null),
       ])
+      
+      // Update form data with account data if available
+      if (accountData?.data) {
+        setFormData(prev => ({
+          ...prev,
+          name: accountData.data.name || prev.name,
+        }))
+      }
       
       // Load modules for the first website
       let modulesData: WebsiteModule[] = []
@@ -135,10 +146,35 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
 
   const handleSave = async () => {
     setIsSaving(true)
+
+    const savePromise = async () => {
+      // First get current account data to merge
+      const currentAccount = await accountsAPI.getAccount(user.id)
+      const currentData = currentAccount.data || {}
+      
+      // Save to API with merged data
+      await accountsAPI.updateAccountData(user.id, {
+        data: { ...currentData, name: formData.name }
+      })
+      
+      // Update parent state with the new name
+      if (onUserUpdate) {
+        onUserUpdate({ name: formData.name })
+      }
+    }
+
+    toast.promise(savePromise(), {
+      loading: 'Enregistrement...',
+      success: 'Profil mis à jour',
+      error: 'Erreur lors de la sauvegarde',
+    })
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500))
-      onUserUpdate?.(formData)
+      await savePromise()
+      // Close modal on success
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Failed to save account data:', error)
     } finally {
       setIsSaving(false)
     }
@@ -155,10 +191,31 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[80vh] max-h-[700px] p-0 gap-0 flex flex-col [&>button]:z-10">
-        <div className="flex h-full min-h-0">
-          {/* Sidebar */}
-          <div className="w-56 border-r bg-muted/30 p-4 flex flex-col shrink-0">
+      <DialogContent className="max-w-[calc(100%-1rem)] sm:max-w-4xl h-[90vh] sm:h-[80vh] max-h-[700px] p-0 gap-0 flex flex-col [&>button]:z-10 overflow-hidden">
+        <div className="flex flex-col sm:flex-row h-full min-h-0">
+          {/* Mobile Tab Bar - Top on mobile */}
+          <div className="sm:hidden border-b bg-muted/30 p-2 shrink-0 overflow-x-auto">
+            <div className="flex gap-1 min-w-max">
+              {settingsTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap",
+                    activeTab === tab.id
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <tab.icon className="h-3.5 w-3.5" />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Desktop Sidebar - Hidden on mobile */}
+          <div className="hidden sm:flex w-56 border-r bg-muted/30 p-4 flex-col shrink-0">
             <DialogHeader className="pb-4">
               <DialogTitle className="text-lg">Paramètres</DialogTitle>
             </DialogHeader>
@@ -183,13 +240,14 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
 
           {/* Content */}
           <div className="flex-1 flex flex-col min-h-0 min-w-0">
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               {activeTab === 'account' && (
                 <AccountSettings
                   user={user}
                   formData={formData}
                   setFormData={setFormData}
                   getInitials={getInitials}
+                  onAvatarUpdate={(avatarUrl) => onUserUpdate?.({ avatar: avatarUrl })}
                 />
               )}
               {activeTab === 'security' && <SecuritySettings />}
@@ -202,11 +260,11 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
 
             {/* Footer with save button */}
             {activeTab === 'account' && (
-              <div className="border-t p-4 flex justify-end gap-2 bg-background">
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <div className="border-t p-3 sm:p-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 bg-background">
+                <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
                   Annuler
                 </Button>
-                <Button onClick={handleSave} disabled={isSaving}>
+                <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Enregistrer
                 </Button>
@@ -225,69 +283,229 @@ function AccountSettings({
   formData,
   setFormData,
   getInitials,
+  onAvatarUpdate,
 }: {
   user: UserData
   formData: { name: string; email: string }
   setFormData: React.Dispatch<React.SetStateAction<{ name: string; email: string }>>
   getInitials: (name: string) => string
+  onAvatarUpdate?: (avatarUrl: string) => void
 }) {
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(user.avatar)
+  const [showFilePicker, setShowFilePicker] = useState(false)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  
+  // Helper to construct file URL with auth token
+  const getFileUrl = (fileId: string) => {
+    const token = localStorage.getItem('auth_token')
+    return `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${fileId}?token=${token}`
+  }
+  
+  // Load avatar from account data on mount
+  useEffect(() => {
+    const loadAvatar = async () => {
+      try {
+        const accountData = await accountsAPI.getAccount(user.id)
+        if (accountData.data?.avatar) {
+          // Extract file ID from stored URL and add token for display
+          const storedUrl = accountData.data.avatar
+          const fileIdMatch = storedUrl.match(/\/files\/([a-f0-9-]+)/)
+          if (fileIdMatch) {
+            setAvatarUrl(getFileUrl(fileIdMatch[1]))
+          } else {
+            setAvatarUrl(storedUrl)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load avatar:', error)
+      }
+    }
+    loadAvatar()
+  }, [user.id])
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Reset error
+    setAvatarError(null)
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setAvatarError('Veuillez sélectionner une image')
+      return
+    }
+
+    // Validate file size (1MB max)
+    if (file.size > 1024 * 1024) {
+      setAvatarError('L\'image doit faire moins de 1MB')
+      return
+    }
+
+    setIsUploadingAvatar(true)
+
+    const uploadPromise = async () => {
+      // Upload the file
+      const uploadedFile = await filesAPI.upload(file)
+      
+      // Update avatar in account data (store file ID, display with token)
+      const avatarFileId = uploadedFile.id
+      const displayUrl = getFileUrl(avatarFileId)
+      setAvatarUrl(displayUrl)
+      
+      // Save file ID to account data (not the full URL with token)
+      const avatarStorageUrl = `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${avatarFileId}`
+      const currentAccount = await accountsAPI.getAccount(user.id)
+      const currentData = currentAccount.data || {}
+      await accountsAPI.updateAccountData(user.id, {
+        data: { ...currentData, avatar: avatarStorageUrl }
+      })
+      
+      // Notify parent of avatar change
+      onAvatarUpdate?.(displayUrl)
+    }
+
+    toast.promise(uploadPromise(), {
+      loading: 'Upload de l\'avatar...',
+      success: 'Avatar mis à jour',
+      error: 'Erreur lors du téléchargement de l\'avatar',
+    })
+
+    try {
+      await uploadPromise()
+    } catch (error) {
+      console.error('Failed to upload avatar:', error)
+      setAvatarError('Erreur lors du téléchargement de l\'avatar')
+    } finally {
+      setIsUploadingAvatar(false)
+    }
+  }
+
+  const handleFileSelect = async (file: FileMetadata) => {
+    setAvatarError(null)
+    const displayUrl = getFileUrl(file.id)
+    setAvatarUrl(displayUrl)
+    
+    // Save file URL to account data (without token for storage)
+    const avatarStorageUrl = `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${file.id}`
+    
+    const updatePromise = async () => {
+      const currentAccount = await accountsAPI.getAccount(user.id)
+      const currentData = currentAccount.data || {}
+      await accountsAPI.updateAccountData(user.id, {
+        data: { ...currentData, avatar: avatarStorageUrl }
+      })
+      
+      // Notify parent of avatar change
+      onAvatarUpdate?.(displayUrl)
+    }
+
+    toast.promise(updatePromise(), {
+      loading: 'Mise à jour de l\'avatar...',
+      success: 'Avatar mis à jour',
+      error: 'Erreur lors de la mise à jour de l\'avatar',
+    })
+
+    try {
+      await updatePromise()
+    } catch (error) {
+      console.error('Failed to update avatar:', error)
+      setAvatarError('Erreur lors de la mise à jour de l\'avatar')
+    }
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Informations du compte</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="text-base sm:text-lg font-medium">Informations du compte</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Gérez vos informations personnelles.
         </p>
       </div>
       <Separator />
 
       {/* Avatar */}
-      <div className="flex items-center gap-4">
-        <Avatar className="h-20 w-20">
-          <AvatarImage src={user.avatar} alt={user.name} />
-          <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-            {getInitials(formData.name || user.email)}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <Button variant="outline" size="sm">
-            Changer l'avatar
-          </Button>
-          <p className="text-xs text-muted-foreground mt-1">
-            JPG, PNG ou GIF. 1MB max.
-          </p>
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
+            <AvatarImage src={avatarUrl} alt={user.name} />
+            <AvatarFallback className="text-xl sm:text-2xl bg-primary text-primary-foreground">
+              {getInitials(formData.name || user.email)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="space-y-2 text-center sm:text-left">
+            <div className="flex flex-col xs:flex-row gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingAvatar}
+                className="text-xs sm:text-sm"
+              >
+                {isUploadingAvatar && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+                Uploader
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowFilePicker(true)}
+                disabled={isUploadingAvatar}
+                className="text-xs sm:text-sm"
+              >
+                Choisir du cloud
+              </Button>
+            </div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              JPG, PNG ou GIF. 1MB max.
+            </p>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarUpload}
+            className="hidden"
+          />
         </div>
+        {avatarError && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+            {avatarError}
+          </div>
+        )}
       </div>
 
       {/* Form fields */}
-      <div className="grid gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="name">Nom d'affichage</Label>
+      <div className="grid gap-3 sm:gap-4">
+        <div className="grid gap-1.5 sm:gap-2">
+          <Label htmlFor="name" className="text-sm">Nom d'affichage</Label>
           <Input
             id="name"
             value={formData.name}
             onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             placeholder="Votre nom"
+            className="h-9 sm:h-10 text-sm"
           />
         </div>
-        <div className="grid gap-2">
-          <Label htmlFor="email">Email</Label>
+        <div className="grid gap-1.5 sm:gap-2">
+          <Label htmlFor="email" className="text-sm">Email</Label>
           <Input
             id="email"
             type="email"
             value={formData.email}
             disabled
-            className="bg-muted"
+            className="bg-muted h-9 sm:h-10 text-sm"
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
             Contactez le support pour modifier votre email.
           </p>
         </div>
       </div>
 
       {/* Danger Zone */}
-      <div className="pt-6">
-        <h4 className="text-sm font-medium text-destructive mb-4">Zone de danger</h4>
+      <div className="pt-4 sm:pt-6">
+        <h4 className="text-xs sm:text-sm font-medium text-destructive mb-3 sm:mb-4">Zone de danger</h4>
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="destructive" size="sm">
@@ -311,19 +529,95 @@ function AccountSettings({
           </AlertDialogContent>
         </AlertDialog>
       </div>
+
+      {/* File Picker Dialog */}
+      <FilePickerDialog
+        open={showFilePicker}
+        onOpenChange={setShowFilePicker}
+        onSelect={handleFileSelect}
+        accept="image/*"
+        title="Choisir une image de profil"
+        description="Sélectionnez une image depuis votre stockage cloud."
+      />
     </div>
   )
 }
 
 // Security Settings Tab
 function SecuritySettings() {
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  })
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
+
+  const handlePasswordChange = async () => {
+    // Reset states
+    setPasswordError(null)
+    setPasswordSuccess(false)
+
+    // Validation
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      setPasswordError('Tous les champs sont requis')
+      return
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      setPasswordError('Le nouveau mot de passe doit contenir au moins 8 caractères')
+      return
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('Les mots de passe ne correspondent pas')
+      return
+    }
+
+    setIsChangingPassword(true)
+
+    const changePasswordPromise = async () => {
+      await authAPI.changePassword({
+        current_password: passwordData.currentPassword,
+        new_password: passwordData.newPassword,
+      })
+      
+      setPasswordSuccess(true)
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      })
+    }
+
+    toast.promise(changePasswordPromise(), {
+      loading: 'Modification du mot de passe...',
+      success: 'Mot de passe modifié avec succès',
+      error: (err) => {
+        const errorMsg = err instanceof Error && err.message?.includes('incorrect') 
+          ? 'Le mot de passe actuel est incorrect'
+          : 'Erreur lors du changement de mot de passe'
+        setPasswordError(errorMsg)
+        return errorMsg
+      },
+    })
+
+    try {
+      await changePasswordPromise()
+    } catch (error: unknown) {
+      // Error already handled in toast.promise
+      console.error('Failed to change password:', error)
+    } finally {
+      setIsChangingPassword(false)
+    }
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Sécurité</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="text-base sm:text-lg font-medium">Sécurité</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Gérez la sécurité de votre compte.
         </p>
       </div>
@@ -331,87 +625,116 @@ function SecuritySettings() {
 
       {/* Password */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
             <Key className="h-4 w-4" />
             Mot de passe
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             Changez votre mot de passe régulièrement pour sécuriser votre compte.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-2">
-            <Label htmlFor="current-password">Mot de passe actuel</Label>
+        <CardContent className="space-y-3 sm:space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
+          {passwordSuccess && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 flex items-center gap-2">
+              <Check className="h-4 w-4" />
+              Mot de passe changé avec succès
+            </div>
+          )}
+          {passwordError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+              {passwordError}
+            </div>
+          )}
+          <div className="grid gap-1.5 sm:gap-2">
+            <Label htmlFor="current-password" className="text-sm">Mot de passe actuel</Label>
             <Input
               id="current-password"
               type="password"
               placeholder="••••••••"
+              value={passwordData.currentPassword}
+              onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+              disabled={isChangingPassword}
+              className="h-9 sm:h-10 text-sm"
             />
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="new-password">Nouveau mot de passe</Label>
+          <div className="grid gap-1.5 sm:gap-2">
+            <Label htmlFor="new-password" className="text-sm">Nouveau mot de passe</Label>
             <Input
               id="new-password"
               type="password"
               placeholder="••••••••"
+              value={passwordData.newPassword}
+              onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+              disabled={isChangingPassword}
+              className="h-9 sm:h-10 text-sm"
             />
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              Minimum 8 caractères
+            </p>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="confirm-password">Confirmer le mot de passe</Label>
+          <div className="grid gap-1.5 sm:gap-2">
+            <Label htmlFor="confirm-password" className="text-sm">Confirmer le mot de passe</Label>
             <Input
               id="confirm-password"
               type="password"
               placeholder="••••••••"
+              value={passwordData.confirmPassword}
+              onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+              disabled={isChangingPassword}
+              className="h-9 sm:h-10 text-sm"
             />
           </div>
-          <Button>Mettre à jour le mot de passe</Button>
+          <Button onClick={handlePasswordChange} disabled={isChangingPassword} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
+            {isChangingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Mettre à jour
+          </Button>
         </CardContent>
       </Card>
 
       {/* Two-Factor */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
             <Shield className="h-4 w-4" />
             Authentification à deux facteurs
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             Ajoutez une couche de sécurité supplémentaire à votre compte.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <p className="text-sm font-medium">2FA par application</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Utilisez Google Authenticator ou similaire
               </p>
             </div>
-            <Button variant="outline">Configurer</Button>
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">Configurer</Button>
           </div>
         </CardContent>
       </Card>
 
       {/* Sessions */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Sessions actives</CardTitle>
-          <CardDescription>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-sm sm:text-base">Sessions actives</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             Gérez vos sessions connectées.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
           <div className="space-y-3">
-            <div className="flex items-center justify-between py-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2">
               <div>
                 <p className="text-sm font-medium">Chrome sur Linux</p>
-                <p className="text-xs text-muted-foreground">Actif maintenant • France</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Actif maintenant • France</p>
               </div>
-              <Badge variant="secondary">Session actuelle</Badge>
+              <Badge variant="secondary" className="w-fit text-xs">Session actuelle</Badge>
             </div>
           </div>
-          <Button variant="outline" size="sm" className="mt-4">
+          <Button variant="outline" size="sm" className="mt-4 w-full sm:w-auto text-xs sm:text-sm">
             Déconnecter toutes les autres sessions
           </Button>
         </CardContent>
@@ -423,10 +746,10 @@ function SecuritySettings() {
 // Billing Settings Tab
 function BillingSettings() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Facturation</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="text-base sm:text-lg font-medium">Facturation</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Gérez vos informations de paiement et historique.
         </p>
       </div>
@@ -434,26 +757,26 @@ function BillingSettings() {
 
       {/* Payment Method */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Moyen de paiement</CardTitle>
-          <CardDescription>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-sm sm:text-base">Moyen de paiement</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             Votre carte enregistrée pour les renouvellements.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between p-3 border rounded-lg">
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 border rounded-lg">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-12 bg-gradient-to-r from-blue-600 to-blue-400 rounded flex items-center justify-center text-white text-xs font-bold">
+              <div className="h-8 w-12 bg-gradient-to-r from-blue-600 to-blue-400 rounded flex items-center justify-center text-white text-xs font-bold shrink-0">
                 VISA
               </div>
               <div>
                 <p className="text-sm font-medium">•••• •••• •••• 4242</p>
-                <p className="text-xs text-muted-foreground">Expire 12/26</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Expire 12/26</p>
               </div>
             </div>
-            <Button variant="ghost" size="sm">Modifier</Button>
+            <Button variant="ghost" size="sm" className="w-full sm:w-auto">Modifier</Button>
           </div>
-          <Button variant="outline" size="sm" className="mt-3">
+          <Button variant="outline" size="sm" className="mt-3 w-full sm:w-auto">
             Ajouter une carte
           </Button>
         </CardContent>
@@ -461,24 +784,24 @@ function BillingSettings() {
 
       {/* Billing Address */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Adresse de facturation</CardTitle>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-sm sm:text-base">Adresse de facturation</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-3">
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+          <p className="text-xs sm:text-sm text-muted-foreground mb-3">
             Aucune adresse enregistrée
           </p>
-          <Button variant="outline" size="sm">Ajouter une adresse</Button>
+          <Button variant="outline" size="sm" className="w-full sm:w-auto">Ajouter une adresse</Button>
         </CardContent>
       </Card>
 
       {/* Invoice History */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Historique des factures</CardTitle>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-sm sm:text-base">Historique des factures</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="text-sm text-muted-foreground text-center py-8">
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+          <div className="text-xs sm:text-sm text-muted-foreground text-center py-6 sm:py-8">
             Aucune facture pour le moment
           </div>
         </CardContent>
@@ -539,17 +862,61 @@ function CloudSettings({ quota, files, isLoading }: CloudSettingsProps) {
           <Skeleton className="h-4 w-60" />
         </div>
         <Separator />
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-32 w-full" />
+        {/* Storage Card Skeleton */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-4" />
+              <Skeleton className="h-5 w-40" />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+              <Skeleton className="h-2 w-full rounded-full" />
+            </div>
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className="p-3 border rounded-lg space-y-1">
+                <Skeleton className="h-8 w-12" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+              <div className="p-3 border rounded-lg space-y-1">
+                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        {/* Breakdown Skeleton */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <Skeleton className="h-8 w-8 rounded" />
+                <div className="flex-1 space-y-1">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-2 w-full rounded-full" />
+                </div>
+                <Skeleton className="h-4 w-12" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Stockage Cloud</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="text-base sm:text-lg font-medium">Stockage Cloud</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Gérez votre espace de stockage.
         </p>
       </div>
@@ -557,28 +924,28 @@ function CloudSettings({ quota, files, isLoading }: CloudSettingsProps) {
 
       {/* Storage Usage */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
             <Cloud className="h-4 w-4" />
             Utilisation du stockage
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 sm:space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
           <div className="space-y-2">
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-xs sm:text-sm">
               <span>{quota ? formatBytes(quota.total_size_used) : '0 B'} utilisés</span>
               <span>{quota ? formatBytes(quota.quota_limit) : '0 B'} total</span>
             </div>
             <Progress value={quota?.usage_percentage || 0} className="h-2" />
           </div>
-          <div className="grid grid-cols-2 gap-4 pt-2">
-            <div className="p-3 border rounded-lg">
-              <p className="text-2xl font-bold">{files.length}</p>
-              <p className="text-xs text-muted-foreground">Fichiers</p>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-2">
+            <div className="p-2.5 sm:p-3 border rounded-lg">
+              <p className="text-xl sm:text-2xl font-bold">{files.length}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Fichiers</p>
             </div>
-            <div className="p-3 border rounded-lg">
-              <p className="text-2xl font-bold">{quota ? formatBytes(quota.remaining) : '0 B'}</p>
-              <p className="text-xs text-muted-foreground">Disponible</p>
+            <div className="p-2.5 sm:p-3 border rounded-lg">
+              <p className="text-xl sm:text-2xl font-bold">{quota ? formatBytes(quota.remaining) : '0 B'}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Disponible</p>
             </div>
           </div>
         </CardContent>
@@ -587,16 +954,16 @@ function CloudSettings({ quota, files, isLoading }: CloudSettingsProps) {
       {/* Storage Breakdown */}
       {breakdown.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Répartition</CardTitle>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-sm sm:text-base">Répartition</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            <div className="space-y-2.5 sm:space-y-3">
               {breakdown.map((item) => (
-                <div key={item.label} className="flex items-center gap-3">
-                  <div className={cn("h-3 w-3 rounded-full", item.color)} />
-                  <span className="text-sm flex-1">{item.label}</span>
-                  <span className="text-sm text-muted-foreground">{item.size}</span>
+                <div key={item.label} className="flex items-center gap-2.5 sm:gap-3">
+                  <div className={cn("h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full", item.color)} />
+                  <span className="text-xs sm:text-sm flex-1">{item.label}</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">{item.size}</span>
                 </div>
               ))}
             </div>
@@ -604,7 +971,7 @@ function CloudSettings({ quota, files, isLoading }: CloudSettingsProps) {
         </Card>
       )}
 
-      <Button variant="outline" className="w-full" asChild>
+      <Button variant="outline" className="w-full h-9 sm:h-10 text-sm" asChild>
         <a href="/app/cloud">Gérer mes fichiers</a>
       </Button>
     </div>
@@ -644,17 +1011,55 @@ function PlanSettings({ quota, websites, modules, isLoading }: PlanSettingsProps
           <Skeleton className="h-4 w-60" />
         </div>
         <Separator />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-40 w-full" />
+        {/* Current Plan Skeleton */}
+        <Card className="border-primary">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="h-5 w-12 rounded-full" />
+                </div>
+                <Skeleton className="h-4 w-32" />
+              </div>
+              <Skeleton className="h-8 w-8" />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Skeleton className="h-4 w-4 rounded" />
+                <Skeleton className="h-4 w-40" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+        {/* Usage Skeleton */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="space-y-2">
+                <div className="flex justify-between">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+                <Skeleton className="h-2 w-full rounded-full" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Abonnement</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="text-base sm:text-lg font-medium">Abonnement</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Gérez votre plan et vos limites.
         </p>
       </div>
@@ -662,36 +1067,36 @@ function PlanSettings({ quota, websites, modules, isLoading }: PlanSettingsProps
 
       {/* Current Plan */}
       <Card className="border-primary">
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex items-start sm:items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
                 Plan {plan.name}
-                <Badge>Actif</Badge>
+                <Badge className="text-[10px] sm:text-xs">Actif</Badge>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 {plan.price === '0' ? 'Gratuit pour toujours' : `${plan.price}€ / mois`}
               </CardDescription>
             </div>
-            <Sparkles className="h-8 w-8 text-primary" />
+            <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-primary shrink-0" />
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-2 text-sm">
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+          <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
             <div className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-primary" />
+              <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
               <span>{plan.sitesLimit} site publié</span>
             </div>
             <div className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-primary" />
+              <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
               <span>{formatBytes(plan.storageLimit)} de stockage</span>
             </div>
             <div className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-primary" />
+              <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
               <span>{plan.tokensLimit.toLocaleString()} tokens IA / mois</span>
             </div>
             <div className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-primary" />
+              <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
               <span>Sous-domaine asap.cool</span>
             </div>
           </div>
@@ -700,26 +1105,26 @@ function PlanSettings({ quota, websites, modules, isLoading }: PlanSettingsProps
 
       {/* Usage */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Utilisation ce mois</CardTitle>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-sm sm:text-base">Utilisation ce mois</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 sm:space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
           <div>
-            <div className="flex justify-between text-sm mb-1">
+            <div className="flex justify-between text-xs sm:text-sm mb-1">
               <span>Sites</span>
               <span>{sitesUsed} / {plan.sitesLimit}</span>
             </div>
             <Progress value={Math.min(sitesPercent, 100)} className="h-2" />
           </div>
           <div>
-            <div className="flex justify-between text-sm mb-1">
+            <div className="flex justify-between text-xs sm:text-sm mb-1">
               <span>Stockage</span>
               <span>{quota ? formatBytes(quota.total_size_used) : '0 B'} / {formatBytes(plan.storageLimit)}</span>
             </div>
             <Progress value={storagePercent} className="h-2" />
           </div>
           <div>
-            <div className="flex justify-between text-sm mb-1">
+            <div className="flex justify-between text-xs sm:text-sm mb-1">
               <span>Modules actifs</span>
               <span>{enabledModules}</span>
             </div>
@@ -728,11 +1133,11 @@ function PlanSettings({ quota, websites, modules, isLoading }: PlanSettingsProps
       </Card>
 
       {/* Actions */}
-      <div className="flex gap-3">
-        <Button className="flex-1">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        <Button className="flex-1 h-9 sm:h-10 text-sm">
           Passer au plan Pro
         </Button>
-        <Button variant="outline" asChild>
+        <Button variant="outline" className="h-9 sm:h-10 text-sm" asChild>
           <a href="/#pricing">Voir les plans</a>
         </Button>
       </div>

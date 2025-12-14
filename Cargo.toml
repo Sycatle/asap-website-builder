@@ -9,6 +9,7 @@ members = [
     "modules/themes",
     "modules/analytics",
     "modules/projections",
+    "modules/notifications",
     "apps/api",
     "apps/worker",
 ]

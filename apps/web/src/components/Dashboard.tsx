@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from 'react';
-import { websitesAPI, filesAPI, modulesAPI, authAPI, type Website, type QuotaUsage, type WebsiteModule, type UpdateWebsiteRequest } from '../lib/api';
+import { useEffect, useState, useMemo } from 'react';
+import { websitesAPI, authAPI, type Website, type UpdateWebsiteRequest } from '../lib/api';
+import { useDashboardData, useCacheActions } from '../hooks/useCache';
 import { formatBytes } from '../lib/utils/formatters';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label as FormLabel } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ChartContainer,
@@ -45,77 +46,109 @@ import {
   AlertCircle,
   Loader2,
   Settings,
-  LayoutDashboard
+  LayoutDashboard,
+  RefreshCw
 } from "lucide-react";
+import { FormActions } from "@/components/ui/form-actions";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 export default function Dashboard() {
-  const [website, setWebsite] = useState<Website | null>(null);
-  const [quota, setQuota] = useState<QuotaUsage | null>(null);
-  const [modules, setModules] = useState<WebsiteModule[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Use cached data
+  const { website, quota, modules, isLoading, refetchAll } = useDashboardData();
+  const { updateWebsiteCache } = useCacheActions();
+  
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
   // Form state for website editing
   const [title, setTitle] = useState('');
   const [tagline, setTagline] = useState('');
   const [githubUsername, setGithubUsername] = useState('');
+  
+  // Track initial values for dirty state
+  const [initialValues, setInitialValues] = useState({ title: '', tagline: '' });
 
+  // Sync form state when website changes
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load websites and quota in parallel
-        const [websites, quotaData] = await Promise.all([
-          websitesAPI.list(),
-          filesAPI.getQuota(),
-        ]);
-        
-        setQuota(quotaData);
-        
-        if (websites.length > 0) {
-          const w = websites[0];
-          setWebsite(w);
-          setTitle(w.title || '');
-          setTagline(w.tagline || '');
-          
-          // Load modules for this website
-          try {
-            const modulesData = await modulesAPI.listForWebsite(w.id);
-            setModules(modulesData);
-          } catch (error) {
-            console.error('Failed to load website modules:', error);
-            setModules([]);
-          }
+    if (website) {
+      setTitle(website.title || '');
+      setTagline(website.tagline || '');
+      setInitialValues({ title: website.title || '', tagline: website.tagline || '' });
+    }
+  }, [website]);
+
+  // Check if form is dirty
+  const isFormDirty = title !== initialValues.title || tagline !== initialValues.tagline;
+
+  // Cancel changes handler
+  const handleCancel = () => {
+    setTitle(initialValues.title);
+    setTagline(initialValues.tagline);
+  };
+
+  // Keyboard shortcuts
+  const shortcuts = useMemo(() => [
+    {
+      key: 's',
+      ctrl: true,
+      action: () => {
+        if (isFormDirty && !isSaving) {
+          handleSave();
         }
-      } catch (error) {
-        console.error('Failed to load data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      },
+      description: 'Sauvegarder',
+      enabled: isFormDirty,
+    },
+    {
+      key: 'Escape',
+      action: () => {
+        if (isFormDirty) {
+          handleCancel();
+          toast.info('Modifications annulées');
+        }
+      },
+      description: 'Annuler les modifications',
+      enabled: isFormDirty,
+    },
+    {
+      key: 'r',
+      ctrl: true,
+      shift: true,
+      action: () => {
+        refetchAll();
+        toast.info('Actualisation des données...');
+      },
+      description: 'Actualiser',
+    },
+  ], [isFormDirty, isSaving, initialValues]);
 
-    loadData();
-  }, []);
+  useKeyboardShortcuts(shortcuts);
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!website) return;
 
     setIsSaving(true);
-    setMessage(null);
+
+    const savePromise = async () => {
+      const data: UpdateWebsiteRequest = { title, tagline };
+      const updatedWebsite = await websitesAPI.update(website.id, data);
+      // Update cache immediately
+      updateWebsiteCache(updatedWebsite);
+      // Update initial values after save
+      setInitialValues({ title, tagline });
+    };
+
+    toast.promise(savePromise(), {
+      loading: 'Sauvegarde en cours...',
+      success: 'Site mis à jour avec succès !',
+      error: 'Erreur lors de la sauvegarde',
+    });
 
     try {
-      const data: UpdateWebsiteRequest = { title, tagline };
-      await websitesAPI.update(website.id, data);
-      const websites = await websitesAPI.list();
-      if (websites.length > 0) {
-        setWebsite(websites[0]);
-      }
-      setMessage({ type: 'success', text: 'Site mis à jour avec succès !' });
+      await savePromise();
     } catch (error) {
       console.error('Failed to save website:', error);
-      setMessage({ type: 'error', text: 'Erreur lors de la sauvegarde' });
     } finally {
       setIsSaving(false);
     }
@@ -125,18 +158,23 @@ export default function Dashboard() {
     if (!website) return;
 
     setIsSaving(true);
-    setMessage(null);
+
+    const publishPromise = async () => {
+      await websitesAPI.publish(website.id);
+      // Refetch to get updated status
+      await refetchAll();
+    };
+
+    toast.promise(publishPromise(), {
+      loading: 'Publication en cours...',
+      success: 'Site publié ! Votre site est maintenant en ligne.',
+      error: 'Erreur lors de la publication',
+    });
 
     try {
-      await websitesAPI.publish(website.id);
-      const websites = await websitesAPI.list();
-      if (websites.length > 0) {
-        setWebsite(websites[0]);
-      }
-      setMessage({ type: 'success', text: 'Site publié avec succès !' });
+      await publishPromise();
     } catch (error) {
       console.error('Failed to publish website:', error);
-      setMessage({ type: 'error', text: 'Erreur lors de la publication' });
     } finally {
       setIsSaving(false);
     }
@@ -147,20 +185,27 @@ export default function Dashboard() {
     if (!website || !githubUsername.trim()) return;
 
     setIsSaving(true);
-    setMessage(null);
 
-    try {
+    const connectPromise = async () => {
       const token = localStorage.getItem('auth_token');
       if (token) {
         const payload = JSON.parse(atob(token.split('.')[1]));
         await authAPI.updateGitHubIntegration(payload.sub, {
           github_username: githubUsername.trim(),
         });
-        setMessage({ type: 'success', text: 'GitHub connecté ! Vos projets seront synchronisés.' });
       }
+    };
+
+    toast.promise(connectPromise(), {
+      loading: 'Connexion à GitHub...',
+      success: 'GitHub connecté ! Vos projets seront synchronisés.',
+      error: 'Erreur lors de la connexion GitHub',
+    });
+
+    try {
+      await connectPromise();
     } catch (error) {
       console.error('Failed to connect GitHub:', error);
-      setMessage({ type: 'error', text: 'Erreur lors de la connexion GitHub' });
     } finally {
       setIsSaving(false);
     }
@@ -187,68 +232,121 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="space-y-8">
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-64" />
-          <Skeleton className="h-5 w-96" />
+      <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-9 w-48" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </div>
+            <Skeleton className="h-5 w-40" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-32" />
+          </div>
         </div>
+
+        {/* Stats Cards Skeleton */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-32" />
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-3 w-32" />
+              </CardContent>
+            </Card>
           ))}
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Skeleton className="col-span-4 h-80" />
-          <Skeleton className="col-span-3 h-80" />
+
+        {/* Tabs Skeleton */}
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-9 w-24 rounded-md" />
+            ))}
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            <Card className="col-span-4">
+              <CardHeader>
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-48" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-64 w-full rounded-lg" />
+              </CardContent>
+            </Card>
+            <Card className="col-span-3">
+              <CardHeader>
+                <Skeleton className="h-5 w-32" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <Skeleton className="h-10 w-10 rounded-lg" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <Skeleton className="h-8 w-8 rounded" />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 animate-fade-in">
       {/* Header with site info */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:gap-4 animate-fade-in-down">
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
               {website?.title || 'Mon Dashboard'}
             </h1>
             {website?.status === 'published' ? (
-              <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20">
+              <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20 transition-all duration-200">
                 <CheckCircle2 className="w-3 h-3 mr-1" />
                 En ligne
               </Badge>
             ) : (
-              <Badge variant="secondary">
+              <Badge variant="secondary" className="transition-all duration-200">
                 <Clock className="w-3 h-3 mr-1" />
                 Brouillon
               </Badge>
             )}
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             {website?.slug ? (
-              <span className="font-mono text-sm">{website.slug}.asap.cool</span>
+              <span className="font-mono text-xs sm:text-sm">{website.slug}.asap.cool</span>
             ) : (
               'Configurez votre site pour commencer'
             )}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           {website?.status === 'draft' && (
-            <Button onClick={handlePublish} disabled={isSaving} className="bg-green-600 hover:bg-green-700">
+            <Button onClick={handlePublish} disabled={isSaving} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto group">
               {isSaving ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
-                <Rocket className="h-4 w-4 mr-2" />
+                <Rocket className="h-4 w-4 mr-2 transition-transform group-hover:-translate-y-0.5 group-hover:rotate-12" />
               )}
               Publier
             </Button>
           )}
           {website && (
-            <Button variant="outline" asChild>
+            <Button variant="outline" asChild className="w-full sm:w-auto group">
               <a href={`/${website.slug}`} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 mr-2" />
+                <ExternalLink className="h-4 w-4 mr-2 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 Voir le site
               </a>
             </Button>
@@ -256,159 +354,149 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Message feedback */}
-      {message && (
-        <Alert variant={message.type === 'error' ? 'destructive' : 'default'} className={message.type === 'success' ? 'border-green-500/50 bg-green-500/10 text-green-700' : ''}>
-          {message.type === 'success' ? (
-            <CheckCircle2 className="h-4 w-4" />
-          ) : (
-            <AlertCircle className="h-4 w-4" />
-          )}
-          <AlertDescription>{message.text}</AlertDescription>
-        </Alert>
-      )}
-
       {/* Tabs for Overview / Site Settings */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
-            <LayoutDashboard className="h-4 w-4" />
-            Vue d'ensemble
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+        <TabsList className="grid w-full grid-cols-2 h-auto">
+          <TabsTrigger value="overview" className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm py-2 sm:py-2.5 transition-all duration-200 data-[state=active]:scale-[1.02]">
+            <LayoutDashboard className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Vue d'ensemble</span>
+            <span className="xs:hidden">Accueil</span>
           </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
+          <TabsTrigger value="settings" className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm py-2 sm:py-2.5 transition-all duration-200 data-[state=active]:scale-[1.02]">
+            <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Mon Site
           </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="overview" className="space-y-4 sm:space-y-6 animate-fade-in">
           {/* Stats Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             {/* Site Status */}
-            <Card className="relative overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Statut du site</CardTitle>
-                <Globe className="h-4 w-4 text-muted-foreground" />
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.05s', animationFillMode: 'both' }}>
+              <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Statut</CardTitle>
+                <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform group-hover:rotate-12" />
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2">
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   {website?.status === 'published' ? (
                     <>
-                      <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                      <span className="text-2xl font-bold">Publié</span>
+                      <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-green-500 animate-pulse" />
+                      <span className="text-lg sm:text-2xl font-bold">Publié</span>
                     </>
                   ) : (
                     <>
-                      <div className="h-2 w-2 rounded-full bg-amber-500" />
-                      <span className="text-2xl font-bold">Brouillon</span>
+                      <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-amber-500 animate-pulse" />
+                      <span className="text-lg sm:text-2xl font-bold">Brouillon</span>
                     </>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
                   {website?.slug ? `${website.slug}.asap.cool` : 'Configurez votre site'}
                 </p>
               </CardContent>
-              <div className="absolute right-0 bottom-0 opacity-5">
-                <Globe className="h-24 w-24 -mr-6 -mb-6" />
+              <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
+                <Globe className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
               </div>
             </Card>
 
             {/* Storage */}
-            <Card className="relative overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Stockage</CardTitle>
-                <HardDrive className="h-4 w-4 text-muted-foreground" />
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
+              <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Stockage</CardTitle>
+                <HardDrive className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-lg sm:text-2xl font-bold">
                   {quota ? formatBytes(quota.total_size_used) : '0 B'}
                 </div>
-                <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2">
                   <Progress 
                     value={storagePercentage} 
-                    className="h-2 flex-1"
+                    className="h-1.5 sm:h-2 flex-1"
                   />
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
                     {storagePercentage.toFixed(0)}%
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  sur {quota ? formatBytes(quota.quota_limit) : '50 MB'} disponibles
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
+                  sur {quota ? formatBytes(quota.quota_limit) : '50 MB'}
                 </p>
               </CardContent>
-              <div className="absolute right-0 bottom-0 opacity-5">
-                <HardDrive className="h-24 w-24 -mr-6 -mb-6" />
+              <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
+                <HardDrive className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
               </div>
             </Card>
 
             {/* Modules */}
-            <Card className="relative overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Modules actifs</CardTitle>
-                <Puzzle className="h-4 w-4 text-muted-foreground" />
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
+              <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Modules</CardTitle>
+                <Puzzle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform group-hover:rotate-12" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{enabledModulesCount}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  sur {modules.length} modules disponibles
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-lg sm:text-2xl font-bold">{enabledModulesCount}</div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+                  sur {modules.length} disponibles
                 </p>
-                <div className="flex gap-1 mt-2">
-                  {modules.slice(0, 5).map((m) => (
+                <div className="flex gap-0.5 sm:gap-1 mt-1.5 sm:mt-2">
+                  {modules.slice(0, 4).map((m, index) => (
                     <div
                       key={m.module_id}
-                      className={`h-2 w-2 rounded-full ${m.enabled ? 'bg-primary' : 'bg-muted'}`}
+                      className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full transition-all duration-300 ${m.enabled ? 'bg-primary scale-100' : 'bg-muted scale-90'}`}
+                      style={{ animationDelay: `${index * 0.05}s` }}
                       title={m.module_slug}
                     />
                   ))}
-                  {modules.length > 5 && (
-                    <span className="text-xs text-muted-foreground">+{modules.length - 5}</span>
+                  {modules.length > 4 && (
+                    <span className="text-[10px] sm:text-xs text-muted-foreground">+{modules.length - 4}</span>
                   )}
                 </div>
               </CardContent>
-              <div className="absolute right-0 bottom-0 opacity-5">
-                <Puzzle className="h-24 w-24 -mr-6 -mb-6" />
+              <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
+                <Puzzle className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
               </div>
             </Card>
 
             {/* Files */}
-            <Card className="relative overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Fichiers</CardTitle>
-                <Upload className="h-4 w-4 text-muted-foreground" />
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
+              <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Fichiers</CardTitle>
+                <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-lg sm:text-2xl font-bold">
                   {quota ? formatBytes(quota.total_size_used) : '0 B'}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  de fichiers uploadés
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+                  uploadés
                 </p>
-                <div className="flex items-center gap-1 mt-2 text-xs text-green-600">
-                  <TrendingUp className="h-3 w-3" />
-                  <span>Prêt pour plus</span>
+                <div className="flex items-center gap-1 mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-green-600">
+                  <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                  <span>OK</span>
                 </div>
               </CardContent>
-              <div className="absolute right-0 bottom-0 opacity-5">
-                <Upload className="h-24 w-24 -mr-6 -mb-6" />
+              <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
+                <Upload className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
               </div>
             </Card>
           </div>
 
           {/* Main Content Grid */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <div className="grid gap-3 sm:gap-4 lg:grid-cols-7">
             {/* Storage Chart */}
-            <Card className="col-span-4 lg:col-span-3">
-              <CardHeader>
-                <CardTitle>Utilisation du stockage</CardTitle>
-                <CardDescription>
-                  Espace disque utilisé par vos fichiers
+            <Card className="lg:col-span-3 animate-fade-in-up" style={{ animationDelay: '0.25s', animationFillMode: 'both' }}>
+              <CardHeader className="px-4 sm:px-6">
+                <CardTitle className="text-sm sm:text-base">Utilisation du stockage</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Espace disque utilisé
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex items-center justify-center pb-0">
+              <CardContent className="flex items-center justify-center pb-0 px-4 sm:px-6">
                 <ChartContainer
                   config={storageChartConfig}
-                  className="mx-auto aspect-square max-h-[200px]"
+                  className="mx-auto aspect-square max-h-[160px] sm:max-h-[200px]"
                 >
                   <RadialBarChart
                     data={storageChartData}
@@ -479,69 +567,69 @@ export default function Dashboard() {
             </Card>
 
             {/* Quick Actions */}
-            <Card className="col-span-4">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
+            <Card className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
+              <CardHeader className="px-4 sm:px-6">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary animate-pulse-soft" />
                   Actions rapides
                 </CardTitle>
-                <CardDescription>
-                  Accédez rapidement aux fonctionnalités principales
+                <CardDescription className="text-xs sm:text-sm">
+                  Accédez rapidement aux fonctionnalités
                 </CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-3">
+              <CardContent className="grid gap-2 sm:gap-3 px-4 sm:px-6">
                 <button
                   onClick={() => setActiveTab('settings')}
-                  className="group flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 text-left w-full"
+                  className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-md text-left w-full active:scale-[0.99]"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                      <Edit className="h-5 w-5" />
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200 group-hover:scale-110">
+                      <Edit className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">Éditer mon site</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <h3 className="font-semibold text-sm sm:text-base">Éditer mon site</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
                         Modifier le contenu et le design
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200" />
                 </button>
 
                 <a
                   href="/app/modules"
-                  className="group flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50"
+                  className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-md active:scale-[0.99]"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 group-hover:bg-violet-500 group-hover:text-white transition-colors">
-                      <Puzzle className="h-5 w-5" />
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 group-hover:bg-violet-500 group-hover:text-white transition-all duration-200 group-hover:scale-110">
+                      <Puzzle className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:rotate-12" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">Gérer les modules</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <h3 className="font-semibold text-sm sm:text-base">Gérer les modules</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         {enabledModulesCount} module{enabledModulesCount > 1 ? 's' : ''} actif{enabledModulesCount > 1 ? 's' : ''}
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-violet-600 transition-colors" />
+                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-violet-600 group-hover:translate-x-1 transition-all duration-200" />
                 </a>
 
                 <a
                   href="/app/cloud"
-                  className="group flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50"
+                  className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-md active:scale-[0.99]"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                      <Upload className="h-5 w-5" />
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-200 group-hover:scale-110">
+                      <Upload className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:-translate-y-0.5" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">Mes fichiers</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <h3 className="font-semibold text-sm sm:text-base">Mes fichiers</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         {quota ? formatBytes(quota.total_size_used) : '0 B'} utilisés
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-emerald-600 transition-colors" />
+                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-emerald-600 group-hover:translate-x-1 transition-all duration-200" />
                 </a>
 
                 {website && (
@@ -549,20 +637,20 @@ export default function Dashboard() {
                     href={`/${website.slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50"
+                    className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-md active:scale-[0.99]"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
-                        <ExternalLink className="h-5 w-5" />
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-all duration-200 group-hover:scale-110">
+                        <ExternalLink className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                       </div>
                       <div>
-                        <h3 className="font-semibold">Voir mon site</h3>
-                        <p className="text-sm text-muted-foreground">
+                        <h3 className="font-semibold text-sm sm:text-base">Voir mon site</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate max-w-[150px] sm:max-w-none">
                           {website.slug}.asap.cool
                         </p>
                       </div>
                     </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-amber-600 transition-colors" />
+                    <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-amber-600 group-hover:translate-x-1 transition-all duration-200" />
                   </a>
                 )}
               </CardContent>
@@ -571,43 +659,43 @@ export default function Dashboard() {
         </TabsContent>
 
         {/* Site Settings Tab */}
-        <TabsContent value="settings" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-2">
+        <TabsContent value="settings" className="space-y-4 sm:space-y-6 animate-fade-in">
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
             {/* Website Info Form */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Globe className="h-5 w-5 text-primary" />
+            <Card className="animate-fade-in-up" style={{ animationDelay: '0.05s', animationFillMode: 'both' }}>
+              <CardHeader className="px-4 sm:px-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   Informations générales
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   Les informations de base de votre site
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSave} className="space-y-6">
-                  <div className="space-y-2">
-                    <FormLabel htmlFor="slug" className="flex items-center gap-2">
-                      <Link2 className="h-4 w-4 text-muted-foreground" />
+              <CardContent className="px-4 sm:px-6">
+                <form onSubmit={handleSave} className="space-y-4 sm:space-y-6">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <FormLabel htmlFor="slug" className="flex items-center gap-2 text-sm">
+                      <Link2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                       URL du site
                     </FormLabel>
                     <div className="flex items-center">
-                      <span className="flex h-10 items-center rounded-l-md border border-r-0 bg-muted px-3 text-sm text-muted-foreground">
+                      <span className="flex h-9 sm:h-10 items-center rounded-l-md border border-r-0 bg-muted px-2 sm:px-3 text-xs sm:text-sm text-muted-foreground">
                         asap.cool/
                       </span>
                       <Input
                         id="slug"
                         value={website?.slug || ''}
                         disabled
-                        className="rounded-l-none bg-muted"
+                        className="rounded-l-none bg-muted h-9 sm:h-10 text-sm"
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">L'URL ne peut pas être modifiée après la création</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">L'URL ne peut pas être modifiée</p>
                   </div>
 
-                  <div className="space-y-2">
-                    <FormLabel htmlFor="title" className="flex items-center gap-2">
-                      <Type className="h-4 w-4 text-muted-foreground" />
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <FormLabel htmlFor="title" className="flex items-center gap-2 text-sm">
+                      <Type className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                       Titre
                     </FormLabel>
                     <Input
@@ -615,65 +703,57 @@ export default function Dashboard() {
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="Votre nom ou titre"
+                      className="h-9 sm:h-10 text-sm"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <FormLabel htmlFor="tagline" className="flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <FormLabel htmlFor="tagline" className="flex items-center gap-2 text-sm">
+                      <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                       Tagline
                     </FormLabel>
                     <Input
                       id="tagline"
                       value={tagline}
                       onChange={(e) => setTagline(e.target.value)}
-                      placeholder="Développeur Full Stack | Designer | ..."
+                      placeholder="Développeur | Designer | ..."
+                      className="h-9 sm:h-10 text-sm"
                     />
                   </div>
 
                   <Separator />
-
-                  <div className="flex justify-end">
-                    <Button type="submit" disabled={isSaving}>
-                      {isSaving ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Save className="h-4 w-4 mr-2" />
-                      )}
-                      Enregistrer
-                    </Button>
-                  </div>
                 </form>
               </CardContent>
             </Card>
 
             {/* GitHub Integration */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Github className="h-5 w-5" />
+              <CardHeader className="px-4 sm:px-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Github className="h-4 w-4 sm:h-5 sm:w-5" />
                   Intégration GitHub
                 </CardTitle>
-                <CardDescription>
-                  Connectez votre compte GitHub pour afficher automatiquement vos projets
+                <CardDescription className="text-xs sm:text-sm">
+                  Connectez GitHub pour afficher vos projets
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleGitHubConnect} className="space-y-4">
-                  <div className="space-y-2">
-                    <FormLabel htmlFor="github">Nom d'utilisateur GitHub</FormLabel>
-                    <div className="flex gap-2">
+              <CardContent className="px-4 sm:px-6">
+                <form onSubmit={handleGitHubConnect} className="space-y-3 sm:space-y-4">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <FormLabel htmlFor="github" className="text-sm">Nom d'utilisateur GitHub</FormLabel>
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Input
                         id="github"
                         value={githubUsername}
                         onChange={(e) => setGithubUsername(e.target.value)}
                         placeholder="votre-username"
-                        className="flex-1"
+                        className="flex-1 h-9 sm:h-10 text-sm"
                       />
                       <Button 
                         type="submit" 
                         variant="secondary"
                         disabled={isSaving || !githubUsername.trim()}
+                        className="h-9 sm:h-10 w-full sm:w-auto"
                       >
                         {isSaving ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -722,6 +802,14 @@ export default function Dashboard() {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Sticky form actions */}
+      <FormActions
+        isDirty={isFormDirty}
+        isSaving={isSaving}
+        onSave={() => handleSave()}
+        onCancel={handleCancel}
+      />
     </div>
   );
 }

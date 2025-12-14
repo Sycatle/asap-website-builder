@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 export default function SignupForm({
@@ -15,7 +15,7 @@ export default function SignupForm({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [slug, setSlug] = useState('');
-  const { signup, isLoading, error } = useAuthStore();
+  const { signup, isLoading } = useAuthStore();
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newEmail = e.target.value;
@@ -30,12 +30,23 @@ export default function SignupForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
+    
+    const signupPromise = async () => {
       await signup(email, password, slug);
-      window.location.href = '/app/dashboard';
-    } catch (err) {
-      // Error is handled by the store
-    }
+      return slug;
+    };
+
+    toast.promise(signupPromise(), {
+      loading: 'Création du compte...',
+      success: (slug) => {
+        // Redirect on success
+        setTimeout(() => {
+          window.location.href = '/app/dashboard';
+        }, 500);
+        return `Bienvenue ! Votre site ${slug}.asap.cool est prêt.`;
+      },
+      error: (err) => err.message || 'Échec de la création du compte',
+    });
   };
 
   return (
@@ -57,12 +68,6 @@ export default function SignupForm({
               Lancez votre site en quelques minutes
             </p>
           </div>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
 
           <div className="flex flex-col gap-4">
             <div className="grid gap-2">

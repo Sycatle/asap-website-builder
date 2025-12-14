@@ -1,9 +1,25 @@
-import { useEffect, useState } from 'react';
-import { modulesAPI, websitesAPI } from '../lib/api';
+import { useEffect, useState, useMemo, useRef } from 'react';
+import { modulesAPI } from '../lib/api';
 import type { Module, WebsiteModule, ConfigSchema, ConfigAction } from '../lib/api/modules';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import SchemaRenderer from './SchemaRenderer';
+import { useWebsites, useModuleCatalog, useWebsiteModules, useModuleData, useCacheActions } from '@/hooks/useCache';
+import { FormActions } from '@/components/ui/form-actions';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 interface ModuleConfigProps {
   slug: string;
@@ -144,127 +160,144 @@ interface ChangelogEntry {
 }
 
 export default function ModuleConfig({ slug }: ModuleConfigProps) {
-  const [module, setModule] = useState<Module | null>(null);
-  const [websiteModule, setWebsiteModule] = useState<WebsiteModule | null>(null);
-  const [websiteId, setWebsiteId] = useState<string | null>(null);
+  // Cache hooks
+  const { websites, isLoading: websitesLoading } = useWebsites();
+  const { modules: catalogModules, isLoading: catalogLoading } = useModuleCatalog();
+  const websiteId = websites[0]?.id || null;
+  const { modules: websiteModules, isLoading: modulesLoading, refetch: refetchModules } = useWebsiteModules(websiteId);
+  const { data: moduleDataResponse, isLoading: moduleDataLoading, refetch: refetchModuleData } = useModuleData(websiteId, slug);
+  const { invalidateWebsiteData } = useCacheActions();
+
+  // Derive module from catalog
+  const module = useMemo(() => {
+    if (!catalogModules.length) return null;
+    return catalogModules.find((m: Module) => m.slug === slug) || null;
+  }, [catalogModules, slug]);
+
+  // Derive websiteModule from cached modules
+  const websiteModule = useMemo(() => {
+    if (!websiteModules.length) return null;
+    return websiteModules.find((m: WebsiteModule) => m.module_slug === slug) || null;
+  }, [websiteModules, slug]);
+
+  // Local state for settings and UI
   const [isModuleEnabled, setIsModuleEnabled] = useState(false);
   const [settings, setSettings] = useState<Record<string, any>>({});
+  const [initialSettings, setInitialSettings] = useState<Record<string, any>>({});
   const [moduleData, setModuleData] = useState<Record<string, any>>({});
   const [changelog, setChangelog] = useState<ChangelogEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [executingAction, setExecutingAction] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<string | null>(null);
+  const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
 
+  // Combined loading state
+  const isLoading = websitesLoading || catalogLoading || modulesLoading || moduleDataLoading;
+  
+  // Track if settings have changed
+  const isSettingsDirty = useMemo(() => {
+    return JSON.stringify(settings) !== JSON.stringify(initialSettings);
+  }, [settings, initialSettings]);
+
+  // Update local state when cached data changes
   useEffect(() => {
-    loadData();
-  }, [slug]);
-
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Get current website
-      const websites = await websitesAPI.list();
-      if (websites.length === 0) {
-        setError('Aucun site web trouvé');
-        setIsLoading(false);
-        return;
-      }
-      
-      const currentWebsiteId = websites[0].id;
-      setWebsiteId(currentWebsiteId);
-
-      // Get module by slug (includes config_schema)
-      let foundModule: Module | null = null;
-      
-      try {
-        foundModule = await modulesAPI.getBySlug(slug);
-      } catch {
-        // Fallback to catalog search
-        const catalog = await modulesAPI.catalog();
-        foundModule = catalog.find(m => m.slug === slug) || null;
-      }
-      
-      if (!foundModule) {
-        setError('Module non trouvé');
-        setIsLoading(false);
-        return;
-      }
-      
-      setModule(foundModule);
-
-      // Load website modules to check if this one is activated
-      try {
-        const websiteModules = await modulesAPI.listForWebsite(currentWebsiteId);
-        const activeModule = websiteModules.find(m => m.module_slug === slug);
-        
-        if (activeModule) {
-          setWebsiteModule(activeModule);
-          setIsModuleEnabled(activeModule.enabled);
-          setSettings(activeModule.settings || foundModule.default_settings || {});
-        } else {
-          setSettings(foundModule.default_settings || {});
-          setIsModuleEnabled(false);
-        }
-      } catch {
-        setSettings(foundModule.default_settings || {});
-        setIsModuleEnabled(false);
-      }
-
-      // Try to load module-specific data
-      try {
-        const data = await modulesAPI.getModuleData(currentWebsiteId, slug);
-        console.log('Module data response:', data);
-        setModuleData(data.data || {});
-        if (data.enabled !== undefined) {
-          setIsModuleEnabled(data.enabled);
-        }
-      } catch (err) {
-        console.error('Failed to load module data:', err);
-        setModuleData({});
-      }
-
-      // Mock changelog data (should be fetched from API in production)
-      setChangelog([
-        {
-          id: '1',
-          action: 'sync',
-          description: 'Synchronisation des données',
-          timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-        },
-        {
-          id: '2',
-          action: 'settings_updated',
-          description: 'Configuration mise à jour',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-        },
-        {
-          id: '3',
-          action: 'enabled',
-          description: 'Module activé',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-        },
-      ]);
-    } catch (err) {
-      console.error('Failed to load module config:', err);
-      setError('Erreur lors du chargement de la configuration');
-    } finally {
-      setIsLoading(false);
+    if (websiteModule) {
+      setIsModuleEnabled(websiteModule.enabled);
+      const newSettings = websiteModule.settings || module?.default_settings || {};
+      setSettings(newSettings);
+      setInitialSettings(newSettings);
+    } else if (module) {
+      const newSettings = module.default_settings || {};
+      setSettings(newSettings);
+      setInitialSettings(newSettings);
+      setIsModuleEnabled(false);
     }
+  }, [websiteModule, module]);
+
+  // Update module data from cache
+  useEffect(() => {
+    if (moduleDataResponse) {
+      setModuleData(moduleDataResponse.data || {});
+      if (moduleDataResponse.enabled !== undefined) {
+        setIsModuleEnabled(moduleDataResponse.enabled);
+      }
+    }
+  }, [moduleDataResponse]);
+
+  // Initialize changelog (mock data)
+  useEffect(() => {
+    setChangelog([
+      {
+        id: '1',
+        action: 'sync',
+        description: 'Synchronisation des données',
+        timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+      },
+      {
+        id: '2',
+        action: 'settings_updated',
+        description: 'Configuration mise à jour',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+      },
+      {
+        id: '3',
+        action: 'enabled',
+        description: 'Module activé',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+      },
+    ]);
+  }, []);
+
+  // Cancel changes handler
+  const handleCancelChanges = () => {
+    setSettings(initialSettings);
+    toast.info('Modifications annulées');
   };
+
+  // Keyboard shortcuts
+  const shortcuts = useMemo(() => [
+    {
+      key: 's',
+      ctrl: true,
+      action: () => {
+        if (isSettingsDirty && !isSaving) {
+          handleSaveSettings();
+        }
+      },
+      description: 'Sauvegarder',
+      enabled: isSettingsDirty,
+    },
+    {
+      key: 'Escape',
+      action: () => {
+        if (isSettingsDirty) {
+          handleCancelChanges();
+        }
+      },
+      description: 'Annuler les modifications',
+      enabled: isSettingsDirty,
+    },
+    {
+      key: 'r',
+      ctrl: true,
+      shift: true,
+      action: () => {
+        refreshData();
+        toast.info('Actualisation des données...');
+      },
+      description: 'Actualiser',
+    },
+  ], [isSettingsDirty, isSaving, initialSettings]);
+
+  useKeyboardShortcuts(shortcuts);
 
   const handleSaveSettings = async () => {
     if (!module || !websiteId) return;
 
-    try {
-      setIsSaving(true);
-      setError(null);
-      setSuccess(null);
+    setIsSaving(true);
 
+    const savePromise = async () => {
       if (websiteModule) {
         await modulesAPI.updateSettings(websiteId, websiteModule.module_id, { settings });
       } else {
@@ -273,22 +306,39 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
           settings,
         });
       }
+      // Update initial settings after save
+      setInitialSettings(settings);
+      // Invalidate cache and refetch
+      invalidateWebsiteData(websiteId);
+      await Promise.all([refetchModules(true), refetchModuleData(true)]);
+    };
 
-      setSuccess('Configuration enregistrée');
-      setTimeout(() => setSuccess(null), 3000);
-      await loadData();
+    toast.promise(savePromise(), {
+      loading: 'Enregistrement en cours...',
+      success: 'Configuration enregistrée',
+      error: 'Erreur lors de l\'enregistrement',
+    });
+
+    try {
+      await savePromise();
     } catch (err) {
       console.error('Failed to save settings:', err);
-      setError('Erreur lors de l\'enregistrement');
     } finally {
       setIsSaving(false);
     }
   };
 
+  // Refresh data from cache
+  const refreshData = async () => {
+    if (!websiteId) return;
+    invalidateWebsiteData(websiteId);
+    await Promise.all([refetchModules(true), refetchModuleData(true)]);
+  };
+
   const handleAction = async (actionKey: string) => {
     if (!websiteId) return;
     
-    const action = module?.config_schema?.actions?.find(a => a.key === actionKey);
+    const action = module?.config_schema?.actions?.find((a: ConfigAction) => a.key === actionKey);
     
     // Handle confirmation
     if (action?.confirm && pendingConfirm !== actionKey) {
@@ -297,22 +347,25 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
     }
     setPendingConfirm(null);
     
-    try {
-      setExecutingAction(actionKey);
-      setError(null);
-      setSuccess(null);
+    setExecutingAction(actionKey);
 
+    const actionPromise = async () => {
       await modulesAPI.executeAction(websiteId, slug, actionKey, settings);
-      
-      setSuccess(`Action "${action?.label || actionKey}" exécutée`);
-      setTimeout(() => setSuccess(null), 3000);
-      
       if (action?.refreshAfter !== false) {
-        setTimeout(loadData, 2000);
+        setTimeout(refreshData, 2000);
       }
+    };
+
+    toast.promise(actionPromise(), {
+      loading: `Exécution de "${action?.label || actionKey}"...`,
+      success: `Action "${action?.label || actionKey}" exécutée`,
+      error: `Erreur lors de l'exécution de l'action`,
+    });
+
+    try {
+      await actionPromise();
     } catch (err) {
       console.error('Failed to execute action:', err);
-      setError(`Erreur lors de l'exécution de l'action`);
     } finally {
       setExecutingAction(null);
     }
@@ -322,44 +375,63 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
     if (!module || !websiteId) return;
     
     if (isModuleEnabled) {
-      if (!confirm('Êtes-vous sûr de vouloir désactiver ce module ?')) return;
-      
-      try {
-        if (websiteModule) {
-          await modulesAPI.deactivate(websiteId, websiteModule.id);
-        }
-        setSuccess('Module désactivé');
-        setTimeout(() => setSuccess(null), 3000);
-        await loadData();
-      } catch (err) {
-        setError('Erreur lors de la désactivation');
-      }
+      // Show confirmation dialog instead of native confirm
+      setShowDeactivateConfirm(true);
     } else {
-      try {
+      const activatePromise = async () => {
         await modulesAPI.activate(websiteId, {
           module_id: module.id,
           settings: module.default_settings || {},
         });
-        setSuccess('Module activé');
-        setTimeout(() => setSuccess(null), 3000);
-        await loadData();
+        await refreshData();
+      };
+
+      toast.promise(activatePromise(), {
+        loading: 'Activation en cours...',
+        success: 'Module activé',
+        error: 'Erreur lors de l\'activation',
+      });
+
+      try {
+        await activatePromise();
       } catch (err) {
-        setError('Erreur lors de l\'activation');
+        console.error('Failed to activate module:', err);
       }
+    }
+  };
+
+  const confirmDeactivateModule = async () => {
+    if (!websiteId || !websiteModule) {
+      toast.error('Données manquantes pour la désactivation');
+      return;
+    }
+    
+    setIsDeactivating(true);
+    
+    try {
+      await modulesAPI.deactivate(websiteId, websiteModule.id);
+      await refreshData();
+      toast.success('Module désactivé');
+    } catch (err) {
+      console.error('Failed to deactivate module:', err);
+      toast.error('Erreur lors de la désactivation');
+    } finally {
+      setIsDeactivating(false);
+      setShowDeactivateConfirm(false);
     }
   };
 
   // Find sync action from schema
   const getSyncAction = (): ConfigAction | undefined => {
     return module?.config_schema?.actions?.find(
-      a => a.key === 'sync' || a.key.includes('sync')
+      (a: ConfigAction) => a.key === 'sync' || a.key.includes('sync')
     );
   };
 
   // Get other actions (non-sync)
   const getOtherActions = (): ConfigAction[] => {
     return module?.config_schema?.actions?.filter(
-      a => a.key !== 'sync' && !a.key.includes('sync')
+      (a: ConfigAction) => a.key !== 'sync' && !a.key.includes('sync')
     ) || [];
   };
 
@@ -398,11 +470,56 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
-          <p className="text-sm text-gray-500">Chargement...</p>
-        </div>
+      <div className="max-w-4xl mx-auto">
+        {/* Back link skeleton */}
+        <Skeleton className="h-4 w-20 mb-6" />
+        
+        {/* Header Card Skeleton */}
+        <Card className="mb-6">
+          <CardHeader className="p-6">
+            <div className="flex items-start gap-4">
+              <Skeleton className="h-14 w-14 rounded-xl shrink-0" />
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-7 w-48" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+                <Skeleton className="h-4 w-full max-w-md" />
+              </div>
+              <div className="flex items-center gap-3 ml-auto">
+                <Skeleton className="h-10 w-28" />
+                <Skeleton className="h-10 w-10 rounded" />
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+
+        {/* Tabs Skeleton */}
+        <Card>
+          <CardHeader className="border-b p-0">
+            <div className="flex gap-2 px-6 py-3">
+              <Skeleton className="h-9 w-28" />
+              <Skeleton className="h-9 w-24" />
+              <Skeleton className="h-9 w-28" />
+            </div>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            {/* Form fields skeleton */}
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-3 w-64" />
+              </div>
+            ))}
+            {/* Action buttons skeleton */}
+            <div className="flex gap-3 pt-4 border-t">
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-10 w-24" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -440,25 +557,25 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       {/* Back link */}
       <a 
         href="/app/modules" 
-        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6 transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-gray-500 hover:text-gray-700 mb-4 sm:mb-6 transition-colors"
       >
         {Icons.back}
         Modules
       </a>
 
       {/* Header Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-        <div className="p-6">
-          <div className="flex items-start justify-between gap-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 sm:mb-6">
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             {/* Module info */}
-            <div className="flex items-start gap-4 flex-1 min-w-0">
-              <div className={`w-12 h-12 ${getCategoryColor(module.category)} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
+            <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 ${getCategoryColor(module.category)} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
                 {getModuleIcon(module.category)}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h1 className="text-xl font-bold text-gray-900">{module.name}</h1>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <h1 className="text-lg sm:text-xl font-bold text-gray-900">{module.name}</h1>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${
                     isModuleEnabled 
                       ? 'bg-green-100 text-green-700' 
                       : 'bg-gray-100 text-gray-600'
@@ -466,8 +583,8 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
                     {isModuleEnabled ? 'Actif' : 'Inactif'}
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-gray-600 line-clamp-2">{module.description}</p>
-                <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
+                <p className="mt-1 text-xs sm:text-sm text-gray-600 line-clamp-2">{module.description}</p>
+                <div className="mt-1.5 sm:mt-2 flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-gray-500">
                   <span className="inline-flex items-center gap-1">
                     {getCategoryLabel(module.category)}
                   </span>
@@ -478,23 +595,24 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
               {/* Sync button */}
               {syncAction && isModuleEnabled && (
                 <button
                   onClick={() => handleAction(syncAction.key)}
                   disabled={executingAction === syncAction.key}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {executingAction === syncAction.key ? Icons.spinner : Icons.sync}
-                  Synchroniser
+                  <span className="hidden xs:inline">Synchroniser</span>
+                  <span className="xs:hidden">Sync</span>
                 </button>
               )}
               
               {/* Enable/Disable toggle */}
               <button
                 onClick={handleToggleModule}
-                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
                   isModuleEnabled
                     ? 'text-red-600 bg-red-50 border border-red-200 hover:bg-red-100'
                     : 'text-white bg-primary-600 hover:bg-primary-700'
@@ -507,40 +625,23 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
           </div>
         </div>
 
-        {/* Success/Error messages */}
-        {(error || success) && (
-          <div className={`px-6 py-3 border-t ${error ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-sm ${error ? 'text-red-700' : 'text-green-700'}`}>
-                {error || success}
-              </span>
-              <button 
-                onClick={() => { setError(null); setSuccess(null); }}
-                className={`text-sm ${error ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700'}`}
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Confirmation dialog */}
         {pendingConfirm && (
-          <div className="px-6 py-4 border-t bg-amber-50 border-amber-100">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-amber-700">
-                {module.config_schema?.actions?.find(a => a.key === pendingConfirm)?.confirm || 'Confirmer cette action ?'}
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-t bg-amber-50 border-amber-100">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <span className="text-xs sm:text-sm text-amber-700">
+                {module.config_schema?.actions?.find((a: ConfigAction) => a.key === pendingConfirm)?.confirm || 'Confirmer cette action ?'}
               </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setPendingConfirm(null)}
-                  className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={() => handleAction(pendingConfirm)}
-                  className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+                  className="flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
                 >
                   Confirmer
                 </button>
@@ -553,31 +654,33 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       {/* Tabs Content */}
       {isModuleEnabled && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <Tabs defaultValue={defaultTab}>
-              <TabsList className="mb-4">
+              <TabsList className="mb-4 flex flex-wrap gap-1">
                 {hasConfig && (
-                  <TabsTrigger value="config" className="gap-2">
+                  <TabsTrigger value="config" className="gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
                     {Icons.settings}
-                    Configuration
+                    <span className="hidden xs:inline">Configuration</span>
+                    <span className="xs:hidden">Config</span>
                   </TabsTrigger>
                 )}
                 {hasData && (
-                  <TabsTrigger value="data" className="gap-2">
+                  <TabsTrigger value="data" className="gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
                     {Icons.data}
                     Données
                     {Object.keys(moduleData).length > 0 && (
-                      <Badge variant="secondary" className="ml-1">
+                      <Badge variant="secondary" className="ml-1 text-[10px] sm:text-xs h-4 sm:h-5">
                         {Object.values(moduleData).flat().length}
                       </Badge>
                     )}
                   </TabsTrigger>
                 )}
-                <TabsTrigger value="changelog" className="gap-2">
+                <TabsTrigger value="changelog" className="gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
                   {Icons.history}
-                  Historique
+                  <span className="hidden xs:inline">Historique</span>
+                  <span className="xs:hidden">Hist.</span>
                   {changelog.length > 0 && (
-                    <Badge variant="secondary" className="ml-1">
+                    <Badge variant="secondary" className="ml-1 text-[10px] sm:text-xs h-4 sm:h-5">
                       {changelog.length}
                     </Badge>
                   )}
@@ -600,15 +703,15 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
                     
                     {/* Other actions */}
                       {getOtherActions().length > 0 && (
-                        <div className="border-t border-gray-200 pt-6">
-                          <h3 className="text-sm font-medium text-gray-900 mb-3">Actions</h3>
+                        <div className="border-t border-gray-200 pt-4 sm:pt-6">
+                          <h3 className="text-xs sm:text-sm font-medium text-gray-900 mb-2 sm:mb-3">Actions</h3>
                           <div className="flex flex-wrap gap-2">
                             {getOtherActions().map((action) => (
                               <button
                                 key={action.key}
                                 onClick={() => handleAction(action.key)}
                                 disabled={executingAction === action.key}
-                                className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                                className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                                   action.style === 'danger'
                                     ? 'text-red-600 bg-red-50 border border-red-200 hover:bg-red-100'
                                     : action.style === 'secondary'
@@ -623,24 +726,6 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
                           </div>
                         </div>
                       )}
-
-                      {/* Save button */}
-                      <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-                        <button
-                          onClick={() => loadData()}
-                          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                          Annuler
-                        </button>
-                        <button
-                          onClick={handleSaveSettings}
-                          disabled={isSaving}
-                          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {isSaving ? Icons.spinner : Icons.check}
-                          Enregistrer
-                        </button>
-                      </div>
                     </div>
                   </TabsContent>
                 )}
@@ -701,23 +786,71 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
 
       {/* Not enabled state */}
       {!isModuleEnabled && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
-          <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8 text-center">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3 sm:mb-4 text-gray-400">
             {Icons.power}
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Module désactivé</h3>
-          <p className="text-gray-500 mb-6 max-w-md mx-auto">
-            Activez ce module pour accéder à sa configuration et ses fonctionnalités.
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1.5 sm:mb-2">Module désactivé</h3>
+          <p className="text-xs sm:text-sm text-gray-500 mb-4 sm:mb-6 max-w-md mx-auto">
+            Activez ce module pour accéder à sa configuration.
           </p>
           <button
             onClick={handleToggleModule}
-            className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+            className="inline-flex items-center gap-2 px-5 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
           >
             {Icons.check}
             Activer le module
           </button>
         </div>
       )}
+      
+      {/* Sticky form actions */}
+      <FormActions
+        isDirty={isSettingsDirty}
+        isSaving={isSaving}
+        onSave={handleSaveSettings}
+        onCancel={handleCancelChanges}
+      />
+
+      {/* Deactivate Module Confirmation Dialog */}
+      <Dialog open={showDeactivateConfirm} onOpenChange={setShowDeactivateConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Désactiver le module
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Êtes-vous sûr de vouloir désactiver le module <span className="font-medium text-foreground">{module?.name}</span> ?
+              <br />
+              <span className="text-muted-foreground">Vous pourrez le réactiver à tout moment.</span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeactivateConfirm(false)}
+              disabled={isDeactivating}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeactivateModule}
+              disabled={isDeactivating}
+            >
+              {isDeactivating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Désactivation...
+                </>
+              ) : (
+                'Désactiver'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

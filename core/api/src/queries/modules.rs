@@ -176,3 +176,36 @@ pub async fn update_website_module(
 
     Ok(result.rows_affected() > 0)
 }
+
+/// Deactivate (delete) a module from a website
+/// module_id_or_row_id can be either the module_id (from modules table) or the id (from website_modules table)
+pub async fn deactivate_website_module(
+    pool: &PgPool,
+    website_id: Uuid,
+    module_id_or_row_id: Uuid,
+    account_id: Uuid,
+) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    // Verify website belongs to account
+    let count: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
+    )
+    .bind(website_id)
+    .bind(account_id)
+    .fetch_one(pool)
+    .await?;
+
+    if count.0 == 0 {
+        return Ok(false);
+    }
+
+    // Delete the module from the website - try both id (row id) and module_id
+    let result = sqlx::query(
+        "DELETE FROM website_modules WHERE website_id = $1 AND (id = $2 OR module_id = $2)"
+    )
+    .bind(website_id)
+    .bind(module_id_or_row_id)
+    .execute(pool)
+    .await?;
+
+    Ok(result.rows_affected() > 0)
+}

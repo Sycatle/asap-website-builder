@@ -293,6 +293,17 @@ pub async fn publish_website(
 
     match result {
         Ok(result) if result.rows_affected() > 0 => {
+            // Get website slug for notification
+            let website_slug = sqlx::query_scalar::<_, String>(
+                "SELECT slug FROM websites WHERE id = $1"
+            )
+            .bind(website_id)
+            .fetch_optional(&pool)
+            .await
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| website_id.to_string());
+
             let event_payload = serde_json::json!({
                 "website_id": website_id.to_string()
             });
@@ -310,6 +321,11 @@ pub async fn publish_website(
 
             if let Err(e) = event_result {
                 tracing::error!("Failed to create WEBSITE_PUBLISHED event: {}", e);
+            }
+
+            // Create notification for website published
+            if let Err(e) = crate::notifications::create_website_published_notification(&pool, account_id, &website_slug).await {
+                tracing::error!("Failed to create website published notification: {}", e);
             }
 
             tracing::info!("Website published: {}", website_id);

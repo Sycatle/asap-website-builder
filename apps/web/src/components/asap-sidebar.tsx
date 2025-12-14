@@ -11,11 +11,9 @@ import {
   Palette,
 } from "lucide-react"
 
-import { NavUserAsap } from "@/components/nav-user-asap"
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -134,9 +132,6 @@ export function AsapSidebar({ modules = [], user }: AsapSidebarProps) {
           </SidebarGroup>
         )}
       </SidebarContent>
-      <SidebarFooter>
-        <NavUserAsap user={user} />
-      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )

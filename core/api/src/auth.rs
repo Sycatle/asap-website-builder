@@ -48,6 +48,12 @@ pub struct MeResponse {
     pub plan: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct ChangePasswordRequest {
+    pub current_password: String,
+    pub new_password: String,
+}
+
 /// Hash a password using bcrypt
 fn hash_password(password: &str) -> Result<String, bcrypt::BcryptError> {
     bcrypt::hash(password, bcrypt::DEFAULT_COST)
@@ -351,6 +357,16 @@ pub async fn signup(
         }))).into_response();
     }
 
+    // Create welcome notification (fire and forget)
+    tokio::spawn({
+        let pool = pool.clone();
+        async move {
+            if let Err(e) = crate::notifications::create_welcome_notification(&pool, account_id).await {
+                tracing::warn!("Failed to create welcome notification: {}", e);
+            }
+        }
+    });
+
     // Generate JWT token
     let token = match generate_token(&account_id.to_string(), &config) {
         Ok(token) => token,
@@ -426,6 +442,11 @@ pub async fn login(
         }
     };
 
+    // Create notification for new login
+    if let Err(e) = crate::notifications::create_new_login_notification(&pool, account.id, None).await {
+        tracing::error!("Failed to create login notification: {}", e);
+    }
+
     tracing::info!("Account logged in successfully: {}", payload.email);
 
     (StatusCode::OK, Json(LoginResponse { token })).into_response()
@@ -467,6 +488,108 @@ pub async fn me(
         }
         Err(e) => {
             tracing::error!("Database error fetching account: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response()
+        }
+    }
+}
+
+pub async fn change_password(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<ChangePasswordRequest>,
+) -> impl IntoResponse {
+    // Parse account ID from claims
+    let account_id = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    // Validate new password length
+    if payload.new_password.len() < 8 {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "New password must be at least 8 characters"
+        }))).into_response();
+    }
+
+    // Get current password hash
+    let account_result = sqlx::query_scalar::<_, String>(
+        "SELECT password_hash FROM accounts WHERE id = $1"
+    )
+    .bind(account_id)
+    .fetch_optional(&pool)
+    .await;
+
+    let password_hash = match account_result {
+        Ok(Some(hash)) => hash,
+        Ok(None) => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Account not found"
+            }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Database error fetching account: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    // Verify current password
+    match verify_password(&payload.current_password, &password_hash) {
+        Ok(true) => {},
+        Ok(false) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Current password is incorrect"
+            }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Failed to verify password: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    }
+
+    // Hash new password
+    let new_password_hash = match hash_password(&payload.new_password) {
+        Ok(hash) => hash,
+        Err(e) => {
+            tracing::error!("Failed to hash password: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    // Update password
+    let update_result = sqlx::query(
+        "UPDATE accounts SET password_hash = $1 WHERE id = $2"
+    )
+    .bind(&new_password_hash)
+    .bind(account_id)
+    .execute(&pool)
+    .await;
+
+    match update_result {
+        Ok(_) => {
+            // Create notification for password change
+            if let Err(e) = crate::notifications::create_password_changed_notification(&pool, account_id).await {
+                tracing::error!("Failed to create password change notification: {}", e);
+            }
+            
+            tracing::debug!("Password changed successfully for account: {}", account_id);
+            (StatusCode::OK, Json(serde_json::json!({
+                "message": "Password changed successfully"
+            }))).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Database error updating password: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()

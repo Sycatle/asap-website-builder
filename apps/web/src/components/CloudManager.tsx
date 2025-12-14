@@ -1,14 +1,14 @@
 "use client"
 
-import { useEffect, useState, useRef } from 'react';
-import { filesAPI, type FileMetadata, type QuotaUsage } from '../lib/api';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { filesAPI, type FileMetadata } from '../lib/api';
 import { formatBytes } from '../lib/utils/formatters';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { 
   Upload, 
   Image, 
@@ -29,63 +37,106 @@ import {
   Copy,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Loader2,
   LayoutGrid,
   List,
   HardDrive,
   X,
-  Eye
+  Eye,
+  ExternalLink,
+  Link2
 } from "lucide-react";
+import { useFiles, useQuota } from '@/hooks/useCache';
+import { useGridNavigation, KeyboardHint } from '@/hooks/useGridNavigation';
 
 type ViewMode = 'grid' | 'list';
 
 export default function CloudManager() {
-  const [files, setFiles] = useState<FileMetadata[]>([]);
-  const [quota, setQuota] = useState<QuotaUsage | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Cache hooks
+  const { files, isLoading: filesLoading, refetch: refetchFiles, addFile, removeFile } = useFiles();
+  const { quota, isLoading: quotaLoading, refetch: refetchQuota } = useQuota();
+  
+  // Local UI state
   const [isUploading, setIsUploading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ file: FileMetadata } | null>(null);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const gridContainerRef = useRef<HTMLDivElement>(null);
 
-  const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
-
+  // Detect number of columns based on container width
+  const [columns, setColumns] = useState(2);
+  
   useEffect(() => {
-    loadData();
+    const updateColumns = () => {
+      if (typeof window === 'undefined') return;
+      const width = window.innerWidth;
+      if (width >= 1280) setColumns(5);      // xl
+      else if (width >= 1024) setColumns(4); // lg
+      else if (width >= 640) setColumns(3);  // sm
+      else setColumns(2);                    // mobile
+    };
+    
+    updateColumns();
+    window.addEventListener('resize', updateColumns);
+    return () => window.removeEventListener('resize', updateColumns);
   }, []);
 
-  const loadData = async () => {
-    try {
-      const [filesData, quotaData] = await Promise.all([
-        filesAPI.list(),
-        filesAPI.getQuota(),
-      ]);
-      setFiles(filesData);
-      setQuota(quotaData);
-    } catch (error) {
-      console.error('Failed to load data:', error);
-      setMessage({ type: 'error', text: 'Erreur lors du chargement des fichiers' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Memoized callbacks for keyboard navigation
+  const getFileId = useCallback((file: FileMetadata) => file.id, []);
+  const handleOpenFile = useCallback((file: FileMetadata) => setPreviewFile(file), []);
+
+  // Keyboard navigation
+  const {
+    focusedIndex,
+    selectedIds,
+    isSelected,
+    isFocused,
+    selectAll,
+    clearSelection,
+    toggleSelection,
+    getItemProps,
+    containerRef,
+  } = useGridNavigation({
+    items: files,
+    getItemId: getFileId,
+    columns: viewMode === 'grid' ? columns : 1,
+    onOpen: handleOpenFile,
+    enabled: files.length > 0,
+  });
+
+  const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
+  const isLoading = filesLoading || quotaLoading;
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
-    setMessage(null);
+
+    const uploadPromise = async () => {
+      const uploadedFile = await filesAPI.upload(file);
+      // Optimistic update: add to cache immediately
+      addFile(uploadedFile);
+      // Refetch quota (it changed after upload)
+      await refetchQuota(true);
+      return file.name;
+    };
+
+    toast.promise(uploadPromise(), {
+      loading: `Upload de ${file.name}...`,
+      success: (name) => `${name} uploadé avec succès !`,
+      error: 'Erreur lors de l\'upload',
+    });
 
     try {
-      await filesAPI.upload(file);
-      setMessage({ type: 'success', text: `${file.name} uploadé avec succès !` });
-      await loadData();
+      await uploadPromise();
     } catch (error) {
       console.error('Failed to upload file:', error);
-      setMessage({ type: 'error', text: 'Erreur lors de l\'upload' });
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -94,17 +145,52 @@ export default function CloudManager() {
     }
   };
 
-  const handleDelete = async (fileId: string, filename: string) => {
-    if (!confirm(`Supprimer ${filename} ?`)) return;
+  const handleDelete = async (file: FileMetadata) => {
+    setDeleteConfirm({ file });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+    
+    const { file } = deleteConfirm;
+    setIsDeleting(true);
 
     try {
-      await filesAPI.delete(fileId);
-      setMessage({ type: 'success', text: 'Fichier supprimé' });
+      await filesAPI.delete(file.id);
+      removeFile(file.id);
       setPreviewFile(null);
-      await loadData();
+      await refetchQuota(true);
+      toast.success('Fichier supprimé');
     } catch (error) {
       console.error('Failed to delete file:', error);
-      setMessage({ type: 'error', text: 'Erreur lors de la suppression' });
+      toast.error('Erreur lors de la suppression');
+      await refetchFiles(true);
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirm(null);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const selectedFiles = files.filter(f => selectedIds.has(f.id));
+    if (selectedFiles.length === 0) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      await Promise.all(
+        selectedFiles.map(file => filesAPI.delete(file.id).then(() => removeFile(file.id)))
+      );
+      toast.success(`${selectedFiles.length} fichier${selectedFiles.length > 1 ? 's' : ''} supprimé${selectedFiles.length > 1 ? 's' : ''}`);
+      clearSelection();
+      await refetchQuota(true);
+    } catch (error) {
+      console.error('Failed to delete files:', error);
+      toast.error('Erreur lors de la suppression');
+      await refetchFiles(true);
+    } finally {
+      setIsDeleting(false);
+      setBulkDeleteConfirm(false);
     }
   };
 
@@ -117,6 +203,7 @@ export default function CloudManager() {
     const url = getFileUrl(fileId);
     await navigator.clipboard.writeText(url);
     setCopiedId(fileId);
+    toast.success('Lien copié !');
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -144,14 +231,47 @@ export default function CloudManager() {
   if (isLoading) {
     return (
       <div className="space-y-8">
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-32" />
-          <Skeleton className="h-5 w-64" />
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-9 w-32" />
+            <Skeleton className="h-5 w-48" />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center border rounded-lg p-1">
+              <Skeleton className="h-8 w-8" />
+              <Skeleton className="h-8 w-8" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
         </div>
-        <Skeleton className="h-24" />
+        
+        {/* Quota Card Skeleton */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-10 w-10 rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <div className="flex justify-between">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+                <Skeleton className="h-2 w-full rounded-full" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* File Grid Skeleton */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <Skeleton key={i} className="aspect-square" />
+          {[...Array(10)].map((_, i) => (
+            <div key={i} className="rounded-lg border overflow-hidden">
+              <Skeleton className="aspect-square w-full" />
+              <div className="p-2 space-y-1">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -159,13 +279,13 @@ export default function CloudManager() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:gap-2 animate-fade-in-down">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Fichiers</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Fichiers</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
               Gérez vos fichiers et médias
             </p>
           </div>
@@ -176,7 +296,7 @@ export default function CloudManager() {
                 variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('grid')}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 transition-all duration-200"
               >
                 <LayoutGrid className="h-4 w-4" />
               </Button>
@@ -184,7 +304,7 @@ export default function CloudManager() {
                 variant={viewMode === 'list' ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('list')}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 transition-all duration-200"
               >
                 <List className="h-4 w-4" />
               </Button>
@@ -197,57 +317,41 @@ export default function CloudManager() {
               className="hidden"
               id="file-upload"
             />
-            <Button asChild disabled={isUploading}>
+            <Button asChild disabled={isUploading} className="h-9 sm:h-10 group">
               <label htmlFor="file-upload" className="cursor-pointer">
                 {isUploading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-1.5 sm:mr-2 animate-spin" />
                 ) : (
-                  <Upload className="h-4 w-4 mr-2" />
+                  <Upload className="h-4 w-4 mr-1.5 sm:mr-2 transition-transform group-hover:-translate-y-0.5" />
                 )}
-                {isUploading ? 'Upload...' : 'Upload'}
+                <span className="text-sm">{isUploading ? 'Upload...' : 'Upload'}</span>
               </label>
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Message */}
-      {message && (
-        <Alert variant={message.type === 'error' ? 'destructive' : 'default'} className={message.type === 'success' ? 'border-green-500/50 bg-green-500/10 text-green-700' : ''}>
-          {message.type === 'success' ? (
-            <CheckCircle2 className="h-4 w-4" />
-          ) : (
-            <AlertCircle className="h-4 w-4" />
-          )}
-          <AlertDescription className="flex items-center justify-between">
-            {message.text}
-            <Button variant="ghost" size="sm" onClick={() => setMessage(null)} className="h-6 w-6 p-0">
-              <X className="h-4 w-4" />
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* Quota Card */}
       {quota && (
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="animate-fade-in-up" style={{ animationDelay: '0.05s', animationFillMode: 'both' }}>
+          <CardHeader className="pb-2 px-4 sm:px-6">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <HardDrive className="h-4 w-4 text-muted-foreground" />
-                Espace de stockage
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                <HardDrive className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+                <span className="hidden xs:inline">Espace de stockage</span>
+                <span className="xs:hidden">Stockage</span>
               </CardTitle>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-xs sm:text-sm text-muted-foreground">
                 {formatBytes(quota.total_size_used)} / {formatBytes(quota.quota_limit)}
               </span>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 sm:px-6">
             <Progress 
               value={quota.usage_percentage} 
-              className={`h-2 ${quota.usage_percentage > 80 ? '[&>div]:bg-destructive' : ''}`}
+              className={`h-1.5 sm:h-2 transition-all duration-500 ${quota.usage_percentage > 80 ? '[&>div]:bg-destructive' : ''}`}
             />
-            <p className="mt-2 text-xs text-muted-foreground">
+            <p className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-muted-foreground">
               {quota.usage_percentage.toFixed(1)}% utilisé · {formatBytes(quota.remaining)} restant
             </p>
           </CardContent>
@@ -256,18 +360,18 @@ export default function CloudManager() {
 
       {/* Files */}
       {files.length === 0 ? (
-        <Card className="border-dashed">
+        <Card className="border-dashed animate-fade-in-up" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted animate-bounce-subtle">
               <Upload className="h-8 w-8 text-muted-foreground" />
             </div>
             <h3 className="mt-4 text-lg font-semibold">Aucun fichier</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               Commencez par uploader votre premier fichier
             </p>
-            <Button className="mt-4" asChild>
+            <Button className="mt-4 group" asChild>
               <label htmlFor="file-upload" className="cursor-pointer">
-                <Upload className="h-4 w-4 mr-2" />
+                <Upload className="h-4 w-4 mr-2 transition-transform group-hover:-translate-y-0.5" />
                 Upload un fichier
               </label>
             </Button>
@@ -275,128 +379,374 @@ export default function CloudManager() {
         </Card>
       ) : viewMode === 'grid' ? (
         /* Grid View */
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {files.map((file) => (
-            <Card
-              key={file.id}
-              className="group cursor-pointer hover:shadow-md transition-all hover:border-primary/50 overflow-hidden"
-              onClick={() => setPreviewFile(file)}
-            >
-              {/* Preview Thumbnail */}
-              <div className="aspect-square bg-muted relative overflow-hidden">
-                {isImage(file.mime_type) ? (
-                  <img
-                    src={getFileUrl(file.id)}
-                    alt={file.filename}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    {getFileIcon(file.mime_type, "h-12 w-12")}
-                  </div>
-                )}
-                {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Eye className="h-6 w-6 text-white" />
-                </div>
-              </div>
-              {/* File Info */}
-              <CardContent className="p-3">
-                <p className="text-sm font-medium truncate">{file.filename}</p>
-                <div className="flex items-center justify-between mt-1">
-                  <Badge variant="outline" className="text-xs">
-                    {getFileTypeLabel(file.mime_type)}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {formatBytes(file.size)}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div 
+          ref={containerRef as React.RefObject<HTMLDivElement>}
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4"
+          role="grid"
+          aria-label="Fichiers"
+        >
+          {files.map((file, index) => {
+            const itemProps = getItemProps(file, index);
+            return (
+              <ContextMenu key={file.id}>
+                <ContextMenuTrigger asChild>
+                  <Card
+                    tabIndex={itemProps.tabIndex}
+                    data-focused={itemProps['data-focused']}
+                    data-selected={itemProps['data-selected']}
+                    className={`group cursor-pointer hover:shadow-lg transition-all duration-300 hover:border-primary/50 hover:-translate-y-1 overflow-hidden animate-fade-in-up outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                      isSelected(file) ? 'ring-2 ring-primary border-primary bg-primary/5 scale-[0.98]' : ''
+                    } ${isFocused(index) ? 'ring-2 ring-ring' : ''}`}
+                    style={{ animationDelay: `${Math.min(index * 0.03, 0.3)}s`, animationFillMode: 'both' }}
+                    onFocus={itemProps.onFocus}
+                    onClick={(e) => {
+                      // Only handle selection on Ctrl/Cmd+click or Shift+click
+                      if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                        itemProps.onClick(e);
+                      } else {
+                        // Normal click just opens preview
+                        setPreviewFile(file);
+                      }
+                    }}
+                    onKeyDown={itemProps.onKeyDown}
+                    role="gridcell"
+                  >
+                    {/* Selection checkbox - visible on hover or when selected */}
+                    <div 
+                      className={`absolute top-2 left-2 z-10 transition-all duration-200 ${
+                        isSelected(file) ? 'opacity-100 scale-100' : 'opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100'
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSelection(file);
+                      }}
+                    >
+                      <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                        isSelected(file) 
+                          ? 'bg-primary border-primary' 
+                          : 'bg-background/80 backdrop-blur-sm border-muted-foreground/30 hover:border-primary/50 hover:bg-background'
+                      }`}>
+                        {isSelected(file) && (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-primary-foreground" />
+                        )}
+                      </div>
+                    </div>
+                    {/* Preview Thumbnail */}
+                    <div className="aspect-square bg-muted relative overflow-hidden">
+                      {isImage(file.mime_type) ? (
+                        <img
+                          src={getFileUrl(file.id)}
+                          alt={file.filename}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
+                          {getFileIcon(file.mime_type, "h-8 w-8 sm:h-12 sm:w-12")}
+                        </div>
+                      )}
+                      {/* Hover Overlay */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                        <Eye className="h-5 w-5 sm:h-6 sm:w-6 text-white transform scale-0 group-hover:scale-100 transition-transform duration-300" />
+                      </div>
+                    </div>
+                    {/* File Info */}
+                    <CardContent className="p-2 sm:p-3">
+                      <p className="text-xs sm:text-sm font-medium truncate">{file.filename}</p>
+                      <div className="flex items-center justify-between mt-1">
+                        <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 sm:px-2 transition-colors group-hover:bg-primary/10">
+                          {getFileTypeLabel(file.mime_type)}
+                        </Badge>
+                        <span className="text-[10px] sm:text-xs text-muted-foreground">
+                          {formatBytes(file.size_bytes)}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </ContextMenuTrigger>
+                <ContextMenuContent className="w-52">
+                  <ContextMenuItem onClick={() => setPreviewFile(file)}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    Aperçu
+                    <ContextMenuShortcut>Entrée</ContextMenuShortcut>
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => copyToClipboard(file.id)}>
+                    <Link2 className="mr-2 h-4 w-4" />
+                    Copier le lien
+                    <ContextMenuShortcut>⌘C</ContextMenuShortcut>
+                  </ContextMenuItem>
+                  <ContextMenuItem asChild>
+                    <a href={getFileUrl(file.id)} download className="flex items-center">
+                      <Download className="mr-2 h-4 w-4" />
+                      Télécharger
+                    </a>
+                  </ContextMenuItem>
+                  <ContextMenuItem asChild>
+                    <a href={getFileUrl(file.id)} target="_blank" rel="noopener noreferrer" className="flex items-center">
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Ouvrir dans un nouvel onglet
+                    </a>
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem 
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => handleDelete(file)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Supprimer
+                    <ContextMenuShortcut>⌫</ContextMenuShortcut>
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
+            );
+          })}
         </div>
       ) : (
         /* List View */
-        <Card>
+        <Card className="animate-fade-in">
           <CardContent className="p-0">
-            <div className="divide-y">
-              {files.map((file) => (
-                <div
-                  key={file.id}
-                  className="flex items-center gap-4 p-4 hover:bg-accent/50 cursor-pointer transition-colors"
-                  onClick={() => setPreviewFile(file)}
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                    {getFileIcon(file.mime_type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{file.filename}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatBytes(file.size)} · {new Date(file.created_at).toLocaleDateString('fr-FR')}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copyToClipboard(file.id);
-                      }}
-                    >
-                      {copiedId === file.id ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(file.id, file.filename);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+            <div 
+              ref={containerRef as React.RefObject<HTMLDivElement>}
+              className="divide-y"
+              role="list"
+              aria-label="Fichiers"
+            >
+              {files.map((file, index) => {
+                const itemProps = getItemProps(file, index);
+                return (
+                  <ContextMenu key={file.id}>
+                    <ContextMenuTrigger asChild>
+                      <div
+                        tabIndex={itemProps.tabIndex}
+                        data-focused={itemProps['data-focused']}
+                        data-selected={itemProps['data-selected']}
+                        className={`group flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-accent/50 cursor-pointer transition-all duration-200 animate-fade-in-up outline-none focus-visible:bg-accent ${
+                          isSelected(file) ? 'bg-primary/10 border-l-2 border-l-primary' : ''
+                        } ${isFocused(index) ? 'bg-accent' : ''}`}
+                        style={{ animationDelay: `${index * 0.02}s`, animationFillMode: 'both' }}
+                        onFocus={itemProps.onFocus}
+                        onClick={(e) => {
+                          // Only handle selection on Ctrl/Cmd+click or Shift+click
+                          if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                            itemProps.onClick(e);
+                          } else {
+                            // Normal click just opens preview
+                            setPreviewFile(file);
+                          }
+                        }}
+                        onKeyDown={itemProps.onKeyDown}
+                        role="listitem"
+                      >
+                        {/* Selection checkbox - visible on hover or when selected */}
+                        <div 
+                          className={`shrink-0 transition-all duration-200 ${
+                            isSelected(file) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSelection(file);
+                          }}
+                        >
+                          <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                            isSelected(file) 
+                              ? 'bg-primary border-primary' 
+                              : 'bg-background border-muted-foreground/30 hover:border-primary/50'
+                          }`}>
+                            {isSelected(file) && (
+                              <CheckCircle2 className="h-3.5 w-3.5 text-primary-foreground" />
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-muted shrink-0 transition-transform duration-200 hover:scale-110">
+                          {getFileIcon(file.mime_type, "h-4 w-4 sm:h-5 sm:w-5")}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm sm:text-base font-medium truncate">{file.filename}</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
+                            {formatBytes(file.size_bytes)} · {new Date(file.uploaded_at).toLocaleDateString('fr-FR')}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 transition-all duration-200 hover:scale-110"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToClipboard(file.id);
+                            }}
+                          >
+                            {copiedId === file.id ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(file);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent className="w-52">
+                      <ContextMenuItem onClick={() => setPreviewFile(file)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        Aperçu
+                        <ContextMenuShortcut>Entrée</ContextMenuShortcut>
+                      </ContextMenuItem>
+                      <ContextMenuItem onClick={() => copyToClipboard(file.id)}>
+                        <Link2 className="mr-2 h-4 w-4" />
+                        Copier le lien
+                        <ContextMenuShortcut>⌘C</ContextMenuShortcut>
+                      </ContextMenuItem>
+                      <ContextMenuItem asChild>
+                        <a href={getFileUrl(file.id)} download className="flex items-center">
+                          <Download className="mr-2 h-4 w-4" />
+                          Télécharger
+                        </a>
+                      </ContextMenuItem>
+                      <ContextMenuItem asChild>
+                        <a href={getFileUrl(file.id)} target="_blank" rel="noopener noreferrer" className="flex items-center">
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Ouvrir dans un nouvel onglet
+                        </a>
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem 
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => handleDelete(file)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Supprimer
+                        <ContextMenuShortcut>⌫</ContextMenuShortcut>
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
       )}
 
+      {/* Selection Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 animate-fade-in-up">
+          <Card className="shadow-2xl border-primary bg-background/95 backdrop-blur-sm">
+            <CardContent className="flex items-center gap-2 sm:gap-4 p-2 sm:p-3">
+              {/* Selection count */}
+              <div className="flex items-center gap-2 px-2 sm:px-3 py-1 bg-primary/10 rounded-lg">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <span className="text-xs sm:text-sm font-medium">
+                  {selectedIds.size} <span className="hidden sm:inline">fichier{selectedIds.size > 1 ? 's' : ''}</span>
+                </span>
+              </div>
+              
+              <div className="h-6 w-px bg-border hidden sm:block" />
+              
+              {/* Actions */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 sm:px-3 text-xs gap-1"
+                  onClick={() => selectAll()}
+                  title="Tout sélectionner"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Tout</span>
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 sm:px-3 text-xs gap-1"
+                  onClick={() => {
+                    const selectedFiles = files.filter(f => selectedIds.has(f.id));
+                    selectedFiles.forEach(file => {
+                      const link = document.createElement('a');
+                      link.href = getFileUrl(file.id);
+                      link.download = file.filename;
+                      link.click();
+                    });
+                    toast.success(`${selectedFiles.length} téléchargement${selectedFiles.length > 1 ? 's' : ''} lancé${selectedFiles.length > 1 ? 's' : ''}`);
+                  }}
+                  title="Télécharger la sélection"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Télécharger</span>
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 sm:px-3 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
+                  onClick={() => setBulkDeleteConfirm(true)}
+                  title="Supprimer la sélection"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Supprimer</span>
+                </Button>
+              </div>
+              
+              <div className="h-6 w-px bg-border" />
+              
+              {/* Close */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => clearSelection()}
+                title="Annuler la sélection"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Keyboard Hint */}
+      {files.length > 0 && selectedIds.size === 0 && (
+        <KeyboardHint className="text-center mt-4" />
+      )}
+
       {/* Preview Dialog */}
       <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-3xl p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {previewFile && getFileIcon(previewFile.mime_type)}
+            <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+              {previewFile && getFileIcon(previewFile.mime_type, "h-4 w-4 sm:h-5 sm:w-5")}
               <span className="truncate">{previewFile?.filename}</span>
             </DialogTitle>
-            <DialogDescription>
-              {previewFile && `${getFileTypeLabel(previewFile.mime_type)} · ${formatBytes(previewFile.size)}`}
+            <DialogDescription className="text-xs sm:text-sm">
+              {previewFile && `${getFileTypeLabel(previewFile.mime_type)} · ${formatBytes(previewFile.size_bytes)}`}
             </DialogDescription>
           </DialogHeader>
           
           {/* Preview Content */}
           {previewFile && (
-            <div className="mt-4">
+            <div className="mt-3 sm:mt-4">
               {isImage(previewFile.mime_type) && (
                 <img
                   src={getFileUrl(previewFile.id)}
                   alt={previewFile.filename}
-                  className="max-h-[60vh] mx-auto rounded-lg"
+                  className="max-h-[50vh] sm:max-h-[60vh] mx-auto rounded-lg"
                 />
               )}
               {isVideo(previewFile.mime_type) && (
                 <video
                   src={getFileUrl(previewFile.id)}
                   controls
-                  className="max-h-[60vh] mx-auto rounded-lg"
+                  className="max-h-[50vh] sm:max-h-[60vh] w-full mx-auto rounded-lg"
                 />
               )}
               {isAudio(previewFile.mime_type) && (
@@ -407,28 +757,28 @@ export default function CloudManager() {
                 />
               )}
               {!isImage(previewFile.mime_type) && !isVideo(previewFile.mime_type) && !isAudio(previewFile.mime_type) && (
-                <div className="flex flex-col items-center justify-center py-12 bg-muted rounded-lg">
-                  {getFileIcon(previewFile.mime_type, "h-16 w-16")}
-                  <p className="mt-4 text-muted-foreground">Aperçu non disponible</p>
+                <div className="flex flex-col items-center justify-center py-8 sm:py-12 bg-muted rounded-lg">
+                  {getFileIcon(previewFile.mime_type, "h-12 w-12 sm:h-16 sm:w-16")}
+                  <p className="mt-3 sm:mt-4 text-sm text-muted-foreground">Aperçu non disponible</p>
                 </div>
               )}
             </div>
           )}
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex-col gap-2 mt-4 sm:mt-0">
             <Button
               variant="outline"
               onClick={() => previewFile && copyToClipboard(previewFile.id)}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto h-9 text-sm"
             >
               {copiedId === previewFile?.id ? (
                 <>
-                  <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
+                  <CheckCircle2 className="h-4 w-4 mr-1.5 text-green-600" />
                   Copié !
                 </>
               ) : (
                 <>
-                  <Copy className="h-4 w-4 mr-2" />
+                  <Copy className="h-4 w-4 mr-1.5" />
                   Copier l'URL
                 </>
               )}
@@ -436,20 +786,111 @@ export default function CloudManager() {
             <Button
               variant="outline"
               asChild
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto h-9 text-sm"
             >
               <a href={previewFile ? getFileUrl(previewFile.id) : '#'} download>
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="h-4 w-4 mr-1.5" />
                 Télécharger
               </a>
             </Button>
             <Button
               variant="destructive"
-              onClick={() => previewFile && handleDelete(previewFile.id, previewFile.filename)}
-              className="w-full sm:w-auto"
+              onClick={() => {
+                if (previewFile) {
+                  setPreviewFile(null);
+                  handleDelete(previewFile);
+                }
+              }}
+              className="w-full sm:w-auto h-9 text-sm"
             >
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="h-4 w-4 mr-1.5" />
               Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Confirmer la suppression
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Êtes-vous sûr de vouloir supprimer <span className="font-medium text-foreground">{deleteConfirm?.file.filename}</span> ?
+              <br />
+              <span className="text-muted-foreground">Cette action est irréversible.</span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirm(null)}
+              disabled={isDeleting}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Supprimer
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Confirmer la suppression
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Êtes-vous sûr de vouloir supprimer <span className="font-medium text-foreground">{selectedIds.size} fichier{selectedIds.size > 1 ? 's' : ''}</span> ?
+              <br />
+              <span className="text-muted-foreground">Cette action est irréversible.</span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setBulkDeleteConfirm(false)}
+              disabled={isDeleting}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Supprimer {selectedIds.size} fichier{selectedIds.size > 1 ? 's' : ''}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

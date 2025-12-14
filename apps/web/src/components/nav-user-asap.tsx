@@ -28,8 +28,9 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { Skeleton } from "@/components/ui/skeleton"
 import { SettingsModal } from "@/components/settings-modal"
-import { authAPI, websitesAPI, type Website } from "@/lib/api"
+import { authAPI, websitesAPI, accountsAPI, type Website } from "@/lib/api"
 
 interface UserData {
   id: string
@@ -56,6 +57,16 @@ export function NavUserAsap({ user: initialUser }: NavUserAsapProps) {
   })
   const [website, setWebsite] = useState<Website | null>(null)
 
+  // Helper to construct file URL with auth token
+  const getFileUrl = (storedUrl: string) => {
+    const fileIdMatch = storedUrl.match(/\/files\/([a-f0-9-]+)/)
+    if (fileIdMatch) {
+      const token = localStorage.getItem('auth_token')
+      return `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${fileIdMatch[1]}?token=${token}`
+    }
+    return storedUrl
+  }
+
   // Load user and website data from API
   useEffect(() => {
     const loadData = async () => {
@@ -63,10 +74,27 @@ export function NavUserAsap({ user: initialUser }: NavUserAsapProps) {
       try {
         // Fetch user info
         const meData = await authAPI.me()
+        
+        // Fetch account data (name, avatar, etc.)
+        let accountData: Record<string, any> = {}
+        try {
+          const account = await accountsAPI.getAccount(meData.id)
+          accountData = account.data || {}
+        } catch (err) {
+          console.error('Failed to load account data:', err)
+        }
+        
+        // Process avatar URL to add token for display
+        let avatarUrl = accountData.avatar
+        if (avatarUrl && avatarUrl.includes('/files/')) {
+          avatarUrl = getFileUrl(avatarUrl)
+        }
+        
         const userData: UserData = {
           id: meData.id,
           email: meData.email,
-          name: meData.email.split('@')[0], // Default name from email
+          name: accountData.name || meData.email.split('@')[0], // Use saved name or default from email
+          avatar: avatarUrl,
           plan: meData.plan,
         }
         setUser(userData)
@@ -116,12 +144,13 @@ export function NavUserAsap({ user: initialUser }: NavUserAsapProps) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton size="lg" className="animate-pulse">
-            <div className="h-8 w-8 rounded-lg bg-muted" />
-            <div className="grid flex-1 gap-1">
-              <div className="h-4 w-24 rounded bg-muted" />
-              <div className="h-3 w-32 rounded bg-muted" />
+          <SidebarMenuButton size="lg">
+            <Skeleton className="h-8 w-8 rounded-lg" />
+            <div className="grid flex-1 gap-1.5">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-32" />
             </div>
+            <Skeleton className="h-4 w-4 ml-auto" />
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
@@ -145,7 +174,7 @@ export function NavUserAsap({ user: initialUser }: NavUserAsapProps) {
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{website?.title || user.name || 'Mon site'}</span>
+                  <span className="truncate font-semibold">{user.name || user.email.split('@')[0]}</span>
                   <span className="truncate text-xs text-muted-foreground">{user.email}</span>
                 </div>
                 <ChevronsUpDown className="ml-auto size-4" />
