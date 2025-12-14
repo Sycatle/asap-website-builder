@@ -52,6 +52,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { filesAPI, websitesAPI, modulesAPI, authAPI, accountsAPI, type QuotaUsage, type FileMetadata, type Website, type WebsiteModule } from "@/lib/api"
 import { formatBytes } from "@/lib/utils/formatters"
@@ -145,7 +146,8 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
 
   const handleSave = async () => {
     setIsSaving(true)
-    try {
+
+    const savePromise = async () => {
       // First get current account data to merge
       const currentAccount = await accountsAPI.getAccount(user.id)
       const currentData = currentAccount.data || {}
@@ -159,7 +161,16 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
       if (onUserUpdate) {
         onUserUpdate({ name: formData.name })
       }
-      
+    }
+
+    toast.promise(savePromise(), {
+      loading: 'Enregistrement...',
+      success: 'Profil mis à jour',
+      error: 'Erreur lors de la sauvegarde',
+    })
+
+    try {
+      await savePromise()
       // Close modal on success
       onOpenChange(false)
     } catch (error) {
@@ -314,7 +325,7 @@ function AccountSettings({
 
     setIsUploadingAvatar(true)
 
-    try {
+    const uploadPromise = async () => {
       // Upload the file
       const uploadedFile = await filesAPI.upload(file)
       
@@ -333,6 +344,16 @@ function AccountSettings({
       
       // Notify parent of avatar change
       onAvatarUpdate?.(displayUrl)
+    }
+
+    toast.promise(uploadPromise(), {
+      loading: 'Upload de l\'avatar...',
+      success: 'Avatar mis à jour',
+      error: 'Erreur lors du téléchargement de l\'avatar',
+    })
+
+    try {
+      await uploadPromise()
     } catch (error) {
       console.error('Failed to upload avatar:', error)
       setAvatarError('Erreur lors du téléchargement de l\'avatar')
@@ -348,7 +369,8 @@ function AccountSettings({
     
     // Save file URL to account data (without token for storage)
     const avatarStorageUrl = `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${file.id}`
-    try {
+    
+    const updatePromise = async () => {
       const currentAccount = await accountsAPI.getAccount(user.id)
       const currentData = currentAccount.data || {}
       await accountsAPI.updateAccountData(user.id, {
@@ -357,6 +379,16 @@ function AccountSettings({
       
       // Notify parent of avatar change
       onAvatarUpdate?.(displayUrl)
+    }
+
+    toast.promise(updatePromise(), {
+      loading: 'Mise à jour de l\'avatar...',
+      success: 'Avatar mis à jour',
+      error: 'Erreur lors de la mise à jour de l\'avatar',
+    })
+
+    try {
+      await updatePromise()
     } catch (error) {
       console.error('Failed to update avatar:', error)
       setAvatarError('Erreur lors de la mise à jour de l\'avatar')
@@ -521,7 +553,7 @@ function SecuritySettings() {
 
     setIsChangingPassword(true)
 
-    try {
+    const changePasswordPromise = async () => {
       await authAPI.changePassword({
         current_password: passwordData.currentPassword,
         new_password: passwordData.newPassword,
@@ -533,12 +565,25 @@ function SecuritySettings() {
         newPassword: '',
         confirmPassword: '',
       })
+    }
+
+    toast.promise(changePasswordPromise(), {
+      loading: 'Modification du mot de passe...',
+      success: 'Mot de passe modifié avec succès',
+      error: (err) => {
+        const errorMsg = err instanceof Error && err.message?.includes('incorrect') 
+          ? 'Le mot de passe actuel est incorrect'
+          : 'Erreur lors du changement de mot de passe'
+        setPasswordError(errorMsg)
+        return errorMsg
+      },
+    })
+
+    try {
+      await changePasswordPromise()
     } catch (error: unknown) {
-      // Sanitize error messages - only show safe generic messages
-      const errorMsg = error instanceof Error && error.message?.includes('incorrect') 
-        ? 'Le mot de passe actuel est incorrect'
-        : 'Erreur lors du changement de mot de passe'
-      setPasswordError(errorMsg)
+      // Error already handled in toast.promise
+      console.error('Failed to change password:', error)
     } finally {
       setIsChangingPassword(false)
     }

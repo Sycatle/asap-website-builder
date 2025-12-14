@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,7 +41,6 @@ import {
 export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [website, setWebsite] = useState<Website | null>(null);
   
@@ -72,7 +71,7 @@ export default function SettingsPage() {
 
   const handleDeleteAccount = async () => {
     // Placeholder - implement actual delete functionality
-    setMessage({ type: 'error', text: 'La suppression de compte n\'est pas encore disponible.' });
+    toast.error('La suppression de compte n\'est pas encore disponible.');
   };
 
   if (isLoading) {
@@ -171,18 +170,6 @@ export default function SettingsPage() {
           Gérez les paramètres de votre compte et de votre site
         </p>
       </div>
-
-      {/* Message */}
-      {message && (
-        <Alert variant={message.type === 'error' ? 'destructive' : 'default'} className={message.type === 'success' ? 'border-green-500/50 bg-green-500/10 text-green-700' : ''}>
-          {message.type === 'success' ? (
-            <CheckCircle2 className="h-4 w-4" />
-          ) : (
-            <AlertCircle className="h-4 w-4" />
-          )}
-          <AlertDescription>{message.text}</AlertDescription>
-        </Alert>
-      )}
 
       {/* Account Section */}
       <Card>

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 import { 
   Github, 
   BookOpen, 
@@ -43,7 +43,6 @@ export default function ModulesManager() {
   const [activeModules, setActiveModules] = useState<WebsiteModule[]>([]);
   const [currentWebsiteId, setCurrentWebsiteId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activatingModule, setActivatingModule] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,7 +52,6 @@ export default function ModulesManager() {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      setError(null);
 
       const catalog = await modulesAPI.catalog();
       setCatalogModules(catalog);
@@ -68,11 +66,11 @@ export default function ModulesManager() {
         const websiteModules = await modulesAPI.listForWebsite(websiteId);
         setActiveModules(websiteModules);
       } else {
-        setError('Aucun site web trouvé. Créez un site pour gérer les modules.');
+        toast.error('Aucun site web trouvé. Créez un site pour gérer les modules.');
       }
     } catch (err) {
       console.error('Failed to load modules:', err);
-      setError('Erreur lors du chargement des modules');
+      toast.error('Erreur lors du chargement des modules');
     } finally {
       setIsLoading(false);
     }
@@ -80,20 +78,31 @@ export default function ModulesManager() {
 
   const handleActivateModule = async (module: Module) => {
     if (!currentWebsiteId) {
-      setError('Aucun site web sélectionné');
+      toast.error('Aucun site web sélectionné');
       return;
     }
 
-    try {
-      setActivatingModule(module.id);
+    setActivatingModule(module.id);
+
+    const activatePromise = async () => {
       await modulesAPI.activate(currentWebsiteId, {
         module_id: module.id,
         settings: module.default_settings || {},
       });
       await loadData();
+      return module.name;
+    };
+
+    toast.promise(activatePromise(), {
+      loading: `Activation de ${module.name}...`,
+      success: (name) => `Module ${name} activé !`,
+      error: `Erreur lors de l'activation du module ${module.name}`,
+    });
+
+    try {
+      await activatePromise();
     } catch (err) {
       console.error('Failed to activate module:', err);
-      setError(`Erreur lors de l'activation du module ${module.name}`);
     } finally {
       setActivatingModule(null);
     }
@@ -101,17 +110,27 @@ export default function ModulesManager() {
 
   const handleDeactivateModule = async (moduleId: string) => {
     if (!currentWebsiteId) {
-      setError('Aucun site web sélectionné');
+      toast.error('Aucun site web sélectionné');
       return;
     }
 
-    try {
-      setActivatingModule(moduleId);
+    setActivatingModule(moduleId);
+
+    const deactivatePromise = async () => {
       await modulesAPI.deactivate(currentWebsiteId, moduleId);
       await loadData();
+    };
+
+    toast.promise(deactivatePromise(), {
+      loading: 'Désactivation en cours...',
+      success: 'Module désactivé',
+      error: 'Erreur lors de la désactivation du module',
+    });
+
+    try {
+      await deactivatePromise();
     } catch (err) {
       console.error('Failed to deactivate module:', err);
-      setError('Erreur lors de la désactivation du module');
     } finally {
       setActivatingModule(null);
     }
@@ -215,22 +234,6 @@ export default function ModulesManager() {
           Activez des modules pour débloquer de nouvelles fonctionnalités sur votre site
         </p>
       </div>
-
-      {/* Error message */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription className="flex items-center justify-between">
-            {error}
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => setError(null)}
-            >
-              ✕
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
 
       {/* Active Modules */}
       {activeModules.filter(m => m.enabled).length > 0 && (

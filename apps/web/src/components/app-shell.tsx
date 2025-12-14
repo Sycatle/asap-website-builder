@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { AsapSidebar } from "@/components/asap-sidebar"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
+import { Toaster } from "@/components/ui/sonner"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -95,6 +96,7 @@ export function AppShell({ children, title, breadcrumbs = [] }: AppShellProps) {
           {children}
         </main>
       </SidebarInset>
+      <Toaster />
     </SidebarProvider>
   )
 }

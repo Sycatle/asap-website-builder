@@ -7,8 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -44,7 +44,6 @@ export default function CloudManager() {
   const [quota, setQuota] = useState<QuotaUsage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -66,7 +65,7 @@ export default function CloudManager() {
       setQuota(quotaData);
     } catch (error) {
       console.error('Failed to load data:', error);
-      setMessage({ type: 'error', text: 'Erreur lors du chargement des fichiers' });
+      toast.error('Erreur lors du chargement des fichiers');
     } finally {
       setIsLoading(false);
     }
@@ -77,15 +76,23 @@ export default function CloudManager() {
     if (!file) return;
 
     setIsUploading(true);
-    setMessage(null);
+
+    const uploadPromise = async () => {
+      await filesAPI.upload(file);
+      await loadData();
+      return file.name;
+    };
+
+    toast.promise(uploadPromise(), {
+      loading: `Upload de ${file.name}...`,
+      success: (name) => `${name} uploadé avec succès !`,
+      error: 'Erreur lors de l\'upload',
+    });
 
     try {
-      await filesAPI.upload(file);
-      setMessage({ type: 'success', text: `${file.name} uploadé avec succès !` });
-      await loadData();
+      await uploadPromise();
     } catch (error) {
       console.error('Failed to upload file:', error);
-      setMessage({ type: 'error', text: 'Erreur lors de l\'upload' });
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -97,14 +104,22 @@ export default function CloudManager() {
   const handleDelete = async (fileId: string, filename: string) => {
     if (!confirm(`Supprimer ${filename} ?`)) return;
 
-    try {
+    const deletePromise = async () => {
       await filesAPI.delete(fileId);
-      setMessage({ type: 'success', text: 'Fichier supprimé' });
       setPreviewFile(null);
       await loadData();
+    };
+
+    toast.promise(deletePromise(), {
+      loading: 'Suppression en cours...',
+      success: 'Fichier supprimé',
+      error: 'Erreur lors de la suppression',
+    });
+
+    try {
+      await deletePromise();
     } catch (error) {
       console.error('Failed to delete file:', error);
-      setMessage({ type: 'error', text: 'Erreur lors de la suppression' });
     }
   };
 
@@ -117,6 +132,7 @@ export default function CloudManager() {
     const url = getFileUrl(fileId);
     await navigator.clipboard.writeText(url);
     setCopiedId(fileId);
+    toast.success('Lien copié !');
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -243,23 +259,6 @@ export default function CloudManager() {
           </div>
         </div>
       </div>
-
-      {/* Message */}
-      {message && (
-        <Alert variant={message.type === 'error' ? 'destructive' : 'default'} className={message.type === 'success' ? 'border-green-500/50 bg-green-500/10 text-green-700' : ''}>
-          {message.type === 'success' ? (
-            <CheckCircle2 className="h-4 w-4" />
-          ) : (
-            <AlertCircle className="h-4 w-4" />
-          )}
-          <AlertDescription className="flex items-center justify-between">
-            {message.text}
-            <Button variant="ghost" size="sm" onClick={() => setMessage(null)} className="h-6 w-6 p-0">
-              <X className="h-4 w-4" />
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
 
       {/* Quota Card */}
       {quota && (

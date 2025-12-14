@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { toast } from 'sonner';
 import SchemaRenderer from './SchemaRenderer';
 
 interface ModuleConfigProps {
@@ -156,8 +157,6 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [executingAction, setExecutingAction] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<string | null>(null);
 
   useEffect(() => {
@@ -167,12 +166,11 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      setError(null);
 
       // Get current website
       const websites = await websitesAPI.list();
       if (websites.length === 0) {
-        setError('Aucun site web trouvé');
+        toast.error('Aucun site web trouvé');
         setIsLoading(false);
         return;
       }
@@ -192,7 +190,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       }
       
       if (!foundModule) {
-        setError('Module non trouvé');
+        toast.error('Module non trouvé');
         setIsLoading(false);
         return;
       }
@@ -253,7 +251,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       ]);
     } catch (err) {
       console.error('Failed to load module config:', err);
-      setError('Erreur lors du chargement de la configuration');
+      toast.error('Erreur lors du chargement de la configuration');
     } finally {
       setIsLoading(false);
     }
@@ -262,11 +260,9 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
   const handleSaveSettings = async () => {
     if (!module || !websiteId) return;
 
-    try {
-      setIsSaving(true);
-      setError(null);
-      setSuccess(null);
+    setIsSaving(true);
 
+    const savePromise = async () => {
       if (websiteModule) {
         await modulesAPI.updateSettings(websiteId, websiteModule.module_id, { settings });
       } else {
@@ -275,13 +271,19 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
           settings,
         });
       }
-
-      setSuccess('Configuration enregistrée');
-      setTimeout(() => setSuccess(null), 3000);
       await loadData();
+    };
+
+    toast.promise(savePromise(), {
+      loading: 'Enregistrement en cours...',
+      success: 'Configuration enregistrée',
+      error: 'Erreur lors de l\'enregistrement',
+    });
+
+    try {
+      await savePromise();
     } catch (err) {
       console.error('Failed to save settings:', err);
-      setError('Erreur lors de l\'enregistrement');
     } finally {
       setIsSaving(false);
     }
@@ -299,22 +301,25 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
     }
     setPendingConfirm(null);
     
-    try {
-      setExecutingAction(actionKey);
-      setError(null);
-      setSuccess(null);
+    setExecutingAction(actionKey);
 
+    const actionPromise = async () => {
       await modulesAPI.executeAction(websiteId, slug, actionKey, settings);
-      
-      setSuccess(`Action "${action?.label || actionKey}" exécutée`);
-      setTimeout(() => setSuccess(null), 3000);
-      
       if (action?.refreshAfter !== false) {
         setTimeout(loadData, 2000);
       }
+    };
+
+    toast.promise(actionPromise(), {
+      loading: `Exécution de "${action?.label || actionKey}"...`,
+      success: `Action "${action?.label || actionKey}" exécutée`,
+      error: `Erreur lors de l'exécution de l'action`,
+    });
+
+    try {
+      await actionPromise();
     } catch (err) {
       console.error('Failed to execute action:', err);
-      setError(`Erreur lors de l'exécution de l'action`);
     } finally {
       setExecutingAction(null);
     }
@@ -326,27 +331,43 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
     if (isModuleEnabled) {
       if (!confirm('Êtes-vous sûr de vouloir désactiver ce module ?')) return;
       
-      try {
+      const deactivatePromise = async () => {
         if (websiteModule) {
           await modulesAPI.deactivate(websiteId, websiteModule.id);
         }
-        setSuccess('Module désactivé');
-        setTimeout(() => setSuccess(null), 3000);
         await loadData();
+      };
+
+      toast.promise(deactivatePromise(), {
+        loading: 'Désactivation en cours...',
+        success: 'Module désactivé',
+        error: 'Erreur lors de la désactivation',
+      });
+
+      try {
+        await deactivatePromise();
       } catch (err) {
-        setError('Erreur lors de la désactivation');
+        console.error('Failed to deactivate module:', err);
       }
     } else {
-      try {
+      const activatePromise = async () => {
         await modulesAPI.activate(websiteId, {
           module_id: module.id,
           settings: module.default_settings || {},
         });
-        setSuccess('Module activé');
-        setTimeout(() => setSuccess(null), 3000);
         await loadData();
+      };
+
+      toast.promise(activatePromise(), {
+        loading: 'Activation en cours...',
+        success: 'Module activé',
+        error: 'Erreur lors de l\'activation',
+      });
+
+      try {
+        await activatePromise();
       } catch (err) {
-        setError('Erreur lors de l\'activation');
+        console.error('Failed to activate module:', err);
       }
     }
   };
@@ -553,23 +574,6 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
             </div>
           </div>
         </div>
-
-        {/* Success/Error messages */}
-        {(error || success) && (
-          <div className={`px-6 py-3 border-t ${error ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-sm ${error ? 'text-red-700' : 'text-green-700'}`}>
-                {error || success}
-              </span>
-              <button 
-                onClick={() => { setError(null); setSuccess(null); }}
-                className={`text-sm ${error ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700'}`}
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Confirmation dialog */}
         {pendingConfirm && (

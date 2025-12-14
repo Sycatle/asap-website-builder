@@ -10,8 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label as FormLabel } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ChartContainer,
@@ -54,7 +54,6 @@ export default function Dashboard() {
   const [modules, setModules] = useState<WebsiteModule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
   // Form state for website editing
@@ -103,19 +102,26 @@ export default function Dashboard() {
     if (!website) return;
 
     setIsSaving(true);
-    setMessage(null);
 
-    try {
+    const savePromise = async () => {
       const data: UpdateWebsiteRequest = { title, tagline };
       await websitesAPI.update(website.id, data);
       const websites = await websitesAPI.list();
       if (websites.length > 0) {
         setWebsite(websites[0]);
       }
-      setMessage({ type: 'success', text: 'Site mis à jour avec succès !' });
+    };
+
+    toast.promise(savePromise(), {
+      loading: 'Sauvegarde en cours...',
+      success: 'Site mis à jour avec succès !',
+      error: 'Erreur lors de la sauvegarde',
+    });
+
+    try {
+      await savePromise();
     } catch (error) {
       console.error('Failed to save website:', error);
-      setMessage({ type: 'error', text: 'Erreur lors de la sauvegarde' });
     } finally {
       setIsSaving(false);
     }
@@ -125,18 +131,25 @@ export default function Dashboard() {
     if (!website) return;
 
     setIsSaving(true);
-    setMessage(null);
 
-    try {
+    const publishPromise = async () => {
       await websitesAPI.publish(website.id);
       const websites = await websitesAPI.list();
       if (websites.length > 0) {
         setWebsite(websites[0]);
       }
-      setMessage({ type: 'success', text: 'Site publié avec succès !' });
+    };
+
+    toast.promise(publishPromise(), {
+      loading: 'Publication en cours...',
+      success: 'Site publié ! Votre site est maintenant en ligne.',
+      error: 'Erreur lors de la publication',
+    });
+
+    try {
+      await publishPromise();
     } catch (error) {
       console.error('Failed to publish website:', error);
-      setMessage({ type: 'error', text: 'Erreur lors de la publication' });
     } finally {
       setIsSaving(false);
     }
@@ -147,20 +160,27 @@ export default function Dashboard() {
     if (!website || !githubUsername.trim()) return;
 
     setIsSaving(true);
-    setMessage(null);
 
-    try {
+    const connectPromise = async () => {
       const token = localStorage.getItem('auth_token');
       if (token) {
         const payload = JSON.parse(atob(token.split('.')[1]));
         await authAPI.updateGitHubIntegration(payload.sub, {
           github_username: githubUsername.trim(),
         });
-        setMessage({ type: 'success', text: 'GitHub connecté ! Vos projets seront synchronisés.' });
       }
+    };
+
+    toast.promise(connectPromise(), {
+      loading: 'Connexion à GitHub...',
+      success: 'GitHub connecté ! Vos projets seront synchronisés.',
+      error: 'Erreur lors de la connexion GitHub',
+    });
+
+    try {
+      await connectPromise();
     } catch (error) {
       console.error('Failed to connect GitHub:', error);
-      setMessage({ type: 'error', text: 'Erreur lors de la connexion GitHub' });
     } finally {
       setIsSaving(false);
     }
@@ -308,18 +328,6 @@ export default function Dashboard() {
           )}
         </div>
       </div>
-
-      {/* Message feedback */}
-      {message && (
-        <Alert variant={message.type === 'error' ? 'destructive' : 'default'} className={message.type === 'success' ? 'border-green-500/50 bg-green-500/10 text-green-700' : ''}>
-          {message.type === 'success' ? (
-            <CheckCircle2 className="h-4 w-4" />
-          ) : (
-            <AlertCircle className="h-4 w-4" />
-          )}
-          <AlertDescription>{message.text}</AlertDescription>
-        </Alert>
-      )}
 
       {/* Tabs for Overview / Site Settings */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
