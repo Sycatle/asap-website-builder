@@ -10,7 +10,7 @@ use chrono::{DateTime, Utc};
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct WebsiteWithData {
     pub id: Uuid,
-    pub tenant_id: Uuid,
+    pub account_id: Uuid,
     pub slug: String,
     pub title: String,
     pub tagline: String,
@@ -66,26 +66,10 @@ pub struct PresetRow {
     pub thumbnail_url: Option<String>,
 }
 
-/// Tenant module response (modules linked to tenant, not website)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TenantModuleRow {
-    pub id: Uuid,
-    pub tenant_id: Uuid,
-    pub module_id: Uuid,
-    pub module_name: String,
-    pub module_slug: String,
-    pub module_icon: Option<String>,
-    pub settings: JsonValue,
-    pub enabled: bool,
-    pub activated_at: DateTime<Utc>,
-    pub sidebar_label: Option<String>,
-    pub sidebar_order: i32,
-}
-
 /// Event for batch operations
 #[derive(Debug, Clone)]
 pub struct BatchEvent {
-    pub tenant_id: Uuid,
+    pub account_id: Uuid,
     pub event_type: String,
     pub payload: JsonValue,
 }
@@ -97,7 +81,7 @@ mod tests {
     #[test]
     fn test_batch_event_creation() {
         let event = BatchEvent {
-            tenant_id: Uuid::new_v4(),
+            account_id: Uuid::new_v4(),
             event_type: "WEBSITE_PUBLISHED".to_string(),
             payload: serde_json::json!({ "website_id": "test" }),
         };
@@ -109,7 +93,7 @@ mod tests {
     fn test_website_with_data_serialization() {
         let website = WebsiteWithData {
             id: Uuid::new_v4(),
-            tenant_id: Uuid::new_v4(),
+            account_id: Uuid::new_v4(),
             slug: "my-website".to_string(),
             title: "My Website".to_string(),
             tagline: "A great website".to_string(),

@@ -160,7 +160,7 @@ async fn run_payment_reconciliation() -> anyhow::Result<()> {
     let stats = reconciliation.reconcile_all().await?;
     
     println!("Payment reconciliation completed:");
-    println!("  Total tenants: {}", stats.total_tenants);
+    println!("  Total accounts: {}", stats.total_accounts);
     println!("  Successful: {}", stats.successful);
     println!("  Failed: {}", stats.failed);
     

@@ -11,28 +11,28 @@ use uuid::Uuid;
 use asap_core_shared::Claims;
 
 #[derive(Debug, Serialize)]
-pub struct UserData {
+pub struct AccountData {
     pub id: String,
     pub email: String,
-    pub tenant_id: String,
+    pub plan: String,
     pub data: serde_json::Value,
 }
 
-/// Maximum allowed size for user data JSON (64KB)
-const MAX_USER_DATA_SIZE: usize = 64 * 1024;
+/// Maximum allowed size for account data JSON (64KB)
+const MAX_ACCOUNT_DATA_SIZE: usize = 64 * 1024;
 /// Maximum nesting depth for JSON
 const MAX_JSON_DEPTH: usize = 10;
 
 #[derive(Debug, Deserialize)]
-pub struct UpdateUserRequest {
+pub struct UpdateAccountRequest {
     pub data: serde_json::Value,
 }
 
 /// Validate JSON data size and structure
-fn validate_user_data(data: &serde_json::Value) -> Result<(), &'static str> {
+fn validate_account_data(data: &serde_json::Value) -> Result<(), &'static str> {
     // Check serialized size
     let serialized = serde_json::to_string(data).map_err(|_| "Invalid JSON structure")?;
-    if serialized.len() > MAX_USER_DATA_SIZE {
+    if serialized.len() > MAX_ACCOUNT_DATA_SIZE {
         return Err("Data payload too large (max 64KB)");
     }
     
@@ -59,23 +59,23 @@ fn validate_user_data(data: &serde_json::Value) -> Result<(), &'static str> {
     Ok(())
 }
 
-pub async fn get_user(
+pub async fn get_account(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    // Parse user ID
-    let user_id = match Uuid::parse_str(&id) {
+    // Parse account ID
+    let account_id = match Uuid::parse_str(&id) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid user ID format"
+                "error": "Invalid account ID format"
             }))).into_response();
         }
     };
 
-    // Verify the user is accessing their own data or within their tenant
-    let claims_user_id = match Uuid::parse_str(&claims.sub) {
+    // Verify the account is accessing their own data
+    let claims_account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -84,51 +84,41 @@ pub async fn get_user(
         }
     };
 
-    if user_id != claims_user_id {
+    if account_id != claims_account_id {
         return (StatusCode::FORBIDDEN, Json(serde_json::json!({
             "error": "Access denied"
         }))).into_response();
     }
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
-        Ok(id) => id,
-        Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
-        }
-    };
-
-    // Query user and user_data
+    // Query account and account_data
     let result = sqlx::query!(
         r#"
-        SELECT u.id, u.email, u.tenant_id, COALESCE(ud.data, '{}'::jsonb) as "data!"
-        FROM users u
-        LEFT JOIN user_data ud ON u.id = ud.user_id
-        WHERE u.id = $1 AND u.tenant_id = $2
+        SELECT a.id, a.email, a.plan, COALESCE(ad.data, '{}'::jsonb) as "data!"
+        FROM accounts a
+        LEFT JOIN account_data ad ON a.id = ad.account_id
+        WHERE a.id = $1
         "#,
-        user_id,
-        tenant_id
+        account_id
     )
     .fetch_optional(&pool)
     .await;
 
     match result {
-        Ok(Some(user)) => {
-            (StatusCode::OK, Json(UserData {
-                id: user.id.to_string(),
-                email: user.email,
-                tenant_id: user.tenant_id.to_string(),
-                data: user.data,
+        Ok(Some(account)) => {
+            (StatusCode::OK, Json(AccountData {
+                id: account.id.to_string(),
+                email: account.email,
+                plan: account.plan,
+                data: account.data,
             })).into_response()
         }
         Ok(None) => {
             (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "User not found"
+                "error": "Account not found"
             }))).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error fetching user: {}", e);
+            tracing::error!("Database error fetching account: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()
@@ -136,24 +126,24 @@ pub async fn get_user(
     }
 }
 
-pub async fn update_user(
+pub async fn update_account(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<String>,
-    Json(payload): Json<UpdateUserRequest>,
+    Json(payload): Json<UpdateAccountRequest>,
 ) -> impl IntoResponse {
-    // Parse user ID
-    let user_id = match Uuid::parse_str(&id) {
+    // Parse account ID
+    let account_id = match Uuid::parse_str(&id) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid user ID format"
+                "error": "Invalid account ID format"
             }))).into_response();
         }
     };
 
-    // Verify the user is accessing their own data
-    let claims_user_id = match Uuid::parse_str(&claims.sub) {
+    // Verify the account is accessing their own data
+    let claims_account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -162,28 +152,28 @@ pub async fn update_user(
         }
     };
 
-    if user_id != claims_user_id {
+    if account_id != claims_account_id {
         return (StatusCode::FORBIDDEN, Json(serde_json::json!({
             "error": "Access denied"
         }))).into_response();
     }
 
     // Validate payload data (size, depth, structure)
-    if let Err(e) = validate_user_data(&payload.data) {
+    if let Err(e) = validate_account_data(&payload.data) {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
             "error": e
         }))).into_response();
     }
 
-    // Update user_data
+    // Update account_data
     let result = sqlx::query!(
         r#"
-        INSERT INTO user_data (user_id, data)
+        INSERT INTO account_data (account_id, data)
         VALUES ($1, $2)
-        ON CONFLICT (user_id)
+        ON CONFLICT (account_id)
         DO UPDATE SET data = $2, updated_at = now()
         "#,
-        user_id,
+        account_id,
         payload.data
     )
     .execute(&pool)
@@ -192,11 +182,11 @@ pub async fn update_user(
     match result {
         Ok(_) => {
             (StatusCode::OK, Json(serde_json::json!({
-                "message": "User data updated successfully"
+                "message": "Account data updated successfully"
             }))).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error updating user: {}", e);
+            tracing::error!("Database error updating account: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()

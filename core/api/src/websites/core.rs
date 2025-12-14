@@ -15,7 +15,7 @@ use asap_core_shared::Claims;
 #[derive(Debug, Serialize)]
 pub struct Website {
     pub id: String,
-    pub tenant_id: String,
+    pub account_id: String,
     pub slug: String,
     pub title: String,
     pub tagline: String,
@@ -52,7 +52,7 @@ pub async fn list_websites(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -63,7 +63,7 @@ pub async fn list_websites(
 
     use crate::queries;
     
-    let result = queries::list_websites_with_data(&pool, tenant_id).await;
+    let result = queries::list_websites_with_data(&pool, account_id).await;
 
     match result {
         Ok(websites) => {
@@ -71,7 +71,7 @@ pub async fn list_websites(
                 .into_iter()
                 .map(|w| Website {
                     id: w.id.to_string(),
-                    tenant_id: w.tenant_id.to_string(),
+                    account_id: w.account_id.to_string(),
                     slug: w.slug,
                     title: w.title,
                     tagline: w.tagline,
@@ -108,7 +108,7 @@ pub async fn get_website(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -119,13 +119,13 @@ pub async fn get_website(
 
     use crate::queries;
     
-    let result = queries::get_website_with_data(&pool, website_id, tenant_id).await;
+    let result = queries::get_website_with_data(&pool, website_id, account_id).await;
 
     match result {
         Ok(Some(w)) => {
             (StatusCode::OK, Json(Website {
                 id: w.id.to_string(),
-                tenant_id: w.tenant_id.to_string(),
+                account_id: w.account_id.to_string(),
                 slug: w.slug,
                 title: w.title,
                 tagline: w.tagline,
@@ -165,7 +165,7 @@ pub async fn update_website(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -185,7 +185,7 @@ pub async fn update_website(
     let result = queries::update_website_batch_fields(
         &pool,
         website_id,
-        tenant_id,
+        account_id,
         payload.title.as_deref(),
         payload.tagline.as_deref(),
         payload.metadata.as_ref(),
@@ -221,7 +221,7 @@ pub async fn patch_website_data(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -232,7 +232,7 @@ pub async fn patch_website_data(
 
     use crate::queries;
     
-    match queries::verify_website_ownership(&pool, website_id, tenant_id).await {
+    match queries::verify_website_ownership(&pool, website_id, account_id).await {
         Ok(true) => {}
         Ok(false) => {
             return (StatusCode::NOT_FOUND, Json(serde_json::json!({
@@ -278,7 +278,7 @@ pub async fn publish_website(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -289,7 +289,7 @@ pub async fn publish_website(
 
     use crate::queries;
     
-    let result = queries::update_website_status(&pool, website_id, tenant_id, "published").await;
+    let result = queries::update_website_status(&pool, website_id, account_id, "published").await;
 
     match result {
         Ok(result) if result.rows_affected() > 0 => {
@@ -299,11 +299,11 @@ pub async fn publish_website(
 
             let event_result = sqlx::query(
                 r#"
-                INSERT INTO events (tenant_id, event_type, payload)
+                INSERT INTO events (account_id, event_type, payload)
                 VALUES ($1, 'WEBSITE_PUBLISHED', $2)
                 "#
             )
-            .bind(tenant_id)
+            .bind(account_id)
             .bind(&event_payload)
             .execute(&pool)
             .await;
@@ -345,7 +345,7 @@ pub async fn get_public_website(
         Ok(Some(w)) => {
             (StatusCode::OK, Json(Website {
                 id: w.id.to_string(),
-                tenant_id: w.tenant_id.to_string(),
+                account_id: w.account_id.to_string(),
                 slug: w.slug,
                 title: w.title,
                 tagline: w.tagline,

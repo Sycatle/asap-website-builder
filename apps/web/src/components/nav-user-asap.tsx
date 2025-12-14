@@ -36,7 +36,7 @@ interface UserData {
   email: string
   name: string
   avatar?: string
-  tenantId?: string
+  plan?: string
 }
 
 interface NavUserAsapProps {
@@ -67,7 +67,7 @@ export function NavUserAsap({ user: initialUser }: NavUserAsapProps) {
           id: meData.id,
           email: meData.email,
           name: meData.email.split('@')[0], // Default name from email
-          tenantId: meData.tenant_id,
+          plan: meData.plan,
         }
         setUser(userData)
 

@@ -105,24 +105,9 @@ export interface Module {
 export interface ModuleData {
   module: Module;
   settings: Record<string, any>;
-  enabled?: boolean;             // Whether module is activated for tenant
+  enabled?: boolean;             // Whether module is activated for website
   data?: Record<string, any>;    // Dynamic data (e.g., projects, stats)
   lastSync?: string;
-}
-
-// Tenant module (module linked to tenant, not website)
-export interface TenantModule {
-  id: string;
-  tenant_id: string;
-  module_id: string;
-  module_name: string;
-  module_slug: string;
-  module_icon?: string;
-  settings: Record<string, any>;
-  enabled: boolean;
-  activated_at: string;
-  sidebar_label?: string;
-  sidebar_order: number;
 }
 
 export interface WebsiteModule {
@@ -185,34 +170,5 @@ export const modulesAPI = {
   // Execute a module action (e.g., sync, test)
   async executeAction(websiteId: string, moduleSlug: string, actionKey: string, payload?: Record<string, any>): Promise<any> {
     return apiClient.post<any>(`/websites/${websiteId}/modules/${moduleSlug}/actions/${actionKey}`, payload || {});
-  },
-
-  // ==========================================
-  // TENANT MODULES API (NEW)
-  // ==========================================
-
-  // List activated modules for the current tenant
-  async listForTenant(): Promise<TenantModule[]> {
-    return apiClient.get<TenantModule[]>('/modules/activated');
-  },
-
-  // Get module data for tenant configuration page (includes dynamic data)
-  async getTenantModuleData(moduleSlug: string): Promise<ModuleData> {
-    return apiClient.get<ModuleData>(`/modules/${moduleSlug}/data`);
-  },
-
-  // Activate a module for the tenant
-  async activateForTenant(data: ActivateModuleRequest): Promise<TenantModule> {
-    return apiClient.post<TenantModule>('/modules/activate', data);
-  },
-
-  // Update settings for a tenant module
-  async updateTenantModuleSettings(moduleSlug: string, data: UpdateModuleSettingsRequest): Promise<TenantModule> {
-    return apiClient.patch<TenantModule>(`/modules/${moduleSlug}/settings`, data);
-  },
-
-  // Execute a tenant module action (e.g., sync, test)
-  async executeTenantAction(moduleSlug: string, actionKey: string, payload?: Record<string, any>): Promise<any> {
-    return apiClient.post<any>(`/modules/${moduleSlug}/actions/${actionKey}`, payload || {});
   },
 };

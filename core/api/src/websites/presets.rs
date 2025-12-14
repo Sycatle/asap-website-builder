@@ -64,7 +64,7 @@ pub async fn create_website_from_preset(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -76,7 +76,7 @@ pub async fn create_website_from_preset(
     use crate::queries;
     let result = queries::create_website_from_preset(
         &pool,
-        tenant_id,
+        account_id,
         preset_uuid,
         &payload.slug,
         &payload.title,
@@ -91,9 +91,9 @@ pub async fn create_website_from_preset(
             });
 
             let _ = sqlx::query(
-                "INSERT INTO events (tenant_id, event_type, payload) VALUES ($1, 'PRESET_APPLIED', $2)"
+                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'PRESET_APPLIED', $2)"
             )
-            .bind(tenant_id)
+            .bind(account_id)
             .bind(&event_payload)
             .execute(&pool)
             .await;

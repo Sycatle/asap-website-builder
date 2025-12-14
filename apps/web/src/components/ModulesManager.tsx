@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { modulesAPI } from '../lib/api';
-import type { Module, TenantModule } from '../lib/api/modules';
+import { modulesAPI, websitesAPI } from '../lib/api';
+import type { Module, WebsiteModule } from '../lib/api/modules';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,8 @@ const categoryLabels: Record<string, string> = {
 
 export default function ModulesManager() {
   const [catalogModules, setCatalogModules] = useState<Module[]>([]);
-  const [activeModules, setActiveModules] = useState<TenantModule[]>([]);
+  const [activeModules, setActiveModules] = useState<WebsiteModule[]>([]);
+  const [currentWebsiteId, setCurrentWebsiteId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activatingModule, setActivatingModule] = useState<string | null>(null);
@@ -57,12 +58,17 @@ export default function ModulesManager() {
       const catalog = await modulesAPI.catalog();
       setCatalogModules(catalog);
 
-      try {
-        const tenantModules = await modulesAPI.listForTenant();
-        setActiveModules(tenantModules);
-      } catch (err) {
-        console.error('Failed to load tenant modules:', err);
-        setActiveModules([]);
+      // Get current website
+      const websites = await websitesAPI.list();
+      if (websites.length > 0) {
+        const websiteId = websites[0].id;
+        setCurrentWebsiteId(websiteId);
+        
+        // Load modules for this website
+        const websiteModules = await modulesAPI.listForWebsite(websiteId);
+        setActiveModules(websiteModules);
+      } else {
+        setError('Aucun site web trouvé. Créez un site pour gérer les modules.');
       }
     } catch (err) {
       console.error('Failed to load modules:', err);
@@ -73,11 +79,16 @@ export default function ModulesManager() {
   };
 
   const handleActivateModule = async (module: Module) => {
+    if (!currentWebsiteId) {
+      setError('Aucun site web sélectionné');
+      return;
+    }
+
     try {
       setActivatingModule(module.id);
-      await modulesAPI.activateForTenant({
+      await modulesAPI.activate(currentWebsiteId, {
         module_id: module.id,
-        settings: module.default_settings,
+        settings: module.default_settings || {},
       });
       await loadData();
     } catch (err) {
@@ -88,13 +99,15 @@ export default function ModulesManager() {
     }
   };
 
-  const handleDeactivateModule = async (moduleSlug: string) => {
+  const handleDeactivateModule = async (moduleId: string) => {
+    if (!currentWebsiteId) {
+      setError('Aucun site web sélectionné');
+      return;
+    }
+
     try {
-      setActivatingModule(moduleSlug);
-      await modulesAPI.updateTenantModuleSettings(moduleSlug, {
-        settings: {},
-        enabled: false,
-      });
+      setActivatingModule(moduleId);
+      await modulesAPI.deactivate(currentWebsiteId, moduleId);
       await loadData();
     } catch (err) {
       console.error('Failed to deactivate module:', err);
@@ -112,7 +125,7 @@ export default function ModulesManager() {
   // Check if a module is active (compare by slug)
   const isModuleActive = (moduleIdOrSlug: string) => {
     return activeModules.some(m => 
-      (m.module_slug === moduleIdOrSlug || m.module_id === moduleIdOrSlug) && m.enabled
+      m.module_slug === moduleIdOrSlug && m.enabled
     );
   };
 
@@ -175,13 +188,12 @@ export default function ModulesManager() {
             Modules activés ({activeModules.filter(m => m.enabled).length})
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {activeModules.filter(m => m.enabled).map((tenantModule) => {
-              // Match by slug since catalog uses slug as id
-              const catalogModule = catalogModules.find(cm => cm.slug === tenantModule.module_slug);
+            {activeModules.filter(m => m.enabled).map((websiteModule) => {
+              const catalogModule = catalogModules.find(cm => cm.slug === websiteModule.module_slug);
               if (!catalogModule) return null;
 
               return (
-                <Card key={tenantModule.id} className="relative overflow-hidden">
+                <Card key={websiteModule.id} className="relative overflow-hidden">
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between">
                       <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -213,11 +225,11 @@ export default function ModulesManager() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDeactivateModule(tenantModule.module_slug)}
-                        disabled={activatingModule === tenantModule.module_slug}
+                        onClick={() => handleDeactivateModule(websiteModule.id)}
+                        disabled={activatingModule === websiteModule.id}
                         className="text-destructive hover:text-destructive"
                       >
-                        {activatingModule === tenantModule.module_slug ? (
+                        {activatingModule === websiteModule.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <Power className="h-4 w-4" />

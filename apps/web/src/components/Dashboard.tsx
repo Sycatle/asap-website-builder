@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react';
-import { websitesAPI, filesAPI, modulesAPI, authAPI, type Website, type QuotaUsage, type TenantModule, type UpdateWebsiteRequest } from '../lib/api';
+import { websitesAPI, filesAPI, modulesAPI, authAPI, type Website, type QuotaUsage, type WebsiteModule, type UpdateWebsiteRequest } from '../lib/api';
 import { formatBytes } from '../lib/utils/formatters';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -51,7 +51,7 @@ import {
 export default function Dashboard() {
   const [website, setWebsite] = useState<Website | null>(null);
   const [quota, setQuota] = useState<QuotaUsage | null>(null);
-  const [modules, setModules] = useState<TenantModule[]>([]);
+  const [modules, setModules] = useState<WebsiteModule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -65,20 +65,29 @@ export default function Dashboard() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [websites, quotaData, modulesData] = await Promise.all([
+        // Load websites and quota in parallel
+        const [websites, quotaData] = await Promise.all([
           websitesAPI.list(),
           filesAPI.getQuota(),
-          modulesAPI.listForTenant()
         ]);
+        
+        setQuota(quotaData);
         
         if (websites.length > 0) {
           const w = websites[0];
           setWebsite(w);
           setTitle(w.title || '');
           setTagline(w.tagline || '');
+          
+          // Load modules for this website
+          try {
+            const modulesData = await modulesAPI.listForWebsite(w.id);
+            setModules(modulesData);
+          } catch (error) {
+            console.error('Failed to load website modules:', error);
+            setModules([]);
+          }
         }
-        setQuota(quotaData);
-        setModules(modulesData);
       } catch (error) {
         console.error('Failed to load data:', error);
       } finally {

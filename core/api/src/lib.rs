@@ -1,6 +1,6 @@
 pub mod routes;
 pub mod auth;
-pub mod users;
+pub mod accounts;
 pub mod integrations;
 pub mod websites;
 pub mod events;

@@ -10,15 +10,13 @@ pub type Result<T> = std::result::Result<T, SharedError>;
 /// JWT Claims structure
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
-    pub sub: String,      // user_id
-    pub tenant_id: String,
+    pub sub: String,      // account_id
     pub exp: i64,
 }
 
-/// Generate a JWT token for a user
+/// Generate a JWT token for an account
 pub fn generate_token(
-    user_id: &str,
-    tenant_id: &str,
+    account_id: &str,
     config: &SharedConfig,
 ) -> Result<String> {
     let expiration = Utc::now()
@@ -27,8 +25,7 @@ pub fn generate_token(
         .timestamp();
 
     let claims = Claims {
-        sub: user_id.to_string(),
-        tenant_id: tenant_id.to_string(),
+        sub: account_id.to_string(),
         exp: expiration,
     };
 
@@ -61,10 +58,9 @@ mod tests {
     #[test]
     fn test_generate_token() {
         let config = SharedConfig::default();
-        let user_id = "user-123";
-        let tenant_id = "tenant-456";
+        let account_id = "account-123";
 
-        let token = generate_token(user_id, tenant_id, &config).unwrap();
+        let token = generate_token(account_id, &config).unwrap();
 
         // Token should not be empty
         assert!(!token.is_empty());
@@ -73,26 +69,24 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_token_different_users() {
+    fn test_generate_token_different_accounts() {
         let config = SharedConfig::default();
-        let user1_token = generate_token("user1", "tenant1", &config).unwrap();
-        let user2_token = generate_token("user2", "tenant2", &config).unwrap();
+        let account1_token = generate_token("account1", &config).unwrap();
+        let account2_token = generate_token("account2", &config).unwrap();
 
-        // Different users should have different tokens
-        assert_ne!(user1_token, user2_token);
+        // Different accounts should have different tokens
+        assert_ne!(account1_token, account2_token);
     }
 
     #[test]
     fn test_validate_token() {
         let config = SharedConfig::default();
-        let user_id = "user-123";
-        let tenant_id = "tenant-456";
+        let account_id = "account-123";
 
-        let token = generate_token(user_id, tenant_id, &config).unwrap();
+        let token = generate_token(account_id, &config).unwrap();
         let claims = validate_token(&token, &config).unwrap();
 
-        assert_eq!(claims.sub, user_id);
-        assert_eq!(claims.tenant_id, tenant_id);
+        assert_eq!(claims.sub, account_id);
     }
 
     #[test]
@@ -105,21 +99,18 @@ mod tests {
 
     #[test]
     fn test_claims_structure() {
-        let user_id = "test-user";
-        let tenant_id = "test-tenant";
+        let account_id = "test-account";
         let expiration = Utc::now()
             .checked_add_signed(Duration::hours(24))
             .expect("valid timestamp")
             .timestamp();
 
         let claims = Claims {
-            sub: user_id.to_string(),
-            tenant_id: tenant_id.to_string(),
+            sub: account_id.to_string(),
             exp: expiration,
         };
 
-        assert_eq!(claims.sub, user_id);
-        assert_eq!(claims.tenant_id, tenant_id);
+        assert_eq!(claims.sub, account_id);
         assert!(claims.exp > Utc::now().timestamp());
     }
 }

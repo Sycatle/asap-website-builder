@@ -28,18 +28,18 @@ pub fn parse_uuid(id: &str, field_name: &str) -> Result<Uuid, Response> {
     })
 }
 
-/// Parse the tenant ID from claims, returning an error response if invalid.
+/// Parse the account ID from claims, returning an error response if invalid.
 ///
 /// # Arguments
-/// * `claims` - The JWT claims containing tenant_id
+/// * `claims` - The JWT claims containing account ID in sub field
 ///
 /// # Returns
-/// * `Ok(Uuid)` - Successfully parsed tenant UUID
+/// * `Ok(Uuid)` - Successfully parsed account UUID
 /// * `Err(Response)` - Error response with UNAUTHORIZED status
-pub fn parse_tenant_id(claims: &Claims) -> Result<Uuid, Response> {
-    Uuid::parse_str(&claims.tenant_id).map_err(|_| {
+pub fn parse_account_id(claims: &Claims) -> Result<Uuid, Response> {
+    Uuid::parse_str(&claims.sub).map_err(|_| {
         (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-            "error": "Invalid tenant ID in token"
+            "error": "Invalid account ID in token"
         }))).into_response()
     })
 }
@@ -96,26 +96,22 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_tenant_id_valid() {
+    fn test_parse_account_id_valid() {
         let claims = Claims {
-            sub: "user-123".to_string(),
-            tenant_id: "550e8400-e29b-41d4-a716-446655440000".to_string(),
+            sub: "550e8400-e29b-41d4-a716-446655440000".to_string(),
             exp: 0,
-            iat: 0,
         };
-        let result = parse_tenant_id(&claims);
+        let result = parse_account_id(&claims);
         assert!(result.is_ok());
     }
 
     #[test]
-    fn test_parse_tenant_id_invalid() {
+    fn test_parse_account_id_invalid() {
         let claims = Claims {
-            sub: "user-123".to_string(),
-            tenant_id: "invalid".to_string(),
+            sub: "invalid".to_string(),
             exp: 0,
-            iat: 0,
         };
-        let result = parse_tenant_id(&claims);
+        let result = parse_account_id(&claims);
         assert!(result.is_err());
     }
 }

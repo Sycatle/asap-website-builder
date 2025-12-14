@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { modulesAPI, type TenantModule } from '../lib/api/modules';
+import { modulesAPI, websitesAPI, type WebsiteModule } from '../lib/api';
 
 // Icon mapping for common module icons
 const moduleIcons: Record<string, React.ReactNode> = {
@@ -35,44 +35,36 @@ const moduleIcons: Record<string, React.ReactNode> = {
   ),
 };
 
-// Get icon for module
-function getModuleIcon(module: TenantModule): React.ReactNode {
-  // Try module_icon
-  if (module.module_icon) {
-    const icon = moduleIcons[module.module_icon];
-    if (icon) return icon;
-  }
+// Get icon for module (website module doesn't have icon field, guess from slug)
+function getModuleIcon(moduleSlug: string): React.ReactNode {
   // Guess from slug
-  if (module.module_slug.includes('github')) return moduleIcons['github'];
-  if (module.module_slug.includes('blog')) return moduleIcons['blog'];
-  if (module.module_slug.includes('contact')) return moduleIcons['contact'];
-  if (module.module_slug.includes('analytics')) return moduleIcons['analytics'];
-  if (module.module_slug.includes('theme')) return moduleIcons['theme'];
+  if (moduleSlug.includes('github')) return moduleIcons['github'];
+  if (moduleSlug.includes('blog')) return moduleIcons['blog'];
+  if (moduleSlug.includes('contact')) return moduleIcons['contact'];
+  if (moduleSlug.includes('analytics')) return moduleIcons['analytics'];
+  if (moduleSlug.includes('theme')) return moduleIcons['theme'];
   
   return moduleIcons['default'];
 }
 
-// Get label for module
-function getModuleLabel(module: TenantModule): string {
-  return module.sidebar_label || module.module_name;
-}
-
 export default function DynamicSidebar() {
-  const [modules, setModules] = useState<TenantModule[]>([]);
+  const [modules, setModules] = useState<WebsiteModule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadModules = async () => {
       try {
-        const data = await modulesAPI.listForTenant();
-        // Filter only enabled modules and sort by sidebar_order
-        const enabledModules = data
-          .filter(m => m.enabled)
-          .sort((a, b) => a.sidebar_order - b.sidebar_order);
-        setModules(enabledModules);
+        // Get current website first
+        const websites = await websitesAPI.list();
+        if (websites.length > 0) {
+          const data = await modulesAPI.listForWebsite(websites[0].id);
+          // Filter only enabled modules
+          const enabledModules = data.filter(m => m.enabled);
+          setModules(enabledModules);
+        }
       } catch (err) {
-        console.error('Failed to load tenant modules:', err);
+        console.error('Failed to load website modules:', err);
         setError('Erreur de chargement');
       } finally {
         setLoading(false);
@@ -100,9 +92,9 @@ export default function DynamicSidebar() {
             className="flex items-center gap-3 px-4 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
           >
             <span className="text-gray-600">
-              {getModuleIcon(module)}
+              {getModuleIcon(module.module_slug)}
             </span>
-            <span>{getModuleLabel(module)}</span>
+            <span>{module.module_name}</span>
           </a>
         ))}
       </nav>

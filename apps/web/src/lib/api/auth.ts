@@ -8,13 +8,9 @@ export interface SignupRequest {
 
 export interface SignupResponse {
   token: string;
-  user: {
+  account: {
     id: string;
     email: string;
-  };
-  tenant: {
-    id: string;
-    slug: string;
   };
 }
 
@@ -30,7 +26,7 @@ export interface LoginResponse {
 export interface MeResponse {
   id: string;
   email: string;
-  tenant_id: string;
+  plan: string;
 }
 
 export interface UpdateGitHubIntegrationRequest {
@@ -70,7 +66,7 @@ export const authAPI = {
     }
   },
 
-  async updateGitHubIntegration(userId: string, data: UpdateGitHubIntegrationRequest): Promise<void> {
-    return apiClient.put<void>(`/users/${userId}/integrations/github`, data);
+  async updateGitHubIntegration(accountId: string, data: UpdateGitHubIntegrationRequest): Promise<void> {
+    return apiClient.put<void>(`/accounts/${accountId}/integrations/github`, data);
   },
 };

@@ -23,7 +23,7 @@ pub async fn batch_insert_events(
     }
 
     let mut query = String::from(
-        "INSERT INTO events (tenant_id, event_type, payload) VALUES "
+        "INSERT INTO events (account_id, event_type, payload) VALUES "
     );
 
     let mut bindings: Vec<(Uuid, String, JsonValue)> = Vec::new();
@@ -34,12 +34,12 @@ pub async fn batch_insert_events(
         }
         // Only generating placeholder indices, not interpolating user data
         query.push_str(&format!("(${}, ${}, ${})", idx * 3 + 1, idx * 3 + 2, idx * 3 + 3));
-        bindings.push((event.tenant_id, event.event_type.clone(), event.payload.clone()));
+        bindings.push((event.account_id, event.event_type.clone(), event.payload.clone()));
     }
 
     let mut query_builder = sqlx::query(&query);
-    for (tenant_id, event_type, payload) in bindings {
-        query_builder = query_builder.bind(tenant_id).bind(event_type).bind(payload);
+    for (account_id, event_type, payload) in bindings {
+        query_builder = query_builder.bind(account_id).bind(event_type).bind(payload);
     }
 
     let result = query_builder.execute(pool).await?;

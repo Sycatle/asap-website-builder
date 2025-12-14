@@ -25,6 +25,7 @@ import {
   SidebarGroupContent,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import type { WebsiteModule } from "@/lib/api"
 
 // Icon mapping for modules
 const moduleIcons: Record<string, React.ElementType> = {
@@ -40,18 +41,8 @@ const moduleIcons: Record<string, React.ElementType> = {
   'theme-engine': Palette,
 }
 
-interface TenantModule {
-  id: string
-  module_slug: string
-  module_name: string
-  module_icon?: string
-  sidebar_label?: string
-  sidebar_order: number
-  enabled: boolean
-}
-
 interface AsapSidebarProps {
-  modules?: TenantModule[]
+  modules?: WebsiteModule[]
   user?: {
     name: string
     email: string
@@ -78,10 +69,8 @@ export function AsapSidebar({ modules = [], user }: AsapSidebarProps) {
     },
   ]
 
-  // Sort and filter enabled modules
-  const enabledModules = modules
-    .filter(m => m.enabled)
-    .sort((a, b) => a.sidebar_order - b.sidebar_order)
+  // Filter enabled modules
+  const enabledModules = modules.filter(m => m.enabled)
 
   return (
     <Sidebar collapsible="icon">
@@ -128,13 +117,13 @@ export function AsapSidebar({ modules = [], user }: AsapSidebarProps) {
             <SidebarGroupContent>
               <SidebarMenu>
                 {enabledModules.map((module) => {
-                  const IconComponent = moduleIcons[module.module_icon || module.module_slug] || Puzzle
+                  const IconComponent = moduleIcons[module.module_slug] || Puzzle
                   return (
                     <SidebarMenuItem key={module.id}>
-                      <SidebarMenuButton asChild tooltip={module.sidebar_label || module.module_name}>
+                      <SidebarMenuButton asChild tooltip={module.module_name}>
                         <a href={`/app/modules/${module.module_slug}`}>
                           <IconComponent />
-                          <span>{module.sidebar_label || module.module_name}</span>
+                          <span>{module.module_name}</span>
                         </a>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

@@ -21,20 +21,13 @@ pub struct SignupRequest {
 #[derive(Debug, Serialize)]
 pub struct SignupResponse {
     pub token: String,
-    pub user: UserResponse,
-    pub tenant: TenantResponse,
+    pub account: AccountResponse,
 }
 
 #[derive(Debug, Serialize)]
-pub struct UserResponse {
+pub struct AccountResponse {
     pub id: String,
     pub email: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TenantResponse {
-    pub id: String,
-    pub slug: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -52,7 +45,7 @@ pub struct LoginResponse {
 pub struct MeResponse {
     pub id: String,
     pub email: String,
-    pub tenant_id: String,
+    pub plan: String,
 }
 
 /// Hash a password using bcrypt
@@ -137,38 +130,27 @@ mod password_tests {
     }
 
     #[test]
-    fn test_user_response() {
-        let resp = UserResponse {
-            id: "user-123".to_string(),
+    fn test_account_response() {
+        let resp = AccountResponse {
+            id: "account-123".to_string(),
             email: "user@example.com".to_string(),
         };
 
-        assert_eq!(resp.id, "user-123");
+        assert_eq!(resp.id, "account-123");
         assert_eq!(resp.email, "user@example.com");
-    }
-
-    #[test]
-    fn test_tenant_response() {
-        let resp = TenantResponse {
-            id: "tenant-123".to_string(),
-            slug: "my-workspace".to_string(),
-        };
-
-        assert_eq!(resp.id, "tenant-123");
-        assert_eq!(resp.slug, "my-workspace");
     }
 
     #[test]
     fn test_me_response() {
         let resp = MeResponse {
-            id: "user-456".to_string(),
+            id: "account-456".to_string(),
             email: "me@example.com".to_string(),
-            tenant_id: "tenant-789".to_string(),
+            plan: "free".to_string(),
         };
 
-        assert_eq!(resp.id, "user-456");
+        assert_eq!(resp.id, "account-456");
         assert_eq!(resp.email, "me@example.com");
-        assert_eq!(resp.tenant_id, "tenant-789");
+        assert_eq!(resp.plan, "free");
     }
 
     #[test]
@@ -291,69 +273,35 @@ pub async fn signup(
         }
     };
 
-    // Create user and tenant (handling circular dependency)
-    let user_id = Uuid::new_v4();
-    let tenant_id = Uuid::new_v4();
+    // Create account
+    let account_id = Uuid::new_v4();
 
-    // Create tenant first (with temporary owner_id that will be updated)
-    let tenant_result = sqlx::query!(
-        "INSERT INTO tenants (id, owner_id, slug, plan) VALUES ($1, $1, $2, 'free')",
-        tenant_id,
-        slug // Use sanitized slug, not raw payload
-    )
-    .execute(&mut *tx)
-    .await;
-
-    if let Err(e) = tenant_result {
-        tracing::error!("Failed to create tenant: {}", e);
-        let _ = tx.rollback().await;
-        return (StatusCode::CONFLICT, Json(serde_json::json!({
-            "error": "Website slug already exists"
-        }))).into_response();
-    }
-
-    // Create user
-    let user_result = sqlx::query!(
-        "INSERT INTO users (id, email, password_hash, tenant_id) VALUES ($1, $2, $3, $4)",
-        user_id,
+    // Create account
+    let account_result = sqlx::query!(
+        "INSERT INTO accounts (id, email, password_hash, plan) VALUES ($1, $2, $3, 'free')",
+        account_id,
         payload.email,
-        password_hash,
-        tenant_id
+        password_hash
     )
     .execute(&mut *tx)
     .await;
 
-    if let Err(e) = user_result {
-        tracing::error!("Failed to create user: {}", e);
+    if let Err(e) = account_result {
+        tracing::error!("Failed to create account: {}", e);
         let _ = tx.rollback().await;
         return (StatusCode::CONFLICT, Json(serde_json::json!({
             "error": "Email already exists"
         }))).into_response();
     }
 
-    // Update tenant with correct owner_id
+    // Create account_data entry
     if let Err(e) = sqlx::query!(
-        "UPDATE tenants SET owner_id = $1 WHERE id = $2",
-        user_id,
-        tenant_id
+        "INSERT INTO account_data (account_id, data) VALUES ($1, '{}'::jsonb)",
+        account_id
     )
     .execute(&mut *tx)
     .await {
-        tracing::error!("Failed to update tenant owner: {}", e);
-        let _ = tx.rollback().await;
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Internal server error"
-        }))).into_response();
-    }
-
-    // Create user_data entry
-    if let Err(e) = sqlx::query!(
-        "INSERT INTO user_data (user_id, data) VALUES ($1, '{}'::jsonb)",
-        user_id
-    )
-    .execute(&mut *tx)
-    .await {
-        tracing::error!("Failed to create user_data: {}", e);
+        tracing::error!("Failed to create account_data: {}", e);
         let _ = tx.rollback().await;
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
             "error": "Internal server error"
@@ -362,12 +310,12 @@ pub async fn signup(
 
     // Create default website
     let website_id = Uuid::new_v4();
-    let default_title = payload.email.split('@').next().unwrap_or("User");
+    let default_title = payload.email.split('@').next().unwrap_or("Account");
     if let Err(e) = sqlx::query(
-        "INSERT INTO websites (id, tenant_id, slug, title, tagline, status, creation_mode) VALUES ($1, $2, $3, $4, $5, 'draft', $6)"
+        "INSERT INTO websites (id, account_id, slug, title, tagline, status, creation_mode) VALUES ($1, $2, $3, $4, $5, 'draft', $6)"
     )
     .bind(website_id)
-    .bind(tenant_id)
+    .bind(account_id)
     .bind(&slug)
     .bind(default_title)
     .bind(DEFAULT_TAGLINE)
@@ -404,7 +352,7 @@ pub async fn signup(
     }
 
     // Generate JWT token
-    let token = match generate_token(&user_id.to_string(), &tenant_id.to_string(), &config) {
+    let token = match generate_token(&account_id.to_string(), &config) {
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate token: {}", e);
@@ -414,17 +362,13 @@ pub async fn signup(
         }
     };
 
-    tracing::info!("User created successfully: {}", payload.email);
+    tracing::info!("Account created successfully: {}", payload.email);
 
     (StatusCode::CREATED, Json(SignupResponse {
         token,
-        user: UserResponse {
-            id: user_id.to_string(),
+        account: AccountResponse {
+            id: account_id.to_string(),
             email: payload.email,
-        },
-        tenant: TenantResponse {
-            id: tenant_id.to_string(),
-            slug, // Use sanitized slug
         },
     })).into_response()
 }
@@ -434,14 +378,14 @@ pub async fn login(
     Extension(config): Extension<SharedConfig>,
     Json(payload): Json<LoginRequest>,
 ) -> impl IntoResponse {
-    // Query user by email
-    let user = match sqlx::query!(
-        "SELECT id, email, password_hash, tenant_id FROM users WHERE email = $1",
+    // Query account by email
+    let account = match sqlx::query!(
+        "SELECT id, email, password_hash FROM accounts WHERE email = $1",
         payload.email
     )
     .fetch_optional(&pool)
     .await {
-        Ok(Some(user)) => user,
+        Ok(Some(account)) => account,
         Ok(None) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
                 "error": "Invalid email or password"
@@ -456,7 +400,7 @@ pub async fn login(
     };
 
     // Verify password
-    match verify_password(&payload.password, &user.password_hash) {
+    match verify_password(&payload.password, &account.password_hash) {
         Ok(true) => {},
         Ok(false) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -472,7 +416,7 @@ pub async fn login(
     }
 
     // Generate JWT token
-    let token = match generate_token(&user.id.to_string(), &user.tenant_id.to_string(), &config) {
+    let token = match generate_token(&account.id.to_string(), &config) {
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate token: {}", e);
@@ -482,7 +426,7 @@ pub async fn login(
         }
     };
 
-    tracing::info!("User logged in successfully: {}", payload.email);
+    tracing::info!("Account logged in successfully: {}", payload.email);
 
     (StatusCode::OK, Json(LoginResponse { token })).into_response()
 }
@@ -491,7 +435,7 @@ pub async fn me(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    let user_id = match Uuid::parse_str(&claims.sub) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -500,29 +444,29 @@ pub async fn me(
         }
     };
 
-    // Query user information
+    // Query account information
     let result = sqlx::query!(
-        "SELECT id, email, tenant_id FROM users WHERE id = $1",
-        user_id
+        "SELECT id, email, plan FROM accounts WHERE id = $1",
+        account_id
     )
     .fetch_optional(&pool)
     .await;
 
     match result {
-        Ok(Some(user)) => {
+        Ok(Some(account)) => {
             (StatusCode::OK, Json(MeResponse {
-                id: user.id.to_string(),
-                email: user.email,
-                tenant_id: user.tenant_id.to_string(),
+                id: account.id.to_string(),
+                email: account.email,
+                plan: account.plan,
             })).into_response()
         }
         Ok(None) => {
             (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "User not found"
+                "error": "Account not found"
             }))).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error fetching user: {}", e);
+            tracing::error!("Database error fetching account: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()

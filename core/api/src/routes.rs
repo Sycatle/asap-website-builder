@@ -38,10 +38,11 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
     // Authenticated routes (require JWT)
     let authenticated_routes = Router::new()
         .route("/auth/me", get(crate::auth::me))
-        .route("/users/:id", get(crate::users::get_user))
-        .route("/users/:id", put(crate::users::update_user))
-        .route("/users/:id/integrations", get(crate::integrations::get_integrations))
-        .route("/users/:id/integrations/github", put(crate::integrations::update_github_integration))
+        // Account routes
+        .route("/accounts/:id", get(crate::accounts::get_account))
+        .route("/accounts/:id", put(crate::accounts::update_account))
+        .route("/accounts/:id/integrations", get(crate::integrations::get_integrations))
+        .route("/accounts/:id/integrations/github", put(crate::integrations::update_github_integration))
         // Website routes
         .route("/websites", get(crate::websites::list_websites))
         .route("/websites/:id", get(crate::websites::get_website))
@@ -52,12 +53,6 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
         .route("/websites/:id/modules", get(crate::websites::list_website_modules))
         .route("/websites/:id/modules", post(crate::websites::activate_module))
         .route("/websites/:id/modules/:module_id", patch(crate::websites::update_website_module))
-        // Tenant modules routes (modules linked to tenant)
-        .route("/modules/activated", get(crate::websites::list_tenant_modules))
-        .route("/modules/activate", post(crate::websites::activate_tenant_module))
-        .route("/modules/:module_slug/settings", patch(crate::websites::update_tenant_module))
-        .route("/modules/:module_slug/data", get(crate::websites::get_tenant_module_data))
-        .route("/modules/:module_slug/actions/:action_key", post(crate::websites::execute_tenant_module_action))
         // Website sections routes
         .route("/websites/:id/sections", get(crate::websites::list_website_sections))
         .route("/websites/:id/sections", post(crate::websites::create_section))
@@ -139,9 +134,9 @@ mod tests {
         // Test route definitions
         let routes_list = vec![
             "/auth/me",
-            "/users/:id",
-            "/users/:id/integrations",
-            "/users/:id/integrations/github",
+            "/accounts/:id",
+            "/accounts/:id/integrations",
+            "/accounts/:id/integrations/github",
             "/websites",
             "/websites/:id",
             "/websites/:id/modules",
@@ -162,7 +157,7 @@ mod tests {
     fn test_authenticated_routes() {
         let auth_routes = vec![
             "/auth/me",
-            "/users/:id",
+            "/accounts/:id",
             "/websites",
             "/events",
             "/modules",
@@ -193,7 +188,7 @@ mod tests {
     #[test]
     fn test_route_parameter_patterns() {
         let parameterized_routes = vec![
-            "/users/:id",
+            "/accounts/:id",
             "/websites/:id",
             "/websites/:id/modules/:module_id",
             "/websites/:id/sections/:section_id",
@@ -292,11 +287,11 @@ mod tests {
     }
 
     #[test]
-    fn test_user_integration_routes() {
-        // Test user integration routes
+    fn test_account_integration_routes() {
+        // Test account integration routes
         let integration_routes = vec![
-            "/users/:id/integrations",
-            "/users/:id/integrations/github",
+            "/accounts/:id/integrations",
+            "/accounts/:id/integrations/github",
         ];
 
         for route in integration_routes {

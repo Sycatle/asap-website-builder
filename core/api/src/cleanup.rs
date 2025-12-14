@@ -20,7 +20,7 @@ impl FileCleanupService {
 
         let mut stats = CleanupStats::default();
 
-        // Clean orphaned file metadata (files with deleted users)
+        // Clean orphaned file metadata (files with deleted accounts)
         stats.orphaned_files_cleaned = self.cleanup_orphaned_files().await?;
 
         // Clean old audit logs
@@ -34,11 +34,11 @@ impl FileCleanupService {
         Ok(stats)
     }
 
-    /// Remove metadata for orphaned files (user deleted but files remain)
+    /// Remove metadata for orphaned files (account deleted but files remain)
     async fn cleanup_orphaned_files(&self) -> Result<u64> {
         let result = sqlx::query(
             "DELETE FROM files 
-             WHERE user_id NOT IN (SELECT id FROM users)"
+             WHERE account_id NOT IN (SELECT id FROM accounts)"
         )
         .execute(&self.pool)
         .await?;
@@ -66,7 +66,7 @@ impl FileCleanupService {
     async fn cleanup_deleted_user_quotas(&self) -> Result<u64> {
         let result = sqlx::query(
             "DELETE FROM user_storage_quota 
-             WHERE user_id NOT IN (SELECT id FROM users)"
+             WHERE account_id NOT IN (SELECT id FROM accounts)"
         )
         .execute(&self.pool)
         .await?;
@@ -88,7 +88,7 @@ impl FileCleanupService {
         .fetch_one(&self.pool)
         .await?;
 
-        let total_users = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users")
+        let total_accounts = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM accounts")
             .fetch_one(&self.pool)
             .await?;
 
@@ -96,7 +96,7 @@ impl FileCleanupService {
             total_files: row.0,
             total_compressed_size: row.1.unwrap_or(0),
             total_original_size: row.2.unwrap_or(0),
-            total_users,
+            total_users: total_accounts,
             calculated_at: Utc::now(),
         })
     }
@@ -104,17 +104,17 @@ impl FileCleanupService {
     /// Audit file operation for security logging
     pub async fn audit_operation(
         &self,
-        user_id: uuid::Uuid,
+        account_id: uuid::Uuid,
         file_id: Option<uuid::Uuid>,
         operation: &str,
         ip_address: Option<&str>,
         user_agent: Option<&str>,
     ) -> Result<()> {
         sqlx::query(
-            "INSERT INTO file_operations_audit (user_id, file_id, operation, ip_address, user_agent, created_at)
+            "INSERT INTO file_operations_audit (account_id, file_id, operation, ip_address, user_agent, created_at)
              VALUES ($1, $2, $3, $4, $5, $6)"
         )
-        .bind(user_id)
+        .bind(account_id)
         .bind(file_id)
         .bind(operation)
         .bind(ip_address)
