@@ -52,7 +52,7 @@ pub async fn list_websites(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let tenant_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -108,7 +108,7 @@ pub async fn get_website(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let tenant_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -165,7 +165,7 @@ pub async fn update_website(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let tenant_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -221,7 +221,7 @@ pub async fn patch_website_data(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let tenant_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -278,7 +278,7 @@ pub async fn publish_website(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let tenant_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({

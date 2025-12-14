@@ -208,7 +208,7 @@ pub async fn update_github_integration(
     }
 
     // Create an event for USER_INTEGRATION_ADDED
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let tenant_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({

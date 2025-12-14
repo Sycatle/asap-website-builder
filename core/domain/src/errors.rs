@@ -16,8 +16,8 @@ pub enum DomainError {
     #[error("Website not found: {0}")]
     WebsiteNotFound(String),
 
-    #[error("Tenant not found: {0}")]
-    TenantNotFound(String),
+    #[error("Account not found: {0}")]
+    AccountNotFound(String),
 
     #[error("Invalid credentials")]
     InvalidCredentials,

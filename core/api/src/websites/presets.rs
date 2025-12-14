@@ -64,7 +64,7 @@ pub async fn create_website_from_preset(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let tenant_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({

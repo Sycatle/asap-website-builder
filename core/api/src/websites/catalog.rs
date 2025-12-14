@@ -77,7 +77,7 @@ pub async fn get_website_module_data(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let tenant_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -195,7 +195,7 @@ pub async fn execute_module_action(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let tenant_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({

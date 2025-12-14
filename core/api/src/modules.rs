@@ -35,7 +35,7 @@ pub async fn list_modules(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -44,7 +44,7 @@ pub async fn list_modules(
         }
     };
 
-    // Get all modules with their configuration status for this tenant
+    // Get all modules with their configuration status for this account
     let result = sqlx::query!(
         r#"
         SELECT 
@@ -55,11 +55,11 @@ pub async fn list_modules(
             m.enabled,
             CASE WHEN mc.id IS NOT NULL THEN true ELSE false END as "has_config!"
         FROM modules m
-        LEFT JOIN module_configs mc ON m.id = mc.module_id AND mc.tenant_id = $1
+        LEFT JOIN module_configs mc ON m.id = mc.module_id AND mc.account_id = $1
         WHERE m.enabled = true
         ORDER BY m.name
         "#,
-        tenant_id
+        account_id
     )
     .fetch_all(&pool)
     .await;
@@ -103,7 +103,7 @@ pub async fn get_module_config(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -119,10 +119,10 @@ pub async fn get_module_config(
             m.name,
             COALESCE(mc.config, '{}'::jsonb) as "config!"
         FROM modules m
-        LEFT JOIN module_configs mc ON m.id = mc.module_id AND mc.tenant_id = $1
+        LEFT JOIN module_configs mc ON m.id = mc.module_id AND mc.account_id = $1
         WHERE m.id = $2
         "#,
-        tenant_id,
+        account_id,
         module_id
     )
     .fetch_optional(&pool)
@@ -165,7 +165,7 @@ pub async fn update_module_config(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -200,12 +200,12 @@ pub async fn update_module_config(
     // Insert or update module config
     let result = sqlx::query!(
         r#"
-        INSERT INTO module_configs (tenant_id, module_id, config)
+        INSERT INTO module_configs (account_id, module_id, config)
         VALUES ($1, $2, $3)
-        ON CONFLICT (tenant_id, module_id)
+        ON CONFLICT (account_id, module_id)
         DO UPDATE SET config = $3, updated_at = now()
         "#,
-        tenant_id,
+        account_id,
         module_id,
         payload.config
     )
@@ -214,7 +214,7 @@ pub async fn update_module_config(
 
     match result {
         Ok(_) => {
-            tracing::info!("Module config updated: {} for tenant {}", module_id, tenant_id);
+            tracing::info!("Module config updated: {} for account {}", module_id, account_id);
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Module configuration updated successfully"
             }))).into_response()

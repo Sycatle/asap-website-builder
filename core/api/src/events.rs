@@ -14,7 +14,7 @@ use asap_core_shared::Claims;
 #[derive(Debug, Serialize)]
 pub struct Event {
     pub id: String,
-    pub tenant_id: String,
+    pub account_id: String,
     pub event_type: String,
     pub payload: serde_json::Value,
     pub created_at: String,
@@ -39,7 +39,7 @@ pub async fn get_events(
     Extension(claims): Extension<Claims>,
     Query(params): Query<GetEventsQuery>,
 ) -> impl IntoResponse {
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -53,7 +53,7 @@ pub async fn get_events(
 
     // Build query string dynamically
     let mut query_str = String::from(
-        "SELECT id, tenant_id, event_type, payload, created_at, processed_at FROM events WHERE tenant_id = $1"
+        "SELECT id, account_id, event_type, payload, created_at, processed_at FROM events WHERE account_id = $1"
     );
     
     let has_event_type = params.event_type.is_some();
@@ -81,14 +81,14 @@ pub async fn get_events(
     // Execute query with proper bindings
     let rows = if let Some(event_type) = &params.event_type {
         sqlx::query(&query_str)
-            .bind(tenant_id)
+            .bind(account_id)
             .bind(event_type)
             .bind(limit)
             .fetch_all(&pool)
             .await
     } else {
         sqlx::query(&query_str)
-            .bind(tenant_id)
+            .bind(account_id)
             .bind(limit)
             .fetch_all(&pool)
             .await
@@ -110,7 +110,7 @@ pub async fn get_events(
             use sqlx::Row;
             Event {
                 id: row.get::<Uuid, _>("id").to_string(),
-                tenant_id: row.get::<Uuid, _>("tenant_id").to_string(),
+                account_id: row.get::<Uuid, _>("account_id").to_string(),
                 event_type: row.get("event_type"),
                 payload: row.get("payload"),
                 created_at: row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_string(),
@@ -127,7 +127,7 @@ pub async fn create_event(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateEventRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -139,12 +139,12 @@ pub async fn create_event(
     let event_id = Uuid::new_v4();
     let result = sqlx::query!(
         r#"
-        INSERT INTO events (id, tenant_id, event_type, payload)
+        INSERT INTO events (id, account_id, event_type, payload)
         VALUES ($1, $2, $3, $4)
         RETURNING id, created_at
         "#,
         event_id,
-        tenant_id,
+        account_id,
         payload.event_type,
         payload.payload
     )
@@ -183,7 +183,7 @@ pub async fn mark_processed(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -196,10 +196,10 @@ pub async fn mark_processed(
         r#"
         UPDATE events
         SET processed_at = now()
-        WHERE id = $1 AND tenant_id = $2 AND processed_at IS NULL
+        WHERE id = $1 AND account_id = $2 AND processed_at IS NULL
         "#,
         event_id,
-        tenant_id
+        account_id
     )
     .execute(&pool)
     .await;

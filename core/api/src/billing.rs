@@ -33,10 +33,10 @@ pub async fn create_checkout_session(
     Extension(payment_gateway): Extension<std::sync::Arc<dyn PaymentGateway>>,
     Json(req): Json<CreateCheckoutSessionRequest>,
 ) -> Result<Json<CreateCheckoutSessionResponse>, Response> {
-    tracing::info!("Creating checkout session for tenant: {}", claims.tenant_id);
+    tracing::info!("Creating checkout session for tenant: {}", claims.sub);
 
     // Parse tenant_id from string to Uuid
-    let tenant_id = Uuid::parse_str(&claims.tenant_id).map_err(|_| {
+    let tenant_id = Uuid::parse_str(&claims.sub).map_err(|_| {
         (StatusCode::BAD_REQUEST, "Invalid tenant ID").into_response()
     })?;
 
