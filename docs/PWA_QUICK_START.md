@@ -48,7 +48,8 @@ Guide pratique pour exploiter immédiatement les fonctionnalités PWA d'ASAP.
 
 **Activation :**
 ```typescript
-// Dans votre composant
+// NOTE: Exemple d'implémentation - voir PWA_EXAMPLES.md pour le code complet
+// Le hook useNotifications n'existe pas encore, mais le code est fourni dans PWA_EXAMPLES.md
 import { useNotifications } from '@/utils/pwa/notifications';
 
 function MyComponent() {
@@ -136,6 +137,7 @@ const handleClear = async () => {
 ```astro
 ---
 // src/layouts/AppLayout.astro
+// NOTE: Ces composants existent déjà dans le projet (voir src/components/pwa-manager.tsx)
 import { PWAProvider } from '@/components/pwa-manager';
 ---
 

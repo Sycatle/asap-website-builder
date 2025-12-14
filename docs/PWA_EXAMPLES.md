@@ -770,9 +770,20 @@ export class OfflineActionQueue {
   }
 }
 
+// Singleton instance pour éviter les multiples instances
+let queueInstance: OfflineActionQueue | null = null;
+
+function getQueueInstance(): OfflineActionQueue {
+  if (!queueInstance) {
+    queueInstance = new OfflineActionQueue();
+  }
+  return queueInstance;
+}
+
 // Usage dans un composant
 export function useOfflineQueue() {
-  const [queue] = useState(() => new OfflineActionQueue());
+  // Utiliser useMemo pour garantir une seule instance
+  const queue = useMemo(() => getQueueInstance(), []);
 
   const queueAction = async (type: string, url: string, method: string, data: any) => {
     return await queue.add({ type, url, method, data });
@@ -859,10 +870,13 @@ export class NotificationManager {
       if (!subscription) {
         // Récupérer la clé VAPID depuis la config runtime ou variable d'env
         // NOTE: Cette clé est publique et peut être exposée côté client
+        // SETUP: Obtenir la clé depuis votre backend ou générer avec web-push
+        // Exemple: npx web-push generate-vapid-keys
+        // Puis configurer PUBLIC_VAPID_PUBLIC_KEY dans .env
         const vapidKey = import.meta.env.PUBLIC_VAPID_PUBLIC_KEY;
         
         if (!vapidKey) {
-          console.error('VAPID public key not configured');
+          console.error('VAPID public key not configured. Run: npx web-push generate-vapid-keys');
           return;
         }
         

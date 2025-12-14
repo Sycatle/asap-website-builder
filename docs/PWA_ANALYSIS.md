@@ -326,8 +326,10 @@ const browserInfo = {
 ```json
 "screenshots": [
   {
-    "src": "/screenshots/desktop.png",  // ❌ N'existe pas - CAUSE 404
-    "src": "/screenshots/mobile.png"     // ❌ N'existe pas - CAUSE 404
+    "src": "/screenshots/desktop.png"  // ❌ N'existe pas - CAUSE 404
+  },
+  {
+    "src": "/screenshots/mobile.png"   // ❌ N'existe pas - CAUSE 404
   }
 ]
 ```

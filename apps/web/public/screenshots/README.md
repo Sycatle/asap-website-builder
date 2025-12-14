@@ -33,7 +33,8 @@ Ce dossier contient les screenshots de l'application pour le manifest PWA et les
    # Ouvrir le dashboard dans un navigateur
    # Ouvrir les DevTools (F12)
    # Activer le mode "Device Toolbar" (Cmd+Shift+M / Ctrl+Shift+M)
-   # Sélectionner "iPhone 8 Plus" ou définir 750x1334
+   # Sélectionner "iPhone 6/7/8" ou "iPhone X/XS" ou définir manuellement 750x1334
+   # Note: iPhone 8 Plus = 1080x1920, pas 750x1334
    # Prendre un screenshot
    # Sauvegarder comme mobile.png dans ce dossier
    ```
