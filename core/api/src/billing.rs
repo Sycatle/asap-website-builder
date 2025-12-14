@@ -67,7 +67,7 @@ pub async fn create_checkout_session(
 
     // Create checkout session
     let checkout_request = CheckoutSessionRequest {
-        tenant_id,
+        account_id,
         price_id: req.price_id,
         success_url: req.success_url,
         cancel_url: req.cancel_url,

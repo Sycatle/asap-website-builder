@@ -6,24 +6,24 @@ pub async fn check_account_payment_status(
     pool: &PgPool,
     account_id: Uuid,
 ) -> Result<bool, sqlx::Error> {
-    let tenant = sqlx::query!(
+    let account = sqlx::query!(
         r#"
         SELECT plan_status, current_period_end
         FROM accounts 
         WHERE id = $1 AND stripe_customer_id IS NOT NULL
         "#,
-        tenant_id
+        account_id
     )
     .fetch_optional(pool)
     .await?;
 
-    let Some(tenant) = tenant else {
+    let Some(account) = account else {
         return Ok(false);
     };
 
     // Check for dubious statuses that need immediate reconciliation
     let dubious_statuses = ["incomplete", "past_due", "unpaid"];
-    if let Some(status) = tenant.plan_status {
+    if let Some(status) = account.plan_status {
         if dubious_statuses.contains(&status.as_str()) {
             tracing::warn!("Account {} has dubious payment status: {}", account_id, status);
             return Ok(true);
@@ -31,7 +31,7 @@ pub async fn check_account_payment_status(
     }
 
     // Check if subscription is expired
-    if let Some(period_end) = tenant.current_period_end {
+    if let Some(period_end) = account.current_period_end {
         if period_end < chrono::Utc::now() {
             tracing::warn!("Account {} subscription has expired", account_id);
             return Ok(true);
@@ -46,7 +46,7 @@ pub async fn get_account_subscription_info(
     pool: &PgPool,
     account_id: Uuid,
 ) -> Result<Option<SubscriptionInfo>, sqlx::Error> {
-    let tenant = sqlx::query!(
+    let account = sqlx::query!(
         r#"
         SELECT 
             stripe_customer_id,
@@ -56,12 +56,12 @@ pub async fn get_account_subscription_info(
         FROM accounts 
         WHERE id = $1
         "#,
-        tenant_id
+        account_id
     )
     .fetch_optional(pool)
     .await?;
 
-    Ok(tenant.map(|t| SubscriptionInfo {
+    Ok(account.map(|t| SubscriptionInfo {
         customer_id: t.stripe_customer_id,
         plan: t.plan,
         status: t.plan_status,

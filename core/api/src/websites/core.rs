@@ -185,7 +185,7 @@ pub async fn update_website(
     let result = queries::update_website_batch_fields(
         &pool,
         website_id,
-        tenant_id,
+        account_id,
         payload.title.as_deref(),
         payload.tagline.as_deref(),
         payload.metadata.as_ref(),

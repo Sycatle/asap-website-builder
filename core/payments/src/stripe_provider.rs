@@ -161,7 +161,7 @@ impl PaymentGateway for StripeProvider {
     async fn get_customer_id(&self, account_id: Uuid) -> Result<Option<String>, PaymentError> {
         // Check cache first
         let cache = self.customer_cache.read().await;
-        if let Some(customer_id) = cache.get(&tenant_id) {
+        if let Some(customer_id) = cache.get(&account_id) {
             return Ok(Some(customer_id.clone()));
         }
         drop(cache);

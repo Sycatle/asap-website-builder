@@ -132,7 +132,7 @@ pub async fn create_section(
     let result = queries::create_website_section(
         &pool,
         website_uuid,
-        tenant_id,
+        account_id,
         module_uuid,
         &payload.section_type,
         &payload.slug,
@@ -211,7 +211,7 @@ pub async fn update_section(
         &pool,
         section_uuid,
         website_uuid,
-        tenant_id,
+        account_id,
         payload.title.as_deref(),
         payload.layout.as_deref(),
         payload.settings.as_ref(),

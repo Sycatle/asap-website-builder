@@ -202,7 +202,7 @@ pub async fn activate_module(
         &pool,
         website_uuid,
         module_uuid,
-        tenant_id,
+        account_id,
         payload.settings.unwrap_or(serde_json::json!({})),
     ).await;
 
@@ -272,7 +272,7 @@ pub async fn update_website_module(
         &pool,
         website_uuid,
         module_uuid,
-        tenant_id,
+        account_id,
         &payload.settings,
         payload.enabled,
     ).await;

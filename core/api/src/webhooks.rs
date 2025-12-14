@@ -125,12 +125,12 @@ pub async fn stripe_webhook(
     // Process event based on type
     match event_type {
         "customer.subscription.created" | "customer.subscription.updated" => {
-            if let Some(tid) = tenant_id {
+            if let Some(tid) = account_id {
                 process_subscription_event(&pool, tid, &event).await?;
             }
         }
         "customer.subscription.deleted" => {
-            if let Some(tid) = tenant_id {
+            if let Some(tid) = account_id {
                 process_subscription_deleted(&pool, tid).await?;
             }
         }
@@ -139,7 +139,7 @@ pub async fn stripe_webhook(
         }
         "invoice.payment_failed" => {
             tracing::warn!("Payment failed for customer {}", customer_id);
-            if let Some(tid) = tenant_id {
+            if let Some(tid) = account_id {
                 update_plan_status(&pool, tid, "past_due").await?;
             }
         }
