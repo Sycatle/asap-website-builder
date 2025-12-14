@@ -94,7 +94,7 @@ pub async fn stripe_webhook(
         return Err((StatusCode::BAD_REQUEST, "No customer ID").into_response());
     };
 
-    // Find tenant by customer ID
+    // Find account by customer ID
     let account_id = sqlx::query_scalar::<_, Uuid>(
         "SELECT id FROM accounts WHERE stripe_customer_id = $1"
     )

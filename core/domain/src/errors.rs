@@ -10,9 +10,6 @@ pub enum DomainError {
     #[error("Invalid slug format: {0}")]
     InvalidSlug(String),
 
-    #[error("User not found: {0}")]
-    UserNotFound(String),
-
     #[error("Website not found: {0}")]
     WebsiteNotFound(String),
 

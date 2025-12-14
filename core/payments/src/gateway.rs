@@ -22,7 +22,7 @@ pub trait PaymentGateway: Send + Sync {
     /// Get customer by ID
     async fn get_customer_id(&self, account_id: Uuid) -> Result<Option<String>, PaymentError>;
 
-    /// Create or get customer for tenant
+    /// Create or get customer for account
     async fn ensure_customer(
         &self,
         account_id: Uuid,

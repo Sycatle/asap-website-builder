@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct File {
     pub id: Uuid,
-    pub user_id: Uuid,
+    pub account_id: Uuid,
     pub filename: String,
     pub mime_type: String,
     pub original_size: i64,
@@ -18,7 +18,7 @@ pub struct File {
 
 impl File {
     pub fn new(
-        user_id: Uuid,
+        account_id: Uuid,
         filename: String,
         mime_type: String,
         original_size: i64,
@@ -28,7 +28,7 @@ impl File {
     ) -> Self {
         Self {
             id: Uuid::new_v4(),
-            user_id,
+            account_id,
             filename,
             mime_type,
             original_size,
@@ -54,21 +54,21 @@ impl File {
     }
 }
 
-/// UserStorageQuota tracks storage usage
+/// AccountStorageQuota tracks storage usage
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UserStorageQuota {
-    pub user_id: Uuid,
+pub struct AccountStorageQuota {
+    pub account_id: Uuid,
     pub total_size_used: i64,
     pub quota_limit: i64,
     pub updated_at: DateTime<Utc>,
 }
 
-impl UserStorageQuota {
+impl AccountStorageQuota {
     pub const DEFAULT_QUOTA: i64 = 52_428_800; // 50 MB in bytes (plan standard)
 
-    pub fn new(user_id: Uuid) -> Self {
+    pub fn new(account_id: Uuid) -> Self {
         Self {
-            user_id,
+            account_id,
             total_size_used: 0,
             quota_limit: Self::DEFAULT_QUOTA,
             updated_at: Utc::now(),

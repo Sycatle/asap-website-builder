@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum EventType {
-    // User events
+    // Account events
     UserCreated,
     UserIntegrationAdded,
     UserIntegrationUpdated,

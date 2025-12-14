@@ -161,7 +161,7 @@ struct RetryCountRow {
 impl From<EventRow> for Event {
     fn from(row: EventRow) -> Self {
         let event_type = match row.event_type.as_str() {
-            // User events
+            // Account events
             "USER_CREATED" => EventType::UserCreated,
             "USER_INTEGRATION_ADDED" => EventType::UserIntegrationAdded,
             "USER_INTEGRATION_UPDATED" => EventType::UserIntegrationUpdated,

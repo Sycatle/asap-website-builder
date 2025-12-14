@@ -12,7 +12,7 @@ pub async fn list_website_sections(
     website_id: Uuid,
     account_id: Uuid,
 ) -> Result<Vec<WebsiteSectionRow>, Box<dyn std::error::Error + Send + Sync>> {
-    // Verify website belongs to tenant
+    // Verify website belongs to account
     let count: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
     )
@@ -70,7 +70,7 @@ pub async fn create_website_section(
     settings: &JsonValue,
     data: &JsonValue,
 ) -> Result<Uuid, Box<dyn std::error::Error + Send + Sync>> {
-    // Verify website belongs to tenant
+    // Verify website belongs to account
     let count: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
     )
@@ -118,7 +118,7 @@ pub async fn update_website_section(
     data: Option<&JsonValue>,
     visible: Option<bool>,
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
-    // Verify website belongs to tenant
+    // Verify website belongs to account
     let count: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
     )
@@ -199,7 +199,7 @@ pub async fn delete_website_section(
     website_id: Uuid,
     account_id: Uuid,
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
-    // Verify website belongs to tenant
+    // Verify website belongs to account
     let count: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
     )
@@ -230,7 +230,7 @@ pub async fn reorder_website_sections(
     account_id: Uuid,
     section_ids: &[Uuid],
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // Verify website belongs to tenant
+    // Verify website belongs to account
     let count: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
     )

@@ -19,7 +19,7 @@ pub async fn upload_file(
     mut multipart: Multipart,
 ) -> Result<(StatusCode, Json<FileUploadResponse>), (StatusCode, String)> {
     let user_id = uuid::Uuid::parse_str(&claims.sub)
-        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid user ID".to_string()))?;
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid account ID".to_string()))?;
 
     while let Some(field) = multipart
         .next_field()
@@ -62,14 +62,14 @@ pub async fn upload_file(
     Err((StatusCode::BAD_REQUEST, "No file provided".to_string()))
 }
 
-/// List user files
+/// List account files
 pub async fn list_files(
     Extension(claims): Extension<Claims>,
     Extension(storage): Extension<std::sync::Arc<FileStorageService>>,
     axum::extract::Query(params): axum::extract::Query<HashMap<String, String>>,
 ) -> Result<Json<Vec<FileUploadResponse>>, (StatusCode, String)> {
     let user_id = uuid::Uuid::parse_str(&claims.sub)
-        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid user ID".to_string()))?;
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid account ID".to_string()))?;
     
     // Security: Strict pagination limits to prevent DoS
     const MAX_LIMIT: i64 = 100;
@@ -106,7 +106,7 @@ pub async fn delete_file(
     Path(file_id): Path<Uuid>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id = uuid::Uuid::parse_str(&claims.sub)
-        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid user ID".to_string()))?;
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid account ID".to_string()))?;
 
     storage
         .delete_file(user_id, file_id)
@@ -131,7 +131,7 @@ pub async fn download_file(
         .map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid token".to_string()))?;
     
     let user_id = uuid::Uuid::parse_str(&claims.sub)
-        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid user ID".to_string()))?;
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid account ID".to_string()))?;
 
     // Get file metadata
     let file = storage
@@ -166,13 +166,13 @@ pub async fn download_file(
     Ok(response)
 }
 
-/// Get user quota usage
+/// Get account quota usage
 pub async fn get_quota(
     Extension(claims): Extension<Claims>,
     Extension(storage): Extension<std::sync::Arc<FileStorageService>>,
 ) -> Result<Json<StorageQuotaResponse>, (StatusCode, String)> {
     let user_id = uuid::Uuid::parse_str(&claims.sub)
-        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid user ID".to_string()))?;
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid account ID".to_string()))?;
 
     let quota = storage
         .get_user_quota(user_id)

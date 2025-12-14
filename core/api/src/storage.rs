@@ -317,7 +317,7 @@ impl FileStorageService {
     /// Upload file with compression
     pub async fn upload_file(
         &self,
-        user_id: Uuid,
+        account_id: Uuid,
         filename: &str,
         mime_type: &str,
         data: &[u8],
@@ -326,7 +326,7 @@ impl FileStorageService {
         self.validate_file(filename, mime_type, data.len() as i64)?;
 
         // Check quota
-        self.check_user_quota(user_id, data.len() as i64).await?;
+        self.check_user_quota(account_id, data.len() as i64).await?;
 
         // Calculate hash (deduplicate by content)
         let file_hash = self.calculate_hash(data);
@@ -345,11 +345,11 @@ impl FileStorageService {
         };
 
         // Generate storage key
-        let storage_key = format!("{}/{}", user_id, Uuid::new_v4());
+        let storage_key = format!("{}/{}", account_id, Uuid::new_v4());
 
         // Store metadata in database
         let file = File::new(
-            user_id,
+            account_id,
             filename.to_string(),
             mime_type.to_string(),
             data.len() as i64,
@@ -364,8 +364,8 @@ impl FileStorageService {
         // Save file content
         self.save_file_content(file.id, &compressed_data).await?;
 
-        // Update user quota (use compressed size for quota)
-        self.update_user_quota(user_id, compressed_data.len() as i64)
+        // Update account quota (use compressed size for quota)
+        self.update_user_quota(account_id, compressed_data.len() as i64)
             .await?;
 
         Ok(file)
@@ -374,11 +374,11 @@ impl FileStorageService {
     /// Save file metadata to database
     async fn save_file(&self, file: &File) -> Result<()> {
         sqlx::query(
-            "INSERT INTO files (id, user_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at)
+            "INSERT INTO files (id, account_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
         )
         .bind(file.id)
-        .bind(file.user_id)
+        .bind(file.account_id)
         .bind(&file.filename)
         .bind(&file.mime_type)
         .bind(file.original_size)
@@ -450,7 +450,7 @@ impl FileStorageService {
     /// Get file by hash (for content deduplication)
     async fn get_file_by_hash(&self, file_hash: &str) -> Result<Option<File>> {
         let row = sqlx::query(
-            "SELECT id, user_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at
+            "SELECT id, account_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at
              FROM files WHERE file_hash = $1"
         )
         .bind(file_hash)
@@ -460,7 +460,7 @@ impl FileStorageService {
         Ok(row.map(|r| {
             File {
                 id: r.get(0),
-                user_id: r.get(1),
+                account_id: r.get(1),
                 filename: r.get(2),
                 mime_type: r.get(3),
                 original_size: r.get(4),
@@ -472,9 +472,9 @@ impl FileStorageService {
         }))
     }
 
-    /// Check user quota
-    async fn check_user_quota(&self, user_id: Uuid, file_size: i64) -> Result<()> {
-        let quota = self.get_user_quota(user_id).await?;
+    /// Check account quota
+    async fn check_user_quota(&self, account_id: Uuid, file_size: i64) -> Result<()> {
+        let quota = self.get_user_quota(account_id).await?;
 
         if !quota.can_upload(file_size) {
             return Err(anyhow::anyhow!(
@@ -486,32 +486,32 @@ impl FileStorageService {
         Ok(())
     }
 
-    /// Get user quota
-    pub async fn get_user_quota(&self, user_id: Uuid) -> Result<UserStorageQuota> {
+    /// Get account quota
+    pub async fn get_user_quota(&self, account_id: Uuid) -> Result<UserStorageQuota> {
         let row = sqlx::query(
-            "SELECT user_id, total_size_used, quota_limit, updated_at
-             FROM user_storage_quota WHERE user_id = $1"
+            "SELECT account_id, total_size_used, quota_limit, updated_at
+             FROM account_storage_quota WHERE account_id = $1"
         )
-        .bind(user_id)
+        .bind(account_id)
         .fetch_optional(&self.pool)
         .await?;
 
         match row {
             Some(r) => Ok(UserStorageQuota {
-                user_id: r.get(0),
+                account_id: r.get(0),
                 total_size_used: r.get(1),
                 quota_limit: r.get(2),
                 updated_at: r.get(3),
             }),
             None => {
                 // Create quota if doesn't exist
-                let quota = UserStorageQuota::new(user_id);
+                let quota = UserStorageQuota::new(account_id);
                 sqlx::query(
-                    "INSERT INTO user_storage_quota (user_id, total_size_used, quota_limit)
+                    "INSERT INTO account_storage_quota (account_id, total_size_used, quota_limit)
                      VALUES ($1, $2, $3)
-                     ON CONFLICT (user_id) DO NOTHING"
+                     ON CONFLICT (account_id) DO NOTHING"
                 )
-                .bind(user_id)
+                .bind(account_id)
                 .bind(0i64)
                 .bind(UserStorageQuota::DEFAULT_QUOTA)
                 .execute(&self.pool)
@@ -522,15 +522,15 @@ impl FileStorageService {
         }
     }
 
-    /// Update user quota after upload
-    async fn update_user_quota(&self, user_id: Uuid, file_size: i64) -> Result<()> {
+    /// Update account quota after upload
+    async fn update_user_quota(&self, account_id: Uuid, file_size: i64) -> Result<()> {
         sqlx::query(
-            "UPDATE user_storage_quota
+            "UPDATE account_storage_quota
              SET total_size_used = total_size_used + $1
-             WHERE user_id = $2"
+             WHERE account_id = $2"
         )
         .bind(file_size)
-        .bind(user_id)
+        .bind(account_id)
         .execute(&self.pool)
         .await?;
 
@@ -538,12 +538,12 @@ impl FileStorageService {
     }
 
     /// Delete file and free up quota
-    pub async fn delete_file(&self, user_id: Uuid, file_id: Uuid) -> Result<()> {
+    pub async fn delete_file(&self, account_id: Uuid, file_id: Uuid) -> Result<()> {
         // Get file to retrieve size
         let file = self.get_file(file_id).await?;
 
         // Verify ownership
-        if file.user_id != user_id {
+        if file.account_id != account_id {
             return Err(anyhow::anyhow!("Unauthorized"));
         }
 
@@ -555,12 +555,12 @@ impl FileStorageService {
 
         // Update quota
         sqlx::query(
-            "UPDATE user_storage_quota
+            "UPDATE account_storage_quota
              SET total_size_used = (total_size_used - $1)
-             WHERE user_id = $2"
+             WHERE account_id = $2"
         )
         .bind(file.compressed_size)
-        .bind(user_id)
+        .bind(account_id)
         .execute(&self.pool)
         .await?;
 
@@ -570,7 +570,7 @@ impl FileStorageService {
     /// Get file metadata
     pub async fn get_file(&self, file_id: Uuid) -> Result<File> {
         let row = sqlx::query(
-            "SELECT id, user_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at
+            "SELECT id, account_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at
              FROM files WHERE id = $1"
         )
         .bind(file_id)
@@ -580,7 +580,7 @@ impl FileStorageService {
         match row {
             Some(r) => Ok(File {
                 id: r.get(0),
-                user_id: r.get(1),
+                account_id: r.get(1),
                 filename: r.get(2),
                 mime_type: r.get(3),
                 original_size: r.get(4),
@@ -593,15 +593,15 @@ impl FileStorageService {
         }
     }
 
-    /// List user files
-    pub async fn list_user_files(&self, user_id: Uuid, limit: i64, offset: i64) -> Result<Vec<File>> {
+    /// List account files
+    pub async fn list_user_files(&self, account_id: Uuid, limit: i64, offset: i64) -> Result<Vec<File>> {
         let rows = sqlx::query(
-            "SELECT id, user_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at
-             FROM files WHERE user_id = $1
+            "SELECT id, account_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at
+             FROM files WHERE account_id = $1
              ORDER BY created_at DESC
              LIMIT $2 OFFSET $3"
         )
-        .bind(user_id)
+        .bind(account_id)
         .bind(limit)
         .bind(offset)
         .fetch_all(&self.pool)
@@ -611,7 +611,7 @@ impl FileStorageService {
             .iter()
             .map(|r| File {
                 id: r.get(0),
-                user_id: r.get(1),
+                account_id: r.get(1),
                 filename: r.get(2),
                 mime_type: r.get(3),
                 original_size: r.get(4),
@@ -628,7 +628,7 @@ impl FileStorageService {
     /// Cleanup old file metadata (runs periodically)
     pub async fn cleanup_orphaned_files(&self, days: i64) -> Result<u64> {
         let result = sqlx::query(
-            "DELETE FROM files WHERE created_at < now() - interval '1 day' * $1 AND user_id NOT IN (SELECT id FROM users)"
+            "DELETE FROM files WHERE created_at < now() - interval '1 day' * $1 AND account_id NOT IN (SELECT id FROM users)"
         )
         .bind(days)
         .execute(&self.pool)

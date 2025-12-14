@@ -133,7 +133,7 @@ mod tests {
     #[test]
     fn test_checkout_session_request() {
         let request = CheckoutSessionRequest {
-            tenant_id: Uuid::new_v4(),
+            account_id: Uuid::new_v4(),
             price_id: "price_123".to_string(),
             success_url: "https://example.com/success".to_string(),
             cancel_url: "https://example.com/cancel".to_string(),

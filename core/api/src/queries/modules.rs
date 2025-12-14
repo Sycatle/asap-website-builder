@@ -100,7 +100,7 @@ pub async fn activate_website_module(
     account_id: Uuid,
     settings: JsonValue,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // Verify website belongs to tenant
+    // Verify website belongs to account
     let count: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
     )
@@ -140,7 +140,7 @@ pub async fn update_website_module(
     settings: &JsonValue,
     enabled: Option<bool>,
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
-    // Verify website belongs to tenant
+    // Verify website belongs to account
     let count: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
     )

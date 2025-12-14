@@ -33,7 +33,7 @@ pub async fn create_checkout_session(
     Extension(payment_gateway): Extension<std::sync::Arc<dyn PaymentGateway>>,
     Json(req): Json<CreateCheckoutSessionRequest>,
 ) -> Result<Json<CreateCheckoutSessionResponse>, Response> {
-    tracing::info!("Creating checkout session for tenant: {}", claims.sub);
+    tracing::info!("Creating checkout session for account: {}", claims.sub);
 
     // Parse account_id from string to Uuid
     let account_id = Uuid::parse_str(&claims.sub).map_err(|_| {
@@ -41,10 +41,10 @@ pub async fn create_checkout_session(
     })?;
 
     let user_id = Uuid::parse_str(&claims.sub).map_err(|_| {
-        (StatusCode::BAD_REQUEST, "Invalid user ID").into_response()
+        (StatusCode::BAD_REQUEST, "Invalid account ID").into_response()
     })?;
 
-    // Get user email for customer creation
+    // Get account email for customer creation
     let email = sqlx::query_scalar::<_, String>(
         "SELECT email FROM users WHERE id = $1"
     )
@@ -52,8 +52,8 @@ pub async fn create_checkout_session(
     .fetch_one(&pool)
     .await
     .map_err(|e| {
-        tracing::error!("Failed to fetch user: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch user").into_response()
+        tracing::error!("Failed to fetch account: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch account").into_response()
     })?;
 
     // Ensure customer exists in Stripe

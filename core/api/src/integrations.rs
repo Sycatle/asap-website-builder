@@ -63,18 +63,18 @@ pub async fn get_integrations(
     Extension(claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    // Parse user ID
-    let user_id = match Uuid::parse_str(&id) {
+    // Parse account ID
+    let account_id = match Uuid::parse_str(&id) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid user ID format"
+                "error": "Invalid account ID format"
             }))).into_response();
         }
     };
 
-    // Verify the user is accessing their own data
-    let claims_user_id = match Uuid::parse_str(&claims.sub) {
+    // Verify the account is accessing their own data
+    let claims_account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -83,7 +83,7 @@ pub async fn get_integrations(
         }
     };
 
-    if user_id != claims_user_id {
+    if user_id != claims_account_id {
         return (StatusCode::FORBIDDEN, Json(serde_json::json!({
             "error": "Access denied"
         }))).into_response();
@@ -93,8 +93,8 @@ pub async fn get_integrations(
     let result = sqlx::query!(
         r#"
         SELECT COALESCE(data->'integrations', '{}'::jsonb) as "integrations!"
-        FROM user_data
-        WHERE user_id = $1
+        FROM account_data
+        WHERE account_id = $1
         "#,
         user_id
     )
@@ -127,18 +127,18 @@ pub async fn update_github_integration(
     Path(id): Path<String>,
     Json(payload): Json<UpdateGitHubIntegrationRequest>,
 ) -> impl IntoResponse {
-    // Parse user ID
-    let user_id = match Uuid::parse_str(&id) {
+    // Parse account ID
+    let account_id = match Uuid::parse_str(&id) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid user ID format"
+                "error": "Invalid account ID format"
             }))).into_response();
         }
     };
 
-    // Verify the user is accessing their own data
-    let claims_user_id = match Uuid::parse_str(&claims.sub) {
+    // Verify the account is accessing their own data
+    let claims_account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -147,7 +147,7 @@ pub async fn update_github_integration(
         }
     };
 
-    if user_id != claims_user_id {
+    if user_id != claims_account_id {
         return (StatusCode::FORBIDDEN, Json(serde_json::json!({
             "error": "Access denied"
         }))).into_response();
@@ -179,15 +179,15 @@ pub async fn update_github_integration(
         }
     });
 
-    // Update user_data with GitHub integration
+    // Update account_data with GitHub integration
     let result = sqlx::query!(
         r#"
-        INSERT INTO user_data (user_id, data)
+        INSERT INTO account_data (account_id, data)
         VALUES ($1, $2)
-        ON CONFLICT (user_id)
+        ON CONFLICT (account_id)
         DO UPDATE SET 
             data = jsonb_set(
-                COALESCE(user_data.data, '{}'::jsonb),
+                COALESCE(account_data.data, '{}'::jsonb),
                 '{integrations,github}',
                 $2->'integrations'->'github',
                 true
@@ -212,7 +212,7 @@ pub async fn update_github_integration(
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Invalid tenant ID"
+                "error": "Invalid account ID"
             }))).into_response();
         }
     };
@@ -239,7 +239,7 @@ pub async fn update_github_integration(
         // Don't fail the request if event creation fails
     }
 
-    tracing::info!("GitHub integration updated for user: {}", user_id);
+    tracing::info!("GitHub integration updated for account: {}", account_id);
 
     (StatusCode::OK, Json(serde_json::json!({
         "message": "GitHub integration updated successfully",

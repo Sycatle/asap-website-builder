@@ -44,7 +44,7 @@ impl FileCleanupTask {
 
         // Recalculate quotas based on actual files
         let recalc = self.recalculate_user_quotas().await?;
-        info!("Recalculated {} user quotas", recalc);
+        info!("Recalculated {} account quotas", recalc);
 
         info!("File cleanup completed successfully");
         Ok(())
@@ -54,7 +54,7 @@ impl FileCleanupTask {
     async fn cleanup_orphaned_files(&self) -> anyhow::Result<u64> {
         let result = sqlx::query(
             "DELETE FROM files 
-             WHERE user_id NOT IN (SELECT id FROM users)"
+             WHERE account_id NOT IN (SELECT id FROM accounts)"
         )
         .execute(&self.pool)
         .await?;
@@ -77,8 +77,8 @@ impl FileCleanupTask {
     /// Remove quota entries for deleted users
     async fn cleanup_deleted_user_quotas(&self) -> anyhow::Result<u64> {
         let result = sqlx::query(
-            "DELETE FROM user_storage_quota 
-             WHERE user_id NOT IN (SELECT id FROM users)"
+            "DELETE FROM account_storage_quota 
+             WHERE account_id NOT IN (SELECT id FROM accounts)"
         )
         .execute(&self.pool)
         .await?;
@@ -86,21 +86,21 @@ impl FileCleanupTask {
         Ok(result.rows_affected())
     }
 
-    /// Recalculate user quotas based on actual file sizes
+    /// Recalculate account quotas based on actual file sizes
     /// This ensures quota accuracy even if files are manually deleted
     async fn recalculate_user_quotas(&self) -> anyhow::Result<i64> {
         let updated = sqlx::query(
-            "UPDATE user_storage_quota
+            "UPDATE account_storage_quota
              SET total_size_used = (
                  SELECT COALESCE(SUM(compressed_size), 0)
                  FROM files
-                 WHERE files.user_id = user_storage_quota.user_id
+                 WHERE files.account_id = account_storage_quota.account_id
              )
-             WHERE user_id IN (SELECT id FROM users)
+             WHERE account_id IN (SELECT id FROM accounts)
              AND total_size_used != (
                  SELECT COALESCE(SUM(compressed_size), 0)
                  FROM files
-                 WHERE files.user_id = user_storage_quota.user_id
+                 WHERE files.account_id = account_storage_quota.account_id
              )"
         )
         .execute(&self.pool)

@@ -12,7 +12,7 @@ use crate::cache::CacheService;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CachedWebsite {
     pub id: String,
-    pub tenant_id: String,
+    pub account_id: String,
     pub slug: String,
     pub title: String,
     pub tagline: String,
@@ -96,7 +96,7 @@ impl WebsiteCacheService {
         let result = sqlx::query_as::<_, (uuid::Uuid, uuid::Uuid, String, String, String, String, String, Option<uuid::Uuid>, serde_json::Value, serde_json::Value)>(
             r#"
             SELECT 
-                w.id, w.tenant_id, w.slug, w.title, w.tagline, w.status, 
+                w.id, w.account_id, w.slug, w.title, w.tagline, w.status, 
                 w.creation_mode, w.preset_id, w.metadata,
                 COALESCE(wd.data, '{}'::jsonb) as data
             FROM websites w
@@ -108,10 +108,10 @@ impl WebsiteCacheService {
         .fetch_optional(&self.db_pool)
         .await?;
 
-        Ok(result.map(|(id, tenant_id, slug, title, tagline, status, creation_mode, preset_id, metadata, data)| {
+        Ok(result.map(|(id, account_id, slug, title, tagline, status, creation_mode, preset_id, metadata, data)| {
             CachedWebsite {
                 id: id.to_string(),
-                tenant_id: tenant_id.to_string(),
+                account_id: account_id.to_string(),
                 slug,
                 title,
                 tagline,
@@ -172,7 +172,7 @@ mod tests {
     fn test_cached_website_serialization() {
         let website = CachedWebsite {
             id: "123".to_string(),
-            tenant_id: "456".to_string(),
+            account_id: "456".to_string(),
             slug: "test".to_string(),
             title: "Test".to_string(),
             tagline: "Test website".to_string(),
@@ -195,7 +195,7 @@ mod tests {
     fn test_cached_website_with_preset() {
         let website = CachedWebsite {
             id: "123".to_string(),
-            tenant_id: "456".to_string(),
+            account_id: "456".to_string(),
             slug: "test".to_string(),
             title: "Test".to_string(),
             tagline: "Test website".to_string(),
