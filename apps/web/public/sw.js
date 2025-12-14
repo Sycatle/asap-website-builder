@@ -1,9 +1,10 @@
 // ASAP Service Worker - Cross-browser compatible
 // Supports: Chrome, Firefox, Safari, Edge, Opera, Samsung Internet, UC Browser
+// Includes Push Notification support
 
 'use strict';
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const STATIC_CACHE = 'asap-static-' + CACHE_VERSION;
 const DYNAMIC_CACHE = 'asap-dynamic-' + CACHE_VERSION;
 const IMAGE_CACHE = 'asap-images-' + CACHE_VERSION;
@@ -401,3 +402,137 @@ function getCacheSize() {
     return sizes.reduce(function(a, b) { return a + b; }, 0);
   });
 }
+
+// ============================================================================
+// PUSH NOTIFICATION HANDLING
+// ============================================================================
+
+// Push event - handle incoming push notifications
+self.addEventListener('push', function(event) {
+  console.log('[SW] Push notification received');
+  
+  var data = {};
+  
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data = {
+        title: 'ASAP',
+        body: event.data.text(),
+      };
+    }
+  }
+  
+  var title = data.title || 'ASAP';
+  var options = {
+    body: data.body || data.message || 'Nouvelle notification',
+    icon: data.icon || '/icons/icon-192x192.png',
+    badge: '/icons/icon-72x72.png',
+    tag: data.tag || 'asap-notification-' + Date.now(),
+    data: {
+      url: data.action_url || data.url || '/app',
+      notificationId: data.id,
+      category: data.category,
+    },
+    vibrate: [100, 50, 100],
+    requireInteraction: data.priority === 'high' || data.priority === 'urgent',
+    actions: []
+  };
+  
+  // Add actions based on notification type
+  if (data.action_url) {
+    options.actions.push({
+      action: 'open',
+      title: 'Voir',
+    });
+  }
+  
+  options.actions.push({
+    action: 'dismiss',
+    title: 'Ignorer',
+  });
+  
+  // Show notification
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+// Notification click handler
+self.addEventListener('notificationclick', function(event) {
+  console.log('[SW] Notification clicked:', event.action);
+  
+  event.notification.close();
+  
+  if (event.action === 'dismiss') {
+    return;
+  }
+  
+  var url = event.notification.data?.url || '/app';
+  
+  // Focus existing window or open new one
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(function(clientList) {
+        // Check if there's already a window open
+        for (var i = 0; i < clientList.length; i++) {
+          var client = clientList[i];
+          if (client.url.includes('/app') && 'focus' in client) {
+            return client.focus().then(function(focusedClient) {
+              if (focusedClient && 'navigate' in focusedClient) {
+                return focusedClient.navigate(url);
+              }
+            });
+          }
+        }
+        // Open new window if no existing one
+        if (clients.openWindow) {
+          return clients.openWindow(url);
+        }
+      })
+  );
+});
+
+// Notification close handler
+self.addEventListener('notificationclose', function(event) {
+  console.log('[SW] Notification closed');
+  
+  // Optionally track notification dismissal
+  var notificationId = event.notification.data?.notificationId;
+  if (notificationId) {
+    // Could send analytics or mark as dismissed
+    console.log('[SW] Notification dismissed:', notificationId);
+  }
+});
+
+// Push subscription change handler
+self.addEventListener('pushsubscriptionchange', function(event) {
+  console.log('[SW] Push subscription changed');
+  
+  event.waitUntil(
+    // Get new subscription and update backend
+    self.registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: event.oldSubscription?.options?.applicationServerKey
+    }).then(function(subscription) {
+      // Send new subscription to backend
+      return fetch('/api/notifications/push/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('p256dh')))),
+            auth: btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('auth')))),
+          }
+        }),
+        credentials: 'include',
+      });
+    }).catch(function(error) {
+      console.error('[SW] Failed to resubscribe:', error);
+    })
+  );
+});
