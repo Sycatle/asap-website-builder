@@ -10,14 +10,14 @@ use super::types::WebsiteSectionRow;
 pub async fn list_website_sections(
     pool: &PgPool,
     website_id: Uuid,
-    tenant_id: Uuid,
+    account_id: Uuid,
 ) -> Result<Vec<WebsiteSectionRow>, Box<dyn std::error::Error + Send + Sync>> {
     // Verify website belongs to tenant
     let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND tenant_id = $2"
+        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
     )
     .bind(website_id)
-    .bind(tenant_id)
+    .bind(account_id)
     .fetch_one(pool)
     .await?;
 
@@ -60,7 +60,7 @@ pub async fn list_website_sections(
 pub async fn create_website_section(
     pool: &PgPool,
     website_id: Uuid,
-    tenant_id: Uuid,
+    account_id: Uuid,
     module_id: Option<Uuid>,
     section_type: &str,
     slug: &str,
@@ -72,10 +72,10 @@ pub async fn create_website_section(
 ) -> Result<Uuid, Box<dyn std::error::Error + Send + Sync>> {
     // Verify website belongs to tenant
     let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND tenant_id = $2"
+        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
     )
     .bind(website_id)
-    .bind(tenant_id)
+    .bind(account_id)
     .fetch_one(pool)
     .await?;
 
@@ -111,7 +111,7 @@ pub async fn update_website_section(
     pool: &PgPool,
     section_id: Uuid,
     website_id: Uuid,
-    tenant_id: Uuid,
+    account_id: Uuid,
     title: Option<&str>,
     layout: Option<&str>,
     settings: Option<&JsonValue>,
@@ -120,10 +120,10 @@ pub async fn update_website_section(
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
     // Verify website belongs to tenant
     let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND tenant_id = $2"
+        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
     )
     .bind(website_id)
-    .bind(tenant_id)
+    .bind(account_id)
     .fetch_one(pool)
     .await?;
 
@@ -197,14 +197,14 @@ pub async fn delete_website_section(
     pool: &PgPool,
     section_id: Uuid,
     website_id: Uuid,
-    tenant_id: Uuid,
+    account_id: Uuid,
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
     // Verify website belongs to tenant
     let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND tenant_id = $2"
+        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
     )
     .bind(website_id)
-    .bind(tenant_id)
+    .bind(account_id)
     .fetch_one(pool)
     .await?;
 
@@ -227,15 +227,15 @@ pub async fn delete_website_section(
 pub async fn reorder_website_sections(
     pool: &PgPool,
     website_id: Uuid,
-    tenant_id: Uuid,
+    account_id: Uuid,
     section_ids: &[Uuid],
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Verify website belongs to tenant
     let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND tenant_id = $2"
+        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
     )
     .bind(website_id)
-    .bind(tenant_id)
+    .bind(account_id)
     .fetch_one(pool)
     .await?;
 

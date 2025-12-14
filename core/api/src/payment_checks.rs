@@ -1,15 +1,15 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
-/// Check if tenant needs payment reconciliation on login
-pub async fn check_tenant_payment_status(
+/// Check if account needs payment reconciliation on login
+pub async fn check_account_payment_status(
     pool: &PgPool,
-    tenant_id: Uuid,
+    account_id: Uuid,
 ) -> Result<bool, sqlx::Error> {
     let tenant = sqlx::query!(
         r#"
         SELECT plan_status, current_period_end
-        FROM tenants 
+        FROM accounts 
         WHERE id = $1 AND stripe_customer_id IS NOT NULL
         "#,
         tenant_id
@@ -25,7 +25,7 @@ pub async fn check_tenant_payment_status(
     let dubious_statuses = ["incomplete", "past_due", "unpaid"];
     if let Some(status) = tenant.plan_status {
         if dubious_statuses.contains(&status.as_str()) {
-            tracing::warn!("Tenant {} has dubious payment status: {}", tenant_id, status);
+            tracing::warn!("Account {} has dubious payment status: {}", account_id, status);
             return Ok(true);
         }
     }
@@ -33,7 +33,7 @@ pub async fn check_tenant_payment_status(
     // Check if subscription is expired
     if let Some(period_end) = tenant.current_period_end {
         if period_end < chrono::Utc::now() {
-            tracing::warn!("Tenant {} subscription has expired", tenant_id);
+            tracing::warn!("Account {} subscription has expired", account_id);
             return Ok(true);
         }
     }
@@ -41,10 +41,10 @@ pub async fn check_tenant_payment_status(
     Ok(false)
 }
 
-/// Get tenant payment status information
-pub async fn get_tenant_subscription_info(
+/// Get account payment status information
+pub async fn get_account_subscription_info(
     pool: &PgPool,
-    tenant_id: Uuid,
+    account_id: Uuid,
 ) -> Result<Option<SubscriptionInfo>, sqlx::Error> {
     let tenant = sqlx::query!(
         r#"
@@ -53,7 +53,7 @@ pub async fn get_tenant_subscription_info(
             plan,
             plan_status,
             current_period_end
-        FROM tenants 
+        FROM accounts 
         WHERE id = $1
         "#,
         tenant_id

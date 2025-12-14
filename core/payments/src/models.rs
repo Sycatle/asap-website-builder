@@ -72,7 +72,7 @@ impl PaymentEvent {
 /// Checkout session request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckoutSessionRequest {
-    pub tenant_id: Uuid,
+    pub account_id: Uuid,
     pub price_id: String,
     pub success_url: String,
     pub cancel_url: String,

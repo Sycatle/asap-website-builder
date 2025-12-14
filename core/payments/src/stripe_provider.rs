@@ -75,11 +75,11 @@ impl PaymentGateway for StripeProvider {
         &self,
         request: CheckoutSessionRequest,
     ) -> Result<CheckoutSessionResponse, PaymentError> {
-        tracing::info!("Creating Stripe checkout session for tenant {}", request.tenant_id);
+        tracing::info!("Creating Stripe checkout session for account {}", request.account_id);
 
         // Ensure customer exists
-        let customer_id = self.get_customer_id(request.tenant_id).await?
-            .ok_or_else(|| PaymentError::CustomerNotFound(request.tenant_id.to_string()))?;
+        let customer_id = self.get_customer_id(request.account_id).await?
+            .ok_or_else(|| PaymentError::CustomerNotFound(request.account_id.to_string()))?;
 
         // Create checkout session via Stripe API
         let mut params = HashMap::new();
@@ -158,7 +158,7 @@ impl PaymentGateway for StripeProvider {
         })
     }
 
-    async fn get_customer_id(&self, tenant_id: Uuid) -> Result<Option<String>, PaymentError> {
+    async fn get_customer_id(&self, account_id: Uuid) -> Result<Option<String>, PaymentError> {
         // Check cache first
         let cache = self.customer_cache.read().await;
         if let Some(customer_id) = cache.get(&tenant_id) {
@@ -173,20 +173,20 @@ impl PaymentGateway for StripeProvider {
 
     async fn ensure_customer(
         &self,
-        tenant_id: Uuid,
+        account_id: Uuid,
         email: String,
     ) -> Result<String, PaymentError> {
-        tracing::info!("Ensuring Stripe customer for tenant {} ({})", tenant_id, email);
+        tracing::info!("Ensuring Stripe customer for account {} ({})", account_id, email);
 
         // Check if we already have a customer
-        if let Some(customer_id) = self.get_customer_id(tenant_id).await? {
+        if let Some(customer_id) = self.get_customer_id(account_id).await? {
             return Ok(customer_id);
         }
 
         // Create new customer via Stripe API
         let mut params = HashMap::new();
         params.insert("email", email);
-        params.insert("metadata[tenant_id]", tenant_id.to_string());
+        params.insert("metadata[account_id]", account_id.to_string());
 
         let response = self.client
             .post("https://api.stripe.com/v1/customers")
@@ -209,7 +209,7 @@ impl PaymentGateway for StripeProvider {
 
         // Cache the customer ID
         let mut cache = self.customer_cache.write().await;
-        cache.insert(tenant_id, customer_id.clone());
+        cache.insert(account_id, customer_id.clone());
 
         Ok(customer_id)
     }
@@ -267,21 +267,21 @@ mod tests {
             "whsec_test_123".to_string(),
         ).unwrap();
 
-        let tenant_id = Uuid::new_v4();
+        let account_id = Uuid::new_v4();
         
         // Initially should return None
-        let result = provider.get_customer_id(tenant_id).await;
+        let result = provider.get_customer_id(account_id).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), None);
 
         // Add to cache
         {
             let mut cache = provider.customer_cache.write().await;
-            cache.insert(tenant_id, "cus_test123".to_string());
+            cache.insert(account_id, "cus_test123".to_string());
         }
 
         // Should now return cached value
-        let result = provider.get_customer_id(tenant_id).await;
+        let result = provider.get_customer_id(account_id).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), Some("cus_test123".to_string()));
     }

@@ -97,15 +97,15 @@ pub async fn activate_website_module(
     pool: &PgPool,
     website_id: Uuid,
     module_id: Uuid,
-    tenant_id: Uuid,
+    account_id: Uuid,
     settings: JsonValue,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Verify website belongs to tenant
     let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND tenant_id = $2"
+        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
     )
     .bind(website_id)
-    .bind(tenant_id)
+    .bind(account_id)
     .fetch_one(pool)
     .await?;
 
@@ -136,16 +136,16 @@ pub async fn update_website_module(
     pool: &PgPool,
     website_id: Uuid,
     module_id: Uuid,
-    tenant_id: Uuid,
+    account_id: Uuid,
     settings: &JsonValue,
     enabled: Option<bool>,
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
     // Verify website belongs to tenant
     let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND tenant_id = $2"
+        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
     )
     .bind(website_id)
-    .bind(tenant_id)
+    .bind(account_id)
     .fetch_one(pool)
     .await?;
 

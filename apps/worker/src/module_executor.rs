@@ -265,7 +265,7 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
 
         // Extract GitHub username - try different sources depending on event type
         let github_username = if event.event_type == EventType::GitHubSyncRequested {
-            // For sync requests, first check payload, then fetch from tenant_modules settings
+            // For sync requests, first check payload, then fetch from module_configs settings
             let from_payload = event.payload["github_username"]
                 .as_str()
                 .map(|s| s.to_string())
@@ -274,16 +274,16 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
             match from_payload {
                 Some(username) => username,
                 None => {
-                    // Fetch from tenant_modules settings
+                    // Fetch from module_configs settings
                     let settings: Option<(serde_json::Value,)> = sqlx::query_as(
                         r#"
                         SELECT tm.settings 
-                        FROM tenant_modules tm
+                        FROM module_configs tm
                         JOIN modules m ON tm.module_id = m.id
-                        WHERE tm.tenant_id = $1 AND m.slug = 'github-sync'
+                        WHERE mc.account_id = $1 AND m.slug = 'github-sync'
                         "#
                     )
-                    .bind(event.tenant_id)
+                    .bind(event.account_id)
                     .fetch_optional(&self.pool)
                     .await?;
 
@@ -331,9 +331,9 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
 
         // Find the user's website
         let website: Option<(uuid::Uuid,)> = sqlx::query_as(
-            "SELECT id FROM websites WHERE tenant_id = $1 LIMIT 1"
+            "SELECT id FROM websites WHERE account_id = $1 LIMIT 1"
         )
-        .bind(event.tenant_id)
+        .bind(event.account_id)
         .fetch_optional(&self.pool)
         .await?;
 
@@ -342,7 +342,7 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
             None => {
                 return Err(anyhow::anyhow!(
                     "No website found for tenant {}",
-                    event.tenant_id
+                    event.account_id
                 ));
             }
         };
@@ -363,10 +363,10 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
 
         // Create a new event to indicate repos have been synced
         sqlx::query(
-            "INSERT INTO events (id, tenant_id, event_type, payload) VALUES ($1, $2, 'GITHUB_REPOS_SYNCED', $3)"
+            "INSERT INTO events (id, account_id, event_type, payload) VALUES ($1, $2, 'GITHUB_REPOS_SYNCED', $3)"
         )
         .bind(uuid::Uuid::new_v4())
-        .bind(event.tenant_id)
+        .bind(event.account_id)
         .bind(serde_json::json!({
             "website_id": website_id,
             "repo_count": website_content["projects"].as_array().map(|a| a.len()).unwrap_or(0)

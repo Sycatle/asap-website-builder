@@ -208,7 +208,7 @@ pub async fn update_github_integration(
     }
 
     // Create an event for USER_INTEGRATION_ADDED
-    let tenant_id = match Uuid::parse_str(&claims.sub) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
@@ -225,7 +225,7 @@ pub async fn update_github_integration(
 
     let event_result = sqlx::query!(
         r#"
-        INSERT INTO events (tenant_id, event_type, payload)
+        INSERT INTO events (account_id, event_type, payload)
         VALUES ($1, 'USER_INTEGRATION_ADDED', $2)
         "#,
         tenant_id,
