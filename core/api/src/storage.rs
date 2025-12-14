@@ -9,7 +9,7 @@ use sha2::{Sha256, Digest};
 use hex;
 use tokio::io::AsyncRead;
 
-use asap_core_domain::{File, UserStorageQuota};
+use asap_core_domain::{File, AccountStorageQuota};
 
 /// FileStorageService handles file uploads, compression, and metadata management
 pub struct FileStorageService {
@@ -474,7 +474,7 @@ impl FileStorageService {
 
     /// Check account quota
     async fn check_user_quota(&self, account_id: Uuid, file_size: i64) -> Result<()> {
-        let quota = self.get_user_quota(account_id).await?;
+        let quota = self.get_account_quota(account_id).await?;
 
         if !quota.can_upload(file_size) {
             return Err(anyhow::anyhow!(
@@ -487,7 +487,7 @@ impl FileStorageService {
     }
 
     /// Get account quota
-    pub async fn get_user_quota(&self, account_id: Uuid) -> Result<UserStorageQuota> {
+    pub async fn get_account_quota(&self, account_id: Uuid) -> Result<AccountStorageQuota> {
         let row = sqlx::query(
             "SELECT account_id, total_size_used, quota_limit, updated_at
              FROM account_storage_quota WHERE account_id = $1"
@@ -497,7 +497,7 @@ impl FileStorageService {
         .await?;
 
         match row {
-            Some(r) => Ok(UserStorageQuota {
+            Some(r) => Ok(AccountStorageQuota {
                 account_id: r.get(0),
                 total_size_used: r.get(1),
                 quota_limit: r.get(2),
@@ -505,7 +505,7 @@ impl FileStorageService {
             }),
             None => {
                 // Create quota if doesn't exist
-                let quota = UserStorageQuota::new(account_id);
+                let quota = AccountStorageQuota::new(account_id);
                 sqlx::query(
                     "INSERT INTO account_storage_quota (account_id, total_size_used, quota_limit)
                      VALUES ($1, $2, $3)
@@ -513,7 +513,7 @@ impl FileStorageService {
                 )
                 .bind(account_id)
                 .bind(0i64)
-                .bind(UserStorageQuota::DEFAULT_QUOTA)
+                .bind(AccountStorageQuota::DEFAULT_QUOTA)
                 .execute(&self.pool)
                 .await?;
 
@@ -594,7 +594,7 @@ impl FileStorageService {
     }
 
     /// List account files
-    pub async fn list_user_files(&self, account_id: Uuid, limit: i64, offset: i64) -> Result<Vec<File>> {
+    pub async fn list_account_files(&self, account_id: Uuid, limit: i64, offset: i64) -> Result<Vec<File>> {
         let rows = sqlx::query(
             "SELECT id, account_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at
              FROM files WHERE account_id = $1

@@ -300,8 +300,8 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
                 .to_string()
         };
 
-        // Extract user_id from the event payload (optional for sync requests)
-        let user_id = event.payload["user_id"]
+        // Extract account_id from the event payload (optional for sync requests)
+        let account_id = event.payload["account_id"]
             .as_str()
             .or_else(|| event.payload["requested_by"].as_str())
             .unwrap_or("unknown");

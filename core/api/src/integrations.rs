@@ -83,7 +83,7 @@ pub async fn get_integrations(
         }
     };
 
-    if user_id != claims_account_id {
+    if account_id != claims_account_id {
         return (StatusCode::FORBIDDEN, Json(serde_json::json!({
             "error": "Access denied"
         }))).into_response();
@@ -96,7 +96,7 @@ pub async fn get_integrations(
         FROM account_data
         WHERE account_id = $1
         "#,
-        user_id
+        account_id
     )
     .fetch_optional(&pool)
     .await;
@@ -147,7 +147,7 @@ pub async fn update_github_integration(
         }
     };
 
-    if user_id != claims_account_id {
+    if account_id != claims_account_id {
         return (StatusCode::FORBIDDEN, Json(serde_json::json!({
             "error": "Access denied"
         }))).into_response();
@@ -194,7 +194,7 @@ pub async fn update_github_integration(
             ),
             updated_at = now()
         "#,
-        user_id,
+        account_id,
         integrations_data
     )
     .execute(&pool)
@@ -218,7 +218,7 @@ pub async fn update_github_integration(
     };
 
     let event_payload = serde_json::json!({
-        "user_id": user_id.to_string(),
+        "account_id": account_id.to_string(),
         "integration_type": "github",
         "username": payload.github_username
     });

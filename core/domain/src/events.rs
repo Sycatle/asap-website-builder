@@ -99,7 +99,7 @@ mod tests {
     fn test_event_creation() {
         let account_id = Uuid::new_v4();
         let payload = serde_json::json!({
-            "user_id": Uuid::new_v4(),
+            "account_id": Uuid::new_v4(),
             "email": "test@example.com"
         });
 

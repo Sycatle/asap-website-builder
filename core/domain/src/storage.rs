@@ -134,8 +134,8 @@ pub struct StorageQuotaResponse {
     pub usage_percentage: f64,
 }
 
-impl From<UserStorageQuota> for StorageQuotaResponse {
-    fn from(quota: UserStorageQuota) -> Self {
+impl From<AccountStorageQuota> for StorageQuotaResponse {
+    fn from(quota: AccountStorageQuota) -> Self {
         Self {
             total_size_used: quota.total_size_used,
             quota_limit: quota.quota_limit,
@@ -151,9 +151,9 @@ mod tests {
 
     #[test]
     fn test_file_creation() {
-        let user_id = Uuid::new_v4();
+        let account_id = Uuid::new_v4();
         let file = File::new(
-            user_id,
+            account_id,
             "test.txt".to_string(),
             "text/plain".to_string(),
             1000,
@@ -162,15 +162,15 @@ mod tests {
             "s3://bucket/key".to_string(),
         );
 
-        assert_eq!(file.user_id, user_id);
+        assert_eq!(file.account_id, account_id);
         assert_eq!(file.filename, "test.txt");
         assert!(file.compression_ratio() <= 100.0);
     }
 
     #[test]
     fn test_quota_can_upload() {
-        let user_id = Uuid::new_v4();
-        let mut quota = UserStorageQuota::new(user_id);
+        let account_id = Uuid::new_v4();
+        let mut quota = AccountStorageQuota::new(account_id);
         
         // Should allow upload initially
         assert!(quota.can_upload(100_000_000)); // 100 MB
@@ -184,8 +184,8 @@ mod tests {
 
     #[test]
     fn test_quota_remaining() {
-        let user_id = Uuid::new_v4();
-        let mut quota = UserStorageQuota::new(user_id);
+        let account_id = Uuid::new_v4();
+        let mut quota = AccountStorageQuota::new(account_id);
         
         quota.total_size_used = 500_000_000; // 500 MB
         

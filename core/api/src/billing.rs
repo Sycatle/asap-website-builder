@@ -40,7 +40,7 @@ pub async fn create_checkout_session(
         (StatusCode::BAD_REQUEST, "Invalid account ID").into_response()
     })?;
 
-    let user_id = Uuid::parse_str(&claims.sub).map_err(|_| {
+    let account_id = Uuid::parse_str(&claims.sub).map_err(|_| {
         (StatusCode::BAD_REQUEST, "Invalid account ID").into_response()
     })?;
 
@@ -48,7 +48,7 @@ pub async fn create_checkout_session(
     let email = sqlx::query_scalar::<_, String>(
         "SELECT email FROM users WHERE id = $1"
     )
-    .bind(user_id)
+    .bind(account_id)
     .fetch_one(&pool)
     .await
     .map_err(|e| {
