@@ -34,6 +34,11 @@ export interface UpdateGitHubIntegrationRequest {
   github_token?: string | null;
 }
 
+export interface ChangePasswordRequest {
+  current_password: string;
+  new_password: string;
+}
+
 export const authAPI = {
   async signup(data: SignupRequest): Promise<SignupResponse> {
     return apiClient.post<SignupResponse>('/auth/signup', data);
@@ -45,6 +50,10 @@ export const authAPI = {
 
   async me(): Promise<MeResponse> {
     return apiClient.get<MeResponse>('/auth/me');
+  },
+
+  async changePassword(data: ChangePasswordRequest): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>('/auth/change-password', data);
   },
 
   logout() {

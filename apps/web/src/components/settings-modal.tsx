@@ -53,8 +53,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
-import { filesAPI, websitesAPI, modulesAPI, type QuotaUsage, type FileMetadata, type Website, type WebsiteModule } from "@/lib/api"
+import { filesAPI, websitesAPI, modulesAPI, authAPI, accountsAPI, type QuotaUsage, type FileMetadata, type Website, type WebsiteModule } from "@/lib/api"
 import { formatBytes } from "@/lib/utils/formatters"
+import { FilePickerDialog } from "@/components/file-picker-dialog"
 
 interface UserData {
   id: string
@@ -231,6 +232,64 @@ function AccountSettings({
   setFormData: React.Dispatch<React.SetStateAction<{ name: string; email: string }>>
   getInitials: (name: string) => string
 }) {
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(user.avatar)
+  const [showFilePicker, setShowFilePicker] = useState(false)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Veuillez sélectionner une image')
+      return
+    }
+
+    // Validate file size (1MB max)
+    if (file.size > 1024 * 1024) {
+      alert('L\'image doit faire moins de 1MB')
+      return
+    }
+
+    setIsUploadingAvatar(true)
+
+    try {
+      // Upload the file
+      const uploadedFile = await filesAPI.upload(file)
+      
+      // Update avatar in account data
+      const avatarFileUrl = `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${uploadedFile.id}`
+      setAvatarUrl(avatarFileUrl)
+      
+      // Save to account data
+      await accountsAPI.updateAccountData(user.id, {
+        data: { avatar: avatarFileUrl }
+      })
+    } catch (error) {
+      console.error('Failed to upload avatar:', error)
+      alert('Erreur lors du téléchargement de l\'avatar')
+    } finally {
+      setIsUploadingAvatar(false)
+    }
+  }
+
+  const handleFileSelect = async (file: FileMetadata) => {
+    const avatarFileUrl = `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${file.id}`
+    setAvatarUrl(avatarFileUrl)
+    
+    // Save to account data
+    try {
+      await accountsAPI.updateAccountData(user.id, {
+        data: { avatar: avatarFileUrl }
+      })
+    } catch (error) {
+      console.error('Failed to update avatar:', error)
+      alert('Erreur lors de la mise à jour de l\'avatar')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -244,19 +303,42 @@ function AccountSettings({
       {/* Avatar */}
       <div className="flex items-center gap-4">
         <Avatar className="h-20 w-20">
-          <AvatarImage src={user.avatar} alt={user.name} />
+          <AvatarImage src={avatarUrl} alt={user.name} />
           <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
             {getInitials(formData.name || user.email)}
           </AvatarFallback>
         </Avatar>
-        <div>
-          <Button variant="outline" size="sm">
-            Changer l'avatar
-          </Button>
-          <p className="text-xs text-muted-foreground mt-1">
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingAvatar}
+            >
+              {isUploadingAvatar && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+              Uploader
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowFilePicker(true)}
+              disabled={isUploadingAvatar}
+            >
+              Choisir du cloud
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
             JPG, PNG ou GIF. 1MB max.
           </p>
         </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleAvatarUpload}
+          className="hidden"
+        />
       </div>
 
       {/* Form fields */}
@@ -311,6 +393,16 @@ function AccountSettings({
           </AlertDialogContent>
         </AlertDialog>
       </div>
+
+      {/* File Picker Dialog */}
+      <FilePickerDialog
+        open={showFilePicker}
+        onOpenChange={setShowFilePicker}
+        onSelect={handleFileSelect}
+        accept="image/*"
+        title="Choisir une image de profil"
+        description="Sélectionnez une image depuis votre stockage cloud."
+      />
     </div>
   )
 }
@@ -318,6 +410,56 @@ function AccountSettings({
 // Security Settings Tab
 function SecuritySettings() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  })
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
+
+  const handlePasswordChange = async () => {
+    // Reset states
+    setPasswordError(null)
+    setPasswordSuccess(false)
+
+    // Validation
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      setPasswordError('Tous les champs sont requis')
+      return
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      setPasswordError('Le nouveau mot de passe doit contenir au moins 8 caractères')
+      return
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('Les mots de passe ne correspondent pas')
+      return
+    }
+
+    setIsChangingPassword(true)
+
+    try {
+      await authAPI.changePassword({
+        current_password: passwordData.currentPassword,
+        new_password: passwordData.newPassword,
+      })
+      
+      setPasswordSuccess(true)
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      })
+    } catch (error: any) {
+      setPasswordError(error.message || 'Erreur lors du changement de mot de passe')
+    } finally {
+      setIsChangingPassword(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -341,12 +483,26 @@ function SecuritySettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {passwordSuccess && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 flex items-center gap-2">
+              <Check className="h-4 w-4" />
+              Mot de passe changé avec succès
+            </div>
+          )}
+          {passwordError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+              {passwordError}
+            </div>
+          )}
           <div className="grid gap-2">
             <Label htmlFor="current-password">Mot de passe actuel</Label>
             <Input
               id="current-password"
               type="password"
               placeholder="••••••••"
+              value={passwordData.currentPassword}
+              onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+              disabled={isChangingPassword}
             />
           </div>
           <div className="grid gap-2">
@@ -355,7 +511,13 @@ function SecuritySettings() {
               id="new-password"
               type="password"
               placeholder="••••••••"
+              value={passwordData.newPassword}
+              onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+              disabled={isChangingPassword}
             />
+            <p className="text-xs text-muted-foreground">
+              Minimum 8 caractères
+            </p>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="confirm-password">Confirmer le mot de passe</Label>
@@ -363,9 +525,15 @@ function SecuritySettings() {
               id="confirm-password"
               type="password"
               placeholder="••••••••"
+              value={passwordData.confirmPassword}
+              onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+              disabled={isChangingPassword}
             />
           </div>
-          <Button>Mettre à jour le mot de passe</Button>
+          <Button onClick={handlePasswordChange} disabled={isChangingPassword}>
+            {isChangingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Mettre à jour le mot de passe
+          </Button>
         </CardContent>
       </Card>
 

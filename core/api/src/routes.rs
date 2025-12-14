@@ -38,6 +38,7 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
     // Authenticated routes (require JWT)
     let authenticated_routes = Router::new()
         .route("/auth/me", get(crate::auth::me))
+        .route("/auth/change-password", post(crate::auth::change_password))
         // Account routes
         .route("/accounts/:id", get(crate::accounts::get_account))
         .route("/accounts/:id", put(crate::accounts::update_account))
