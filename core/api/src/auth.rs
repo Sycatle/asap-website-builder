@@ -357,6 +357,16 @@ pub async fn signup(
         }))).into_response();
     }
 
+    // Create welcome notification (fire and forget)
+    tokio::spawn({
+        let pool = pool.clone();
+        async move {
+            if let Err(e) = crate::notifications::create_welcome_notification(&pool, account_id).await {
+                tracing::warn!("Failed to create welcome notification: {}", e);
+            }
+        }
+    });
+
     // Generate JWT token
     let token = match generate_token(&account_id.to_string(), &config) {
         Ok(token) => token,
@@ -431,6 +441,11 @@ pub async fn login(
             }))).into_response();
         }
     };
+
+    // Create notification for new login
+    if let Err(e) = crate::notifications::create_new_login_notification(&pool, account.id, None).await {
+        tracing::error!("Failed to create login notification: {}", e);
+    }
 
     tracing::info!("Account logged in successfully: {}", payload.email);
 
@@ -563,6 +578,11 @@ pub async fn change_password(
 
     match update_result {
         Ok(_) => {
+            // Create notification for password change
+            if let Err(e) = crate::notifications::create_password_changed_notification(&pool, account_id).await {
+                tracing::error!("Failed to create password change notification: {}", e);
+            }
+            
             tracing::debug!("Password changed successfully for account: {}", account_id);
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Password changed successfully"
