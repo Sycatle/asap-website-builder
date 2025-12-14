@@ -266,7 +266,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       setSuccess(null);
 
       if (websiteModule) {
-        await modulesAPI.updateSettings(websiteId, websiteModule.id, { settings });
+        await modulesAPI.updateSettings(websiteId, websiteModule.module_id, { settings });
       } else {
         await modulesAPI.activate(websiteId, {
           module_id: module.id,

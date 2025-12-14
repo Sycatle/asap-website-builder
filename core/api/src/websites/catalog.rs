@@ -144,20 +144,25 @@ pub async fn get_website_module_data(
     let mut data = serde_json::json!({});
     
     if module_slug == "github-sync" {
-        let website_data = sqlx::query_as::<_, (Option<serde_json::Value>, Option<chrono::DateTime<chrono::Utc>>)>(
-            r#"SELECT data, generated_at FROM website_data WHERE website_id = $1"#
+        let website_data = sqlx::query_as::<_, (serde_json::Value, chrono::DateTime<chrono::Utc>)>(
+            r#"SELECT data, updated_at FROM website_data WHERE website_id = $1"#
         )
         .bind(website_uuid)
         .fetch_optional(&pool)
         .await;
 
-        if let Ok(Some((wd_data, generated_at))) = website_data {
-            if let Some(wd_data) = wd_data {
-                data = serde_json::json!({
-                    "projects": wd_data.get("projects").cloned().unwrap_or(serde_json::json!([])),
-                    "lastSync": generated_at.map(|dt| dt.to_rfc3339())
-                });
-            }
+        if let Ok(Some((wd_data, updated_at))) = website_data {
+            // Get generated_at from inside the JSON data, fallback to updated_at
+            let last_sync = wd_data.get("generated_at")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| updated_at.to_rfc3339());
+            
+            data = serde_json::json!({
+                "projects": wd_data.get("projects").cloned().unwrap_or(serde_json::json!([])),
+                "profile": wd_data.get("profile").cloned(),
+                "lastSync": last_sync
+            });
         }
     }
 
