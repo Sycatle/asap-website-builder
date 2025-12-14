@@ -1,9 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
   Bell,
+  BellRing,
   Check,
   CheckCheck,
   Trash2,
@@ -16,12 +17,17 @@ import {
   User,
   Sparkles,
   ExternalLink,
+  Volume2,
+  VolumeX,
+  Smartphone,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,7 +43,6 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { 
-  notificationsAPI, 
   type Notification, 
   type NotificationCategory,
   type NotificationPriority,
@@ -45,6 +50,14 @@ import {
   checkPushPermission,
   requestPushPermission,
 } from "@/lib/api/notifications"
+import {
+  useNotificationsStore,
+  useNotifications,
+  useUnreadCount,
+  useNotificationsLoading,
+  useHasNewNotifications,
+  useNotificationSettings,
+} from "@/lib/store/notificationsStore"
 import { toast } from "sonner"
 
 // Icon mapping for notification categories
@@ -83,55 +96,39 @@ interface NotificationsDropdownProps {
 
 export function NotificationsDropdown({ className }: NotificationsDropdownProps) {
   const [open, setOpen] = useState(false)
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [isLoading, setIsLoading] = useState(true)
   const [pushEnabled, setPushEnabled] = useState(false)
-  const pollInterval = useRef<NodeJS.Timeout | null>(null)
 
-  // Fetch notifications
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const response = await notificationsAPI.list({ limit: 20 })
-      setNotifications(response.notifications)
-      setUnreadCount(response.unread_count)
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+  // Use the notifications store for optimized state management
+  const notifications = useNotifications()
+  const unreadCount = useUnreadCount()
+  const isLoading = useNotificationsLoading()
+  const hasNewNotifications = useHasNewNotifications()
+  const { soundEnabled, vibrationEnabled } = useNotificationSettings()
+  
+  const {
+    fetchNotifications,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    clearNewNotificationsIndicator,
+    toggleSound,
+    toggleVibration,
+    startPolling,
+  } = useNotificationsStore()
 
-  // Fetch unread count only (lighter call)
-  const fetchUnreadCount = useCallback(async () => {
-    try {
-      const count = await notificationsAPI.getUnreadCount()
-      setUnreadCount(count)
-    } catch (error) {
-      console.error('Failed to fetch unread count:', error)
-    }
-  }, [])
-
-  // Initial load and polling
+  // Start polling on mount
   useEffect(() => {
-    fetchNotifications()
-
-    // Poll for new notifications every 30 seconds
-    pollInterval.current = setInterval(fetchUnreadCount, 30000)
-
-    return () => {
-      if (pollInterval.current) {
-        clearInterval(pollInterval.current)
-      }
-    }
-  }, [fetchNotifications, fetchUnreadCount])
+    const stopPolling = startPolling()
+    return stopPolling
+  }, [startPolling])
 
   // Refetch when dropdown opens
   useEffect(() => {
     if (open) {
-      fetchNotifications()
+      fetchNotifications(undefined, true)
+      clearNewNotificationsIndicator()
     }
-  }, [open, fetchNotifications])
+  }, [open, fetchNotifications, clearNewNotificationsIndicator])
 
   // Check push notification status
   useEffect(() => {
@@ -146,11 +143,7 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
     if (notification.read) return
 
     try {
-      await notificationsAPI.markOneAsRead(notification.id)
-      setNotifications(prev => 
-        prev.map(n => n.id === notification.id ? { ...n, read: true, read_at: new Date().toISOString() } : n)
-      )
-      setUnreadCount(prev => Math.max(0, prev - 1))
+      await markAsRead(notification.id)
     } catch (error) {
       console.error('Failed to mark notification as read:', error)
     }
@@ -159,9 +152,7 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
   // Mark all as read
   const handleMarkAllAsRead = async () => {
     try {
-      await notificationsAPI.markAllAsRead()
-      setNotifications(prev => prev.map(n => ({ ...n, read: true, read_at: new Date().toISOString() })))
-      setUnreadCount(0)
+      await markAllAsRead()
       toast.success('Toutes les notifications marquées comme lues')
     } catch (error) {
       console.error('Failed to mark all as read:', error)
@@ -173,11 +164,7 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
   const handleDelete = async (notification: Notification, e: React.MouseEvent) => {
     e.stopPropagation()
     try {
-      await notificationsAPI.delete(notification.id)
-      setNotifications(prev => prev.filter(n => n.id !== notification.id))
-      if (!notification.read) {
-        setUnreadCount(prev => Math.max(0, prev - 1))
-      }
+      await deleteNotification(notification.id)
     } catch (error) {
       console.error('Failed to delete notification:', error)
       toast.error('Erreur lors de la suppression')
@@ -189,11 +176,7 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
     // Mark as read if unread
     if (!notification.read) {
       try {
-        await notificationsAPI.markOneAsRead(notification.id)
-        setNotifications(prev => 
-          prev.map(n => n.id === notification.id ? { ...n, read: true, read_at: new Date().toISOString() } : n)
-        )
-        setUnreadCount(prev => Math.max(0, prev - 1))
+        await markAsRead(notification.id)
       } catch (error) {
         console.error('Failed to mark notification as read:', error)
       }
@@ -267,14 +250,28 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
         <Button
           variant="ghost"
           size="icon"
-          className={cn("relative h-9 w-9", className)}
+          className={cn(
+            "relative h-9 w-9 transition-all",
+            hasNewNotifications && "animate-pulse",
+            className
+          )}
           aria-label="Notifications"
         >
-          <Bell className="h-5 w-5" />
+          {hasNewNotifications || unreadCount > 0 ? (
+            <BellRing className={cn(
+              "h-5 w-5",
+              hasNewNotifications && "text-primary animate-bounce"
+            )} />
+          ) : (
+            <Bell className="h-5 w-5" />
+          )}
           {unreadCount > 0 && (
             <Badge 
               variant="destructive" 
-              className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1.5 text-xs font-bold"
+              className={cn(
+                "absolute -top-1 -right-1 h-5 min-w-[20px] px-1.5 text-xs font-bold",
+                hasNewNotifications && "animate-pulse"
+              )}
             >
               {unreadCount > 99 ? '99+' : unreadCount}
             </Badge>
@@ -282,7 +279,7 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[380px] p-0" 
+        className="w-[400px] p-0" 
         align="end"
         sideOffset={8}
       >
@@ -314,7 +311,7 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
                   <Settings className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>Paramètres</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {!pushEnabled && (
@@ -323,9 +320,36 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
                     Activer les notifications push
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onClick={() => window.location.href = '/app/settings?tab=notifications'}>
+                <div className="px-2 py-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="sound-toggle" className="text-sm flex items-center gap-2 cursor-pointer">
+                      {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                      Son
+                    </Label>
+                    <Switch
+                      id="sound-toggle"
+                      checked={soundEnabled}
+                      onCheckedChange={toggleSound}
+                    />
+                  </div>
+                </div>
+                <div className="px-2 py-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="vibration-toggle" className="text-sm flex items-center gap-2 cursor-pointer">
+                      <Smartphone className="h-4 w-4" />
+                      Vibration
+                    </Label>
+                    <Switch
+                      id="vibration-toggle"
+                      checked={vibrationEnabled}
+                      onCheckedChange={toggleVibration}
+                    />
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => window.location.href = '/app/notifications'}>
                   <Settings className="mr-2 h-4 w-4" />
-                  Paramètres de notification
+                  Tous les paramètres
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -333,7 +357,7 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
         </div>
 
         {/* Notifications list */}
-        <ScrollArea className="h-[400px]">
+        <ScrollArea className="h-[420px]">
           {isLoading ? (
             <div className="p-4 space-y-4">
               {[...Array(4)].map((_, i) => (
