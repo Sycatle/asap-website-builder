@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SettingsModal } from "@/components/settings-modal"
+import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { authAPI, websitesAPI, accountsAPI, type Website } from "@/lib/api"
 
 interface UserData {
@@ -134,22 +135,32 @@ export function HeaderUser({ user: initialUser }: HeaderUserProps) {
   }
 
   if (isLoading) {
-    return <Skeleton className="h-8 w-8 rounded-full" />
+    return (
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-9 w-9 rounded-md" />
+        <Skeleton className="h-8 w-8 rounded-full" />
+      </div>
+    )
   }
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                {getInitials(user.name || user.email)}
-              </AvatarFallback>
-            </Avatar>
-          </Button>
-        </DropdownMenuTrigger>
+      <div className="flex items-center gap-2">
+        {/* Notifications Dropdown */}
+        <NotificationsDropdown />
+        
+        {/* User Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user.avatar} alt={user.name} />
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                  {getInitials(user.name || user.email)}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="end" forceMount>
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
@@ -173,6 +184,7 @@ export function HeaderUser({ user: initialUser }: HeaderUserProps) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      </div>
 
       {/* Settings Modal */}
       <SettingsModal
