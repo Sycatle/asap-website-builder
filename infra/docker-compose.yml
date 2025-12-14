@@ -91,9 +91,13 @@ services:
       context: ..
       dockerfile: infra/Dockerfile.worker
     container_name: asap-worker
+    # For development: mount local binary (comment out for production)
+    volumes:
+      - ../target/debug/asap-worker:/app/asap-worker:ro
+    command: /app/asap-worker
     environment:
       DATABASE_URL: postgresql://asap:asap_dev_password@postgres:5432/asap
-      RUST_LOG: asap_worker=info,sqlx=warn
+      RUST_LOG: asap_worker=debug,sqlx=warn
       POLL_INTERVAL_SECONDS: 5
     depends_on:
       migrations:
