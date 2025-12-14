@@ -628,7 +628,7 @@ impl FileStorageService {
     /// Cleanup old file metadata (runs periodically)
     pub async fn cleanup_orphaned_files(&self, days: i64) -> Result<u64> {
         let result = sqlx::query(
-            "DELETE FROM files WHERE created_at < now() - interval '1 day' * $1 AND account_id NOT IN (SELECT id FROM users)"
+            "DELETE FROM files WHERE created_at < now() - interval '1 day' * $1 AND account_id NOT IN (SELECT id FROM accounts)"
         )
         .bind(days)
         .execute(&self.pool)

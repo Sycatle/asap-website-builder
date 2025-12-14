@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS module_configs (
     module_id UUID NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
     config JSONB NOT NULL DEFAULT '{}',
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE(account_id, module_id)
+    CONSTRAINT module_configs_account_module_unique UNIQUE(account_id, module_id)
 );
 
 -- Create index on account_id

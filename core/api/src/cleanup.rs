@@ -88,7 +88,7 @@ impl FileCleanupService {
         .fetch_one(&self.pool)
         .await?;
 
-        let total_users = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users")
+        let total_accounts = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM accounts")
             .fetch_one(&self.pool)
             .await?;
 
@@ -96,7 +96,7 @@ impl FileCleanupService {
             total_files: row.0,
             total_compressed_size: row.1.unwrap_or(0),
             total_original_size: row.2.unwrap_or(0),
-            total_users,
+            total_users: total_accounts,
             calculated_at: Utc::now(),
         })
     }
