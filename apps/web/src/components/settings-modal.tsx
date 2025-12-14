@@ -465,9 +465,9 @@ function SecuritySettings() {
         newPassword: '',
         confirmPassword: '',
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Sanitize error messages - only show safe generic messages
-      const errorMsg = error.message?.includes('incorrect') 
+      const errorMsg = error instanceof Error && error.message?.includes('incorrect') 
         ? 'Le mot de passe actuel est incorrect'
         : 'Erreur lors du changement de mot de passe'
       setPasswordError(errorMsg)
