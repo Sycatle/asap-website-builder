@@ -15,7 +15,7 @@ pub use websites::{
 pub use events::{Event, EventType};
 pub use integrations::{Integration, GitHubIntegration};
 pub use errors::{DomainError, Result};
-pub use storage::{File, UserStorageQuota, FileUploadRequest, FileUploadResponse, StorageQuotaResponse};
+pub use storage::{File, AccountStorageQuota, FileUploadRequest, FileUploadResponse, StorageQuotaResponse};
 pub use module_schema::{
     ConfigSchema, ConfigField, ConfigAction, ConfigSection,
     DataDisplay, DataDisplayField, FieldType, FieldValidation,

@@ -33,32 +33,28 @@ pub async fn create_checkout_session(
     Extension(payment_gateway): Extension<std::sync::Arc<dyn PaymentGateway>>,
     Json(req): Json<CreateCheckoutSessionRequest>,
 ) -> Result<Json<CreateCheckoutSessionResponse>, Response> {
-    tracing::info!("Creating checkout session for tenant: {}", claims.tenant_id);
+    tracing::info!("Creating checkout session for account: {}", claims.sub);
 
-    // Parse tenant_id from string to Uuid
-    let tenant_id = Uuid::parse_str(&claims.tenant_id).map_err(|_| {
-        (StatusCode::BAD_REQUEST, "Invalid tenant ID").into_response()
+    // Parse account_id from string to Uuid
+    let account_id = Uuid::parse_str(&claims.sub).map_err(|_| {
+        (StatusCode::BAD_REQUEST, "Invalid account ID").into_response()
     })?;
 
-    let user_id = Uuid::parse_str(&claims.sub).map_err(|_| {
-        (StatusCode::BAD_REQUEST, "Invalid user ID").into_response()
-    })?;
-
-    // Get user email for customer creation
+    // Get account email for customer creation
     let email = sqlx::query_scalar::<_, String>(
-        "SELECT email FROM users WHERE id = $1"
+        "SELECT email FROM accounts WHERE id = $1"
     )
-    .bind(user_id)
+    .bind(account_id)
     .fetch_one(&pool)
     .await
     .map_err(|e| {
-        tracing::error!("Failed to fetch user: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch user").into_response()
+        tracing::error!("Failed to fetch account: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch account").into_response()
     })?;
 
     // Ensure customer exists in Stripe
     payment_gateway
-        .ensure_customer(tenant_id, email)
+        .ensure_customer(account_id, email)
         .await
         .map_err(|e| {
             tracing::error!("Failed to ensure customer: {}", e);
@@ -67,7 +63,7 @@ pub async fn create_checkout_session(
 
     // Create checkout session
     let checkout_request = CheckoutSessionRequest {
-        tenant_id,
+        account_id,
         price_id: req.price_id,
         success_url: req.success_url,
         cancel_url: req.cancel_url,

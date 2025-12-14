@@ -37,7 +37,7 @@ pub async fn list_presets(
 /// Create website from preset
 pub async fn create_website_from_preset(
     pool: &PgPool,
-    tenant_id: Uuid,
+    account_id: Uuid,
     preset_id: Uuid,
     slug: &str,
     title: &str,
@@ -62,12 +62,12 @@ pub async fn create_website_from_preset(
     let website_id = Uuid::new_v4();
     sqlx::query(
         r#"
-        INSERT INTO websites (id, tenant_id, slug, title, tagline, creation_mode, preset_id)
+        INSERT INTO websites (id, account_id, slug, title, tagline, creation_mode, preset_id)
         VALUES ($1, $2, $3, $4, $5, 'from_preset', $6)
         "#
     )
     .bind(website_id)
-    .bind(tenant_id)
+    .bind(account_id)
     .bind(slug)
     .bind(title)
     .bind(tagline)

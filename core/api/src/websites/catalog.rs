@@ -77,7 +77,7 @@ pub async fn get_website_module_data(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -86,12 +86,12 @@ pub async fn get_website_module_data(
         }
     };
 
-    // Verify website belongs to tenant
+    // Verify website belongs to account
     let website_check = sqlx::query_as::<_, (Uuid,)>(
-        "SELECT id FROM websites WHERE id = $1 AND tenant_id = $2"
+        "SELECT id FROM websites WHERE id = $1 AND account_id = $2"
     )
     .bind(website_uuid)
-    .bind(tenant_id)
+    .bind(account_id)
     .fetch_optional(&pool)
     .await;
 
@@ -195,7 +195,7 @@ pub async fn execute_module_action(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -204,12 +204,12 @@ pub async fn execute_module_action(
         }
     };
 
-    // Verify website belongs to tenant
+    // Verify website belongs to account
     let website_check = sqlx::query_as::<_, (Uuid,)>(
-        "SELECT id FROM websites WHERE id = $1 AND tenant_id = $2"
+        "SELECT id FROM websites WHERE id = $1 AND account_id = $2"
     )
     .bind(website_uuid)
-    .bind(tenant_id)
+    .bind(account_id)
     .fetch_optional(&pool)
     .await;
 
@@ -239,9 +239,9 @@ pub async fn execute_module_action(
             });
 
             let event_result = sqlx::query(
-                "INSERT INTO events (tenant_id, event_type, payload) VALUES ($1, 'GITHUB_SYNC_REQUESTED', $2)"
+                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'GITHUB_SYNC_REQUESTED', $2)"
             )
-            .bind(tenant_id)
+            .bind(account_id)
             .bind(&event_payload)
             .execute(&pool)
             .await;

@@ -20,12 +20,12 @@ pub trait PaymentGateway: Send + Sync {
     ) -> Result<SubscriptionInfo, PaymentError>;
 
     /// Get customer by ID
-    async fn get_customer_id(&self, tenant_id: Uuid) -> Result<Option<String>, PaymentError>;
+    async fn get_customer_id(&self, account_id: Uuid) -> Result<Option<String>, PaymentError>;
 
-    /// Create or get customer for tenant
+    /// Create or get customer for account
     async fn ensure_customer(
         &self,
-        tenant_id: Uuid,
+        account_id: Uuid,
         email: String,
     ) -> Result<String, PaymentError>;
 
@@ -61,11 +61,11 @@ mod tests {
                 subscription_id: &str,
             ) -> Result<SubscriptionInfo, PaymentError>;
 
-            async fn get_customer_id(&self, tenant_id: Uuid) -> Result<Option<String>, PaymentError>;
+            async fn get_customer_id(&self, account_id: Uuid) -> Result<Option<String>, PaymentError>;
 
             async fn ensure_customer(
                 &self,
-                tenant_id: Uuid,
+                account_id: Uuid,
                 email: String,
             ) -> Result<String, PaymentError>;
 
@@ -82,12 +82,12 @@ mod tests {
     #[tokio::test]
     async fn test_mock_payment_gateway() {
         let mut mock = MockPaymentGatewayImpl::new();
-        let tenant_id = Uuid::new_v4();
+        let account_id = Uuid::new_v4();
 
         mock.expect_ensure_customer()
             .returning(|_, _| Ok("cus_test123".to_string()));
 
-        let result = mock.ensure_customer(tenant_id, "test@example.com".to_string()).await;
+        let result = mock.ensure_customer(account_id, "test@example.com".to_string()).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "cus_test123");
     }

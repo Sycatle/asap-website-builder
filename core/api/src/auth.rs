@@ -310,7 +310,7 @@ pub async fn signup(
 
     // Create default website
     let website_id = Uuid::new_v4();
-    let default_title = payload.email.split('@').next().unwrap_or("User");
+    let default_title = payload.email.split('@').next().unwrap_or("Account");
     if let Err(e) = sqlx::query(
         "INSERT INTO websites (id, account_id, slug, title, tagline, status, creation_mode) VALUES ($1, $2, $3, $4, $5, 'draft', $6)"
     )

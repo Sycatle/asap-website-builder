@@ -80,7 +80,7 @@ pub async fn stripe_webhook(
         return Ok(Json(WebhookResponse { received: true }));
     }
 
-    // Extract customer ID to find tenant
+    // Extract customer ID to find account
     // For most events, customer ID is in data.object.customer
     // For customer events, it's in data.object.id
     let customer_id = if event_type.starts_with("customer.") {
@@ -94,27 +94,27 @@ pub async fn stripe_webhook(
         return Err((StatusCode::BAD_REQUEST, "No customer ID").into_response());
     };
 
-    // Find tenant by customer ID
-    let tenant_id = sqlx::query_scalar::<_, Uuid>(
-        "SELECT id FROM tenants WHERE stripe_customer_id = $1"
+    // Find account by customer ID
+    let account_id = sqlx::query_scalar::<_, Uuid>(
+        "SELECT id FROM accounts WHERE stripe_customer_id = $1"
     )
     .bind(customer_id)
     .fetch_optional(&pool)
     .await
     .map_err(|e| {
-        tracing::error!("Database error fetching tenant: {}", e);
+        tracing::error!("Database error fetching account: {}", e);
         (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response()
     })?;
 
     // Store event for idempotency
     sqlx::query(
-        "INSERT INTO payment_events (event_id, event_type, payload_hash, tenant_id, processed_at) 
+        "INSERT INTO payment_events (event_id, event_type, payload_hash, account_id, processed_at) 
          VALUES ($1, $2, $3, $4, now())"
     )
     .bind(event_id)
     .bind(event_type)
     .bind(payload_hash)
-    .bind(tenant_id)
+    .bind(account_id)
     .execute(&pool)
     .await
     .map_err(|e| {
@@ -125,12 +125,12 @@ pub async fn stripe_webhook(
     // Process event based on type
     match event_type {
         "customer.subscription.created" | "customer.subscription.updated" => {
-            if let Some(tid) = tenant_id {
+            if let Some(tid) = account_id {
                 process_subscription_event(&pool, tid, &event).await?;
             }
         }
         "customer.subscription.deleted" => {
-            if let Some(tid) = tenant_id {
+            if let Some(tid) = account_id {
                 process_subscription_deleted(&pool, tid).await?;
             }
         }
@@ -139,7 +139,7 @@ pub async fn stripe_webhook(
         }
         "invoice.payment_failed" => {
             tracing::warn!("Payment failed for customer {}", customer_id);
-            if let Some(tid) = tenant_id {
+            if let Some(tid) = account_id {
                 update_plan_status(&pool, tid, "past_due").await?;
             }
         }
@@ -153,7 +153,7 @@ pub async fn stripe_webhook(
 
 async fn process_subscription_event(
     pool: &PgPool,
-    tenant_id: Uuid,
+    account_id: Uuid,
     event: &serde_json::Value,
 ) -> Result<(), Response> {
     let subscription = &event["data"]["object"];
@@ -164,13 +164,13 @@ async fn process_subscription_event(
         .and_then(|ts| chrono::DateTime::from_timestamp(ts, 0));
 
     sqlx::query(
-        "UPDATE tenants 
+        "UPDATE accounts 
          SET plan_status = $1, current_period_end = $2 
          WHERE id = $3"
     )
     .bind(status)
     .bind(current_period_end)
-    .bind(tenant_id)
+    .bind(account_id)
     .execute(pool)
     .await
     .map_err(|e| {
@@ -178,27 +178,27 @@ async fn process_subscription_event(
         (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update status").into_response()
     })?;
 
-    tracing::info!("Updated subscription status for tenant {} to {}", tenant_id, status);
+    tracing::info!("Updated subscription status for account {} to {}", account_id, status);
     Ok(())
 }
 
 async fn process_subscription_deleted(
     pool: &PgPool,
-    tenant_id: Uuid,
+    account_id: Uuid,
 ) -> Result<(), Response> {
-    update_plan_status(pool, tenant_id, "canceled").await
+    update_plan_status(pool, account_id, "canceled").await
 }
 
 async fn update_plan_status(
     pool: &PgPool,
-    tenant_id: Uuid,
+    account_id: Uuid,
     status: &str,
 ) -> Result<(), Response> {
     sqlx::query(
-        "UPDATE tenants SET plan_status = $1 WHERE id = $2"
+        "UPDATE accounts SET plan_status = $1 WHERE id = $2"
     )
     .bind(status)
-    .bind(tenant_id)
+    .bind(account_id)
     .execute(pool)
     .await
     .map_err(|e| {
@@ -206,7 +206,7 @@ async fn update_plan_status(
         (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update status").into_response()
     })?;
 
-    tracing::info!("Updated plan status for tenant {} to {}", tenant_id, status);
+    tracing::info!("Updated plan status for account {} to {}", account_id, status);
     Ok(())
 }
 

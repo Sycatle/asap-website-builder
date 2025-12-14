@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum EventType {
-    // User events
+    // Account events
     UserCreated,
     UserIntegrationAdded,
     UserIntegrationUpdated,
@@ -99,7 +99,7 @@ mod tests {
     fn test_event_creation() {
         let account_id = Uuid::new_v4();
         let payload = serde_json::json!({
-            "user_id": Uuid::new_v4(),
+            "account_id": Uuid::new_v4(),
             "email": "test@example.com"
         });
 

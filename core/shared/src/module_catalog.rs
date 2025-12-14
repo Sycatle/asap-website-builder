@@ -25,7 +25,7 @@ pub struct ModuleDefinition {
     pub icon: Option<String>,
     pub default_settings: serde_json::Value,
     pub config_schema: Option<ConfigSchema>,
-    /// Whether this module appears in user configuration (false = system module)
+    /// Whether this module appears in account configuration (false = system module)
     pub user_configurable: bool,
     /// Order in sidebar when activated
     pub sidebar_order: i32,
@@ -51,7 +51,7 @@ pub fn get_module_by_slug(slug: &str) -> Option<ModuleDefinition> {
     get_module_catalog().into_iter().find(|m| m.slug == slug)
 }
 
-/// Get only user-configurable modules (for catalog display)
+/// Get only account-configurable modules (for catalog display)
 pub fn get_user_modules() -> Vec<ModuleDefinition> {
     get_module_catalog()
         .into_iter()

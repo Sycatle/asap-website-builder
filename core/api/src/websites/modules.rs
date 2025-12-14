@@ -123,7 +123,7 @@ pub async fn list_website_modules(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -134,7 +134,7 @@ pub async fn list_website_modules(
 
     use crate::queries;
     
-    match queries::verify_website_ownership(&pool, website_uuid, tenant_id).await {
+    match queries::verify_website_ownership(&pool, website_uuid, account_id).await {
         Ok(true) => {}
         Ok(false) => {
             return (StatusCode::NOT_FOUND, Json(serde_json::json!({
@@ -188,7 +188,7 @@ pub async fn activate_module(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -202,7 +202,7 @@ pub async fn activate_module(
         &pool,
         website_uuid,
         module_uuid,
-        tenant_id,
+        account_id,
         payload.settings.unwrap_or(serde_json::json!({})),
     ).await;
 
@@ -214,9 +214,9 @@ pub async fn activate_module(
             });
 
             let _ = sqlx::query(
-                "INSERT INTO events (tenant_id, event_type, payload) VALUES ($1, 'MODULE_ACTIVATED', $2)"
+                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'MODULE_ACTIVATED', $2)"
             )
-            .bind(tenant_id)
+            .bind(account_id)
             .bind(&event_payload)
             .execute(&pool)
             .await;
@@ -258,7 +258,7 @@ pub async fn update_website_module(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -272,7 +272,7 @@ pub async fn update_website_module(
         &pool,
         website_uuid,
         module_uuid,
-        tenant_id,
+        account_id,
         &payload.settings,
         payload.enabled,
     ).await;

@@ -48,15 +48,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
       authAPI.setToken(response.token);
       
-      set({ 
-        user: { 
-          id: response.user.id, 
-          email: response.user.email, 
-          tenant_id: response.tenant.id 
-        }, 
-        isAuthenticated: true, 
-        isLoading: false 
-      });
+      const user = await authAPI.me();
+      set({ user, isAuthenticated: true, isLoading: false });
     } catch (error: any) {
       set({ 
         error: error.message || 'Signup failed', 

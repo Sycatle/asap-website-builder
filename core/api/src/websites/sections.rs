@@ -67,7 +67,7 @@ pub async fn list_website_sections(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -77,7 +77,7 @@ pub async fn list_website_sections(
     };
 
     use crate::queries;
-    let result = queries::list_website_sections(&pool, website_uuid, tenant_id).await;
+    let result = queries::list_website_sections(&pool, website_uuid, account_id).await;
 
     match result {
         Ok(sections) => {
@@ -107,7 +107,7 @@ pub async fn create_section(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -132,7 +132,7 @@ pub async fn create_section(
     let result = queries::create_website_section(
         &pool,
         website_uuid,
-        tenant_id,
+        account_id,
         module_uuid,
         &payload.section_type,
         &payload.slug,
@@ -152,9 +152,9 @@ pub async fn create_section(
             });
 
             let _ = sqlx::query(
-                "INSERT INTO events (tenant_id, event_type, payload) VALUES ($1, 'SECTION_CREATED', $2)"
+                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'SECTION_CREATED', $2)"
             )
-            .bind(tenant_id)
+            .bind(account_id)
             .bind(&event_payload)
             .execute(&pool)
             .await;
@@ -197,7 +197,7 @@ pub async fn update_section(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -211,7 +211,7 @@ pub async fn update_section(
         &pool,
         section_uuid,
         website_uuid,
-        tenant_id,
+        account_id,
         payload.title.as_deref(),
         payload.layout.as_deref(),
         payload.settings.as_ref(),
@@ -262,7 +262,7 @@ pub async fn delete_section(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -272,7 +272,7 @@ pub async fn delete_section(
     };
 
     use crate::queries;
-    let result = queries::delete_website_section(&pool, section_uuid, website_uuid, tenant_id).await;
+    let result = queries::delete_website_section(&pool, section_uuid, website_uuid, account_id).await;
 
     match result {
         Ok(deleted) if deleted => {
@@ -282,9 +282,9 @@ pub async fn delete_section(
             });
 
             let _ = sqlx::query(
-                "INSERT INTO events (tenant_id, event_type, payload) VALUES ($1, 'SECTION_DELETED', $2)"
+                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'SECTION_DELETED', $2)"
             )
-            .bind(tenant_id)
+            .bind(account_id)
             .bind(&event_payload)
             .execute(&pool)
             .await;
@@ -322,7 +322,7 @@ pub async fn reorder_sections(
         }
     };
 
-    let tenant_id = match Uuid::parse_str(&claims.tenant_id) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -346,7 +346,7 @@ pub async fn reorder_sections(
     };
 
     use crate::queries;
-    let result = queries::reorder_website_sections(&pool, website_uuid, tenant_id, &section_uuids).await;
+    let result = queries::reorder_website_sections(&pool, website_uuid, account_id, &section_uuids).await;
 
     match result {
         Ok(_) => {
@@ -356,9 +356,9 @@ pub async fn reorder_sections(
             });
 
             let _ = sqlx::query(
-                "INSERT INTO events (tenant_id, event_type, payload) VALUES ($1, 'SECTION_REORDERED', $2)"
+                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'SECTION_REORDERED', $2)"
             )
-            .bind(tenant_id)
+            .bind(account_id)
             .bind(&event_payload)
             .execute(&pool)
             .await;
