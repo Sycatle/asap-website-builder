@@ -83,6 +83,12 @@ export function FilePickerDialog({
     return <FileIcon className="h-4 w-4" />
   }
 
+  // Helper to construct file URL with auth token
+  const getFileUrl = (fileId: string) => {
+    const token = localStorage.getItem('auth_token')
+    return `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${fileId}?token=${token}`
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -123,7 +129,7 @@ export function FilePickerDialog({
                     {file.mime_type.startsWith("image/") ? (
                       <div className="w-full aspect-video bg-muted rounded overflow-hidden">
                         <img 
-                          src={`${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${file.id}`}
+                          src={getFileUrl(file.id)}
                           alt={file.filename}
                           className="w-full h-full object-cover"
                         />
