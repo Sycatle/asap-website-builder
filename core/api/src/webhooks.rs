@@ -127,20 +127,43 @@ pub async fn stripe_webhook(
         "customer.subscription.created" | "customer.subscription.updated" => {
             if let Some(tid) = account_id {
                 process_subscription_event(&pool, tid, &event).await?;
+                // Send notification for new subscription
+                if event_type == "customer.subscription.created" {
+                    let plan_name = event["data"]["object"]["items"]["data"][0]["price"]["nickname"]
+                        .as_str()
+                        .unwrap_or("Premium");
+                    if let Err(e) = crate::notifications::create_subscription_created_notification(&pool, tid, plan_name).await {
+                        tracing::error!("Failed to create subscription notification: {}", e);
+                    }
+                }
             }
         }
         "customer.subscription.deleted" => {
             if let Some(tid) = account_id {
                 process_subscription_deleted(&pool, tid).await?;
+                // Send notification for cancelled subscription
+                if let Err(e) = crate::notifications::create_subscription_cancelled_notification(&pool, tid).await {
+                    tracing::error!("Failed to create subscription cancelled notification: {}", e);
+                }
             }
         }
         "invoice.payment_succeeded" => {
             tracing::info!("Payment succeeded for customer {}", customer_id);
+            // Send notification for successful payment
+            if let Some(tid) = account_id {
+                if let Err(e) = crate::notifications::create_payment_success_notification(&pool, tid).await {
+                    tracing::error!("Failed to create payment success notification: {}", e);
+                }
+            }
         }
         "invoice.payment_failed" => {
             tracing::warn!("Payment failed for customer {}", customer_id);
             if let Some(tid) = account_id {
                 update_plan_status(&pool, tid, "past_due").await?;
+                // Send urgent notification for failed payment
+                if let Err(e) = crate::notifications::create_payment_failed_notification(&pool, tid).await {
+                    tracing::error!("Failed to create payment failed notification: {}", e);
+                }
             }
         }
         _ => {
