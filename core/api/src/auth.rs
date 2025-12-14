@@ -563,7 +563,7 @@ pub async fn change_password(
 
     match update_result {
         Ok(_) => {
-            tracing::info!("Password changed successfully for account: {}", account_id);
+            tracing::debug!("Password changed successfully for account: {}", account_id);
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Password changed successfully"
             }))).into_response()

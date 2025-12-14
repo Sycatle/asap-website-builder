@@ -235,21 +235,25 @@ function AccountSettings({
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(user.avatar)
   const [showFilePicker, setShowFilePicker] = useState(false)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
+    // Reset error
+    setAvatarError(null)
+
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Veuillez sélectionner une image')
+      setAvatarError('Veuillez sélectionner une image')
       return
     }
 
     // Validate file size (1MB max)
     if (file.size > 1024 * 1024) {
-      alert('L\'image doit faire moins de 1MB')
+      setAvatarError('L\'image doit faire moins de 1MB')
       return
     }
 
@@ -269,13 +273,14 @@ function AccountSettings({
       })
     } catch (error) {
       console.error('Failed to upload avatar:', error)
-      alert('Erreur lors du téléchargement de l\'avatar')
+      setAvatarError('Erreur lors du téléchargement de l\'avatar')
     } finally {
       setIsUploadingAvatar(false)
     }
   }
 
   const handleFileSelect = async (file: FileMetadata) => {
+    setAvatarError(null)
     const avatarFileUrl = `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${file.id}`
     setAvatarUrl(avatarFileUrl)
     
@@ -286,7 +291,7 @@ function AccountSettings({
       })
     } catch (error) {
       console.error('Failed to update avatar:', error)
-      alert('Erreur lors de la mise à jour de l\'avatar')
+      setAvatarError('Erreur lors de la mise à jour de l\'avatar')
     }
   }
 
@@ -301,44 +306,51 @@ function AccountSettings({
       <Separator />
 
       {/* Avatar */}
-      <div className="flex items-center gap-4">
-        <Avatar className="h-20 w-20">
-          <AvatarImage src={avatarUrl} alt={user.name} />
-          <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-            {getInitials(formData.name || user.email)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploadingAvatar}
-            >
-              {isUploadingAvatar && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
-              Uploader
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setShowFilePicker(true)}
-              disabled={isUploadingAvatar}
-            >
-              Choisir du cloud
-            </Button>
+      <div className="space-y-3">
+        <div className="flex items-center gap-4">
+          <Avatar className="h-20 w-20">
+            <AvatarImage src={avatarUrl} alt={user.name} />
+            <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
+              {getInitials(formData.name || user.email)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingAvatar}
+              >
+                {isUploadingAvatar && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+                Uploader
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowFilePicker(true)}
+                disabled={isUploadingAvatar}
+              >
+                Choisir du cloud
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              JPG, PNG ou GIF. 1MB max.
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground">
-            JPG, PNG ou GIF. 1MB max.
-          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarUpload}
+            className="hidden"
+          />
         </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleAvatarUpload}
-          className="hidden"
-        />
+        {avatarError && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+            {avatarError}
+          </div>
+        )}
       </div>
 
       {/* Form fields */}
@@ -409,7 +421,6 @@ function AccountSettings({
 
 // Security Settings Tab
 function SecuritySettings() {
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -455,7 +466,11 @@ function SecuritySettings() {
         confirmPassword: '',
       })
     } catch (error: any) {
-      setPasswordError(error.message || 'Erreur lors du changement de mot de passe')
+      // Sanitize error messages - only show safe generic messages
+      const errorMsg = error.message?.includes('incorrect') 
+        ? 'Le mot de passe actuel est incorrect'
+        : 'Erreur lors du changement de mot de passe'
+      setPasswordError(errorMsg)
     } finally {
       setIsChangingPassword(false)
     }
