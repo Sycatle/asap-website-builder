@@ -91,38 +91,38 @@ export function FilePickerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="w-[calc(100%-2rem)] max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogTitle className="text-base sm:text-lg">{title}</DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm">{description}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div className="flex items-center justify-center py-6 sm:py-8">
+              <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground" />
             </div>
           ) : files.length === 0 ? (
-            <div className="text-center py-8 text-sm text-muted-foreground">
+            <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-muted-foreground">
               Aucun fichier trouvé
             </div>
           ) : (
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="grid grid-cols-2 gap-3">
+            <ScrollArea className="h-[280px] xs:h-[320px] sm:h-[400px] pr-3 sm:pr-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                 {files.map((file) => (
                   <button
                     key={file.id}
                     onClick={() => setSelectedFileId(file.id)}
                     className={cn(
-                      "relative flex flex-col items-start gap-2 p-3 rounded-lg border-2 transition-colors text-left",
+                      "relative flex flex-col items-start gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-lg border-2 transition-colors text-left",
                       selectedFileId === file.id
                         ? "border-primary bg-primary/5"
                         : "border-border hover:border-primary/50 hover:bg-muted/50"
                     )}
                   >
                     {selectedFileId === file.id && (
-                      <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                        <Check className="h-3 w-3" />
+                      <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 h-4 w-4 sm:h-5 sm:w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                        <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                       </div>
                     )}
                     
@@ -141,8 +141,8 @@ export function FilePickerDialog({
                     )}
                     
                     <div className="w-full min-w-0">
-                      <p className="text-sm font-medium truncate">{file.filename}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs sm:text-sm font-medium truncate">{file.filename}</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
                         {formatBytes(file.size_bytes)}
                       </p>
                     </div>
@@ -152,11 +152,11 @@ export function FilePickerDialog({
             </ScrollArea>
           )}
 
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex flex-col-reverse xs:flex-row justify-end gap-2 pt-3 sm:pt-4 border-t">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="h-9 sm:h-10 text-sm">
               Annuler
             </Button>
-            <Button onClick={handleSelect} disabled={!selectedFileId}>
+            <Button onClick={handleSelect} disabled={!selectedFileId} className="h-9 sm:h-10 text-sm">
               Sélectionner
             </Button>
           </div>

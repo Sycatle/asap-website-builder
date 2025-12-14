@@ -191,10 +191,31 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[80vh] max-h-[700px] p-0 gap-0 flex flex-col [&>button]:z-10">
-        <div className="flex h-full min-h-0">
-          {/* Sidebar */}
-          <div className="w-56 border-r bg-muted/30 p-4 flex flex-col shrink-0">
+      <DialogContent className="max-w-[calc(100%-1rem)] sm:max-w-4xl h-[90vh] sm:h-[80vh] max-h-[700px] p-0 gap-0 flex flex-col [&>button]:z-10 overflow-hidden">
+        <div className="flex flex-col sm:flex-row h-full min-h-0">
+          {/* Mobile Tab Bar - Top on mobile */}
+          <div className="sm:hidden border-b bg-muted/30 p-2 shrink-0 overflow-x-auto">
+            <div className="flex gap-1 min-w-max">
+              {settingsTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap",
+                    activeTab === tab.id
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <tab.icon className="h-3.5 w-3.5" />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Desktop Sidebar - Hidden on mobile */}
+          <div className="hidden sm:flex w-56 border-r bg-muted/30 p-4 flex-col shrink-0">
             <DialogHeader className="pb-4">
               <DialogTitle className="text-lg">Paramètres</DialogTitle>
             </DialogHeader>
@@ -219,7 +240,7 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
 
           {/* Content */}
           <div className="flex-1 flex flex-col min-h-0 min-w-0">
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               {activeTab === 'account' && (
                 <AccountSettings
                   user={user}
@@ -239,11 +260,11 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
 
             {/* Footer with save button */}
             {activeTab === 'account' && (
-              <div className="border-t p-4 flex justify-end gap-2 bg-background">
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <div className="border-t p-3 sm:p-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 bg-background">
+                <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
                   Annuler
                 </Button>
-                <Button onClick={handleSave} disabled={isSaving}>
+                <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Enregistrer
                 </Button>
@@ -396,10 +417,10 @@ function AccountSettings({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Informations du compte</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="text-base sm:text-lg font-medium">Informations du compte</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Gérez vos informations personnelles.
         </p>
       </div>
@@ -407,20 +428,21 @@ function AccountSettings({
 
       {/* Avatar */}
       <div className="space-y-3">
-        <div className="flex items-center gap-4">
-          <Avatar className="h-20 w-20">
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
             <AvatarImage src={avatarUrl} alt={user.name} />
-            <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
+            <AvatarFallback className="text-xl sm:text-2xl bg-primary text-primary-foreground">
               {getInitials(formData.name || user.email)}
             </AvatarFallback>
           </Avatar>
-          <div className="space-y-2">
-            <div className="flex gap-2">
+          <div className="space-y-2 text-center sm:text-left">
+            <div className="flex flex-col xs:flex-row gap-2">
               <Button 
                 variant="outline" 
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploadingAvatar}
+                className="text-xs sm:text-sm"
               >
                 {isUploadingAvatar && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
                 Uploader
@@ -430,11 +452,12 @@ function AccountSettings({
                 size="sm"
                 onClick={() => setShowFilePicker(true)}
                 disabled={isUploadingAvatar}
+                className="text-xs sm:text-sm"
               >
                 Choisir du cloud
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
               JPG, PNG ou GIF. 1MB max.
             </p>
           </div>
@@ -454,34 +477,35 @@ function AccountSettings({
       </div>
 
       {/* Form fields */}
-      <div className="grid gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="name">Nom d'affichage</Label>
+      <div className="grid gap-3 sm:gap-4">
+        <div className="grid gap-1.5 sm:gap-2">
+          <Label htmlFor="name" className="text-sm">Nom d'affichage</Label>
           <Input
             id="name"
             value={formData.name}
             onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             placeholder="Votre nom"
+            className="h-9 sm:h-10 text-sm"
           />
         </div>
-        <div className="grid gap-2">
-          <Label htmlFor="email">Email</Label>
+        <div className="grid gap-1.5 sm:gap-2">
+          <Label htmlFor="email" className="text-sm">Email</Label>
           <Input
             id="email"
             type="email"
             value={formData.email}
             disabled
-            className="bg-muted"
+            className="bg-muted h-9 sm:h-10 text-sm"
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
             Contactez le support pour modifier votre email.
           </p>
         </div>
       </div>
 
       {/* Danger Zone */}
-      <div className="pt-6">
-        <h4 className="text-sm font-medium text-destructive mb-4">Zone de danger</h4>
+      <div className="pt-4 sm:pt-6">
+        <h4 className="text-xs sm:text-sm font-medium text-destructive mb-3 sm:mb-4">Zone de danger</h4>
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="destructive" size="sm">
@@ -590,10 +614,10 @@ function SecuritySettings() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Sécurité</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="text-base sm:text-lg font-medium">Sécurité</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Gérez la sécurité de votre compte.
         </p>
       </div>
@@ -601,16 +625,16 @@ function SecuritySettings() {
 
       {/* Password */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
             <Key className="h-4 w-4" />
             Mot de passe
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             Changez votre mot de passe régulièrement pour sécuriser votre compte.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 sm:space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
           {passwordSuccess && (
             <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 flex items-center gap-2">
               <Check className="h-4 w-4" />
@@ -622,8 +646,8 @@ function SecuritySettings() {
               {passwordError}
             </div>
           )}
-          <div className="grid gap-2">
-            <Label htmlFor="current-password">Mot de passe actuel</Label>
+          <div className="grid gap-1.5 sm:gap-2">
+            <Label htmlFor="current-password" className="text-sm">Mot de passe actuel</Label>
             <Input
               id="current-password"
               type="password"
@@ -631,10 +655,11 @@ function SecuritySettings() {
               value={passwordData.currentPassword}
               onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
               disabled={isChangingPassword}
+              className="h-9 sm:h-10 text-sm"
             />
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="new-password">Nouveau mot de passe</Label>
+          <div className="grid gap-1.5 sm:gap-2">
+            <Label htmlFor="new-password" className="text-sm">Nouveau mot de passe</Label>
             <Input
               id="new-password"
               type="password"
@@ -642,13 +667,14 @@ function SecuritySettings() {
               value={passwordData.newPassword}
               onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
               disabled={isChangingPassword}
+              className="h-9 sm:h-10 text-sm"
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
               Minimum 8 caractères
             </p>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="confirm-password">Confirmer le mot de passe</Label>
+          <div className="grid gap-1.5 sm:gap-2">
+            <Label htmlFor="confirm-password" className="text-sm">Confirmer le mot de passe</Label>
             <Input
               id="confirm-password"
               type="password"
@@ -656,58 +682,59 @@ function SecuritySettings() {
               value={passwordData.confirmPassword}
               onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
               disabled={isChangingPassword}
+              className="h-9 sm:h-10 text-sm"
             />
           </div>
-          <Button onClick={handlePasswordChange} disabled={isChangingPassword}>
+          <Button onClick={handlePasswordChange} disabled={isChangingPassword} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
             {isChangingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Mettre à jour le mot de passe
+            Mettre à jour
           </Button>
         </CardContent>
       </Card>
 
       {/* Two-Factor */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
             <Shield className="h-4 w-4" />
             Authentification à deux facteurs
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             Ajoutez une couche de sécurité supplémentaire à votre compte.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <p className="text-sm font-medium">2FA par application</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Utilisez Google Authenticator ou similaire
               </p>
             </div>
-            <Button variant="outline">Configurer</Button>
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">Configurer</Button>
           </div>
         </CardContent>
       </Card>
 
       {/* Sessions */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Sessions actives</CardTitle>
-          <CardDescription>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-sm sm:text-base">Sessions actives</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             Gérez vos sessions connectées.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
           <div className="space-y-3">
-            <div className="flex items-center justify-between py-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2">
               <div>
                 <p className="text-sm font-medium">Chrome sur Linux</p>
-                <p className="text-xs text-muted-foreground">Actif maintenant • France</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Actif maintenant • France</p>
               </div>
-              <Badge variant="secondary">Session actuelle</Badge>
+              <Badge variant="secondary" className="w-fit text-xs">Session actuelle</Badge>
             </div>
           </div>
-          <Button variant="outline" size="sm" className="mt-4">
+          <Button variant="outline" size="sm" className="mt-4 w-full sm:w-auto text-xs sm:text-sm">
             Déconnecter toutes les autres sessions
           </Button>
         </CardContent>
@@ -719,10 +746,10 @@ function SecuritySettings() {
 // Billing Settings Tab
 function BillingSettings() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Facturation</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="text-base sm:text-lg font-medium">Facturation</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Gérez vos informations de paiement et historique.
         </p>
       </div>
@@ -730,26 +757,26 @@ function BillingSettings() {
 
       {/* Payment Method */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Moyen de paiement</CardTitle>
-          <CardDescription>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-sm sm:text-base">Moyen de paiement</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             Votre carte enregistrée pour les renouvellements.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between p-3 border rounded-lg">
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 border rounded-lg">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-12 bg-gradient-to-r from-blue-600 to-blue-400 rounded flex items-center justify-center text-white text-xs font-bold">
+              <div className="h-8 w-12 bg-gradient-to-r from-blue-600 to-blue-400 rounded flex items-center justify-center text-white text-xs font-bold shrink-0">
                 VISA
               </div>
               <div>
                 <p className="text-sm font-medium">•••• •••• •••• 4242</p>
-                <p className="text-xs text-muted-foreground">Expire 12/26</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Expire 12/26</p>
               </div>
             </div>
-            <Button variant="ghost" size="sm">Modifier</Button>
+            <Button variant="ghost" size="sm" className="w-full sm:w-auto">Modifier</Button>
           </div>
-          <Button variant="outline" size="sm" className="mt-3">
+          <Button variant="outline" size="sm" className="mt-3 w-full sm:w-auto">
             Ajouter une carte
           </Button>
         </CardContent>
@@ -757,24 +784,24 @@ function BillingSettings() {
 
       {/* Billing Address */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Adresse de facturation</CardTitle>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-sm sm:text-base">Adresse de facturation</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-3">
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+          <p className="text-xs sm:text-sm text-muted-foreground mb-3">
             Aucune adresse enregistrée
           </p>
-          <Button variant="outline" size="sm">Ajouter une adresse</Button>
+          <Button variant="outline" size="sm" className="w-full sm:w-auto">Ajouter une adresse</Button>
         </CardContent>
       </Card>
 
       {/* Invoice History */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Historique des factures</CardTitle>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-sm sm:text-base">Historique des factures</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="text-sm text-muted-foreground text-center py-8">
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+          <div className="text-xs sm:text-sm text-muted-foreground text-center py-6 sm:py-8">
             Aucune facture pour le moment
           </div>
         </CardContent>
@@ -886,10 +913,10 @@ function CloudSettings({ quota, files, isLoading }: CloudSettingsProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Stockage Cloud</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="text-base sm:text-lg font-medium">Stockage Cloud</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Gérez votre espace de stockage.
         </p>
       </div>
@@ -897,28 +924,28 @@ function CloudSettings({ quota, files, isLoading }: CloudSettingsProps) {
 
       {/* Storage Usage */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
             <Cloud className="h-4 w-4" />
             Utilisation du stockage
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 sm:space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
           <div className="space-y-2">
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-xs sm:text-sm">
               <span>{quota ? formatBytes(quota.total_size_used) : '0 B'} utilisés</span>
               <span>{quota ? formatBytes(quota.quota_limit) : '0 B'} total</span>
             </div>
             <Progress value={quota?.usage_percentage || 0} className="h-2" />
           </div>
-          <div className="grid grid-cols-2 gap-4 pt-2">
-            <div className="p-3 border rounded-lg">
-              <p className="text-2xl font-bold">{files.length}</p>
-              <p className="text-xs text-muted-foreground">Fichiers</p>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-2">
+            <div className="p-2.5 sm:p-3 border rounded-lg">
+              <p className="text-xl sm:text-2xl font-bold">{files.length}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Fichiers</p>
             </div>
-            <div className="p-3 border rounded-lg">
-              <p className="text-2xl font-bold">{quota ? formatBytes(quota.remaining) : '0 B'}</p>
-              <p className="text-xs text-muted-foreground">Disponible</p>
+            <div className="p-2.5 sm:p-3 border rounded-lg">
+              <p className="text-xl sm:text-2xl font-bold">{quota ? formatBytes(quota.remaining) : '0 B'}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Disponible</p>
             </div>
           </div>
         </CardContent>
@@ -927,16 +954,16 @@ function CloudSettings({ quota, files, isLoading }: CloudSettingsProps) {
       {/* Storage Breakdown */}
       {breakdown.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Répartition</CardTitle>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-sm sm:text-base">Répartition</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            <div className="space-y-2.5 sm:space-y-3">
               {breakdown.map((item) => (
-                <div key={item.label} className="flex items-center gap-3">
-                  <div className={cn("h-3 w-3 rounded-full", item.color)} />
-                  <span className="text-sm flex-1">{item.label}</span>
-                  <span className="text-sm text-muted-foreground">{item.size}</span>
+                <div key={item.label} className="flex items-center gap-2.5 sm:gap-3">
+                  <div className={cn("h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full", item.color)} />
+                  <span className="text-xs sm:text-sm flex-1">{item.label}</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">{item.size}</span>
                 </div>
               ))}
             </div>
@@ -944,7 +971,7 @@ function CloudSettings({ quota, files, isLoading }: CloudSettingsProps) {
         </Card>
       )}
 
-      <Button variant="outline" className="w-full" asChild>
+      <Button variant="outline" className="w-full h-9 sm:h-10 text-sm" asChild>
         <a href="/app/cloud">Gérer mes fichiers</a>
       </Button>
     </div>
@@ -1029,10 +1056,10 @@ function PlanSettings({ quota, websites, modules, isLoading }: PlanSettingsProps
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Abonnement</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="text-base sm:text-lg font-medium">Abonnement</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Gérez votre plan et vos limites.
         </p>
       </div>
@@ -1040,36 +1067,36 @@ function PlanSettings({ quota, websites, modules, isLoading }: PlanSettingsProps
 
       {/* Current Plan */}
       <Card className="border-primary">
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex items-start sm:items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
                 Plan {plan.name}
-                <Badge>Actif</Badge>
+                <Badge className="text-[10px] sm:text-xs">Actif</Badge>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 {plan.price === '0' ? 'Gratuit pour toujours' : `${plan.price}€ / mois`}
               </CardDescription>
             </div>
-            <Sparkles className="h-8 w-8 text-primary" />
+            <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-primary shrink-0" />
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-2 text-sm">
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+          <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
             <div className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-primary" />
+              <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
               <span>{plan.sitesLimit} site publié</span>
             </div>
             <div className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-primary" />
+              <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
               <span>{formatBytes(plan.storageLimit)} de stockage</span>
             </div>
             <div className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-primary" />
+              <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
               <span>{plan.tokensLimit.toLocaleString()} tokens IA / mois</span>
             </div>
             <div className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-primary" />
+              <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
               <span>Sous-domaine asap.cool</span>
             </div>
           </div>
@@ -1078,26 +1105,26 @@ function PlanSettings({ quota, websites, modules, isLoading }: PlanSettingsProps
 
       {/* Usage */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Utilisation ce mois</CardTitle>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-sm sm:text-base">Utilisation ce mois</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 sm:space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
           <div>
-            <div className="flex justify-between text-sm mb-1">
+            <div className="flex justify-between text-xs sm:text-sm mb-1">
               <span>Sites</span>
               <span>{sitesUsed} / {plan.sitesLimit}</span>
             </div>
             <Progress value={Math.min(sitesPercent, 100)} className="h-2" />
           </div>
           <div>
-            <div className="flex justify-between text-sm mb-1">
+            <div className="flex justify-between text-xs sm:text-sm mb-1">
               <span>Stockage</span>
               <span>{quota ? formatBytes(quota.total_size_used) : '0 B'} / {formatBytes(plan.storageLimit)}</span>
             </div>
             <Progress value={storagePercent} className="h-2" />
           </div>
           <div>
-            <div className="flex justify-between text-sm mb-1">
+            <div className="flex justify-between text-xs sm:text-sm mb-1">
               <span>Modules actifs</span>
               <span>{enabledModules}</span>
             </div>
@@ -1106,11 +1133,11 @@ function PlanSettings({ quota, websites, modules, isLoading }: PlanSettingsProps
       </Card>
 
       {/* Actions */}
-      <div className="flex gap-3">
-        <Button className="flex-1">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        <Button className="flex-1 h-9 sm:h-10 text-sm">
           Passer au plan Pro
         </Button>
-        <Button variant="outline" asChild>
+        <Button variant="outline" className="h-9 sm:h-10 text-sm" asChild>
           <a href="/#pricing">Voir les plans</a>
         </Button>
       </div>
