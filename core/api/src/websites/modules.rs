@@ -208,6 +208,16 @@ pub async fn activate_module(
 
     match result {
         Ok(_) => {
+            // Get module name for notification
+            let module_name: Option<String> = sqlx::query_scalar(
+                "SELECT name FROM modules WHERE id = $1"
+            )
+            .bind(module_uuid)
+            .fetch_optional(&pool)
+            .await
+            .ok()
+            .flatten();
+
             let event_payload = serde_json::json!({
                 "website_id": website_id,
                 "module_id": payload.module_id
@@ -220,6 +230,13 @@ pub async fn activate_module(
             .bind(&event_payload)
             .execute(&pool)
             .await;
+
+            // Create notification for module activated
+            if let Some(name) = module_name {
+                if let Err(e) = crate::notifications::create_module_activated_notification(&pool, account_id, &name).await {
+                    tracing::error!("Failed to create module activated notification: {}", e);
+                }
+            }
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Module activated successfully"
@@ -332,6 +349,23 @@ pub async fn deactivate_module(
     };
 
     use crate::queries;
+    
+    // Get module name before deletion for notification
+    // Try both wm.id (row id) and wm.module_id to match how deactivate_website_module works
+    let module_name: Option<String> = sqlx::query_scalar(
+        r#"
+        SELECT m.name FROM modules m
+        JOIN website_modules wm ON wm.module_id = m.id
+        WHERE wm.website_id = $1 AND (wm.id = $2 OR wm.module_id = $2)
+        "#
+    )
+    .bind(website_uuid)
+    .bind(module_uuid)
+    .fetch_optional(&pool)
+    .await
+    .ok()
+    .flatten();
+    
     let result = queries::deactivate_website_module(
         &pool,
         website_uuid,
@@ -353,6 +387,13 @@ pub async fn deactivate_module(
             .bind(&event_payload)
             .execute(&pool)
             .await;
+
+            // Create notification for module deactivated
+            if let Some(name) = module_name {
+                if let Err(e) = crate::notifications::create_module_deactivated_notification(&pool, account_id, &name).await {
+                    tracing::error!("Failed to create module deactivated notification: {}", e);
+                }
+            }
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Module deactivated successfully"
