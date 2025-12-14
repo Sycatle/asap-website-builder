@@ -15,6 +15,7 @@ pub mod helpers;
 pub mod billing;
 pub mod webhooks;
 pub mod payment_checks;
+pub mod notifications;
 
 pub use routes::create_router;
 pub use asap_core_shared::{Claims, SharedConfig};

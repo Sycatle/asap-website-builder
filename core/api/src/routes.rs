@@ -85,6 +85,20 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
         .route("/files/quota/usage", get(crate::files::get_quota))
         // Billing routes (authenticated)
         .route("/billing/checkout-session", post(crate::billing::create_checkout_session))
+        // Notifications routes
+        .route("/notifications", get(crate::notifications::list_notifications))
+        .route("/notifications/unread-count", get(crate::notifications::get_unread_count))
+        .route("/notifications/mark-read", post(crate::notifications::mark_as_read))
+        .route("/notifications/:notification_id", get(crate::notifications::get_notification))
+        .route("/notifications/:notification_id/read", post(crate::notifications::mark_notification_read))
+        .route("/notifications/:notification_id", delete(crate::notifications::delete_notification))
+        // Push notifications routes
+        .route("/notifications/push/subscribe", post(crate::notifications::subscribe_push))
+        .route("/notifications/push/unsubscribe", post(crate::notifications::unsubscribe_push))
+        .route("/notifications/push/vapid-key", get(crate::notifications::get_vapid_public_key))
+        // Notification settings routes
+        .route("/notifications/settings", get(crate::notifications::get_notification_settings))
+        .route("/notifications/settings", put(crate::notifications::update_notification_settings))
         .layer(Extension(storage_service.clone()))
         .layer(Extension(payment_gateway.clone()))
         .layer(Extension(config.clone()))
