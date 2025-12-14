@@ -111,11 +111,20 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
     setIsLoading(true)
     try {
       // Load independent data in parallel
-      const [quotaData, filesData, websitesData] = await Promise.all([
+      const [quotaData, filesData, websitesData, accountData] = await Promise.all([
         filesAPI.getQuota().catch(() => null),
         filesAPI.list().catch(() => []),
         websitesAPI.list().catch(() => []),
+        accountsAPI.getAccount(user.id).catch(() => null),
       ])
+      
+      // Update form data with account data if available
+      if (accountData?.data) {
+        setFormData(prev => ({
+          ...prev,
+          name: accountData.data.name || prev.name,
+        }))
+      }
       
       // Load modules for the first website
       let modulesData: WebsiteModule[] = []
@@ -137,9 +146,24 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500))
-      onUserUpdate?.(formData)
+      // First get current account data to merge
+      const currentAccount = await accountsAPI.getAccount(user.id)
+      const currentData = currentAccount.data || {}
+      
+      // Save to API with merged data
+      await accountsAPI.updateAccountData(user.id, {
+        data: { ...currentData, name: formData.name }
+      })
+      
+      // Update parent state with the new name
+      if (onUserUpdate) {
+        onUserUpdate({ name: formData.name })
+      }
+      
+      // Close modal on success
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Failed to save account data:', error)
     } finally {
       setIsSaving(false)
     }
@@ -191,6 +215,7 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
                   formData={formData}
                   setFormData={setFormData}
                   getInitials={getInitials}
+                  onAvatarUpdate={(avatarUrl) => onUserUpdate?.({ avatar: avatarUrl })}
                 />
               )}
               {activeTab === 'security' && <SecuritySettings />}
@@ -226,17 +251,47 @@ function AccountSettings({
   formData,
   setFormData,
   getInitials,
+  onAvatarUpdate,
 }: {
   user: UserData
   formData: { name: string; email: string }
   setFormData: React.Dispatch<React.SetStateAction<{ name: string; email: string }>>
   getInitials: (name: string) => string
+  onAvatarUpdate?: (avatarUrl: string) => void
 }) {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(user.avatar)
   const [showFilePicker, setShowFilePicker] = useState(false)
   const [avatarError, setAvatarError] = useState<string | null>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+  
+  // Helper to construct file URL with auth token
+  const getFileUrl = (fileId: string) => {
+    const token = localStorage.getItem('auth_token')
+    return `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${fileId}?token=${token}`
+  }
+  
+  // Load avatar from account data on mount
+  useEffect(() => {
+    const loadAvatar = async () => {
+      try {
+        const accountData = await accountsAPI.getAccount(user.id)
+        if (accountData.data?.avatar) {
+          // Extract file ID from stored URL and add token for display
+          const storedUrl = accountData.data.avatar
+          const fileIdMatch = storedUrl.match(/\/files\/([a-f0-9-]+)/)
+          if (fileIdMatch) {
+            setAvatarUrl(getFileUrl(fileIdMatch[1]))
+          } else {
+            setAvatarUrl(storedUrl)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load avatar:', error)
+      }
+    }
+    loadAvatar()
+  }, [user.id])
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -263,14 +318,21 @@ function AccountSettings({
       // Upload the file
       const uploadedFile = await filesAPI.upload(file)
       
-      // Update avatar in account data
-      const avatarFileUrl = `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${uploadedFile.id}`
-      setAvatarUrl(avatarFileUrl)
+      // Update avatar in account data (store file ID, display with token)
+      const avatarFileId = uploadedFile.id
+      const displayUrl = getFileUrl(avatarFileId)
+      setAvatarUrl(displayUrl)
       
-      // Save to account data
+      // Save file ID to account data (not the full URL with token)
+      const avatarStorageUrl = `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${avatarFileId}`
+      const currentAccount = await accountsAPI.getAccount(user.id)
+      const currentData = currentAccount.data || {}
       await accountsAPI.updateAccountData(user.id, {
-        data: { avatar: avatarFileUrl }
+        data: { ...currentData, avatar: avatarStorageUrl }
       })
+      
+      // Notify parent of avatar change
+      onAvatarUpdate?.(displayUrl)
     } catch (error) {
       console.error('Failed to upload avatar:', error)
       setAvatarError('Erreur lors du téléchargement de l\'avatar')
@@ -281,14 +343,20 @@ function AccountSettings({
 
   const handleFileSelect = async (file: FileMetadata) => {
     setAvatarError(null)
-    const avatarFileUrl = `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${file.id}`
-    setAvatarUrl(avatarFileUrl)
+    const displayUrl = getFileUrl(file.id)
+    setAvatarUrl(displayUrl)
     
-    // Save to account data
+    // Save file URL to account data (without token for storage)
+    const avatarStorageUrl = `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${file.id}`
     try {
+      const currentAccount = await accountsAPI.getAccount(user.id)
+      const currentData = currentAccount.data || {}
       await accountsAPI.updateAccountData(user.id, {
-        data: { avatar: avatarFileUrl }
+        data: { ...currentData, avatar: avatarStorageUrl }
       })
+      
+      // Notify parent of avatar change
+      onAvatarUpdate?.(displayUrl)
     } catch (error) {
       console.error('Failed to update avatar:', error)
       setAvatarError('Erreur lors de la mise à jour de l\'avatar')
