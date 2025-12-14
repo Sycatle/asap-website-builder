@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { modulesAPI, websitesAPI, type WebsiteModule } from '../lib/api';
+import { useMemo } from 'react';
+import type { WebsiteModule } from '../lib/api';
+import { useWebsites, useWebsiteModules } from '../hooks/useCache';
 
 // Icon mapping for common module icons
 const moduleIcons: Record<string, React.ReactNode> = {
@@ -48,34 +49,21 @@ function getModuleIcon(moduleSlug: string): React.ReactNode {
 }
 
 export default function DynamicSidebar() {
-  const [modules, setModules] = useState<WebsiteModule[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Use cache hooks for real-time updates - when modules change elsewhere, sidebar updates automatically
+  const { websites, isLoading: websitesLoading } = useWebsites();
+  const currentWebsiteId = websites.length > 0 ? websites[0].id : null;
+  const { modules: allModules, isLoading: modulesLoading } = useWebsiteModules(currentWebsiteId);
+  
+  // Filter to get only enabled modules
+  const modules = useMemo(() => 
+    allModules.filter(m => m.enabled), 
+    [allModules]
+  );
 
-  useEffect(() => {
-    const loadModules = async () => {
-      try {
-        // Get current website first
-        const websites = await websitesAPI.list();
-        if (websites.length > 0) {
-          const data = await modulesAPI.listForWebsite(websites[0].id);
-          // Filter only enabled modules
-          const enabledModules = data.filter(m => m.enabled);
-          setModules(enabledModules);
-        }
-      } catch (err) {
-        console.error('Failed to load website modules:', err);
-        setError('Erreur de chargement');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadModules();
-  }, []);
+  const loading = websitesLoading || modulesLoading;
 
   // Don't render anything if loading or no modules
-  if (loading || error || modules.length === 0) {
+  if (loading || modules.length === 0) {
     return null;
   }
 

@@ -12,7 +12,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { modulesAPI, websitesAPI, type WebsiteModule } from "@/lib/api"
+import { type WebsiteModule } from "@/lib/api"
+import { useWebsites, useWebsiteModules } from "@/hooks/useCache"
 import { HeaderUser } from "@/components/header-user"
 import { useKeyboardShortcuts, KeyboardShortcut, getModifierKey } from "@/hooks/useKeyboardShortcuts"
 import { toast } from "sonner"
@@ -55,9 +56,19 @@ const shortcuts = [
 ]
 
 export function AppShell({ children, title, breadcrumbs = [] }: AppShellProps) {
-  const [modules, setModules] = useState<WebsiteModule[]>([])
   const [isAuthenticated, setIsAuthenticated] = useState(true)
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
+
+  // Use cache hooks for websites and modules - this ensures sidebar updates when modules change
+  const { websites, isLoading: websitesLoading } = useWebsites()
+  const currentWebsiteId = websites.length > 0 ? websites[0].id : null
+  const { modules: allModules, isLoading: modulesLoading } = useWebsiteModules(currentWebsiteId)
+  
+  // Filter to get only enabled modules for sidebar
+  const modules = React.useMemo(() => 
+    allModules.filter(m => m.enabled), 
+    [allModules]
+  )
 
   useEffect(() => {
     // Check authentication
@@ -67,21 +78,6 @@ export function AppShell({ children, title, breadcrumbs = [] }: AppShellProps) {
       setIsAuthenticated(false)
       return
     }
-
-    // Load modules for sidebar
-    const loadModules = async () => {
-      try {
-        const websites = await websitesAPI.list()
-        if (websites.length > 0) {
-          const data = await modulesAPI.listForWebsite(websites[0].id)
-          setModules(data.filter(m => m.enabled))
-        }
-      } catch (err) {
-        console.error('Failed to load modules:', err)
-      }
-    }
-
-    loadModules()
   }, [])
 
   if (!isAuthenticated) {
