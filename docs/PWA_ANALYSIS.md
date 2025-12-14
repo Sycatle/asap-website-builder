@@ -319,20 +319,22 @@ const browserInfo = {
 
 ## 💡 Recommandations d'optimisation
 
-### 1. Screenshots manquants ⚠️
+### 1. Screenshots manquants ⚠️ PRIORITÉ HAUTE
 
 **Problème :** Le manifest référence des screenshots qui n'existent pas.
 
 ```json
 "screenshots": [
   {
-    "src": "/screenshots/desktop.png",  // ❌ N'existe pas
-    "src": "/screenshots/mobile.png"     // ❌ N'existe pas
+    "src": "/screenshots/desktop.png",  // ❌ N'existe pas - CAUSE 404
+    "src": "/screenshots/mobile.png"     // ❌ N'existe pas - CAUSE 404
   }
 ]
 ```
 
-**Solution :** Créer les screenshots réels
+**Impact :** Réduit le score PWA et peut empêcher l'installation sur certains navigateurs.
+
+**Solution :** Créer les screenshots réels AVANT déploiement
 
 ```bash
 mkdir -p apps/web/public/screenshots

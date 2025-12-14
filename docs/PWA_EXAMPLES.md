@@ -493,6 +493,22 @@ interface NetworkState {
   rtt: number;
 }
 
+// Type pour l'API Network Information (expérimentale)
+interface NetworkInformation extends EventTarget {
+  effectiveType?: '4g' | '3g' | '2g' | 'slow-2g';
+  downlink?: number;
+  rtt?: number;
+  saveData?: boolean;
+}
+
+declare global {
+  interface Navigator {
+    connection?: NetworkInformation;
+    mozConnection?: NetworkInformation;
+    webkitConnection?: NetworkInformation;
+  }
+}
+
 export function NetworkStatus() {
   const { isOnline } = usePWA();
   const [networkState, setNetworkState] = useState<NetworkState>({
@@ -504,11 +520,11 @@ export function NetworkStatus() {
   const [showAlert, setShowAlert] = useState(false);
 
   useEffect(() => {
-    // Obtenir les infos réseau si disponibles
+    // Obtenir les infos réseau si disponibles (API expérimentale)
     const updateNetworkInfo = () => {
-      const connection = (navigator as any).connection 
-        || (navigator as any).mozConnection 
-        || (navigator as any).webkitConnection;
+      const connection = navigator.connection 
+        || navigator.mozConnection 
+        || navigator.webkitConnection;
 
       if (connection) {
         setNetworkState({
@@ -841,12 +857,19 @@ export class NotificationManager {
       let subscription = await registration.pushManager.getSubscription();
       
       if (!subscription) {
+        // Récupérer la clé VAPID depuis la config runtime ou variable d'env
+        // NOTE: Cette clé est publique et peut être exposée côté client
+        const vapidKey = import.meta.env.PUBLIC_VAPID_PUBLIC_KEY;
+        
+        if (!vapidKey) {
+          console.error('VAPID public key not configured');
+          return;
+        }
+        
         // S'abonner
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: this.urlBase64ToUint8Array(
-            import.meta.env.PUBLIC_VAPID_PUBLIC_KEY
-          )
+          applicationServerKey: this.urlBase64ToUint8Array(vapidKey)
         });
       }
 

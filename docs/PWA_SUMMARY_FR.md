@@ -236,9 +236,11 @@ Pour faciliter le partage de contacts.
 | Play Store Android | 25€ one-time | 0€ | 25€ |
 | Développement iOS | 30K€ | 0€ | 30K€ |
 | Développement Android | 25K€ | 0€ | 25K€ |
-| Maintenance iOS | 10K€/an | 0€ | 10K€ |
-| Maintenance Android | 10K€/an | 0€ | 10K€ |
+| Maintenance iOS | 10K€/an | 0€* | 10K€ |
+| Maintenance Android | 10K€/an | 0€* | 10K€ |
 | **TOTAL** | **~55K€** | **0€** | **~55K€** |
+
+*La maintenance PWA est incluse dans la maintenance web existante
 
 ### Avantages supplémentaires
 - ✅ **Mises à jour instantanées** (pas d'approbation store)
