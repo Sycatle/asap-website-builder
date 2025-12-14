@@ -3,6 +3,8 @@ import { modulesAPI, websitesAPI } from '../lib/api';
 import type { Module, WebsiteModule, ConfigSchema, ConfigAction } from '../lib/api/modules';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import SchemaRenderer from './SchemaRenderer';
 
 interface ModuleConfigProps {
@@ -398,11 +400,56 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
-          <p className="text-sm text-gray-500">Chargement...</p>
-        </div>
+      <div className="max-w-4xl mx-auto">
+        {/* Back link skeleton */}
+        <Skeleton className="h-4 w-20 mb-6" />
+        
+        {/* Header Card Skeleton */}
+        <Card className="mb-6">
+          <CardHeader className="p-6">
+            <div className="flex items-start gap-4">
+              <Skeleton className="h-14 w-14 rounded-xl shrink-0" />
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-7 w-48" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+                <Skeleton className="h-4 w-full max-w-md" />
+              </div>
+              <div className="flex items-center gap-3 ml-auto">
+                <Skeleton className="h-10 w-28" />
+                <Skeleton className="h-10 w-10 rounded" />
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+
+        {/* Tabs Skeleton */}
+        <Card>
+          <CardHeader className="border-b p-0">
+            <div className="flex gap-2 px-6 py-3">
+              <Skeleton className="h-9 w-28" />
+              <Skeleton className="h-9 w-24" />
+              <Skeleton className="h-9 w-28" />
+            </div>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            {/* Form fields skeleton */}
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-3 w-64" />
+              </div>
+            ))}
+            {/* Action buttons skeleton */}
+            <div className="flex gap-3 pt-4 border-t">
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-10 w-24" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }

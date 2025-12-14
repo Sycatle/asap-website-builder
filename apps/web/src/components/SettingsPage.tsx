@@ -78,13 +78,84 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="space-y-8 max-w-4xl">
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-48" />
-          <Skeleton className="h-5 w-96" />
+        {/* Header Skeleton */}
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-9 w-40" />
+          <Skeleton className="h-5 w-80" />
         </div>
-        <Skeleton className="h-48" />
-        <Skeleton className="h-48" />
-        <Skeleton className="h-48" />
+
+        {/* Account Card Skeleton */}
+        <Card>
+          <CardHeader className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-5" />
+              <Skeleton className="h-5 w-20" />
+            </div>
+            <Skeleton className="h-4 w-48" />
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 w-12" />
+                </div>
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 w-12" />
+                </div>
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </div>
+            <Skeleton className="h-px w-full" />
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-4" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+              <Skeleton className="h-10 w-40" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Notifications Card Skeleton */}
+        <Card>
+          <CardHeader className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-5" />
+              <Skeleton className="h-5 w-28" />
+            </div>
+            <Skeleton className="h-4 w-56" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-56" />
+                </div>
+                <Skeleton className="h-6 w-11 rounded-full" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Danger Zone Skeleton */}
+        <Card>
+          <CardHeader className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-5" />
+              <Skeleton className="h-5 w-28" />
+            </div>
+            <Skeleton className="h-4 w-64" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-10 w-40" />
+          </CardContent>
+        </Card>
       </div>
     );
   }

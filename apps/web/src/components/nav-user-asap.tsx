@@ -28,6 +28,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { Skeleton } from "@/components/ui/skeleton"
 import { SettingsModal } from "@/components/settings-modal"
 import { authAPI, websitesAPI, accountsAPI, type Website } from "@/lib/api"
 
@@ -143,12 +144,13 @@ export function NavUserAsap({ user: initialUser }: NavUserAsapProps) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton size="lg" className="animate-pulse">
-            <div className="h-8 w-8 rounded-lg bg-muted" />
-            <div className="grid flex-1 gap-1">
-              <div className="h-4 w-24 rounded bg-muted" />
-              <div className="h-3 w-32 rounded bg-muted" />
+          <SidebarMenuButton size="lg">
+            <Skeleton className="h-8 w-8 rounded-lg" />
+            <div className="grid flex-1 gap-1.5">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-32" />
             </div>
+            <Skeleton className="h-4 w-4 ml-auto" />
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
