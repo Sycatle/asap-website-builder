@@ -103,9 +103,18 @@ function isImageRequest(url) {
 }
 
 function isFontRequest(url) {
-  return /\.(woff|woff2|ttf|eot|otf)(\?.*)?$/i.test(url) || 
-         url.indexOf('fonts.gstatic.com') !== -1 ||
-         url.indexOf('fonts.googleapis.com') !== -1;
+  // Check file extension first
+  if (/\.(woff|woff2|ttf|eot|otf)(\?.*)?$/i.test(url)) {
+    return true;
+  }
+  // Check for Google Fonts domains (use URL parsing for security)
+  try {
+    var parsedUrl = new URL(url);
+    var hostname = parsedUrl.hostname;
+    return hostname === 'fonts.gstatic.com' || hostname === 'fonts.googleapis.com';
+  } catch (e) {
+    return false;
+  }
 }
 
 function isStaticAsset(url) {
