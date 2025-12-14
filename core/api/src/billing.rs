@@ -37,7 +37,7 @@ pub async fn create_checkout_session(
 
     // Parse account_id from string to Uuid
     let account_id = Uuid::parse_str(&claims.sub).map_err(|_| {
-        (StatusCode::BAD_REQUEST, "Invalid tenant ID").into_response()
+        (StatusCode::BAD_REQUEST, "Invalid account ID").into_response()
     })?;
 
     let user_id = Uuid::parse_str(&claims.sub).map_err(|_| {

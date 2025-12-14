@@ -86,7 +86,7 @@ pub async fn get_website_module_data(
         }
     };
 
-    // Verify website belongs to tenant
+    // Verify website belongs to account
     let website_check = sqlx::query_as::<_, (Uuid,)>(
         "SELECT id FROM websites WHERE id = $1 AND account_id = $2"
     )
@@ -204,7 +204,7 @@ pub async fn execute_module_action(
         }
     };
 
-    // Verify website belongs to tenant
+    // Verify website belongs to account
     let website_check = sqlx::query_as::<_, (Uuid,)>(
         "SELECT id FROM websites WHERE id = $1 AND account_id = $2"
     )
