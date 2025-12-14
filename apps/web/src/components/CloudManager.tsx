@@ -200,9 +200,9 @@ export default function CloudManager() {
   }
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-6 sm:space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:gap-2">
+      <div className="flex flex-col gap-3 sm:gap-2 animate-fade-in-down">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Fichiers</h1>
@@ -217,7 +217,7 @@ export default function CloudManager() {
                 variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('grid')}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 transition-all duration-200"
               >
                 <LayoutGrid className="h-4 w-4" />
               </Button>
@@ -225,7 +225,7 @@ export default function CloudManager() {
                 variant={viewMode === 'list' ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('list')}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 transition-all duration-200"
               >
                 <List className="h-4 w-4" />
               </Button>
@@ -238,12 +238,12 @@ export default function CloudManager() {
               className="hidden"
               id="file-upload"
             />
-            <Button asChild disabled={isUploading} className="h-9 sm:h-10">
+            <Button asChild disabled={isUploading} className="h-9 sm:h-10 group">
               <label htmlFor="file-upload" className="cursor-pointer">
                 {isUploading ? (
                   <Loader2 className="h-4 w-4 mr-1.5 sm:mr-2 animate-spin" />
                 ) : (
-                  <Upload className="h-4 w-4 mr-1.5 sm:mr-2" />
+                  <Upload className="h-4 w-4 mr-1.5 sm:mr-2 transition-transform group-hover:-translate-y-0.5" />
                 )}
                 <span className="text-sm">{isUploading ? 'Upload...' : 'Upload'}</span>
               </label>
@@ -254,7 +254,7 @@ export default function CloudManager() {
 
       {/* Quota Card */}
       {quota && (
-        <Card>
+        <Card className="animate-fade-in-up" style={{ animationDelay: '0.05s', animationFillMode: 'both' }}>
           <CardHeader className="pb-2 px-4 sm:px-6">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm sm:text-base flex items-center gap-2">
@@ -270,7 +270,7 @@ export default function CloudManager() {
           <CardContent className="px-4 sm:px-6">
             <Progress 
               value={quota.usage_percentage} 
-              className={`h-1.5 sm:h-2 ${quota.usage_percentage > 80 ? '[&>div]:bg-destructive' : ''}`}
+              className={`h-1.5 sm:h-2 transition-all duration-500 ${quota.usage_percentage > 80 ? '[&>div]:bg-destructive' : ''}`}
             />
             <p className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-muted-foreground">
               {quota.usage_percentage.toFixed(1)}% utilisé · {formatBytes(quota.remaining)} restant
@@ -281,18 +281,18 @@ export default function CloudManager() {
 
       {/* Files */}
       {files.length === 0 ? (
-        <Card className="border-dashed">
+        <Card className="border-dashed animate-fade-in-up" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted animate-bounce-subtle">
               <Upload className="h-8 w-8 text-muted-foreground" />
             </div>
             <h3 className="mt-4 text-lg font-semibold">Aucun fichier</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               Commencez par uploader votre premier fichier
             </p>
-            <Button className="mt-4" asChild>
+            <Button className="mt-4 group" asChild>
               <label htmlFor="file-upload" className="cursor-pointer">
-                <Upload className="h-4 w-4 mr-2" />
+                <Upload className="h-4 w-4 mr-2 transition-transform group-hover:-translate-y-0.5" />
                 Upload un fichier
               </label>
             </Button>
@@ -301,10 +301,11 @@ export default function CloudManager() {
       ) : viewMode === 'grid' ? (
         /* Grid View */
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
-          {files.map((file) => (
+          {files.map((file, index) => (
             <Card
               key={file.id}
-              className="group cursor-pointer hover:shadow-md transition-all hover:border-primary/50 overflow-hidden"
+              className="group cursor-pointer hover:shadow-lg transition-all duration-300 hover:border-primary/50 hover:-translate-y-1 overflow-hidden animate-fade-in-up"
+              style={{ animationDelay: `${Math.min(index * 0.03, 0.3)}s`, animationFillMode: 'both' }}
               onClick={() => setPreviewFile(file)}
             >
               {/* Preview Thumbnail */}
@@ -313,24 +314,24 @@ export default function CloudManager() {
                   <img
                     src={getFileUrl(file.id)}
                     alt={file.filename}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     loading="lazy"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
+                  <div className="w-full h-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
                     {getFileIcon(file.mime_type, "h-8 w-8 sm:h-12 sm:w-12")}
                   </div>
                 )}
                 {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Eye className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                  <Eye className="h-5 w-5 sm:h-6 sm:w-6 text-white transform scale-0 group-hover:scale-100 transition-transform duration-300" />
                 </div>
               </div>
               {/* File Info */}
               <CardContent className="p-2 sm:p-3">
                 <p className="text-xs sm:text-sm font-medium truncate">{file.filename}</p>
                 <div className="flex items-center justify-between mt-1">
-                  <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 sm:px-2">
+                  <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 sm:px-2 transition-colors group-hover:bg-primary/10">
                     {getFileTypeLabel(file.mime_type)}
                   </Badge>
                   <span className="text-[10px] sm:text-xs text-muted-foreground">
@@ -343,16 +344,17 @@ export default function CloudManager() {
         </div>
       ) : (
         /* List View */
-        <Card>
+        <Card className="animate-fade-in">
           <CardContent className="p-0">
             <div className="divide-y">
-              {files.map((file) => (
+              {files.map((file, index) => (
                 <div
                   key={file.id}
-                  className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-accent/50 cursor-pointer transition-colors"
+                  className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-accent/50 cursor-pointer transition-all duration-200 animate-fade-in-up"
+                  style={{ animationDelay: `${index * 0.02}s`, animationFillMode: 'both' }}
                   onClick={() => setPreviewFile(file)}
                 >
-                  <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-muted shrink-0">
+                  <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-muted shrink-0 transition-transform duration-200 hover:scale-110">
                     {getFileIcon(file.mime_type, "h-4 w-4 sm:h-5 sm:w-5")}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -365,7 +367,7 @@ export default function CloudManager() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0"
+                      className="h-8 w-8 p-0 transition-all duration-200 hover:scale-110"
                       onClick={(e) => {
                         e.stopPropagation();
                         copyToClipboard(file.id);

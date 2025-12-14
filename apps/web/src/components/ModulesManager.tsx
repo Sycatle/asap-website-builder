@@ -214,9 +214,9 @@ export default function ModulesManager() {
   }
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-6 sm:space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col gap-1.5 sm:gap-2">
+      <div className="flex flex-col gap-1.5 sm:gap-2 animate-fade-in-down">
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Modules</h1>
           <Badge variant="outline" className="text-xs">{catalogModules.length} disponibles</Badge>
@@ -230,22 +230,26 @@ export default function ModulesManager() {
       {activeModules.filter(m => m.enabled).length > 0 && (
         <div>
           <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
-            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
             Modules activés ({activeModules.filter(m => m.enabled).length})
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-            {activeModules.filter(m => m.enabled).map((websiteModule) => {
+            {activeModules.filter(m => m.enabled).map((websiteModule, index) => {
               const catalogModule = catalogModules.find(cm => cm.slug === websiteModule.module_slug);
               if (!catalogModule) return null;
 
               return (
-                <Card key={websiteModule.id} className="relative overflow-hidden">
+                <Card 
+                  key={websiteModule.id} 
+                  className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up"
+                  style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'both' }}
+                >
                   <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
                     <div className="flex items-start justify-between">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110 group-hover:bg-primary/20">
                         {getModuleIcon(catalogModule.category)}
                       </div>
-                      <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-xs">
+                      <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-xs transition-transform duration-200 hover:scale-105">
                         Actif
                       </Badge>
                     </div>
@@ -262,9 +266,9 @@ export default function ModulesManager() {
                       <span className="text-[10px] sm:text-xs text-muted-foreground">v{catalogModule.version}</span>
                     </div>
                     <div className="flex gap-2">
-                      <Button asChild variant="secondary" size="sm" className="flex-1 h-8 sm:h-9 text-xs sm:text-sm">
+                      <Button asChild variant="secondary" size="sm" className="flex-1 h-8 sm:h-9 text-xs sm:text-sm group/btn">
                         <a href={`/app/modules/${catalogModule.slug}`}>
-                          <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                          <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 transition-transform group-hover/btn:rotate-90" />
                           Configurer
                         </a>
                       </Button>
@@ -293,21 +297,25 @@ export default function ModulesManager() {
       {/* Suggested Modules */}
       <div>
         <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
-          <Star className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
+          <Star className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500 animate-pulse-soft" />
           Modules suggérés ({suggestedModules.length})
         </h2>
         {suggestedModules.length === 0 ? (
-          <Card>
+          <Card className="animate-fade-in">
             <CardContent className="py-6 sm:py-8 text-center text-sm text-muted-foreground">
               Tous les modules disponibles sont déjà activés !
             </CardContent>
           </Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-            {suggestedModules.map((module) => (
-              <Card key={module.id} className="relative overflow-hidden">
+            {suggestedModules.map((module, index) => (
+              <Card 
+                key={module.id} 
+                className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up"
+                style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'both' }}
+              >
                 <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110 group-hover:bg-primary/10">
                     {getModuleIcon(module.category)}
                   </div>
                   <CardTitle className="text-sm sm:text-base mt-2 sm:mt-3">{module.name}</CardTitle>
@@ -317,7 +325,7 @@ export default function ModulesManager() {
                 </CardHeader>
                 <CardContent className="pt-2 px-3 sm:px-6 pb-3 sm:pb-6">
                   <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                    <Badge variant="outline" className="text-[10px] sm:text-xs">
+                    <Badge variant="outline" className="text-[10px] sm:text-xs transition-colors group-hover:bg-muted">
                       {categoryLabels[module.category] || module.category}
                     </Badge>
                     <span className="text-[10px] sm:text-xs text-muted-foreground">v{module.version}</span>
@@ -325,7 +333,7 @@ export default function ModulesManager() {
                   <Button
                     onClick={() => handleActivateModule(module)}
                     disabled={activatingModule === module.id}
-                    className="w-full h-8 sm:h-9 text-xs sm:text-sm"
+                    className="w-full h-8 sm:h-9 text-xs sm:text-sm group/activate"
                     size="sm"
                   >
                     {activatingModule === module.id ? (
@@ -334,7 +342,9 @@ export default function ModulesManager() {
                         Activation...
                       </>
                     ) : (
-                      'Activer'
+                      <>
+                        <span className="transition-transform group-hover/activate:scale-105">Activer</span>
+                      </>
                     )}
                   </Button>
                 </CardContent>

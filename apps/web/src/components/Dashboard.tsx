@@ -249,21 +249,21 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 animate-fade-in">
       {/* Header with site info */}
-      <div className="flex flex-col gap-3 sm:gap-4">
+      <div className="flex flex-col gap-3 sm:gap-4 animate-fade-in-down">
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
               {website?.title || 'Mon Dashboard'}
             </h1>
             {website?.status === 'published' ? (
-              <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20">
+              <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20 transition-all duration-200">
                 <CheckCircle2 className="w-3 h-3 mr-1" />
                 En ligne
               </Badge>
             ) : (
-              <Badge variant="secondary">
+              <Badge variant="secondary" className="transition-all duration-200">
                 <Clock className="w-3 h-3 mr-1" />
                 Brouillon
               </Badge>
@@ -279,19 +279,19 @@ export default function Dashboard() {
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           {website?.status === 'draft' && (
-            <Button onClick={handlePublish} disabled={isSaving} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
+            <Button onClick={handlePublish} disabled={isSaving} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto group">
               {isSaving ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
-                <Rocket className="h-4 w-4 mr-2" />
+                <Rocket className="h-4 w-4 mr-2 transition-transform group-hover:-translate-y-0.5 group-hover:rotate-12" />
               )}
               Publier
             </Button>
           )}
           {website && (
-            <Button variant="outline" asChild className="w-full sm:w-auto">
+            <Button variant="outline" asChild className="w-full sm:w-auto group">
               <a href={`/${website.slug}`} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 mr-2" />
+                <ExternalLink className="h-4 w-4 mr-2 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 Voir le site
               </a>
             </Button>
@@ -302,26 +302,26 @@ export default function Dashboard() {
       {/* Tabs for Overview / Site Settings */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
         <TabsList className="grid w-full grid-cols-2 h-auto">
-          <TabsTrigger value="overview" className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm py-2 sm:py-2.5">
+          <TabsTrigger value="overview" className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm py-2 sm:py-2.5 transition-all duration-200 data-[state=active]:scale-[1.02]">
             <LayoutDashboard className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden xs:inline">Vue d'ensemble</span>
             <span className="xs:hidden">Accueil</span>
           </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm py-2 sm:py-2.5">
+          <TabsTrigger value="settings" className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm py-2 sm:py-2.5 transition-all duration-200 data-[state=active]:scale-[1.02]">
             <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Mon Site
           </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-4 sm:space-y-6">
+        <TabsContent value="overview" className="space-y-4 sm:space-y-6 animate-fade-in">
           {/* Stats Cards */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             {/* Site Status */}
-            <Card className="relative overflow-hidden">
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.05s', animationFillMode: 'both' }}>
               <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
                 <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Statut</CardTitle>
-                <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+                <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform group-hover:rotate-12" />
               </CardHeader>
               <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                 <div className="flex items-center gap-1.5 sm:gap-2">
@@ -332,7 +332,7 @@ export default function Dashboard() {
                     </>
                   ) : (
                     <>
-                      <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-amber-500" />
+                      <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-amber-500 animate-pulse" />
                       <span className="text-lg sm:text-2xl font-bold">Brouillon</span>
                     </>
                   )}
@@ -341,13 +341,13 @@ export default function Dashboard() {
                   {website?.slug ? `${website.slug}.asap.cool` : 'Configurez votre site'}
                 </p>
               </CardContent>
-              <div className="absolute right-0 bottom-0 opacity-5">
+              <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
                 <Globe className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
               </div>
             </Card>
 
             {/* Storage */}
-            <Card className="relative overflow-hidden">
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
               <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
                 <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Stockage</CardTitle>
                 <HardDrive className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
@@ -369,16 +369,16 @@ export default function Dashboard() {
                   sur {quota ? formatBytes(quota.quota_limit) : '50 MB'}
                 </p>
               </CardContent>
-              <div className="absolute right-0 bottom-0 opacity-5">
+              <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
                 <HardDrive className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
               </div>
             </Card>
 
             {/* Modules */}
-            <Card className="relative overflow-hidden">
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
               <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
                 <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Modules</CardTitle>
-                <Puzzle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+                <Puzzle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform group-hover:rotate-12" />
               </CardHeader>
               <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                 <div className="text-lg sm:text-2xl font-bold">{enabledModulesCount}</div>
@@ -386,10 +386,11 @@ export default function Dashboard() {
                   sur {modules.length} disponibles
                 </p>
                 <div className="flex gap-0.5 sm:gap-1 mt-1.5 sm:mt-2">
-                  {modules.slice(0, 4).map((m) => (
+                  {modules.slice(0, 4).map((m, index) => (
                     <div
                       key={m.module_id}
-                      className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full ${m.enabled ? 'bg-primary' : 'bg-muted'}`}
+                      className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full transition-all duration-300 ${m.enabled ? 'bg-primary scale-100' : 'bg-muted scale-90'}`}
+                      style={{ animationDelay: `${index * 0.05}s` }}
                       title={m.module_slug}
                     />
                   ))}
@@ -398,16 +399,16 @@ export default function Dashboard() {
                   )}
                 </div>
               </CardContent>
-              <div className="absolute right-0 bottom-0 opacity-5">
+              <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
                 <Puzzle className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
               </div>
             </Card>
 
             {/* Files */}
-            <Card className="relative overflow-hidden">
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
               <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
                 <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Fichiers</CardTitle>
-                <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+                <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5" />
               </CardHeader>
               <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                 <div className="text-lg sm:text-2xl font-bold">
@@ -421,7 +422,7 @@ export default function Dashboard() {
                   <span>OK</span>
                 </div>
               </CardContent>
-              <div className="absolute right-0 bottom-0 opacity-5">
+              <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
                 <Upload className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
               </div>
             </Card>
@@ -430,7 +431,7 @@ export default function Dashboard() {
           {/* Main Content Grid */}
           <div className="grid gap-3 sm:gap-4 lg:grid-cols-7">
             {/* Storage Chart */}
-            <Card className="lg:col-span-3">
+            <Card className="lg:col-span-3 animate-fade-in-up" style={{ animationDelay: '0.25s', animationFillMode: 'both' }}>
               <CardHeader className="px-4 sm:px-6">
                 <CardTitle className="text-sm sm:text-base">Utilisation du stockage</CardTitle>
                 <CardDescription className="text-xs sm:text-sm">
@@ -511,10 +512,10 @@ export default function Dashboard() {
             </Card>
 
             {/* Quick Actions */}
-            <Card className="lg:col-span-4">
+            <Card className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
               <CardHeader className="px-4 sm:px-6">
                 <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary animate-pulse-soft" />
                   Actions rapides
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm">
@@ -524,10 +525,10 @@ export default function Dashboard() {
               <CardContent className="grid gap-2 sm:gap-3 px-4 sm:px-6">
                 <button
                   onClick={() => setActiveTab('settings')}
-                  className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 text-left w-full"
+                  className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-md text-left w-full active:scale-[0.99]"
                 >
                   <div className="flex items-center gap-3 sm:gap-4">
-                    <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200 group-hover:scale-110">
                       <Edit className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
                     <div>
@@ -537,16 +538,16 @@ export default function Dashboard() {
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200" />
                 </button>
 
                 <a
                   href="/app/modules"
-                  className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50"
+                  className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-md active:scale-[0.99]"
                 >
                   <div className="flex items-center gap-3 sm:gap-4">
-                    <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 group-hover:bg-violet-500 group-hover:text-white transition-colors">
-                      <Puzzle className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 group-hover:bg-violet-500 group-hover:text-white transition-all duration-200 group-hover:scale-110">
+                      <Puzzle className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:rotate-12" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-sm sm:text-base">Gérer les modules</h3>
@@ -555,16 +556,16 @@ export default function Dashboard() {
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-violet-600 transition-colors" />
+                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-violet-600 group-hover:translate-x-1 transition-all duration-200" />
                 </a>
 
                 <a
                   href="/app/cloud"
-                  className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50"
+                  className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-md active:scale-[0.99]"
                 >
                   <div className="flex items-center gap-3 sm:gap-4">
-                    <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                      <Upload className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-200 group-hover:scale-110">
+                      <Upload className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:-translate-y-0.5" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-sm sm:text-base">Mes fichiers</h3>
@@ -573,7 +574,7 @@ export default function Dashboard() {
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-emerald-600 transition-colors" />
+                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-emerald-600 group-hover:translate-x-1 transition-all duration-200" />
                 </a>
 
                 {website && (
@@ -581,11 +582,11 @@ export default function Dashboard() {
                     href={`/${website.slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50"
+                    className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-md active:scale-[0.99]"
                   >
                     <div className="flex items-center gap-3 sm:gap-4">
-                      <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
-                        <ExternalLink className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-all duration-200 group-hover:scale-110">
+                        <ExternalLink className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                       </div>
                       <div>
                         <h3 className="font-semibold text-sm sm:text-base">Voir mon site</h3>
@@ -594,7 +595,7 @@ export default function Dashboard() {
                         </p>
                       </div>
                     </div>
-                    <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-amber-600 transition-colors" />
+                    <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-amber-600 group-hover:translate-x-1 transition-all duration-200" />
                   </a>
                 )}
               </CardContent>
@@ -603,10 +604,10 @@ export default function Dashboard() {
         </TabsContent>
 
         {/* Site Settings Tab */}
-        <TabsContent value="settings" className="space-y-4 sm:space-y-6">
+        <TabsContent value="settings" className="space-y-4 sm:space-y-6 animate-fade-in">
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
             {/* Website Info Form */}
-            <Card>
+            <Card className="animate-fade-in-up" style={{ animationDelay: '0.05s', animationFillMode: 'both' }}>
               <CardHeader className="px-4 sm:px-6">
                 <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                   <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />

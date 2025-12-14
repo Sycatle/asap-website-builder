@@ -205,11 +205,32 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+  
+  /* Staggered animation delays for lists */
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.1s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.2s; }
+  .stagger-5 { animation-delay: 0.25s; }
+  .stagger-6 { animation-delay: 0.3s; }
+  .stagger-7 { animation-delay: 0.35s; }
+  .stagger-8 { animation-delay: 0.4s; }
+  
+  /* Shimmer gradient for loading states */
+  .shimmer-bg {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+  }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
   body {
     @apply bg-background text-foreground;
@@ -225,5 +246,68 @@
   /* Better focus states for mobile */
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-primary;
+  }
+}
+
+/* Enhanced transitions for interactive elements */
+@layer components {
+  /* Card hover effects */
+  .card-interactive {
+    @apply transition-all duration-200 ease-out;
+  }
+  .card-interactive:hover {
+    @apply shadow-lg -translate-y-0.5;
+  }
+  .card-interactive:active {
+    @apply scale-[0.99] shadow-md;
+  }
+  
+  /* Button press effect */
+  .btn-press {
+    @apply transition-transform duration-100 active:scale-95;
+  }
+  
+  /* Icon spin on hover */
+  .icon-hover-spin:hover svg {
+    @apply animate-spin;
+  }
+  
+  /* Subtle glow effect */
+  .glow-hover {
+    @apply transition-shadow duration-300;
+  }
+  .glow-hover:hover {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+  }
+  
+  /* Badge pulse for notifications */
+  .badge-pulse {
+    @apply relative;
+  }
+  .badge-pulse::after {
+    content: '';
+    @apply absolute inset-0 rounded-full animate-ping bg-current opacity-30;
+  }
+  
+  /* Smooth page transitions */
+  .page-enter {
+    @apply animate-fade-in-up;
+  }
+  
+  /* List item animations */
+  .list-item-enter {
+    @apply animate-fade-in-up opacity-0;
+    animation-fill-mode: forwards;
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
