@@ -228,7 +228,7 @@ pub async fn update_github_integration(
         INSERT INTO events (account_id, event_type, payload)
         VALUES ($1, 'USER_INTEGRATION_ADDED', $2)
         "#,
-        tenant_id,
+        account_id,
         event_payload
     )
     .execute(&pool)

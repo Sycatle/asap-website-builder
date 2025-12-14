@@ -277,9 +277,9 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
                     // Fetch from module_configs settings
                     let settings: Option<(serde_json::Value,)> = sqlx::query_as(
                         r#"
-                        SELECT tm.settings 
-                        FROM module_configs tm
-                        JOIN modules m ON tm.module_id = m.id
+                        SELECT mc.config 
+                        FROM module_configs mc
+                        JOIN modules m ON mc.module_id = m.id
                         WHERE mc.account_id = $1 AND m.slug = 'github-sync'
                         "#
                     )
@@ -341,7 +341,7 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
             Some((id,)) => id,
             None => {
                 return Err(anyhow::anyhow!(
-                    "No website found for tenant {}",
+                    "No website found for account {}",
                     event.account_id
                 ));
             }
