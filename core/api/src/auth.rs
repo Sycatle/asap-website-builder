@@ -503,15 +503,15 @@ pub async fn change_password(
     }
 
     // Get current password hash
-    let account_result = sqlx::query!(
-        "SELECT password_hash FROM accounts WHERE id = $1",
-        account_id
+    let account_result = sqlx::query_scalar::<_, String>(
+        "SELECT password_hash FROM accounts WHERE id = $1"
     )
+    .bind(account_id)
     .fetch_optional(&pool)
     .await;
 
-    let account = match account_result {
-        Ok(Some(account)) => account,
+    let password_hash = match account_result {
+        Ok(Some(hash)) => hash,
         Ok(None) => {
             return (StatusCode::NOT_FOUND, Json(serde_json::json!({
                 "error": "Account not found"
@@ -526,7 +526,7 @@ pub async fn change_password(
     };
 
     // Verify current password
-    match verify_password(&payload.current_password, &account.password_hash) {
+    match verify_password(&payload.current_password, &password_hash) {
         Ok(true) => {},
         Ok(false) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -553,11 +553,11 @@ pub async fn change_password(
     };
 
     // Update password
-    let update_result = sqlx::query!(
-        "UPDATE accounts SET password_hash = $1 WHERE id = $2",
-        new_password_hash,
-        account_id
+    let update_result = sqlx::query(
+        "UPDATE accounts SET password_hash = $1 WHERE id = $2"
     )
+    .bind(&new_password_hash)
+    .bind(account_id)
     .execute(&pool)
     .await;
 
