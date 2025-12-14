@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { modulesAPI, websitesAPI } from '../lib/api';
+import { modulesAPI } from '../lib/api';
 import type { Module, WebsiteModule } from '../lib/api/modules';
+import { useWebsites, useModuleCatalog, useWebsiteModules, useCacheActions } from '../hooks/useCache';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,42 +40,30 @@ const categoryLabels: Record<string, string> = {
 };
 
 export default function ModulesManager() {
-  const [catalogModules, setCatalogModules] = useState<Module[]>([]);
-  const [activeModules, setActiveModules] = useState<WebsiteModule[]>([]);
-  const [currentWebsiteId, setCurrentWebsiteId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Use cached data
+  const { websites } = useWebsites();
+  const { modules: catalogModules, isLoading: catalogLoading } = useModuleCatalog();
+  
+  const currentWebsiteId = websites.length > 0 ? websites[0].id : null;
+  
+  const { 
+    modules: activeModules, 
+    isLoading: modulesLoading, 
+    refetch: refetchModules 
+  } = useWebsiteModules(currentWebsiteId);
+  
+  const { invalidateWebsiteData } = useCacheActions();
+  
   const [activatingModule, setActivatingModule] = useState<string | null>(null);
+  
+  const isLoading = catalogLoading || modulesLoading;
 
+  // Show error if no website
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-
-      const catalog = await modulesAPI.catalog();
-      setCatalogModules(catalog);
-
-      // Get current website
-      const websites = await websitesAPI.list();
-      if (websites.length > 0) {
-        const websiteId = websites[0].id;
-        setCurrentWebsiteId(websiteId);
-        
-        // Load modules for this website
-        const websiteModules = await modulesAPI.listForWebsite(websiteId);
-        setActiveModules(websiteModules);
-      } else {
-        toast.error('Aucun site web trouvé. Créez un site pour gérer les modules.');
-      }
-    } catch (err) {
-      console.error('Failed to load modules:', err);
-      toast.error('Erreur lors du chargement des modules');
-    } finally {
-      setIsLoading(false);
+    if (!catalogLoading && !modulesLoading && websites.length === 0) {
+      toast.error('Aucun site web trouvé. Créez un site pour gérer les modules.');
     }
-  };
+  }, [catalogLoading, modulesLoading, websites.length]);
 
   const handleActivateModule = async (module: Module) => {
     if (!currentWebsiteId) {
@@ -89,7 +78,8 @@ export default function ModulesManager() {
         module_id: module.id,
         settings: module.default_settings || {},
       });
-      await loadData();
+      // Refresh modules cache
+      await refetchModules(true);
       return module.name;
     };
 
@@ -118,7 +108,8 @@ export default function ModulesManager() {
 
     const deactivatePromise = async () => {
       await modulesAPI.deactivate(currentWebsiteId, moduleId);
-      await loadData();
+      // Refresh modules cache
+      await refetchModules(true);
     };
 
     toast.promise(deactivatePromise(), {

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { modulesAPI, websitesAPI } from '../lib/api';
+import { useEffect, useState, useMemo } from 'react';
+import { modulesAPI } from '../lib/api';
 import type { Module, WebsiteModule, ConfigSchema, ConfigAction } from '../lib/api/modules';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { toast } from 'sonner';
 import SchemaRenderer from './SchemaRenderer';
+import { useWebsites, useModuleCatalog, useWebsiteModules, useModuleData, useCacheActions } from '@/hooks/useCache';
 
 interface ModuleConfigProps {
   slug: string;
@@ -147,115 +148,82 @@ interface ChangelogEntry {
 }
 
 export default function ModuleConfig({ slug }: ModuleConfigProps) {
-  const [module, setModule] = useState<Module | null>(null);
-  const [websiteModule, setWebsiteModule] = useState<WebsiteModule | null>(null);
-  const [websiteId, setWebsiteId] = useState<string | null>(null);
+  // Cache hooks
+  const { websites, isLoading: websitesLoading } = useWebsites();
+  const { modules: catalogModules, isLoading: catalogLoading } = useModuleCatalog();
+  const websiteId = websites[0]?.id || null;
+  const { modules: websiteModules, isLoading: modulesLoading, refetch: refetchModules } = useWebsiteModules(websiteId);
+  const { data: moduleDataResponse, isLoading: moduleDataLoading, refetch: refetchModuleData } = useModuleData(websiteId, slug);
+  const { invalidateWebsiteData } = useCacheActions();
+
+  // Derive module from catalog
+  const module = useMemo(() => {
+    if (!catalogModules.length) return null;
+    return catalogModules.find((m: Module) => m.slug === slug) || null;
+  }, [catalogModules, slug]);
+
+  // Derive websiteModule from cached modules
+  const websiteModule = useMemo(() => {
+    if (!websiteModules.length) return null;
+    return websiteModules.find((m: WebsiteModule) => m.module_slug === slug) || null;
+  }, [websiteModules, slug]);
+
+  // Local state for settings and UI
   const [isModuleEnabled, setIsModuleEnabled] = useState(false);
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [moduleData, setModuleData] = useState<Record<string, any>>({});
   const [changelog, setChangelog] = useState<ChangelogEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [executingAction, setExecutingAction] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<string | null>(null);
 
+  // Combined loading state
+  const isLoading = websitesLoading || catalogLoading || modulesLoading || moduleDataLoading;
+
+  // Update local state when cached data changes
   useEffect(() => {
-    loadData();
-  }, [slug]);
-
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-
-      // Get current website
-      const websites = await websitesAPI.list();
-      if (websites.length === 0) {
-        toast.error('Aucun site web trouvé');
-        setIsLoading(false);
-        return;
-      }
-      
-      const currentWebsiteId = websites[0].id;
-      setWebsiteId(currentWebsiteId);
-
-      // Get module by slug (includes config_schema)
-      let foundModule: Module | null = null;
-      
-      try {
-        foundModule = await modulesAPI.getBySlug(slug);
-      } catch {
-        // Fallback to catalog search
-        const catalog = await modulesAPI.catalog();
-        foundModule = catalog.find(m => m.slug === slug) || null;
-      }
-      
-      if (!foundModule) {
-        toast.error('Module non trouvé');
-        setIsLoading(false);
-        return;
-      }
-      
-      setModule(foundModule);
-
-      // Load website modules to check if this one is activated
-      try {
-        const websiteModules = await modulesAPI.listForWebsite(currentWebsiteId);
-        const activeModule = websiteModules.find(m => m.module_slug === slug);
-        
-        if (activeModule) {
-          setWebsiteModule(activeModule);
-          setIsModuleEnabled(activeModule.enabled);
-          setSettings(activeModule.settings || foundModule.default_settings || {});
-        } else {
-          setSettings(foundModule.default_settings || {});
-          setIsModuleEnabled(false);
-        }
-      } catch {
-        setSettings(foundModule.default_settings || {});
-        setIsModuleEnabled(false);
-      }
-
-      // Try to load module-specific data
-      try {
-        const data = await modulesAPI.getModuleData(currentWebsiteId, slug);
-        console.log('Module data response:', data);
-        setModuleData(data.data || {});
-        if (data.enabled !== undefined) {
-          setIsModuleEnabled(data.enabled);
-        }
-      } catch (err) {
-        console.error('Failed to load module data:', err);
-        setModuleData({});
-      }
-
-      // Mock changelog data (should be fetched from API in production)
-      setChangelog([
-        {
-          id: '1',
-          action: 'sync',
-          description: 'Synchronisation des données',
-          timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-        },
-        {
-          id: '2',
-          action: 'settings_updated',
-          description: 'Configuration mise à jour',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-        },
-        {
-          id: '3',
-          action: 'enabled',
-          description: 'Module activé',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-        },
-      ]);
-    } catch (err) {
-      console.error('Failed to load module config:', err);
-      toast.error('Erreur lors du chargement de la configuration');
-    } finally {
-      setIsLoading(false);
+    if (websiteModule) {
+      setIsModuleEnabled(websiteModule.enabled);
+      setSettings(websiteModule.settings || module?.default_settings || {});
+    } else if (module) {
+      setSettings(module.default_settings || {});
+      setIsModuleEnabled(false);
     }
-  };
+  }, [websiteModule, module]);
+
+  // Update module data from cache
+  useEffect(() => {
+    if (moduleDataResponse) {
+      setModuleData(moduleDataResponse.data || {});
+      if (moduleDataResponse.enabled !== undefined) {
+        setIsModuleEnabled(moduleDataResponse.enabled);
+      }
+    }
+  }, [moduleDataResponse]);
+
+  // Initialize changelog (mock data)
+  useEffect(() => {
+    setChangelog([
+      {
+        id: '1',
+        action: 'sync',
+        description: 'Synchronisation des données',
+        timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+      },
+      {
+        id: '2',
+        action: 'settings_updated',
+        description: 'Configuration mise à jour',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+      },
+      {
+        id: '3',
+        action: 'enabled',
+        description: 'Module activé',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+      },
+    ]);
+  }, []);
 
   const handleSaveSettings = async () => {
     if (!module || !websiteId) return;
@@ -271,7 +239,9 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
           settings,
         });
       }
-      await loadData();
+      // Invalidate cache and refetch
+      invalidateWebsiteData(websiteId);
+      await Promise.all([refetchModules(true), refetchModuleData(true)]);
     };
 
     toast.promise(savePromise(), {
@@ -289,10 +259,17 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
     }
   };
 
+  // Refresh data from cache
+  const refreshData = async () => {
+    if (!websiteId) return;
+    invalidateWebsiteData(websiteId);
+    await Promise.all([refetchModules(true), refetchModuleData(true)]);
+  };
+
   const handleAction = async (actionKey: string) => {
     if (!websiteId) return;
     
-    const action = module?.config_schema?.actions?.find(a => a.key === actionKey);
+    const action = module?.config_schema?.actions?.find((a: ConfigAction) => a.key === actionKey);
     
     // Handle confirmation
     if (action?.confirm && pendingConfirm !== actionKey) {
@@ -306,7 +283,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
     const actionPromise = async () => {
       await modulesAPI.executeAction(websiteId, slug, actionKey, settings);
       if (action?.refreshAfter !== false) {
-        setTimeout(loadData, 2000);
+        setTimeout(refreshData, 2000);
       }
     };
 
@@ -335,7 +312,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
         if (websiteModule) {
           await modulesAPI.deactivate(websiteId, websiteModule.id);
         }
-        await loadData();
+        await refreshData();
       };
 
       toast.promise(deactivatePromise(), {
@@ -355,7 +332,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
           module_id: module.id,
           settings: module.default_settings || {},
         });
-        await loadData();
+        await refreshData();
       };
 
       toast.promise(activatePromise(), {
@@ -375,14 +352,14 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
   // Find sync action from schema
   const getSyncAction = (): ConfigAction | undefined => {
     return module?.config_schema?.actions?.find(
-      a => a.key === 'sync' || a.key.includes('sync')
+      (a: ConfigAction) => a.key === 'sync' || a.key.includes('sync')
     );
   };
 
   // Get other actions (non-sync)
   const getOtherActions = (): ConfigAction[] => {
     return module?.config_schema?.actions?.filter(
-      a => a.key !== 'sync' && !a.key.includes('sync')
+      (a: ConfigAction) => a.key !== 'sync' && !a.key.includes('sync')
     ) || [];
   };
 
@@ -580,7 +557,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
           <div className="px-6 py-4 border-t bg-amber-50 border-amber-100">
             <div className="flex items-center justify-between">
               <span className="text-sm text-amber-700">
-                {module.config_schema?.actions?.find(a => a.key === pendingConfirm)?.confirm || 'Confirmer cette action ?'}
+                {module.config_schema?.actions?.find((a: ConfigAction) => a.key === pendingConfirm)?.confirm || 'Confirmer cette action ?'}
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -678,7 +655,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
                       {/* Save button */}
                       <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
                         <button
-                          onClick={() => loadData()}
+                          onClick={() => refreshData()}
                           className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                         >
                           Annuler

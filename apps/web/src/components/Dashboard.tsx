@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState } from 'react';
-import { websitesAPI, filesAPI, modulesAPI, authAPI, type Website, type QuotaUsage, type WebsiteModule, type UpdateWebsiteRequest } from '../lib/api';
+import { websitesAPI, authAPI, type Website, type UpdateWebsiteRequest } from '../lib/api';
+import { useDashboardData, useCacheActions } from '../hooks/useCache';
 import { formatBytes } from '../lib/utils/formatters';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -45,14 +46,15 @@ import {
   AlertCircle,
   Loader2,
   Settings,
-  LayoutDashboard
+  LayoutDashboard,
+  RefreshCw
 } from "lucide-react";
 
 export default function Dashboard() {
-  const [website, setWebsite] = useState<Website | null>(null);
-  const [quota, setQuota] = useState<QuotaUsage | null>(null);
-  const [modules, setModules] = useState<WebsiteModule[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Use cached data
+  const { website, quota, modules, isLoading, refetchAll } = useDashboardData();
+  const { updateWebsiteCache } = useCacheActions();
+  
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -61,41 +63,13 @@ export default function Dashboard() {
   const [tagline, setTagline] = useState('');
   const [githubUsername, setGithubUsername] = useState('');
 
+  // Sync form state when website changes
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load websites and quota in parallel
-        const [websites, quotaData] = await Promise.all([
-          websitesAPI.list(),
-          filesAPI.getQuota(),
-        ]);
-        
-        setQuota(quotaData);
-        
-        if (websites.length > 0) {
-          const w = websites[0];
-          setWebsite(w);
-          setTitle(w.title || '');
-          setTagline(w.tagline || '');
-          
-          // Load modules for this website
-          try {
-            const modulesData = await modulesAPI.listForWebsite(w.id);
-            setModules(modulesData);
-          } catch (error) {
-            console.error('Failed to load website modules:', error);
-            setModules([]);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
+    if (website) {
+      setTitle(website.title || '');
+      setTagline(website.tagline || '');
+    }
+  }, [website]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,11 +79,9 @@ export default function Dashboard() {
 
     const savePromise = async () => {
       const data: UpdateWebsiteRequest = { title, tagline };
-      await websitesAPI.update(website.id, data);
-      const websites = await websitesAPI.list();
-      if (websites.length > 0) {
-        setWebsite(websites[0]);
-      }
+      const updatedWebsite = await websitesAPI.update(website.id, data);
+      // Update cache immediately
+      updateWebsiteCache(updatedWebsite);
     };
 
     toast.promise(savePromise(), {
@@ -134,10 +106,8 @@ export default function Dashboard() {
 
     const publishPromise = async () => {
       await websitesAPI.publish(website.id);
-      const websites = await websitesAPI.list();
-      if (websites.length > 0) {
-        setWebsite(websites[0]);
-      }
+      // Refetch to get updated status
+      await refetchAll();
     };
 
     toast.promise(publishPromise(), {

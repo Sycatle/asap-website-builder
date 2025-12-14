@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState, useRef } from 'react';
-import { filesAPI, type FileMetadata, type QuotaUsage } from '../lib/api';
+import { useState, useRef } from 'react';
+import { filesAPI, type FileMetadata } from '../lib/api';
 import { formatBytes } from '../lib/utils/formatters';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,13 +36,16 @@ import {
   X,
   Eye
 } from "lucide-react";
+import { useFiles, useQuota } from '@/hooks/useCache';
 
 type ViewMode = 'grid' | 'list';
 
 export default function CloudManager() {
-  const [files, setFiles] = useState<FileMetadata[]>([]);
-  const [quota, setQuota] = useState<QuotaUsage | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Cache hooks
+  const { files, isLoading: filesLoading, refetch: refetchFiles, addFile, removeFile } = useFiles();
+  const { quota, isLoading: quotaLoading, refetch: refetchQuota } = useQuota();
+  
+  // Local UI state
   const [isUploading, setIsUploading] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
@@ -50,26 +53,7 @@ export default function CloudManager() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      const [filesData, quotaData] = await Promise.all([
-        filesAPI.list(),
-        filesAPI.getQuota(),
-      ]);
-      setFiles(filesData);
-      setQuota(quotaData);
-    } catch (error) {
-      console.error('Failed to load data:', error);
-      toast.error('Erreur lors du chargement des fichiers');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const isLoading = filesLoading || quotaLoading;
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -78,8 +62,11 @@ export default function CloudManager() {
     setIsUploading(true);
 
     const uploadPromise = async () => {
-      await filesAPI.upload(file);
-      await loadData();
+      const uploadedFile = await filesAPI.upload(file);
+      // Optimistic update: add to cache immediately
+      addFile(uploadedFile);
+      // Refetch quota (it changed after upload)
+      await refetchQuota(true);
       return file.name;
     };
 
@@ -106,8 +93,11 @@ export default function CloudManager() {
 
     const deletePromise = async () => {
       await filesAPI.delete(fileId);
+      // Optimistic update: remove from cache immediately
+      removeFile(fileId);
       setPreviewFile(null);
-      await loadData();
+      // Refetch quota (it changed after delete)
+      await refetchQuota(true);
     };
 
     toast.promise(deletePromise(), {
@@ -120,6 +110,8 @@ export default function CloudManager() {
       await deletePromise();
     } catch (error) {
       console.error('Failed to delete file:', error);
+      // Refetch files on error to sync state
+      await refetchFiles(true);
     }
   };
 
