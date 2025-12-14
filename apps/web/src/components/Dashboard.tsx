@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { websitesAPI, authAPI, type Website, type UpdateWebsiteRequest } from '../lib/api';
 import { useDashboardData, useCacheActions } from '../hooks/useCache';
 import { formatBytes } from '../lib/utils/formatters';
@@ -49,6 +49,8 @@ import {
   LayoutDashboard,
   RefreshCw
 } from "lucide-react";
+import { FormActions } from "@/components/ui/form-actions";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 export default function Dashboard() {
   // Use cached data
@@ -62,17 +64,68 @@ export default function Dashboard() {
   const [title, setTitle] = useState('');
   const [tagline, setTagline] = useState('');
   const [githubUsername, setGithubUsername] = useState('');
+  
+  // Track initial values for dirty state
+  const [initialValues, setInitialValues] = useState({ title: '', tagline: '' });
 
   // Sync form state when website changes
   useEffect(() => {
     if (website) {
       setTitle(website.title || '');
       setTagline(website.tagline || '');
+      setInitialValues({ title: website.title || '', tagline: website.tagline || '' });
     }
   }, [website]);
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Check if form is dirty
+  const isFormDirty = title !== initialValues.title || tagline !== initialValues.tagline;
+
+  // Cancel changes handler
+  const handleCancel = () => {
+    setTitle(initialValues.title);
+    setTagline(initialValues.tagline);
+  };
+
+  // Keyboard shortcuts
+  const shortcuts = useMemo(() => [
+    {
+      key: 's',
+      ctrl: true,
+      action: () => {
+        if (isFormDirty && !isSaving) {
+          handleSave();
+        }
+      },
+      description: 'Sauvegarder',
+      enabled: isFormDirty,
+    },
+    {
+      key: 'Escape',
+      action: () => {
+        if (isFormDirty) {
+          handleCancel();
+          toast.info('Modifications annulées');
+        }
+      },
+      description: 'Annuler les modifications',
+      enabled: isFormDirty,
+    },
+    {
+      key: 'r',
+      ctrl: true,
+      shift: true,
+      action: () => {
+        refetchAll();
+        toast.info('Actualisation des données...');
+      },
+      description: 'Actualiser',
+    },
+  ], [isFormDirty, isSaving, initialValues]);
+
+  useKeyboardShortcuts(shortcuts);
+
+  const handleSave = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!website) return;
 
     setIsSaving(true);
@@ -82,6 +135,8 @@ export default function Dashboard() {
       const updatedWebsite = await websitesAPI.update(website.id, data);
       // Update cache immediately
       updateWebsiteCache(updatedWebsite);
+      // Update initial values after save
+      setInitialValues({ title, tagline });
     };
 
     toast.promise(savePromise(), {
@@ -667,17 +722,6 @@ export default function Dashboard() {
                   </div>
 
                   <Separator />
-
-                  <div className="flex justify-end">
-                    <Button type="submit" disabled={isSaving}>
-                      {isSaving ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Save className="h-4 w-4 mr-2" />
-                      )}
-                      Enregistrer
-                    </Button>
-                  </div>
                 </form>
               </CardContent>
             </Card>
@@ -758,6 +802,14 @@ export default function Dashboard() {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Sticky form actions */}
+      <FormActions
+        isDirty={isFormDirty}
+        isSaving={isSaving}
+        onSave={() => handleSave()}
+        onCancel={handleCancel}
+      />
     </div>
   );
 }

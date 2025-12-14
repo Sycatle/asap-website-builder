@@ -7,6 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+  ContextMenuShortcut,
+} from "@/components/ui/context-menu";
 import { 
   Github, 
   BookOpen, 
@@ -18,7 +26,10 @@ import {
   Star,
   Loader2,
   Settings,
-  Power
+  Power,
+  Play,
+  ExternalLink,
+  Info
 } from "lucide-react";
 
 // Icon mapping for categories
@@ -239,15 +250,16 @@ export default function ModulesManager() {
               if (!catalogModule) return null;
 
               return (
-                <Card 
-                  key={websiteModule.id} 
-                  className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up"
-                  style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'both' }}
-                >
-                  <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                    <div className="flex items-start justify-between">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110 group-hover:bg-primary/20">
-                        {getModuleIcon(catalogModule.category)}
+                <ContextMenu key={websiteModule.id}>
+                  <ContextMenuTrigger asChild>
+                    <Card 
+                      className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up"
+                      style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'both' }}
+                    >
+                      <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                        <div className="flex items-start justify-between">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110 group-hover:bg-primary/20">
+                            {getModuleIcon(catalogModule.category)}
                       </div>
                       <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-xs transition-transform duration-200 hover:scale-105">
                         Actif
@@ -288,6 +300,25 @@ export default function ModulesManager() {
                     </div>
                   </CardContent>
                 </Card>
+              </ContextMenuTrigger>
+              <ContextMenuContent className="w-56">
+                <ContextMenuItem asChild>
+                  <a href={`/app/modules/${catalogModule.slug}`}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Configurer
+                  </a>
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => handleDeactivateModule(websiteModule.id)}
+                  disabled={activatingModule === websiteModule.id}
+                >
+                  <Power className="mr-2 h-4 w-4" />
+                  Désactiver
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
               );
             })}
           </div>
@@ -309,46 +340,63 @@ export default function ModulesManager() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {suggestedModules.map((module, index) => (
-              <Card 
-                key={module.id} 
-                className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up"
-                style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'both' }}
-              >
-                <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110 group-hover:bg-primary/10">
-                    {getModuleIcon(module.category)}
-                  </div>
-                  <CardTitle className="text-sm sm:text-base mt-2 sm:mt-3">{module.name}</CardTitle>
-                  <CardDescription className="line-clamp-2 text-xs sm:text-sm">
-                    {module.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-2 px-3 sm:px-6 pb-3 sm:pb-6">
-                  <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                    <Badge variant="outline" className="text-[10px] sm:text-xs transition-colors group-hover:bg-muted">
-                      {categoryLabels[module.category] || module.category}
-                    </Badge>
-                    <span className="text-[10px] sm:text-xs text-muted-foreground">v{module.version}</span>
-                  </div>
-                  <Button
+              <ContextMenu key={module.id}>
+                <ContextMenuTrigger asChild>
+                  <Card 
+                    className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up"
+                    style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'both' }}
+                  >
+                    <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110 group-hover:bg-primary/10">
+                        {getModuleIcon(module.category)}
+                      </div>
+                      <CardTitle className="text-sm sm:text-base mt-2 sm:mt-3">{module.name}</CardTitle>
+                      <CardDescription className="line-clamp-2 text-xs sm:text-sm">
+                        {module.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-2 px-3 sm:px-6 pb-3 sm:pb-6">
+                      <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                        <Badge variant="outline" className="text-[10px] sm:text-xs transition-colors group-hover:bg-muted">
+                          {categoryLabels[module.category] || module.category}
+                        </Badge>
+                        <span className="text-[10px] sm:text-xs text-muted-foreground">v{module.version}</span>
+                      </div>
+                      <Button
+                        onClick={() => handleActivateModule(module)}
+                        disabled={activatingModule === module.id}
+                        className="w-full h-8 sm:h-9 text-xs sm:text-sm group/activate"
+                        size="sm"
+                      >
+                        {activatingModule === module.id ? (
+                          <>
+                            <Loader2 className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
+                            Activation...
+                          </>
+                        ) : (
+                          <>
+                            <span className="transition-transform group-hover/activate:scale-105">Activer</span>
+                          </>
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </ContextMenuTrigger>
+                <ContextMenuContent className="w-56">
+                  <ContextMenuItem
                     onClick={() => handleActivateModule(module)}
                     disabled={activatingModule === module.id}
-                    className="w-full h-8 sm:h-9 text-xs sm:text-sm group/activate"
-                    size="sm"
                   >
-                    {activatingModule === module.id ? (
-                      <>
-                        <Loader2 className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
-                        Activation...
-                      </>
-                    ) : (
-                      <>
-                        <span className="transition-transform group-hover/activate:scale-105">Activer</span>
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
+                    <Play className="mr-2 h-4 w-4" />
+                    Activer le module
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem>
+                    <Info className="mr-2 h-4 w-4" />
+                    {module.description}
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
             ))}
           </div>
         )}

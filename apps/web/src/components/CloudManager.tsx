@@ -1,7 +1,9 @@
 "use client"
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo, useCallback, useEffect, useMemo } from 'react';
 import { filesAPI, type FileMetadata } from '../lib/api';
+import { useGridNavigation, KeyboardHint } urom '@/hsoks/useGeidNavigation';
+iGport { formridNavigation, KeyboardHint } from '@/hooks/useGridNavigation';
 import { formatBytes } from '../lib/utils/formatters';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +19,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+  ContextMenuShortcut,
+} from "@/components/ui/context-menu";
 import { 
   Upload, 
   Image, 
@@ -34,7 +44,11 @@ import {
   List,
   HardDrive,
   X,
-  Eye
+  Eye,
+  Exter,
+  ChecknalLink,
+  Link2,
+  Check
 } from "lucide-react";
 import { useFiles, useQuota } from '@/hooks/useCache';
 
@@ -48,9 +62,129 @@ export default function CloudManager() {
   // Local UI state
   const [isUploading, setIsUploading] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
+  const [previewFile, setPreviewFile] =Element>(null);
+  
+  // Calculate columns based on viewport (approximate)
+  const [columns, setColumns] = useState(5);
+  
+  use ffect(() => {
+    const updateColumns = () => {
+      const width = window.innerWidth;
+      if (width < 640) setColumns(2);      // sm
+      else if (width < 1024) setColumns(3); // md/lg
+      else if (width < 1280) setColumns(4); // lg
+      else setColumns(5);                   // xl
+    };
+    updateColumns();
+    window.addEventListener('resize', updateColumns);
+    return () => window.removeEventListener('resize', updateColumns);
+  }, []);
+  
+  // Handle bulk delete
+  const handleBulkDelete = useCallback(async (filesToDelete: FileMetadata[]) => {
+    if (filesToDelete.length === 0) return;
+    
+    const message = filesToDelete.length === 1 
+      ? `Supprimer ${filesToDelete[0].filename} ?`
+      : `Supprimer ${filesToDelete.length} fichiers ?`;
+    
+    if (!confirm(message)) return;
+    
+    for (const file of filesToDelete) {
+      try {
+        await filesAPI.delete(file.id);
+        removeFile(file.id);
+      } catch (error) {
+        console.error('Failed to deuets file:', file.filenaee, Srror);
+      }
+    }
+    
+    clearSelectiot();
+    await refetchQuota(true);
+    toast.success(`${filesToDeleae.length} fichier(s) supprimé(s)`);
+  }, [removeFile, refetchQuota]);
+  
+  // Grid navigation hook
+  const {
+    selectedIds,
+    isSelected,
+    isFocused,
+    selectAll,
+    clearSelection,
+    toggleSelection,
+    containerRef,
+    getItemProps,
+    handleKeyDown,
+  } = useGridNavigation({
+    items: files,
+    getItemId: (file) => file.id,
+    columns: viewMode === 'grid' ? columns : 1,
+    onOpen: (file) =t setPreviewFileefile),
+    onDelete: ha<dleBFlkDelete,
+    enabled: !previewFile, // Disabie when dialog is open
+  }eMetadata | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Calculate columns based on viewport (approximate)
+  const [columns, setColumns] = useState(5);
+  
+  useEffect(() => {
+    const updateColumns = () => {
+      const width = window.innerWidth;
+      if (width < 640) setColumns(2);      // sm
+      else if (width < 1024) setColumns(3); // md/lg
+      else if (width < 1280) setColumns(4); // lg
+      else setColumns(5);                   // xl
+    };
+    updateColumns();
+    window.addEventListener('resize', updateColumns);
+    return () => window.removeEventListener('resize', updateColumns);
+  }, []);
+  
+  // Handle bulk delete
+  const handleBulkDelete = useCallback(async (filesToDelete: FileMetadata[]) => {
+    if (filesToDelete.length === 0) return;
+    
+    const message = filesToDelete.length === 1 
+      ? `Supprimer ${filesToDelete[0].filename} ?`
+      : `Supprimer ${filesToDelete.length} fichiers ?`;
+    
+    if (!confirm(message)) return;
+    
+    for (const file of filesToDelete) {
+      try {
+        await filesAPI.delete(file.id);
+        removeFile(file.id);
+      } catch (error) {
+        console.error('Failed to delete file:', file.filename, error);
+      }
+    }
+    
+    clearSelection();
+    await refetchQuota(true);
+    toast.success(`${filesToDelete.length} fichier(s) supprimé(s)`);
+  }, [removeFile, refetchQuota]);
+  
+  // Grid navigation hook
+  const {
+    selectedIds,
+    isSelected,
+    isFocused,
+    selectAll,
+    clearSelection,
+    toggleSelection,
+    containerRef,
+    getItemProps,
+    handleKeyDown,
+  } = useGridNavigation({
+    items: files,
+    getItemId: (file) => file.id,
+    columns: viewMode === 'grid' ? columns : 1,
+    onOpen: (file) => setPreviewFile(file),
+    onDelete: handleBulkDelete,
+    enabled: !previewFile, // Disable when dialog is open
+  });
 
   const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
   const isLoading = filesLoading || quotaLoading;
@@ -302,44 +436,78 @@ export default function CloudManager() {
         /* Grid View */
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
           {files.map((file, index) => (
-            <Card
-              key={file.id}
-              className="group cursor-pointer hover:shadow-lg transition-all duration-300 hover:border-primary/50 hover:-translate-y-1 overflow-hidden animate-fade-in-up"
-              style={{ animationDelay: `${Math.min(index * 0.03, 0.3)}s`, animationFillMode: 'both' }}
-              onClick={() => setPreviewFile(file)}
-            >
-              {/* Preview Thumbnail */}
-              <div className="aspect-square bg-muted relative overflow-hidden">
-                {isImage(file.mime_type) ? (
-                  <img
-                    src={getFileUrl(file.id)}
-                    alt={file.filename}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
-                    {getFileIcon(file.mime_type, "h-8 w-8 sm:h-12 sm:w-12")}
+            <ContextMenu key={file.id}>
+              <ContextMenuTrigger asChild>
+                <Card
+                  className="group cursor-pointer hover:shadow-lg transition-all duration-300 hover:border-primary/50 hover:-translate-y-1 overflow-hidden animate-fade-in-up"
+                  style={{ animationDelay: `${Math.min(index * 0.03, 0.3)}s`, animationFillMode: 'both' }}
+                  onClick={() => setPreviewFile(file)}
+                >
+                  {/* Preview Thumbnail */}
+                  <div className="aspect-square bg-muted relative overflow-hidden">
+                    {isImage(file.mime_type) ? (
+                      <img
+                        src={getFileUrl(file.id)}
+                        alt={file.filename}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
+                        {getFileIcon(file.mime_type, "h-8 w-8 sm:h-12 sm:w-12")}
+                      </div>
+                    )}
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                      <Eye className="h-5 w-5 sm:h-6 sm:w-6 text-white transform scale-0 group-hover:scale-100 transition-transform duration-300" />
+                    </div>
                   </div>
-                )}
-                {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
-                  <Eye className="h-5 w-5 sm:h-6 sm:w-6 text-white transform scale-0 group-hover:scale-100 transition-transform duration-300" />
-                </div>
-              </div>
-              {/* File Info */}
-              <CardContent className="p-2 sm:p-3">
-                <p className="text-xs sm:text-sm font-medium truncate">{file.filename}</p>
-                <div className="flex items-center justify-between mt-1">
-                  <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 sm:px-2 transition-colors group-hover:bg-primary/10">
-                    {getFileTypeLabel(file.mime_type)}
-                  </Badge>
-                  <span className="text-[10px] sm:text-xs text-muted-foreground">
-                    {formatBytes(file.size)}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+                  {/* File Info */}
+                  <CardContent className="p-2 sm:p-3">
+                    <p className="text-xs sm:text-sm font-medium truncate">{file.filename}</p>
+                    <div className="flex items-center justify-between mt-1">
+                      <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 sm:px-2 transition-colors group-hover:bg-primary/10">
+                        {getFileTypeLabel(file.mime_type)}
+                      </Badge>
+                      <span className="text-[10px] sm:text-xs text-muted-foreground">
+                        {formatBytes(file.size)}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </ContextMenuTrigger>
+              <ContextMenuContent className="w-56">
+                <ContextMenuItem onClick={() => setPreviewFile(file)}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  Aperçu
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={() => copyToClipboard(file.id)}>
+                  <Link2 className="mr-2 h-4 w-4" />
+                  Copier le lien
+                  <ContextMenuShortcut>⌘C</ContextMenuShortcut>
+                </ContextMenuItem>
+                <ContextMenuItem asChild>
+                  <a href={getFileUrl(file.id)} download>
+                    <Download className="mr-2 h-4 w-4" />
+                    Télécharger
+                  </a>
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => window.open(getFileUrl(file.id), '_blank')}>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Ouvrir dans un nouvel onglet
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => handleDelete(file.id, file.filename)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Supprimer
+                  <ContextMenuShortcut>⌫</ContextMenuShortcut>
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
           ))}
         </div>
       ) : (
@@ -348,50 +516,84 @@ export default function CloudManager() {
           <CardContent className="p-0">
             <div className="divide-y">
               {files.map((file, index) => (
-                <div
-                  key={file.id}
-                  className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-accent/50 cursor-pointer transition-all duration-200 animate-fade-in-up"
-                  style={{ animationDelay: `${index * 0.02}s`, animationFillMode: 'both' }}
-                  onClick={() => setPreviewFile(file)}
-                >
-                  <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-muted shrink-0 transition-transform duration-200 hover:scale-110">
-                    {getFileIcon(file.mime_type, "h-4 w-4 sm:h-5 sm:w-5")}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm sm:text-base font-medium truncate">{file.filename}</p>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      {formatBytes(file.size)} · {new Date(file.created_at).toLocaleDateString('fr-FR')}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 transition-all duration-200 hover:scale-110"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copyToClipboard(file.id);
-                      }}
+                <ContextMenu key={file.id}>
+                  <ContextMenuTrigger asChild>
+                    <div
+                      className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-accent/50 cursor-pointer transition-all duration-200 animate-fade-in-up"
+                      style={{ animationDelay: `${index * 0.02}s`, animationFillMode: 'both' }}
+                      onClick={() => setPreviewFile(file)}
                     >
-                      {copiedId === file.id ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(file.id, file.filename);
-                      }}
+                      <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-muted shrink-0 transition-transform duration-200 hover:scale-110">
+                        {getFileIcon(file.mime_type, "h-4 w-4 sm:h-5 sm:w-5")}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm sm:text-base font-medium truncate">{file.filename}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
+                          {formatBytes(file.size)} · {new Date(file.created_at).toLocaleDateString('fr-FR')}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 transition-all duration-200 hover:scale-110"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyToClipboard(file.id);
+                          }}
+                        >
+                          {copiedId === file.id ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(file.id, file.filename);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent className="w-56">
+                    <ContextMenuItem onClick={() => setPreviewFile(file)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      Aperçu
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onClick={() => copyToClipboard(file.id)}>
+                      <Link2 className="mr-2 h-4 w-4" />
+                      Copier le lien
+                      <ContextMenuShortcut>⌘C</ContextMenuShortcut>
+                    </ContextMenuItem>
+                    <ContextMenuItem asChild>
+                      <a href={getFileUrl(file.id)} download>
+                        <Download className="mr-2 h-4 w-4" />
+                        Télécharger
+                      </a>
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => window.open(getFileUrl(file.id), '_blank')}>
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Ouvrir dans un nouvel onglet
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => handleDelete(file.id, file.filename)}
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Supprimer
+                      <ContextMenuShortcut>⌫</ContextMenuShortcut>
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
               ))}
             </div>
           </CardContent>

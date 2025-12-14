@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { modulesAPI } from '../lib/api';
 import type { Module, WebsiteModule, ConfigSchema, ConfigAction } from '../lib/api/modules';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { toast } from 'sonner';
 import SchemaRenderer from './SchemaRenderer';
 import { useWebsites, useModuleCatalog, useWebsiteModules, useModuleData, useCacheActions } from '@/hooks/useCache';
+import { FormActions } from '@/components/ui/form-actions';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 interface ModuleConfigProps {
   slug: string;
@@ -171,6 +173,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
   // Local state for settings and UI
   const [isModuleEnabled, setIsModuleEnabled] = useState(false);
   const [settings, setSettings] = useState<Record<string, any>>({});
+  const [initialSettings, setInitialSettings] = useState<Record<string, any>>({});
   const [moduleData, setModuleData] = useState<Record<string, any>>({});
   const [changelog, setChangelog] = useState<ChangelogEntry[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -179,14 +182,23 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
 
   // Combined loading state
   const isLoading = websitesLoading || catalogLoading || modulesLoading || moduleDataLoading;
+  
+  // Track if settings have changed
+  const isSettingsDirty = useMemo(() => {
+    return JSON.stringify(settings) !== JSON.stringify(initialSettings);
+  }, [settings, initialSettings]);
 
   // Update local state when cached data changes
   useEffect(() => {
     if (websiteModule) {
       setIsModuleEnabled(websiteModule.enabled);
-      setSettings(websiteModule.settings || module?.default_settings || {});
+      const newSettings = websiteModule.settings || module?.default_settings || {};
+      setSettings(newSettings);
+      setInitialSettings(newSettings);
     } else if (module) {
-      setSettings(module.default_settings || {});
+      const newSettings = module.default_settings || {};
+      setSettings(newSettings);
+      setInitialSettings(newSettings);
       setIsModuleEnabled(false);
     }
   }, [websiteModule, module]);
@@ -225,6 +237,49 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
     ]);
   }, []);
 
+  // Cancel changes handler
+  const handleCancelChanges = () => {
+    setSettings(initialSettings);
+    toast.info('Modifications annulées');
+  };
+
+  // Keyboard shortcuts
+  const shortcuts = useMemo(() => [
+    {
+      key: 's',
+      ctrl: true,
+      action: () => {
+        if (isSettingsDirty && !isSaving) {
+          handleSaveSettings();
+        }
+      },
+      description: 'Sauvegarder',
+      enabled: isSettingsDirty,
+    },
+    {
+      key: 'Escape',
+      action: () => {
+        if (isSettingsDirty) {
+          handleCancelChanges();
+        }
+      },
+      description: 'Annuler les modifications',
+      enabled: isSettingsDirty,
+    },
+    {
+      key: 'r',
+      ctrl: true,
+      shift: true,
+      action: () => {
+        refreshData();
+        toast.info('Actualisation des données...');
+      },
+      description: 'Actualiser',
+    },
+  ], [isSettingsDirty, isSaving, initialSettings]);
+
+  useKeyboardShortcuts(shortcuts);
+
   const handleSaveSettings = async () => {
     if (!module || !websiteId) return;
 
@@ -239,6 +294,8 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
           settings,
         });
       }
+      // Update initial settings after save
+      setInitialSettings(settings);
       // Invalidate cache and refetch
       invalidateWebsiteData(websiteId);
       await Promise.all([refetchModules(true), refetchModuleData(true)]);
@@ -654,24 +711,6 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
                           </div>
                         </div>
                       )}
-
-                      {/* Save button */}
-                      <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200">
-                        <button
-                          onClick={() => refreshData()}
-                          className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                          Annuler
-                        </button>
-                        <button
-                          onClick={handleSaveSettings}
-                          disabled={isSaving}
-                          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {isSaving ? Icons.spinner : Icons.check}
-                          Enregistrer
-                        </button>
-                      </div>
                     </div>
                   </TabsContent>
                 )}
@@ -749,6 +788,14 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
           </button>
         </div>
       )}
+      
+      {/* Sticky form actions */}
+      <FormActions
+        isDirty={isSettingsDirty}
+        isSaving={isSaving}
+        onSave={handleSaveSettings}
+        onCancel={handleCancelChanges}
+      />
     </div>
   );
 }
