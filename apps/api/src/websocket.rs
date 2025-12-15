@@ -9,7 +9,7 @@ use chrono::Utc;
 use futures::{sink::SinkExt, stream::StreamExt};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, mpsc};
 use tracing::{info, warn, error};
 
 /// WebSocket message structure
@@ -58,23 +58,38 @@ pub async fn ws_handler(
 /// Handle individual WebSocket connection
 async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
     let (mut sender, mut receiver) = socket.split();
-    let mut rx = state.tx.subscribe();
+    let mut broadcast_rx = state.tx.subscribe();
     
     let client_id = uuid::Uuid::new_v4();
     info!("New WebSocket client connected: {}", client_id);
+
+    // Channel for direct messages to this client
+    let (direct_tx, mut direct_rx) = mpsc::channel::<WsMessage>(32);
 
     // Track if client is authenticated
     let authenticated = Arc::new(tokio::sync::RwLock::new(false));
     let auth_clone = authenticated.clone();
 
-    // Task to send broadcast messages to this client
+    // Task to send messages to this client (both direct and broadcast)
     let mut send_task = tokio::spawn(async move {
-        while let Ok(msg) = rx.recv().await {
-            // Only send if authenticated
-            if *auth_clone.read().await {
-                if let Ok(json) = serde_json::to_string(&msg) {
-                    if sender.send(Message::Text(json)).await.is_err() {
-                        break;
+        loop {
+            tokio::select! {
+                // Handle direct messages (always sent)
+                Some(msg) = direct_rx.recv() => {
+                    if let Ok(json) = serde_json::to_string(&msg) {
+                        if sender.send(Message::Text(json)).await.is_err() {
+                            break;
+                        }
+                    }
+                }
+                // Handle broadcast messages (only if authenticated)
+                Ok(msg) = broadcast_rx.recv() => {
+                    if *auth_clone.read().await {
+                        if let Ok(json) = serde_json::to_string(&msg) {
+                            if sender.send(Message::Text(json)).await.is_err() {
+                                break;
+                            }
+                        }
                     }
                 }
             }
@@ -82,7 +97,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
     });
 
     // Task to receive messages from this client
-    let tx = state.tx.clone();
+    let broadcast_tx = state.tx.clone();
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
             match msg {
@@ -100,7 +115,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                             *authenticated.write().await = true;
                                             info!("Client {} authenticated successfully", client_id);
                                             
-                                            // Send auth success message
+                                            // Send auth success message directly to this client
                                             let auth_success = WsMessage {
                                                 msg_type: "auth-success".to_string(),
                                                 data: serde_json::json!({
@@ -108,36 +123,34 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                                     "client_id": client_id.to_string()
                                                 }),
                                             };
-                                            let _ = tx.send(auth_success);
+                                            let _ = direct_tx.send(auth_success).await;
                                         } else {
                                             warn!("Client {} authentication failed", client_id);
-                                            // Send auth failed message
+                                            // Send auth failed message directly to this client
                                             let auth_failed = WsMessage {
                                                 msg_type: "auth-failed".to_string(),
                                                 data: serde_json::json!({
                                                     "error": "Invalid token"
                                                 }),
                                             };
-                                            let _ = tx.send(auth_failed);
+                                            let _ = direct_tx.send(auth_failed).await;
                                         }
                                     }
                                 }
                                 "ping" => {
-                                    // Respond to ping with pong
-                                    if *authenticated.read().await {
-                                        let pong = WsMessage {
-                                            msg_type: "pong".to_string(),
-                                            data: serde_json::json!({
-                                                "timestamp": Utc::now().timestamp_millis()
-                                            }),
-                                        };
-                                        let _ = tx.send(pong);
-                                    }
+                                    // Respond to ping with pong (always, no auth required for ping)
+                                    let pong = WsMessage {
+                                        msg_type: "pong".to_string(),
+                                        data: serde_json::json!({
+                                            "timestamp": Utc::now().timestamp_millis()
+                                        }),
+                                    };
+                                    let _ = direct_tx.send(pong).await;
                                 }
                                 "action" => {
                                     // Broadcast action to other clients if authenticated
                                     if *authenticated.read().await {
-                                        let _ = tx.send(ws_msg);
+                                        let _ = broadcast_tx.send(ws_msg);
                                     }
                                 }
                                 _ => {
@@ -154,14 +167,13 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                     info!("Client {} sent close message", client_id);
                     break;
                 }
-                Message::Ping(data) => {
-                    // Respond to WebSocket ping with pong
-                    // Axum handles this automatically, but we log it
-                    info!("Received ping from client {}", client_id);
+                Message::Ping(_data) => {
+                    // WebSocket protocol ping - Axum handles pong automatically
+                    info!("Received WebSocket ping from client {}", client_id);
                 }
                 Message::Pong(_) => {
                     // Client responded to our ping
-                    info!("Received pong from client {}", client_id);
+                    info!("Received WebSocket pong from client {}", client_id);
                 }
                 _ => {}
             }
