@@ -118,13 +118,17 @@ Un endroit unique pour :
 
 ### API Core (infrastructure centralisée)
 
-- ✅ **Multi-tenant** : isolation complète par tenant_id, RLS en base
+- ✅ **Multi-tenant** : isolation complète par account_id, RLS en base
 - ✅ **Authentification** : JWT, OAuth (GitHub), 2FA optionnel
 - ✅ **Architecture modulaire** : Websites → Sections → Modules
-- ✅ **Gestion des quotas** : IA tokens, stockage, sites par utilisateur
+- ✅ **Gestion des quotas** : IA tokens, stockage, sites par account
 - ✅ **Event-driven** : Core → Modules via événements persistés
-- ✅ **Facturations** : tracking usage, projections de coûts, webhooks
-- ✅ **Hiérarchie utilisateurs** : tenants + sub-users/clients avec permissions
+- ✅ **WebSocket temps réel** : synchronisation en direct, notifications push
+- ✅ **Redis Pub/Sub** : distribution multi-instances des événements
+- ✅ **Notifications** : in-app, push (PWA), paramètres personnalisables
+- ✅ **Facturations** : Stripe integration, tracking usage, webhooks
+- ✅ **Hiérarchie comptes** : tenants + sub-accounts/clients avec permissions
+- ✅ **PWA complète** : installable, offline, score 93/100
 
 ### Modules (produits intégrés)
 
@@ -136,6 +140,7 @@ Un endroit unique pour :
 | **Analytics Tracker** | Tracking des visites et comportements | Analytics |
 | **Theme Engine** | Thèmes personnalisables et styles | Appearance |
 | **Cloud Storage** | File hosting, CDN delivery, quota management | Per-client |
+| **Notifications** | Notifications in-app, push PWA, consolidation | Engagement |
 
 ### Types de Sections
 
@@ -224,9 +229,13 @@ Frontend (Astro)
 |-----------|-------------|---------------|
 | **API** | Rust + Axum | Performance native, sécurité mémoire, async robuste |
 | **Database** | PostgreSQL | ACID, JSONB, RLS pour isolation multi-tenant |
+| **Cache** | Redis | Caching des sites publics, Pub/Sub temps réel |
+| **WebSocket** | Axum + tokio-tungstenite | Communication bidirectionnelle temps réel |
 | **Worker** | Rust + Tokio | Jobs asynchrones performants |
 | **Frontend** | Astro | SSG/SSR optimisé, excellent pour les sites de contenu |
+| **PWA** | Service Worker + Manifest | Installation, offline, notifications push |
 | **Auth** | JWT / Cookies | Simple et stateless |
+| **Paiements** | Stripe API | Facturation et abonnements |
 
 ### Décisions architecturales clés
 
@@ -294,6 +303,7 @@ asap/
 - **Node.js** 18+
 - **Docker** & Docker Compose
 - **PostgreSQL** 15+ (ou via Docker)
+- **Redis** 7+ (ou via Docker) - optionnel mais recommandé pour WebSocket et cache
 
 ### Installation
 
@@ -307,10 +317,14 @@ cp infra/env.example/api.env infra/api.env
 cp infra/env.example/worker.env infra/worker.env
 cp infra/env.example/web.env infra/web.env
 
-# 3. Lancer l'environnement complet (les migrations sont automatiques)
+# 3. Configurer Redis (optionnel, pour WebSocket et cache)
+# Ajouter dans infra/api.env et infra/worker.env :
+# REDIS_URL=redis://localhost:6379
+
+# 4. Lancer l'environnement complet (les migrations sont automatiques)
 docker compose -f infra/docker-compose.yml up
 
-# 4. (Optionnel) Créer des données de démo
+# 5. (Optionnel) Créer des données de démo
 ./scripts/seed-demo.sh
 ```
 
@@ -334,6 +348,7 @@ cd apps/web && npm install && npm run dev
 | Landing | http://localhost:4321 |
 | Dashboard | http://localhost:4321/app |
 | API | http://localhost:3000 |
+| WebSocket | ws://localhost:3000/ws |
 | Site public | http://{slug}.localhost:4321 (en local) / `{slug}.asap.cool` (prod) |
 
 ---
@@ -574,6 +589,51 @@ Publie le website et le rend accessible publiquement.
 { "message": "Website published", "status": "published" }
 ```
 
+### Notifications (authentifié)
+
+#### `GET /notifications`
+Liste des notifications avec filtres (category, priority, read/unread).
+
+#### `GET /notifications/unread-count`
+Retourne le nombre de notifications non lues.
+
+#### `POST /notifications/mark-read`
+Marquer une ou plusieurs notifications comme lues.
+
+#### `POST /notifications/push/subscribe`
+S'abonner aux notifications push (PWA).
+
+#### `GET /notifications/push/vapid-key`
+Récupérer la clé publique VAPID pour Web Push.
+
+### Paiements (authentifié)
+
+#### `POST /billing/checkout-session`
+Créer une session de paiement Stripe.
+
+```json
+// Request
+{
+  "price_id": "price_xxx",
+  "success_url": "https://app.asap.cool/success",
+  "cancel_url": "https://app.asap.cool/cancel"
+}
+```
+
+### WebSocket
+
+#### `GET /ws`
+Connexion WebSocket pour synchronisation temps réel.
+
+**Authentification :** Envoyer `{"type": "auth", "token": "jwt_token"}` après connexion.
+
+**Messages reçus :**
+- `website_updated` - Website modifié
+- `module_activated` - Module activé
+- `file_uploaded` - Fichier uploadé
+- `notification` - Nouvelle notification
+- Et autres événements de synchronisation...
+
 ### Public
 
 #### `GET /public/websites/:slug`
@@ -739,8 +799,24 @@ Site Public
   - [x] Parallel event processing
   - [x] Query optimization avec indexes
   - [x] File storage avec audit trail
+- [x] **Fonctionnalités temps réel**
+  - [x] WebSocket avec authentification JWT
+  - [x] Redis Pub/Sub pour distribution multi-instances
+  - [x] Contrôle d'accès basé sur les comptes
+  - [x] Synchronisation temps réel (websites, modules, fichiers)
+  - [x] Système de notifications in-app et push
+  - [x] Notification queue avec consolidation
+- [x] **Intégration paiements**
+  - [x] Stripe provider intégré
+  - [x] Checkout sessions
+  - [x] Webhooks Stripe
+- [x] **Progressive Web App**
+  - [x] Service Worker (802 lignes)
+  - [x] Manifest complet avec Share Target
+  - [x] Support offline et caching avancé
+  - [x] Score PWA : 93/100
 
-**📊 Métriques:** 100+ tests unitaires | ~12,000 lignes Rust | 6 migrations SQL
+**📊 Métriques:** 100+ tests unitaires | ~15,000 lignes Rust | 7 migrations SQL
 
 ### 🔨 Phase Actuelle - Frontend & UX (En cours)
 
@@ -751,6 +827,9 @@ Site Public
   - [x] Pages signup/login
   - [x] Client API TypeScript
   - [x] Store d'authentification
+  - [x] PWA complète (installable, offline)
+  - [x] Hook WebSocket temps réel
+  - [x] Système de notifications UI
 - [ ] **Dashboard principal**
   - [ ] Dashboard utilisateur
   - [ ] Sélecteur de Presets
@@ -758,6 +837,7 @@ Site Public
   - [ ] Configuration modules
   - [ ] Upload fichiers
   - [ ] Prévisualisation website
+  - [ ] Notifications dropdown
 - [ ] **Pages publiques**
   - [ ] Website public ([slug])
   - [ ] SSG optimisé
@@ -868,6 +948,10 @@ Ce projet suit un modèle **Open-Core** :
 | [DECISIONS.md](docs/DECISIONS.md) | Journal des décisions (ADR) |
 | [STRUCTURE.md](docs/STRUCTURE.md) | Structure du monorepo |
 | [BUSINESS.md](docs/BUSINESS.md) | Vision & modèle d'affaires |
+| [WEBSOCKET_PHASE4.md](docs/WEBSOCKET_PHASE4.md) | WebSocket Phase 4 - Backend integration & sync |
+| [NOTIFICATIONS.md](docs/NOTIFICATIONS.md) | Système de notifications in-app et push |
+| [PWA_README.md](docs/PWA_README.md) | Documentation Progressive Web App complète |
+| [FILE_STORAGE.md](docs/FILE_STORAGE.md) | Gestion des fichiers et quotas |
 
 ---
 
