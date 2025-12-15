@@ -92,6 +92,23 @@ impl WsState {
             warn!("Failed to broadcast message: {}", e);
         }
     }
+    
+    /// Broadcast a message to all clients of a specific account (Phase 4)
+    /// Note: Currently uses the broadcast channel with account_id metadata
+    /// The actual filtering happens in the WebSocket receiver task
+    pub async fn broadcast_to_account(&self, account_id: &str, mut msg: WsMessage) {
+        // Add account_id metadata to the message for filtering
+        if let Some(data) = msg.data.as_object_mut() {
+            data.insert("__account_id".to_string(), serde_json::json!(account_id));
+        }
+        
+        // Check if account has connected clients before broadcasting
+        if self.has_connected_clients(account_id).await {
+            self.broadcast(msg);
+        } else {
+            tracing::debug!("No clients connected for account: {}, skipping broadcast", account_id);
+        }
+    }
 
     /// Send a new notification event to all connected clients
     pub fn send_notification(&self, notification: serde_json::Value, unread_count: i64) {
@@ -156,15 +173,19 @@ impl WsState {
 /// Implement the WsBroadcaster trait for WsState
 /// This allows core/api to send notifications through WebSocket without direct dependency
 impl WsBroadcaster for WsState {
-    fn broadcast_to_user(&self, _account_id: &str, msg: WsBroadcastMessage) {
+    fn broadcast_to_user(&self, account_id: &str, msg: WsBroadcastMessage) {
         // Convert WsBroadcastMessage to our internal WsMessage format
-        let ws_msg = WsMessage {
+        let mut ws_msg = WsMessage {
             msg_type: msg.msg_type,
             data: msg.data,
         };
+        
+        // Add account_id for filtering (Phase 4 - account-based access control)
+        if let Some(data) = ws_msg.data.as_object_mut() {
+            data.insert("__account_id".to_string(), serde_json::json!(account_id));
+        }
+        
         self.broadcast(ws_msg);
-        // TODO: In the future, filter by account_id to send only to the right user
-        // For now, we broadcast to all authenticated users
     }
 }
 
@@ -205,11 +226,27 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                     }
                 }
                 // Handle broadcast messages (only if authenticated)
-                Ok(msg) = broadcast_rx.recv() => {
-                    if auth_clone.read().await.is_some() {
-                        if let Ok(json) = serde_json::to_string(&msg) {
-                            if sender.send(Message::Text(json)).await.is_err() {
-                                break;
+                Ok(mut msg) = broadcast_rx.recv() => {
+                    if let Some(account_id) = auth_clone.read().await.as_ref() {
+                        // Check if message is targeted for this account
+                        let should_send = if let Some(target_account) = msg.data.get("__account_id") {
+                            // Message is account-specific, only send if it matches
+                            target_account.as_str() == Some(account_id)
+                        } else {
+                            // No account filter, send to all authenticated clients
+                            true
+                        };
+                        
+                        if should_send {
+                            // Remove internal metadata before sending
+                            if let Some(data) = msg.data.as_object_mut() {
+                                data.remove("__account_id");
+                            }
+                            
+                            if let Ok(json) = serde_json::to_string(&msg) {
+                                if sender.send(Message::Text(json)).await.is_err() {
+                                    break;
+                                }
                             }
                         }
                     }

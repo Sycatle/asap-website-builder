@@ -22,4 +22,13 @@ pub use pubsub::{
     SharedNotificationPublisher,
     NoOpPublisher,
     CHANNEL_NOTIFICATIONS,
+    // Sync events (Phase 4)
+    SyncPubSubEvent,
+    SyncPublisher,
+    SharedSyncPublisher,
+    NoOpSyncPublisher,
+    CHANNEL_SYNC_WEBSITE,
+    CHANNEL_SYNC_MODULE,
+    CHANNEL_SYNC_FILE,
+    CHANNEL_PRESENCE,
 };

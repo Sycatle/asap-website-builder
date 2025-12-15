@@ -105,12 +105,17 @@ async fn main() -> anyhow::Result<()> {
     let ws_state = Arc::new(websocket::WsState::new(shared_config.clone()));
     tracing::info!("WebSocket state initialized with authentication");
 
-    // Start Redis Pub/Sub subscriber for real-time notifications
+    // Start Redis Pub/Sub subscribers for real-time features
     if let Ok(redis_url) = std::env::var("REDIS_URL") {
-        redis_pubsub::spawn_redis_subscriber(ws_state.clone(), redis_url);
+        // Notification subscriber
+        redis_pubsub::spawn_redis_subscriber(ws_state.clone(), redis_url.clone());
         tracing::info!("Redis Pub/Sub subscriber started for real-time notifications");
+        
+        // Sync subscriber (Phase 4)
+        redis_pubsub::spawn_redis_sync_subscriber(ws_state.clone(), redis_url);
+        tracing::info!("Redis Pub/Sub subscriber started for real-time sync events (Phase 4)");
     } else {
-        tracing::warn!("REDIS_URL not set. Real-time notifications via Pub/Sub disabled.");
+        tracing::warn!("REDIS_URL not set. Real-time features via Pub/Sub disabled.");
     }
 
     // Create API router with WebSocket broadcaster
