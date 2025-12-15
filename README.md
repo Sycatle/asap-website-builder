@@ -941,6 +941,7 @@ Ce projet suit un modèle **Open-Core** :
 
 | Document | Description |
 |----------|-------------|
+| [ROADMAP.md](docs/ROADMAP.md) | Plan de développement détaillé avec phases et métriques |
 | [SPEC_MVP.md](docs/SPEC_MVP.md) | Spécifications fonctionnelles du MVP |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture technique détaillée |
 | [API_SPEC.md](docs/API_SPEC.md) | Contrat d'API complet |
@@ -952,6 +953,7 @@ Ce projet suit un modèle **Open-Core** :
 | [NOTIFICATIONS.md](docs/NOTIFICATIONS.md) | Système de notifications in-app et push |
 | [PWA_README.md](docs/PWA_README.md) | Documentation Progressive Web App complète |
 | [FILE_STORAGE.md](docs/FILE_STORAGE.md) | Gestion des fichiers et quotas |
+| [CHANGELOG.md](docs/CHANGELOG.md) | Historique détaillé des changements |
 
 ---
 
