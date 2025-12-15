@@ -1,0 +1,81 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { WebSocketTest } from '../components/websocket/WebSocketTest';
+---
+
+<BaseLayout title="WebSocket Test - ASAP">
+  <div class="min-h-screen bg-background p-4 md:p-8">
+    <div class="mx-auto max-w-4xl space-y-6">
+      <div class="space-y-2">
+        <h1 class="text-3xl font-bold">WebSocket Integration - Phase 1</h1>
+        <p class="text-muted-foreground">
+          Testing real-time WebSocket connection between React frontend and Rust backend.
+        </p>
+      </div>
+
+      <div class="grid gap-6">
+        <WebSocketTest client:load />
+      </div>
+
+      <div class="rounded-lg border p-4 space-y-4 bg-muted/20">
+        <h2 class="text-xl font-semibold">Phase 1 Implementation</h2>
+        
+        <div class="space-y-2">
+          <h3 class="font-medium">✅ Backend (Rust/Axum)</h3>
+          <ul class="list-disc list-inside text-sm text-muted-foreground space-y-1">
+            <li>WebSocket server endpoint at <code class="text-xs bg-muted px-1 py-0.5 rounded">/ws</code></li>
+            <li>Broadcast channel for multi-client messaging</li>
+            <li>Authentication with JWT token verification</li>
+            <li>Ping/pong heartbeat mechanism</li>
+            <li>Connection state management</li>
+          </ul>
+        </div>
+
+        <div class="space-y-2">
+          <h3 class="font-medium">✅ Frontend (React/TypeScript)</h3>
+          <ul class="list-disc list-inside text-sm text-muted-foreground space-y-1">
+            <li><code class="text-xs bg-muted px-1 py-0.5 rounded">useWebSocket</code> hook with full TypeScript types</li>
+            <li>Auto-reconnection with exponential backoff</li>
+            <li>Event-based message handling</li>
+            <li>Integration with PWA offline detection</li>
+            <li>Connection lifecycle management</li>
+          </ul>
+        </div>
+
+        <div class="space-y-2">
+          <h3 class="font-medium">🧪 Testing</h3>
+          <ul class="list-disc list-inside text-sm text-muted-foreground space-y-1">
+            <li>Connection/disconnection tests</li>
+            <li>Authentication flow validation</li>
+            <li>Ping/pong latency measurement</li>
+            <li>Message broadcasting between clients</li>
+            <li>Reconnection after network interruption</li>
+          </ul>
+        </div>
+
+        <div class="space-y-2">
+          <h3 class="font-medium">📝 Usage Instructions</h3>
+          <ol class="list-decimal list-inside text-sm text-muted-foreground space-y-1">
+            <li>Make sure the backend server is running: <code class="text-xs bg-muted px-1 py-0.5 rounded">cd apps/api && cargo run</code></li>
+            <li>The WebSocket will auto-connect on page load</li>
+            <li>Click "Send Ping" to test latency</li>
+            <li>Enter a custom message to broadcast to other connected clients</li>
+            <li>Try disconnecting/reconnecting to test auto-reconnection</li>
+            <li>Open multiple browser tabs to see multi-client messaging</li>
+          </ol>
+        </div>
+
+        <div class="rounded-lg border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-950/20 p-3">
+          <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
+            💡 This is Phase 1 of the WebSocket integration. Next phases will add:
+          </p>
+          <ul class="list-disc list-inside text-xs text-blue-600 dark:text-blue-400 mt-2 space-y-1">
+            <li>Phase 2: Real-time notifications system</li>
+            <li>Phase 3: Collaborative editing features</li>
+            <li>Phase 4: Chat support and advanced features</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

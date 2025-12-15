@@ -3,8 +3,10 @@ mod db;
 mod cache;
 mod website_cache;
 mod pool;
+mod websocket;
 
 use std::net::SocketAddr;
+use std::sync::Arc;
 use axum::{Router, routing::get, Json, extract::State};
 use serde_json::json;
 use sqlx::PgPool;
@@ -98,6 +100,10 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
+    // Create WebSocket state
+    let ws_state = Arc::new(websocket::WsState::new());
+    tracing::info!("WebSocket state initialized");
+
     // Create API router
     let api_router = asap_core_api::create_router(pool.clone(), shared_config);
     
@@ -107,6 +113,8 @@ async fn main() -> anyhow::Result<()> {
         .route("/health/pool", get(health_pool))
         .with_state(pool.clone())
         .nest("/api", api_router)
+        .route("/ws", get(websocket::ws_handler))
+        .with_state(ws_state)
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http());
 
