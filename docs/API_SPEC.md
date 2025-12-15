@@ -9,7 +9,7 @@ Ce document décrit les routes HTTP exposées par le **Core API** (pas les modul
 - Toutes les réponses sont au format **JSON** (UTF-8)
 - L'authentification utilise **JWT** ou **cookies signés**
 - Les routes privées requièrent un token JWT
-- Chaque requête inclut implicitement le `tenant_id` depuis le token
+- Chaque requête inclut implicitement le `account_id` depuis le token JWT
 
 ---
 
@@ -579,6 +579,424 @@ Retourne un website publié (fallback si projection absente).
 
 ---
 
+## Routes Notifications (Authentifiées)
+
+### `GET /notifications`
+
+Liste les notifications de l'utilisateur avec filtres optionnels.
+
+**Query params (optionnels) :**
+- `category` : filtrer par catégorie (system, account, website, module, billing, etc.)
+- `priority` : filtrer par priorité (low, normal, high, urgent)
+- `is_read` : filtrer par statut lu/non lu (true/false)
+- `limit` : nombre de résultats (défaut: 50)
+- `offset` : pagination
+
+**Réponse (200) :**
+
+```json
+{
+  "notifications": [
+    {
+      "id": "uuid",
+      "title": "Website publié",
+      "message": "Votre site 'mon-site' est maintenant en ligne",
+      "notification_type": "website_published",
+      "category": "website",
+      "priority": "normal",
+      "is_read": false,
+      "action_url": "/websites/uuid",
+      "icon": "check-circle",
+      "created_at": "2025-12-15T10:30:00Z"
+    }
+  ],
+  "total": 42,
+  "unread_count": 5
+}
+```
+
+### `GET /notifications/unread-count`
+
+Retourne le nombre de notifications non lues.
+
+**Réponse (200) :**
+
+```json
+{
+  "count": 5
+}
+```
+
+### `GET /notifications/:notification_id`
+
+Récupère une notification spécifique.
+
+**Réponse (200) :**
+
+```json
+{
+  "id": "uuid",
+  "title": "Notification",
+  "message": "Message détaillé",
+  "notification_type": "type",
+  "category": "system",
+  "priority": "normal",
+  "is_read": false,
+  "created_at": "2025-12-15T10:30:00Z"
+}
+```
+
+### `POST /notifications/mark-read`
+
+Marque une ou plusieurs notifications comme lues.
+
+**Corps JSON :**
+
+```json
+{
+  "notification_ids": ["uuid1", "uuid2"],  // Optionnel : IDs spécifiques
+  "mark_all": false                         // Optionnel : marquer toutes
+}
+```
+
+**Réponse (200) :**
+
+```json
+{
+  "marked_count": 2
+}
+```
+
+### `POST /notifications/:notification_id/read`
+
+Marque une notification spécifique comme lue.
+
+**Réponse (200) :**
+
+```json
+{
+  "id": "uuid",
+  "is_read": true
+}
+```
+
+### `DELETE /notifications/:notification_id`
+
+Supprime une notification.
+
+**Réponse (204) :**
+
+Pas de contenu.
+
+### `POST /notifications/push/subscribe`
+
+S'abonne aux notifications push (PWA).
+
+**Corps JSON :**
+
+```json
+{
+  "subscription": {
+    "endpoint": "https://fcm.googleapis.com/fcm/send/...",
+    "keys": {
+      "p256dh": "BNc...",
+      "auth": "xyz..."
+    }
+  }
+}
+```
+
+**Réponse (200) :**
+
+```json
+{
+  "message": "Subscription created"
+}
+```
+
+### `POST /notifications/push/unsubscribe`
+
+Se désabonne des notifications push.
+
+**Corps JSON :**
+
+```json
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/..."
+}
+```
+
+**Réponse (200) :**
+
+```json
+{
+  "message": "Subscription removed"
+}
+```
+
+### `GET /notifications/push/vapid-key`
+
+Récupère la clé publique VAPID pour Web Push.
+
+**Réponse (200) :**
+
+```json
+{
+  "public_key": "BNcG..."
+}
+```
+
+### `GET /notifications/settings`
+
+Récupère les paramètres de notification de l'utilisateur.
+
+**Réponse (200) :**
+
+```json
+{
+  "email_enabled": true,
+  "push_enabled": true,
+  "in_app_enabled": true,
+  "categories": {
+    "system": true,
+    "website": true,
+    "module": true,
+    "billing": true,
+    "security": true
+  }
+}
+```
+
+### `PUT /notifications/settings`
+
+Met à jour les paramètres de notification.
+
+**Corps JSON :**
+
+```json
+{
+  "email_enabled": false,
+  "push_enabled": true,
+  "categories": {
+    "system": true,
+    "billing": true
+  }
+}
+```
+
+**Réponse (200) :**
+
+```json
+{
+  "message": "Settings updated"
+}
+```
+
+---
+
+## Routes Paiements (Authentifiées)
+
+### `POST /billing/checkout-session`
+
+Crée une session de paiement Stripe pour un abonnement ou paiement unique.
+
+**Corps JSON :**
+
+```json
+{
+  "price_id": "price_xxxxx",
+  "success_url": "https://app.asap.cool/success",
+  "cancel_url": "https://app.asap.cool/cancel",
+  "mode": "subscription"  // ou "payment" pour paiement unique
+}
+```
+
+**Réponse (200) :**
+
+```json
+{
+  "session_id": "cs_test_xxxxx",
+  "url": "https://checkout.stripe.com/c/pay/cs_test_xxxxx"
+}
+```
+
+**Usage :**
+Rediriger l'utilisateur vers l'URL retournée pour compléter le paiement.
+
+---
+
+## WebSocket
+
+### `GET /ws`
+
+Établit une connexion WebSocket pour la synchronisation temps réel.
+
+**Authentification :**
+
+Après la connexion, envoyer un message d'authentification :
+
+```json
+{
+  "type": "auth",
+  "token": "eyJhbGc..."
+}
+```
+
+**Réponse d'authentification :**
+
+```json
+{
+  "type": "auth_success",
+  "data": {
+    "account_id": "uuid",
+    "message": "Authentication successful"
+  }
+}
+```
+
+**Messages reçus (exemples) :**
+
+```json
+// Website mis à jour
+{
+  "type": "website_updated",
+  "data": {
+    "website_id": "uuid",
+    "website": { ... },
+    "user_name": "John Doe"
+  }
+}
+
+// Module activé
+{
+  "type": "module_activated",
+  "data": {
+    "website_id": "uuid",
+    "module_slug": "github-sync",
+    "user_name": "John Doe"
+  }
+}
+
+// Fichier uploadé
+{
+  "type": "file_uploaded",
+  "data": {
+    "website_id": "uuid",
+    "file_id": "uuid",
+    "file_name": "image.png",
+    "file_size": 1024000
+  }
+}
+
+// Notification
+{
+  "type": "notification",
+  "data": {
+    "notification_id": "uuid",
+    "title": "Nouveau message",
+    "message": "...",
+    "category": "system",
+    "priority": "normal"
+  }
+}
+```
+
+**Messages envoyés (actions) :**
+
+```json
+// Heartbeat (optionnel, toutes les 30s)
+{
+  "type": "ping"
+}
+```
+
+**Déconnexion :**
+
+La connexion se ferme automatiquement en cas d'inactivité ou d'erreur d'authentification.
+
+---
+
+## Routes Fichiers (Authentifiées)
+
+### `POST /files`
+
+Upload un fichier avec compression automatique.
+
+**Content-Type :** `multipart/form-data`
+
+**Champs :**
+- `file` : fichier à uploader
+- `website_id` : UUID du website (optionnel)
+- `category` : catégorie (image, document, etc.)
+
+**Réponse (201) :**
+
+```json
+{
+  "file": {
+    "id": "uuid",
+    "file_name": "image.png",
+    "original_name": "photo.png",
+    "file_size": 512000,
+    "mime_type": "image/png",
+    "category": "image",
+    "storage_path": "accounts/uuid/files/...",
+    "compression": {
+      "enabled": true,
+      "original_size": 1024000,
+      "compressed_size": 512000,
+      "ratio": 0.5,
+      "algorithm": "gzip"
+    },
+    "created_at": "2025-12-15T10:30:00Z"
+  }
+}
+```
+
+### `GET /files`
+
+Liste les fichiers de l'utilisateur.
+
+**Query params (optionnels) :**
+- `website_id` : filtrer par website
+- `category` : filtrer par catégorie
+- `limit` : nombre de résultats
+- `offset` : pagination
+
+**Réponse (200) :**
+
+```json
+{
+  "files": [...],
+  "total": 42
+}
+```
+
+### `DELETE /files/:file_id`
+
+Supprime un fichier.
+
+**Réponse (204) :**
+
+Pas de contenu.
+
+### `GET /files/quota/usage`
+
+Récupère l'usage du quota de stockage.
+
+**Réponse (200) :**
+
+```json
+{
+  "used_bytes": 104857600,
+  "quota_bytes": 1073741824,
+  "usage_percentage": 9.76,
+  "file_count": 42
+}
+```
+
+---
+
 ## Erreurs HTTP
 
 | Code | Description |
@@ -588,4 +1006,6 @@ Retourne un website publié (fallback si projection absente).
 | `403` | Forbidden (mauvais tenant) |
 | `404` | Ressource non trouvée |
 | `409` | Conflit (slug déjà existant) |
+| `413` | Fichier trop volumineux |
+| `429` | Trop de requêtes (rate limiting) |
 | `500` | Erreur serveur |
