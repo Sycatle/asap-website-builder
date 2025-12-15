@@ -82,6 +82,11 @@ export const useNotificationsStore = create<NotificationsState & NotificationsAc
 
       // ========== FETCH NOTIFICATIONS ==========
       fetchNotifications: async (filters?: NotificationFilters, force = false) => {
+        // Don't fetch if no auth token
+        if (typeof window !== 'undefined' && !localStorage.getItem('auth_token')) {
+          return;
+        }
+
         const { lastFetchTime, isLoading } = get();
         
         // Debounce: don't fetch if already loading or fetched recently (within 5 seconds)
@@ -129,6 +134,11 @@ export const useNotificationsStore = create<NotificationsState & NotificationsAc
 
       // ========== FETCH UNREAD COUNT ONLY ==========
       fetchUnreadCount: async () => {
+        // Don't fetch if no auth token
+        if (typeof window !== 'undefined' && !localStorage.getItem('auth_token')) {
+          return;
+        }
+
         try {
           const count = await notificationsAPI.getUnreadCount();
           const previousCount = get().unreadCount;
@@ -372,10 +382,19 @@ export const useHasNewNotifications = () => {
   return useNotificationsStore((state) => state.hasNewNotifications);
 };
 
-// Get notification settings
+// Get sound enabled setting
+export const useSoundEnabled = () => {
+  return useNotificationsStore((state) => state.soundEnabled);
+};
+
+// Get vibration enabled setting
+export const useVibrationEnabled = () => {
+  return useNotificationsStore((state) => state.vibrationEnabled);
+};
+
+// Get notification settings (stable reference)
 export const useNotificationSettings = () => {
-  return useNotificationsStore((state) => ({
-    soundEnabled: state.soundEnabled,
-    vibrationEnabled: state.vibrationEnabled,
-  }));
+  const soundEnabled = useNotificationsStore((state) => state.soundEnabled);
+  const vibrationEnabled = useNotificationsStore((state) => state.vibrationEnabled);
+  return { soundEnabled, vibrationEnabled };
 };
