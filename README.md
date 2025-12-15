@@ -942,6 +942,7 @@ Ce projet suit un modèle **Open-Core** :
 | Document | Description |
 |----------|-------------|
 | [ROADMAP.md](docs/ROADMAP.md) | Plan de développement détaillé avec phases et métriques |
+| [ACTION_PLAN_SHORT_TERM.md](docs/ACTION_PLAN_SHORT_TERM.md) | Plan d'action court terme (4 semaines) - technique et fonctionnel |
 | [SPEC_MVP.md](docs/SPEC_MVP.md) | Spécifications fonctionnelles du MVP |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture technique détaillée |
 | [API_SPEC.md](docs/API_SPEC.md) | Contrat d'API complet |
