@@ -14,8 +14,7 @@ use tokio::sync::{broadcast, mpsc, RwLock};
 use tracing::{info, warn, error};
 
 // Import the broadcaster trait from core-api (which re-exports from core-shared)
-use asap_core_api::{WsBroadcaster, WsBroadcastMessage};
-use asap_core_shared::{SharedConfig, validate_token, Claims};
+use asap_core_api::{WsBroadcaster, WsBroadcastMessage, SharedConfig, validate_token, Claims};
 
 /// WebSocket message structure
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -212,6 +211,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
     // Track authenticated account ID
     let authenticated_account = Arc::new(tokio::sync::RwLock::new(Option::<String>::None));
     let auth_clone = authenticated_account.clone();
+    let auth_for_cleanup = authenticated_account.clone();
 
     // Task to send messages to this client (both direct and broadcast)
     let mut send_task = tokio::spawn(async move {
@@ -257,6 +257,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
 
     // Task to receive messages from this client
     let broadcast_tx = state.tx.clone();
+    let state_for_cleanup = state.clone();  // Clone for cleanup after tasks complete
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
             match msg {
@@ -272,7 +273,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                         // Verify JWT token and extract account ID
                                         if let Some(claims) = verify_token_and_get_claims(&payload.token, &state.config) {
                                             let account_id = claims.sub.clone();
-                                            *authenticated.write().await = Some(account_id.clone());
+                                            *authenticated_account.write().await = Some(account_id.clone());
                                             
                                             // Register this client
                                             state.register_client(account_id.clone(), client_id).await;
@@ -314,7 +315,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                 }
                                 "action" => {
                                     // Broadcast action to other clients only if authenticated
-                                    if authenticated.read().await.is_some() {
+                                    if authenticated_account.read().await.is_some() {
                                         let _ = broadcast_tx.send(ws_msg);
                                     } else {
                                         warn!("Client {} attempted to send action without authentication", client_id);
@@ -360,8 +361,8 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
     }
     
     // Cleanup: Unregister client if authenticated
-    if let Some(account_id) = authenticated_account.read().await.as_ref() {
-        state.unregister_client(account_id, client_id).await;
+    if let Some(account_id) = auth_for_cleanup.read().await.as_ref() {
+        state_for_cleanup.unregister_client(account_id, client_id).await;
         info!("Unregistered client {} for account {}", client_id, account_id);
     }
     
