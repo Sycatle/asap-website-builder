@@ -60,20 +60,33 @@ Les données utilisateur vivent dans le core, pas dans les modules :
 
 ### Control Plane API (Rust / Axum)
 
-L'API expose deux catégories de routes :
+L'API expose plusieurs catégories de routes :
 
 #### A. Routes Core - Gestion des données utilisateur
 
-- **Authentification** : signup, login, refresh token
-- **Profil utilisateur** : récupérer/modifier profil, intégrations
+- **Authentification** : signup, login, refresh token, change password
+- **Profil utilisateur** : récupérer/modifier profil, intégrations (GitHub)
 - **Données métier** : créer/lire/modifier les projets et websites
 - **Événements** : publier des événements pour les modules
+- **Fichiers** : upload avec compression, gestion quotas, audit trail
 
 #### B. Routes Modules - Enregistrement et configuration
 
 - **Module registry** : liste des modules disponibles
-- **Module config** : configuration per-tenant des modules
+- **Module config** : configuration per-account des modules
 - **Module hooks** : webhooks pour les événements du core
+
+#### C. Routes Temps Réel - Notifications et Sync
+
+- **Notifications** : CRUD, mark as read, paramètres personnalisables
+- **Push notifications** : subscription, unsubscription, clés VAPID
+- **WebSocket** : `/ws` pour sync temps réel authentifiée
+- **Redis Pub/Sub** : distribution événements multi-instances
+
+#### D. Routes Paiements - Monétisation
+
+- **Stripe** : création checkout sessions, webhooks
+- **Abonnements** : plans récurrents, usage-based pricing
 
 ---
 
@@ -112,9 +125,9 @@ ASAP utilise **PostgreSQL** comme source de vérité pour le core :
 
 | Table | Responsabilité |
 |-------|-----------------|
-| `users` | Profil utilisateur centralisé |
+| `accounts` (anciennement users) | Profil utilisateur centralisé |
 | `tenants` | Isolation multi-tenant |
-| `user_data` | Données étendues (GitHub, intégrations, préférences) |
+| `account_data` (anciennement user_data) | Données étendues (GitHub, intégrations, préférences) |
 | `websites` | Structure du site (slug, statut, création mode, preset) |
 | `website_data` | Contenu du website (JSONB extensible) |
 | `website_sections` | Sections du site (Hero, About, Projects, etc.) |
@@ -122,14 +135,68 @@ ASAP utilise **PostgreSQL** comme source de vérité pour le core :
 | `presets` | Templates prédéfinis pour création rapide |
 | `modules` | Catalogue des modules disponibles |
 | `events` | Événements métier pour les modules |
+| `notifications` | Notifications utilisateur in-app |
+| `notification_queue` | Queue de consolidation des notifications |
+| `push_subscriptions` | Abonnements aux notifications push (PWA) |
+| `files` | Fichiers uploadés avec quotas |
+| `file_operations_audit` | Audit trail des opérations fichiers |
 
 #### Architecture multi-tenant
 
-- Chaque `user` appartient à un seul `tenant`
+- Chaque `account` appartient à un seul `tenant`
 - Chaque `tenant` peut avoir plusieurs `websites`
 - Chaque `website` a des `sections` et des `modules` activés
 - `RLS (Row Level Security)` : assure que les données ne fuient pas entre tenants
-- Toutes les lectures/écritures passent par `tenant_id`
+- Toutes les lectures/écritures passent par `account_id`
+
+### Redis Cache & Pub/Sub
+
+ASAP utilise **Redis** pour plusieurs fonctionnalités critiques :
+
+#### Cache des sites publics
+
+- **Projections websites** : fichiers JSON mis en cache pour des temps de réponse <10ms
+- **Compression multi-format** : gzip, brotli, zstd selon le client
+- **TTL configuré** : 24h par défaut, invalidation automatique
+
+#### Pub/Sub temps réel
+
+- **Distribution multi-instances** : permet le scale horizontal de l'API
+- **Channels dédiés** :
+  - `asap:sync:website` - événements websites
+  - `asap:sync:module` - événements modules
+  - `asap:sync:file` - événements fichiers
+  - `asap:presence` - présence utilisateurs
+  - `asap:notifications` - notifications push
+
+### WebSocket Server
+
+Architecture WebSocket intégrée au backend :
+
+- **Authentification JWT** : vérification token avant communication
+- **Contrôle d'accès par compte** : filtrage des événements par account_id
+- **Registry des clients** : tracking des connexions actives par account
+- **Heartbeat automatique** : détection des connexions mortes
+- **Graceful shutdown** : fermeture propre des connexions
+
+### Progressive Web App (PWA)
+
+Frontend optimisé pour installation native :
+
+- **Service Worker** : 802 lignes, stratégies de cache adaptatives
+- **Manifest complet** : Share Target, File Handlers, 14 tailles d'icônes
+- **Support offline** : queue de sync, retry automatique
+- **Notifications push** : Web Push API, clés VAPID, support multi-navigateurs
+- **Score Lighthouse** : 93/100 PWA
+
+### Système de Paiements
+
+Intégration **Stripe** pour la monétisation :
+
+- **Provider abstrait** : interface `PaymentGateway` pour extensibilité
+- **Checkout sessions** : création de sessions de paiement sécurisées
+- **Webhooks Stripe** : traitement asynchrone des événements
+- **Abonnements récurrents** : support des plans mensuels/annuels
 
 ---
 
