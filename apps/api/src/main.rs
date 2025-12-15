@@ -3,8 +3,11 @@ mod db;
 mod cache;
 mod website_cache;
 mod pool;
+mod websocket;
+mod redis_pubsub;
 
 use std::net::SocketAddr;
+use std::sync::Arc;
 use axum::{Router, routing::get, Json, extract::State};
 use serde_json::json;
 use sqlx::PgPool;
@@ -98,14 +101,45 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
-    // Create API router
-    let api_router = asap_core_api::create_router(pool.clone(), shared_config);
+    // Create WebSocket state with shared config
+    let ws_state = Arc::new(websocket::WsState::new(shared_config.clone()));
+    tracing::info!("WebSocket state initialized with authentication");
+
+    // Start Redis Pub/Sub subscribers for real-time features
+    if let Ok(redis_url) = std::env::var("REDIS_URL") {
+        // Notification subscriber
+        redis_pubsub::spawn_redis_subscriber(ws_state.clone(), redis_url.clone());
+        tracing::info!("Redis Pub/Sub subscriber started for real-time notifications");
+        
+        // Sync subscriber (Phase 4)
+        redis_pubsub::spawn_redis_sync_subscriber(ws_state.clone(), redis_url);
+        tracing::info!("Redis Pub/Sub subscriber started for real-time sync events (Phase 4)");
+    } else {
+        tracing::warn!("REDIS_URL not set. Real-time features via Pub/Sub disabled.");
+    }
+
+    // Create API router with WebSocket broadcaster
+    let api_router = asap_core_api::create_router_with_ws(
+        pool.clone(),
+        shared_config,
+        Some(ws_state.clone() as asap_core_api::SharedWsBroadcaster)
+    );
     
-    // Create main app router
-    let app = Router::new()
+    // Create health routes with pool state
+    let health_router = Router::new()
         .route("/health", get(health))
         .route("/health/pool", get(health_pool))
-        .with_state(pool.clone())
+        .with_state(pool.clone());
+
+    // Create WebSocket router with ws_state
+    let ws_router = Router::new()
+        .route("/ws", get(websocket::ws_handler))
+        .with_state(ws_state);
+    
+    // Create main app router by merging routers
+    let app = Router::new()
+        .merge(health_router)
+        .merge(ws_router)
         .nest("/api", api_router)
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http());

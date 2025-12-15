@@ -11,11 +11,27 @@ use uuid::Uuid;
 use chrono::Utc;
 
 use crate::Claims;
+use asap_core_shared::SharedWsBroadcaster;
 
 
 // Helper function to parse account ID from claims
 fn get_account_id(claims: &Claims) -> Result<Uuid, StatusCode> {
     Uuid::parse_str(&claims.sub).map_err(|_| StatusCode::UNAUTHORIZED)
+}
+
+// Helper function to get unread notification count
+async fn get_unread_count_for_account(pool: &PgPool, account_id: Uuid) -> Result<i64, StatusCode> {
+    let count: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*)::BIGINT FROM notifications WHERE account_id = $1 AND read = false"
+    )
+    .bind(account_id)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to get unread count: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    Ok(count.0)
 }
 
 // ============================================================================
@@ -278,12 +294,13 @@ pub async fn get_notification(
 pub async fn mark_as_read(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Json(req): Json<MarkReadRequest>,
 ) -> Result<Json<MarkReadResponse>, StatusCode> {
     let account_id = get_account_id(&claims)?;
     let now = Utc::now();
     
-    let updated = if req.all.unwrap_or(false) {
+    let (updated, notification_ids) = if req.all.unwrap_or(false) {
         // Mark all as read
         let result = sqlx::query!(
             r#"
@@ -301,7 +318,7 @@ pub async fn mark_as_read(
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
         
-        result.rows_affected() as i64
+        (result.rows_affected() as i64, None)
     } else if let Some(ids) = req.notification_ids {
         // Mark specific notifications as read
         let result = sqlx::query!(
@@ -321,10 +338,23 @@ pub async fn mark_as_read(
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
         
-        result.rows_affected() as i64
+        let ids_as_strings: Vec<String> = ids.iter().map(|id| id.to_string()).collect();
+        (result.rows_affected() as i64, Some(ids_as_strings))
     } else {
         return Err(StatusCode::BAD_REQUEST);
     };
+
+    // Broadcast via WebSocket if any were updated
+    if updated > 0 {
+        if let Ok(unread_count) = get_unread_count_for_account(&pool, account_id).await {
+            if let Some(ids) = notification_ids {
+                ws_broadcaster.notify_batch_read(&account_id.to_string(), &ids, unread_count);
+            } else {
+                // All marked as read - just send count update
+                ws_broadcaster.notify_unread_count(&account_id.to_string(), unread_count);
+            }
+        }
+    }
 
     Ok(Json(MarkReadResponse { updated }))
 }
@@ -333,6 +363,7 @@ pub async fn mark_as_read(
 pub async fn mark_notification_read(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Path(notification_id): Path<Uuid>,
 ) -> Result<StatusCode, StatusCode> {
     let account_id = get_account_id(&claims)?;
@@ -354,6 +385,14 @@ pub async fn mark_notification_read(
     })?;
 
     if result.rows_affected() > 0 {
+        // Get updated unread count and broadcast via WebSocket
+        if let Ok(unread_count) = get_unread_count_for_account(&pool, account_id).await {
+            ws_broadcaster.notify_notification_read(
+                &account_id.to_string(),
+                &notification_id.to_string(),
+                unread_count
+            );
+        }
         Ok(StatusCode::OK)
     } else {
         Ok(StatusCode::NOT_MODIFIED)
@@ -364,9 +403,11 @@ pub async fn mark_notification_read(
 pub async fn delete_notification(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Path(notification_id): Path<Uuid>,
 ) -> Result<StatusCode, StatusCode> {
     let account_id = get_account_id(&claims)?;
+    
     let result = sqlx::query!(
         "DELETE FROM notifications WHERE id = $1 AND account_id = $2",
         notification_id,
@@ -380,6 +421,14 @@ pub async fn delete_notification(
     })?;
 
     if result.rows_affected() > 0 {
+        // Broadcast deletion via WebSocket
+        if let Ok(unread_count) = get_unread_count_for_account(&pool, account_id).await {
+            ws_broadcaster.notify_notification_deleted(
+                &account_id.to_string(),
+                &notification_id.to_string(),
+                unread_count
+            );
+        }
         Ok(StatusCode::NO_CONTENT)
     } else {
         Err(StatusCode::NOT_FOUND)
@@ -646,7 +695,7 @@ pub async fn queue_notification(
     let now = Utc::now();
     let metadata = serde_json::json!({});
 
-    sqlx::query_scalar!(
+    let result: (Uuid,) = sqlx::query_as(
         r#"
         INSERT INTO notification_queue (
             id, account_id, title, message, notification_type,
@@ -654,22 +703,24 @@ pub async fn queue_notification(
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         RETURNING id
-        "#,
-        id,
-        account_id,
-        title,
-        message,
-        notification_type,
-        category,
-        priority,
-        action_url,
-        icon,
-        metadata,
-        dedup_key,
-        now
+        "#
     )
+    .bind(id)
+    .bind(account_id)
+    .bind(title)
+    .bind(message)
+    .bind(notification_type)
+    .bind(category)
+    .bind(priority)
+    .bind(action_url)
+    .bind(icon)
+    .bind(metadata)
+    .bind(dedup_key)
+    .bind(now)
     .fetch_one(pool)
-    .await
+    .await?;
+    
+    Ok(result.0)
 }
 
 /// Process the notification queue - consolidate and create final notifications
@@ -677,15 +728,15 @@ pub async fn queue_notification(
 /// This should be called periodically (e.g., every 10-30 seconds) by a background worker.
 /// It processes notifications older than QUEUE_CONSOLIDATION_SECONDS and consolidates them.
 pub async fn process_notification_queue(pool: &PgPool) -> Result<(i32, i32), sqlx::Error> {
-    let result = sqlx::query!(
-        "SELECT * FROM process_notification_queue($1)",
-        QUEUE_CONSOLIDATION_SECONDS
+    let result: (Option<i32>, Option<i32>) = sqlx::query_as(
+        "SELECT processed_count, created_count FROM process_notification_queue($1)"
     )
+    .bind(QUEUE_CONSOLIDATION_SECONDS)
     .fetch_one(pool)
     .await?;
     
-    let processed = result.processed_count.unwrap_or(0);
-    let created = result.created_count.unwrap_or(0);
+    let processed = result.0.unwrap_or(0);
+    let created = result.1.unwrap_or(0);
     
     if processed > 0 {
         tracing::info!(
@@ -700,14 +751,14 @@ pub async fn process_notification_queue(pool: &PgPool) -> Result<(i32, i32), sql
 
 /// Cleanup old processed queue entries
 pub async fn cleanup_notification_queue(pool: &PgPool, hours_to_keep: i32) -> Result<i32, sqlx::Error> {
-    let deleted = sqlx::query_scalar!(
-        "SELECT cleanup_notification_queue($1)",
-        hours_to_keep
+    let deleted: (Option<i32>,) = sqlx::query_as(
+        "SELECT cleanup_notification_queue($1)"
     )
+    .bind(hours_to_keep)
     .fetch_one(pool)
     .await?;
     
-    Ok(deleted.unwrap_or(0))
+    Ok(deleted.0.unwrap_or(0))
 }
 
 /// Create a welcome notification for new users

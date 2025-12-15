@@ -8,6 +8,8 @@ mod file_cleanup;
 mod parallel_processor;
 mod registry;
 mod payment_reconciliation;
+mod notification_publisher;
+mod web_push;
 
 use config::Config;
 use event_processor::EventProcessor;
@@ -15,6 +17,8 @@ use registry::{ModuleRegistryConfig, register_all_modules};
 use file_cleanup::FileCleanupTask;
 use parallel_processor::{ParallelProcessorConfig, process_events_parallel};
 use payment_reconciliation::PaymentReconciliation;
+use notification_publisher::WorkerNotificationPublisher;
+use web_push::WebPushSender;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -94,9 +98,52 @@ async fn main() -> anyhow::Result<()> {
         parallel_config.max_concurrency
     );
 
+    // Initialize Redis notification publisher
+    let notification_publisher = match std::env::var("REDIS_URL") {
+        Ok(redis_url) => {
+            match WorkerNotificationPublisher::new(&redis_url).await {
+                Ok(publisher) => {
+                    tracing::info!("Redis notification publisher initialized");
+                    Some(publisher)
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to initialize Redis publisher: {}. Real-time notifications disabled.", e);
+                    None
+                }
+            }
+        }
+        Err(_) => {
+            tracing::warn!("REDIS_URL not set. Real-time notifications disabled.");
+            None
+        }
+    };
+
+    // Initialize Web Push sender for PWA notifications
+    let web_push_sender = match WebPushSender::load_vapid_keys(&pool).await {
+        Ok(vapid_keys) => {
+            let subject = std::env::var("VAPID_SUBJECT")
+                .unwrap_or_else(|_| "mailto:support@asap.cool".to_string());
+            match WebPushSender::new(vapid_keys, subject) {
+                Ok(sender) => {
+                    tracing::info!("Web Push sender initialized");
+                    Some(Arc::new(sender))
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to initialize Web Push sender: {}. PWA push notifications disabled.", e);
+                    None
+                }
+            }
+        }
+        Err(e) => {
+            tracing::warn!("VAPID keys not available: {}. PWA push notifications disabled.", e);
+            None
+        }
+    };
+
     // Notification queue processing interval (every 10 seconds)
     let notification_queue_interval = std::time::Duration::from_secs(10);
     let mut last_notification_queue_process = std::time::Instant::now();
+    let mut last_notification_check = chrono::Utc::now();
 
     // Main event loop
     let polling_interval = std::time::Duration::from_secs(config.polling_interval_secs);
@@ -123,20 +170,109 @@ async fn main() -> anyhow::Result<()> {
 
         // Process notification queue periodically
         if last_notification_queue_process.elapsed() >= notification_queue_interval {
-            tracing::info!("Processing notification queue...");
+            tracing::debug!("Processing notification queue...");
+            
+            // Remember when we started processing
+            let process_start = chrono::Utc::now();
+            
             match process_notification_queue_task(&pool).await {
                 Ok((processed, created)) => {
-                    tracing::info!(
-                        "Notification queue: {} groups processed → {} notifications created",
-                        processed,
-                        created
-                    );
+                    if created > 0 {
+                        tracing::info!(
+                            "Notification queue: {} groups processed → {} notifications created",
+                            processed,
+                            created
+                        );
+                        
+                        // Get new notifications for both Redis pub/sub and Web Push
+                        match notification_publisher::get_notifications_created_since(&pool, last_notification_check).await {
+                            Ok(new_notifications) => {
+                                if !new_notifications.is_empty() {
+                                    // Publish to Redis for WebSocket (real-time in-app)
+                                    if let Some(ref publisher) = notification_publisher {
+                                        match notification_publisher::publish_new_notifications(publisher, &pool, new_notifications.clone()).await {
+                                            Ok(published) => {
+                                                tracing::info!("Published {} notifications to Redis", published);
+                                            }
+                                            Err(e) => {
+                                                tracing::error!("Failed to publish notifications to Redis: {}", e);
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Send Web Push notifications (for PWA background/closed)
+                                    if let Some(ref push_sender) = web_push_sender {
+                                        for notification in &new_notifications {
+                                            // Check if push is enabled for this account
+                                            let push_enabled = web_push::is_push_enabled(&pool, notification.account_id)
+                                                .await
+                                                .unwrap_or(true);
+                                            
+                                            if !push_enabled {
+                                                continue;
+                                            }
+                                            
+                                            // Check if category is enabled
+                                            let category_enabled = web_push::is_category_enabled(
+                                                &pool, 
+                                                notification.account_id, 
+                                                &notification.category
+                                            ).await.unwrap_or(true);
+                                            
+                                            if !category_enabled {
+                                                continue;
+                                            }
+                                            
+                                            // Build push payload
+                                            let payload = web_push::PushPayload {
+                                                id: notification.id.to_string(),
+                                                title: notification.title.clone(),
+                                                body: notification.message.clone(),
+                                                icon: notification.icon.clone(),
+                                                image: None,
+                                                tag: format!("asap-{}", notification.id),
+                                                action_url: notification.action_url.clone(),
+                                                category: notification.category.clone(),
+                                                priority: notification.priority.clone(),
+                                            };
+                                            
+                                            // Send to all devices for this account
+                                            match push_sender.send_to_account(&pool, notification.account_id, &payload).await {
+                                                Ok(result) => {
+                                                    if result.sent > 0 {
+                                                        tracing::debug!(
+                                                            "Sent push notification {} to {} devices for account {}",
+                                                            notification.id,
+                                                            result.sent,
+                                                            notification.account_id
+                                                        );
+                                                    }
+                                                }
+                                                Err(e) => {
+                                                    tracing::error!(
+                                                        "Failed to send push notification {}: {}",
+                                                        notification.id,
+                                                        e
+                                                    );
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to fetch new notifications: {}", e);
+                            }
+                        }
+                    }
                 }
                 Err(e) => {
                     tracing::error!("Error processing notification queue: {}", e);
                 }
             }
+            
             last_notification_queue_process = std::time::Instant::now();
+            last_notification_check = process_start;
         }
 
         tokio::time::sleep(polling_interval).await;

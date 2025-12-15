@@ -25,12 +25,14 @@ impl Config {
                 .unwrap_or_else(|_| "24".to_string())
                 .parse()
                 .context("JWT_EXPIRATION_HOURS must be a valid number")?,
-            server_host: env::var("SERVER_HOST")
+            server_host: env::var("ASAP_API_HOST")
+                .or_else(|_| env::var("SERVER_HOST"))
                 .unwrap_or_else(|_| "0.0.0.0".to_string()),
-            server_port: env::var("SERVER_PORT")
+            server_port: env::var("ASAP_API_PORT")
+                .or_else(|_| env::var("SERVER_PORT"))
                 .unwrap_or_else(|_| "3000".to_string())
                 .parse()
-                .context("SERVER_PORT must be a valid port number (0-65535)")?,
+                .context("ASAP_API_PORT/SERVER_PORT must be a valid port number (0-65535)")?,
         })
     }
 }

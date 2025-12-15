@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useShallow } from 'zustand/react/shallow';
 import { notificationsAPI, type Notification, type NotificationFilters } from '../api/notifications';
 
 // ============================================
@@ -35,11 +36,17 @@ interface NotificationsActions {
   fetchNotifications: (filters?: NotificationFilters, force?: boolean) => Promise<void>;
   fetchUnreadCount: () => Promise<void>;
   
-  // Actions
+  // Actions (with API calls)
   markAsRead: (notificationId: string) => Promise<void>;
   markMultipleAsRead: (notificationIds: string[]) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   deleteNotification: (notificationId: string) => Promise<void>;
+  
+  // WebSocket local updates (no API calls)
+  addNotification: (notification: Notification) => void;
+  removeNotification: (notificationId: string) => void;
+  setNotificationRead: (notificationIds: string[]) => void;
+  setUnreadCount: (count: number) => void;
   
   // UI Actions
   clearNewNotificationsIndicator: () => void;
@@ -82,6 +89,11 @@ export const useNotificationsStore = create<NotificationsState & NotificationsAc
 
       // ========== FETCH NOTIFICATIONS ==========
       fetchNotifications: async (filters?: NotificationFilters, force = false) => {
+        // Don't fetch if no auth token
+        if (typeof window !== 'undefined' && !localStorage.getItem('auth_token')) {
+          return;
+        }
+
         const { lastFetchTime, isLoading } = get();
         
         // Debounce: don't fetch if already loading or fetched recently (within 5 seconds)
@@ -129,6 +141,11 @@ export const useNotificationsStore = create<NotificationsState & NotificationsAc
 
       // ========== FETCH UNREAD COUNT ONLY ==========
       fetchUnreadCount: async () => {
+        // Don't fetch if no auth token
+        if (typeof window !== 'undefined' && !localStorage.getItem('auth_token')) {
+          return;
+        }
+
         try {
           const count = await notificationsAPI.getUnreadCount();
           const previousCount = get().unreadCount;
@@ -288,6 +305,56 @@ export const useNotificationsStore = create<NotificationsState & NotificationsAc
         };
       },
 
+      // ========== WEBSOCKET LOCAL UPDATES (no API calls) ==========
+      
+      /** Add a notification locally (from WebSocket) */
+      addNotification: (notification: Notification) => {
+        const { soundEnabled, vibrationEnabled, notifications } = get();
+        
+        // Check if notification already exists
+        if (notifications.some(n => n.id === notification.id)) {
+          return;
+        }
+        
+        set((state) => ({
+          notifications: [notification, ...state.notifications],
+          total: state.total + 1,
+          hasNewNotifications: true,
+        }));
+        
+        // Play notification sound/vibration
+        if (soundEnabled) {
+          playNotificationSound();
+        }
+        if (vibrationEnabled && 'vibrate' in navigator) {
+          navigator.vibrate([100, 50, 100]);
+        }
+      },
+      
+      /** Remove a notification locally (from WebSocket) */
+      removeNotification: (notificationId: string) => {
+        set((state) => ({
+          notifications: state.notifications.filter(n => n.id !== notificationId),
+          total: Math.max(0, state.total - 1),
+        }));
+      },
+      
+      /** Mark notifications as read locally (from WebSocket) */
+      setNotificationRead: (notificationIds: string[]) => {
+        set((state) => ({
+          notifications: state.notifications.map(n => 
+            notificationIds.includes(n.id)
+              ? { ...n, read: true, read_at: new Date().toISOString() }
+              : n
+          ),
+        }));
+      },
+      
+      /** Set unread count directly (from WebSocket) */
+      setUnreadCount: (count: number) => {
+        set({ unreadCount: count });
+      },
+
       // ========== RESET ==========
       reset: () => {
         set(initialState);
@@ -350,10 +417,10 @@ export const useUnreadCount = () => {
   return useNotificationsStore((state) => state.unreadCount);
 };
 
-// Get only unread notifications
+// Get only unread notifications (uses shallow comparison for array stability)
 export const useUnreadNotifications = () => {
-  return useNotificationsStore((state) => 
-    state.notifications.filter((n) => !n.read)
+  return useNotificationsStore(
+    useShallow((state) => state.notifications.filter((n) => !n.read))
   );
 };
 
@@ -372,10 +439,22 @@ export const useHasNewNotifications = () => {
   return useNotificationsStore((state) => state.hasNewNotifications);
 };
 
-// Get notification settings
+// Get sound enabled setting
+export const useSoundEnabled = () => {
+  return useNotificationsStore((state) => state.soundEnabled);
+};
+
+// Get vibration enabled setting
+export const useVibrationEnabled = () => {
+  return useNotificationsStore((state) => state.vibrationEnabled);
+};
+
+// Get notification settings (stable reference with shallow comparison)
 export const useNotificationSettings = () => {
-  return useNotificationsStore((state) => ({
-    soundEnabled: state.soundEnabled,
-    vibrationEnabled: state.vibrationEnabled,
-  }));
+  return useNotificationsStore(
+    useShallow((state) => ({
+      soundEnabled: state.soundEnabled,
+      vibrationEnabled: state.vibrationEnabled,
+    }))
+  );
 };

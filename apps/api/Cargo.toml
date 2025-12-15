@@ -13,7 +13,7 @@ asap-core-api = { path = "../../core/api" }
 tokio = { workspace = true }
 
 # Web framework
-axum = { workspace = true }
+axum = { workspace = true, features = ["ws"] }
 tower = { workspace = true }
 tower-http = { workspace = true }
 
@@ -23,6 +23,13 @@ sqlx = { workspace = true }
 # Caching
 redis = { workspace = true }
 
+# WebSocket
+tokio-tungstenite = { workspace = true }
+futures = { workspace = true }
+
+# Time
+chrono = { workspace = true }
+
 # Utilities
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
@@ -31,3 +38,5 @@ anyhow = { workspace = true }
 serde_json = { workspace = true }
 serde = { workspace = true }
 uuid = { workspace = true }
+jsonwebtoken = { workspace = true }
+async-trait = { workspace = true }

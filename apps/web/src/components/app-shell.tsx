@@ -16,6 +16,7 @@ import { type WebsiteModule } from "@/lib/api"
 import { useWebsites, useWebsiteModules } from "@/hooks/useCache"
 import { HeaderUser } from "@/components/header-user"
 import { useKeyboardShortcuts, KeyboardShortcut, getModifierKey } from "@/hooks/useKeyboardShortcuts"
+import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket"
 import { toast } from "sonner"
 import {
   Dialog,
@@ -119,6 +120,22 @@ function AppShellContent({
 }: AppShellContentProps) {
   const { toggleSidebar } = useSidebar()
   const [pendingGoTo, setPendingGoTo] = useState(false)
+
+  // Real-time notifications via WebSocket
+  useNotificationWebSocket({
+    handlers: {
+      onNewNotification: (notification) => {
+        // Show toast for new notifications
+        toast.info(notification.title, {
+          description: notification.message,
+          action: notification.action_url ? {
+            label: "Voir",
+            onClick: () => window.location.href = notification.action_url!,
+          } : undefined,
+        })
+      }
+    }
+  })
 
   // Global keyboard shortcuts
   useKeyboardShortcuts([

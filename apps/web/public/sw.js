@@ -124,9 +124,15 @@ function isStaticAsset(url) {
 // Safe response clone that handles opaque responses
 function safeClone(response) {
   try {
+    // Check if response body is already used
+    if (response.bodyUsed) {
+      console.warn('[SW] Response body already used, cannot clone');
+      return null;
+    }
     return response.clone();
   } catch (e) {
-    return response;
+    console.warn('[SW] Failed to clone response:', e.message);
+    return null;
   }
 }
 
@@ -153,15 +159,26 @@ function isCacheStale(response, maxAge) {
   return Date.now() - cacheDate > maxAge;
 }
 
-// Add cache date header to response
+// Add cache date header to response (must receive a cloned response)
 function addCacheDate(response) {
-  var headers = new Headers(response.headers);
-  headers.set('sw-cache-date', new Date().toISOString());
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: headers
-  });
+  if (!response) return null;
+  try {
+    // Check if body is already used
+    if (response.bodyUsed) {
+      console.warn('[SW] Cannot add cache date, body already used');
+      return null;
+    }
+    var headers = new Headers(response.headers);
+    headers.set('sw-cache-date', new Date().toISOString());
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: headers
+    });
+  } catch (e) {
+    console.warn('[SW] Failed to add cache date:', e.message);
+    return null;
+  }
 }
 
 // ============================================================================
@@ -280,9 +297,12 @@ self.addEventListener('fetch', function(event) {
 function handleNavigationRequest(request) {
   return fetch(request).then(function(response) {
     if (response.ok) {
-      caches.open(CACHES.dynamic).then(function(cache) {
-        cache.put(request, safeClone(response));
-      });
+      var cloned = safeClone(response);
+      if (cloned) {
+        caches.open(CACHES.dynamic).then(function(cache) {
+          cache.put(request, cloned);
+        });
+      }
     }
     return response;
   }).catch(function() {
@@ -305,11 +325,16 @@ function handleApiRequest(request) {
   return fetch(request).then(function(response) {
     // Cache certain API responses briefly
     if (response.ok && isCacheableApi(url)) {
-      caches.open(CACHES.api).then(function(cache) {
-        var responseWithDate = addCacheDate(safeClone(response));
-        cache.put(request, responseWithDate);
-        limitCacheSize(CACHES.api, CACHE_LIMITS.api);
-      });
+      var cloned = safeClone(response);
+      if (cloned) {
+        var responseWithDate = addCacheDate(cloned);
+        if (responseWithDate) {
+          caches.open(CACHES.api).then(function(cache) {
+            cache.put(request, responseWithDate);
+            limitCacheSize(CACHES.api, CACHE_LIMITS.api);
+          });
+        }
+      }
     }
     return response;
   }).catch(function() {
@@ -350,9 +375,12 @@ function handleFontRequest(request) {
     
     return fetch(request).then(function(response) {
       if (response.ok) {
-        caches.open(CACHES.fonts).then(function(cache) {
-          cache.put(request, safeClone(response));
-        });
+        var cloned = safeClone(response);
+        if (cloned) {
+          caches.open(CACHES.fonts).then(function(cache) {
+            cache.put(request, cloned);
+          });
+        }
       }
       return response;
     }).catch(function() {
@@ -366,10 +394,13 @@ function handleImageRequest(request) {
   return caches.match(request).then(function(cached) {
     var networkPromise = fetch(request).then(function(response) {
       if (response.ok) {
-        caches.open(CACHES.images).then(function(cache) {
-          cache.put(request, safeClone(response));
-          limitCacheSize(CACHES.images, CACHE_LIMITS.images);
-        });
+        var cloned = safeClone(response);
+        if (cloned) {
+          caches.open(CACHES.images).then(function(cache) {
+            cache.put(request, cloned);
+            limitCacheSize(CACHES.images, CACHE_LIMITS.images);
+          });
+        }
       }
       return response;
     }).catch(function() {
@@ -385,9 +416,12 @@ function handleStaticAsset(request) {
   return caches.match(request).then(function(cached) {
     var networkPromise = fetch(request).then(function(response) {
       if (response.ok) {
-        caches.open(CACHES.static).then(function(cache) {
-          cache.put(request, safeClone(response));
-        });
+        var cloned = safeClone(response);
+        if (cloned) {
+          caches.open(CACHES.static).then(function(cache) {
+            cache.put(request, cloned);
+          });
+        }
       }
       return response;
     }).catch(function() {
@@ -402,10 +436,13 @@ function handleStaticAsset(request) {
 function handleDefaultRequest(request) {
   return fetch(request).then(function(response) {
     if (response.ok && shouldCache(request.url)) {
-      caches.open(CACHES.dynamic).then(function(cache) {
-        cache.put(request, safeClone(response));
-        limitCacheSize(CACHES.dynamic, CACHE_LIMITS.dynamic);
-      });
+      var cloned = safeClone(response);
+      if (cloned) {
+        caches.open(CACHES.dynamic).then(function(cache) {
+          cache.put(request, cloned);
+          limitCacheSize(CACHES.dynamic, CACHE_LIMITS.dynamic);
+        });
+      }
     }
     return response;
   }).catch(function() {
