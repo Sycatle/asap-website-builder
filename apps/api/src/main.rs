@@ -107,14 +107,22 @@ async fn main() -> anyhow::Result<()> {
     // Create API router
     let api_router = asap_core_api::create_router(pool.clone(), shared_config);
     
-    // Create main app router
-    let app = Router::new()
+    // Create health routes with pool state
+    let health_router = Router::new()
         .route("/health", get(health))
         .route("/health/pool", get(health_pool))
-        .with_state(pool.clone())
-        .nest("/api", api_router)
+        .with_state(pool.clone());
+
+    // Create WebSocket router with ws_state
+    let ws_router = Router::new()
         .route("/ws", get(websocket::ws_handler))
-        .with_state(ws_state)
+        .with_state(ws_state);
+    
+    // Create main app router by merging routers
+    let app = Router::new()
+        .merge(health_router)
+        .merge(ws_router)
+        .nest("/api", api_router)
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http());
 

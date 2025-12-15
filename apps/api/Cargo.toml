@@ -27,6 +27,9 @@ redis = { workspace = true }
 tokio-tungstenite = { workspace = true }
 futures = { workspace = true }
 
+# Time
+chrono = { workspace = true }
+
 # Utilities
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

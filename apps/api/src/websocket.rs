@@ -4,8 +4,8 @@ use axum::{
         State,
     },
     response::Response,
-    http::StatusCode,
 };
+use chrono::Utc;
 use futures::{sink::SinkExt, stream::StreamExt};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -128,7 +128,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                         let pong = WsMessage {
                                             msg_type: "pong".to_string(),
                                             data: serde_json::json!({
-                                                "timestamp": chrono::Utc::now().timestamp_millis()
+                                                "timestamp": Utc::now().timestamp_millis()
                                             }),
                                         };
                                         let _ = tx.send(pong);
