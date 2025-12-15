@@ -4,6 +4,7 @@ mod cache;
 mod website_cache;
 mod pool;
 mod websocket;
+mod redis_pubsub;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -104,8 +105,20 @@ async fn main() -> anyhow::Result<()> {
     let ws_state = Arc::new(websocket::WsState::new());
     tracing::info!("WebSocket state initialized");
 
-    // Create API router
-    let api_router = asap_core_api::create_router(pool.clone(), shared_config);
+    // Start Redis Pub/Sub subscriber for real-time notifications
+    if let Ok(redis_url) = std::env::var("REDIS_URL") {
+        redis_pubsub::spawn_redis_subscriber(ws_state.clone(), redis_url);
+        tracing::info!("Redis Pub/Sub subscriber started for real-time notifications");
+    } else {
+        tracing::warn!("REDIS_URL not set. Real-time notifications via Pub/Sub disabled.");
+    }
+
+    // Create API router with WebSocket broadcaster
+    let api_router = asap_core_api::create_router_with_ws(
+        pool.clone(),
+        shared_config,
+        Some(ws_state.clone() as asap_core_api::SharedWsBroadcaster)
+    );
     
     // Create health routes with pool state
     let health_router = Router::new()

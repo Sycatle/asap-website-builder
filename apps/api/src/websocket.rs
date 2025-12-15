@@ -12,6 +12,9 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc};
 use tracing::{info, warn, error};
 
+// Import the broadcaster trait from core-api (which re-exports from core-shared)
+use asap_core_api::{WsBroadcaster, WsBroadcastMessage};
+
 /// WebSocket message structure
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WsMessage {
@@ -43,6 +46,80 @@ impl WsState {
         if let Err(e) = self.tx.send(msg) {
             warn!("Failed to broadcast message: {}", e);
         }
+    }
+
+    /// Send a new notification event to all connected clients
+    pub fn send_notification(&self, notification: serde_json::Value, unread_count: i64) {
+        let msg = WsMessage {
+            msg_type: "notification:new".to_string(),
+            data: serde_json::json!({
+                "notification": notification,
+                "unread_count": unread_count
+            }),
+        };
+        self.broadcast(msg);
+    }
+
+    /// Send notification read event
+    pub fn send_notification_read(&self, notification_id: &str, unread_count: i64) {
+        let msg = WsMessage {
+            msg_type: "notification:read".to_string(),
+            data: serde_json::json!({
+                "notification_id": notification_id,
+                "unread_count": unread_count
+            }),
+        };
+        self.broadcast(msg);
+    }
+
+    /// Send notification deleted event
+    pub fn send_notification_deleted(&self, notification_id: &str, unread_count: i64) {
+        let msg = WsMessage {
+            msg_type: "notification:deleted".to_string(),
+            data: serde_json::json!({
+                "notification_id": notification_id,
+                "unread_count": unread_count
+            }),
+        };
+        self.broadcast(msg);
+    }
+
+    /// Send unread count update
+    pub fn send_unread_count(&self, unread_count: i64) {
+        let msg = WsMessage {
+            msg_type: "notification:count".to_string(),
+            data: serde_json::json!({
+                "unread_count": unread_count
+            }),
+        };
+        self.broadcast(msg);
+    }
+
+    /// Send batch read event
+    pub fn send_batch_read(&self, notification_ids: &[String], unread_count: i64) {
+        let msg = WsMessage {
+            msg_type: "notification:batch-read".to_string(),
+            data: serde_json::json!({
+                "notification_ids": notification_ids,
+                "unread_count": unread_count
+            }),
+        };
+        self.broadcast(msg);
+    }
+}
+
+/// Implement the WsBroadcaster trait for WsState
+/// This allows core/api to send notifications through WebSocket without direct dependency
+impl WsBroadcaster for WsState {
+    fn broadcast_to_user(&self, _account_id: &str, msg: WsBroadcastMessage) {
+        // Convert WsBroadcastMessage to our internal WsMessage format
+        let ws_msg = WsMessage {
+            msg_type: msg.msg_type,
+            data: msg.data,
+        };
+        self.broadcast(ws_msg);
+        // TODO: In the future, filter by account_id to send only to the right user
+        // For now, we broadcast to all authenticated users
     }
 }
 
