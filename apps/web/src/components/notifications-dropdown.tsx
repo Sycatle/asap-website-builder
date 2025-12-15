@@ -116,8 +116,11 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
     startPolling,
   } = useNotificationsStore()
 
-  // Start polling on mount
+  // Start polling on mount (only if authenticated)
   useEffect(() => {
+    const token = localStorage.getItem('auth_token')
+    if (!token) return
+    
     const stopPolling = startPolling()
     return stopPolling
   }, [startPolling])
