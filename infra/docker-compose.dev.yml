@@ -46,6 +46,7 @@ services:
       context: ..
       dockerfile: infra/Dockerfile.worker.dev
     container_name: asap-worker
+    command: ["cargo", "watch", "-x", "run --bin asap-worker", "-w", "apps/worker", "-w", "core", "-w", "modules"]
     volumes:
       # Mount source code for hot reload
       - ../core:/app/core
