@@ -101,9 +101,9 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
-    // Create WebSocket state
-    let ws_state = Arc::new(websocket::WsState::new());
-    tracing::info!("WebSocket state initialized");
+    // Create WebSocket state with shared config
+    let ws_state = Arc::new(websocket::WsState::new(shared_config.clone()));
+    tracing::info!("WebSocket state initialized with authentication");
 
     // Start Redis Pub/Sub subscriber for real-time notifications
     if let Ok(redis_url) = std::env::var("REDIS_URL") {

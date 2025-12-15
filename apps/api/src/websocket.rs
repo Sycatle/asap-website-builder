@@ -9,11 +9,13 @@ use chrono::Utc;
 use futures::{sink::SinkExt, stream::StreamExt};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::sync::{broadcast, mpsc};
+use std::collections::HashMap;
+use tokio::sync::{broadcast, mpsc, RwLock};
 use tracing::{info, warn, error};
 
 // Import the broadcaster trait from core-api (which re-exports from core-shared)
 use asap_core_api::{WsBroadcaster, WsBroadcastMessage};
+use asap_core_shared::{SharedConfig, validate_token, Claims};
 
 /// WebSocket message structure
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -29,16 +31,59 @@ struct AuthPayload {
     token: String,
 }
 
+/// Connected client information
+#[derive(Clone, Debug)]
+struct ClientInfo {
+    account_id: String,
+    client_id: uuid::Uuid,
+}
+
 /// Shared state for WebSocket connections
 #[derive(Clone)]
 pub struct WsState {
     pub tx: broadcast::Sender<WsMessage>,
+    pub config: Arc<SharedConfig>,
+    /// Map of authenticated clients: account_id -> Vec<ClientInfo>
+    pub authenticated_clients: Arc<RwLock<HashMap<String, Vec<ClientInfo>>>>,
 }
 
 impl WsState {
-    pub fn new() -> Self {
+    pub fn new(config: SharedConfig) -> Self {
         let (tx, _) = broadcast::channel(100);
-        Self { tx }
+        Self {
+            tx,
+            config: Arc::new(config),
+            authenticated_clients: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+    
+    /// Register an authenticated client
+    pub async fn register_client(&self, account_id: String, client_id: uuid::Uuid) {
+        let mut clients = self.authenticated_clients.write().await;
+        clients
+            .entry(account_id.clone())
+            .or_insert_with(Vec::new)
+            .push(ClientInfo {
+                account_id,
+                client_id,
+            });
+    }
+    
+    /// Unregister a client
+    pub async fn unregister_client(&self, account_id: &str, client_id: uuid::Uuid) {
+        let mut clients = self.authenticated_clients.write().await;
+        if let Some(account_clients) = clients.get_mut(account_id) {
+            account_clients.retain(|c| c.client_id != client_id);
+            if account_clients.is_empty() {
+                clients.remove(account_id);
+            }
+        }
+    }
+    
+    /// Check if an account has any connected clients
+    pub async fn has_connected_clients(&self, account_id: &str) -> bool {
+        let clients = self.authenticated_clients.read().await;
+        clients.get(account_id).map_or(false, |c| !c.is_empty())
     }
 
     /// Broadcast a message to all connected clients
@@ -143,9 +188,9 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
     // Channel for direct messages to this client
     let (direct_tx, mut direct_rx) = mpsc::channel::<WsMessage>(32);
 
-    // Track if client is authenticated
-    let authenticated = Arc::new(tokio::sync::RwLock::new(false));
-    let auth_clone = authenticated.clone();
+    // Track authenticated account ID
+    let authenticated_account = Arc::new(tokio::sync::RwLock::new(Option::<String>::None));
+    let auth_clone = authenticated_account.clone();
 
     // Task to send messages to this client (both direct and broadcast)
     let mut send_task = tokio::spawn(async move {
@@ -161,7 +206,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                 }
                 // Handle broadcast messages (only if authenticated)
                 Ok(msg) = broadcast_rx.recv() => {
-                    if *auth_clone.read().await {
+                    if auth_clone.read().await.is_some() {
                         if let Ok(json) = serde_json::to_string(&msg) {
                             if sender.send(Message::Text(json)).await.is_err() {
                                 break;
@@ -187,27 +232,33 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                 "auth" => {
                                     // Handle authentication
                                     if let Ok(payload) = serde_json::from_value::<AuthPayload>(ws_msg.data) {
-                                        // Verify JWT token
-                                        if verify_token(&payload.token) {
-                                            *authenticated.write().await = true;
-                                            info!("Client {} authenticated successfully", client_id);
+                                        // Verify JWT token and extract account ID
+                                        if let Some(claims) = verify_token_and_get_claims(&payload.token, &state.config) {
+                                            let account_id = claims.sub.clone();
+                                            *authenticated.write().await = Some(account_id.clone());
+                                            
+                                            // Register this client
+                                            state.register_client(account_id.clone(), client_id).await;
+                                            
+                                            info!("Client {} authenticated successfully for account: {}", client_id, account_id);
                                             
                                             // Send auth success message directly to this client
                                             let auth_success = WsMessage {
                                                 msg_type: "auth-success".to_string(),
                                                 data: serde_json::json!({
                                                     "authenticated": true,
-                                                    "client_id": client_id.to_string()
+                                                    "client_id": client_id.to_string(),
+                                                    "account_id": account_id
                                                 }),
                                             };
                                             let _ = direct_tx.send(auth_success).await;
                                         } else {
-                                            warn!("Client {} authentication failed", client_id);
+                                            warn!("Client {} authentication failed: invalid token", client_id);
                                             // Send auth failed message directly to this client
                                             let auth_failed = WsMessage {
                                                 msg_type: "auth-failed".to_string(),
                                                 data: serde_json::json!({
-                                                    "error": "Invalid token"
+                                                    "error": "Invalid or expired token"
                                                 }),
                                             };
                                             let _ = direct_tx.send(auth_failed).await;
@@ -225,9 +276,11 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                     let _ = direct_tx.send(pong).await;
                                 }
                                 "action" => {
-                                    // Broadcast action to other clients if authenticated
-                                    if *authenticated.read().await {
+                                    // Broadcast action to other clients only if authenticated
+                                    if authenticated.read().await.is_some() {
                                         let _ = broadcast_tx.send(ws_msg);
+                                    } else {
+                                        warn!("Client {} attempted to send action without authentication", client_id);
                                     }
                                 }
                                 _ => {
@@ -269,15 +322,27 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
         },
     }
     
+    // Cleanup: Unregister client if authenticated
+    if let Some(account_id) = authenticated_account.read().await.as_ref() {
+        state.unregister_client(account_id, client_id).await;
+        info!("Unregistered client {} for account {}", client_id, account_id);
+    }
+    
     info!("WebSocket connection closed for client {}", client_id);
 }
 
-/// Verify JWT token (placeholder implementation)
-/// TODO: Implement proper JWT verification using shared JWT secret
-fn verify_token(token: &str) -> bool {
-    // For now, accept any non-empty token for testing
-    // In production, verify JWT signature and expiration
-    !token.is_empty()
+/// Verify JWT token and extract claims
+fn verify_token_and_get_claims(token: &str, config: &SharedConfig) -> Option<Claims> {
+    match validate_token(token, config) {
+        Ok(claims) => {
+            info!("Token validated successfully for account: {}", claims.sub);
+            Some(claims)
+        }
+        Err(e) => {
+            warn!("Token validation failed: {}", e);
+            None
+        }
+    }
 }
 
 #[cfg(test)]
