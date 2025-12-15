@@ -245,7 +245,6 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
       eventHandlers.current.set(event, new Set());
     }
     eventHandlers.current.get(event)!.add(handler);
-    console.log('[WS] Handler registered for:', event);
   }, []);
 
   // Unregister event handler
@@ -253,7 +252,6 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
     const handlers = eventHandlers.current.get(event);
     if (handlers) {
       handlers.delete(handler);
-      console.log('[WS] Handler unregistered for:', event);
     }
   }, []);
 
