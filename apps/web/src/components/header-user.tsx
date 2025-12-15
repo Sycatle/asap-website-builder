@@ -25,15 +25,12 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SettingsModal } from "@/components/settings-modal"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
-import { authAPI, websitesAPI, accountsAPI, type Website } from "@/lib/api"
-
-interface UserData {
-  id: string
-  email: string
-  name: string
-  avatar?: string
-  plan?: string
-}
+import { 
+  useAuthStore, 
+  useUserData, 
+  useAuthLoading,
+  type UserData 
+} from "@/lib/store/authStore"
 
 interface HeaderUserProps {
   user?: Partial<UserData>
@@ -42,82 +39,23 @@ interface HeaderUserProps {
 export function HeaderUser({ user: initialUser }: HeaderUserProps) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'account' | 'billing'>('account')
-  const [isLoading, setIsLoading] = useState(true)
-  const [user, setUser] = useState<UserData>({
-    id: "",
-    email: initialUser?.email || "",
-    name: initialUser?.name || "",
-    avatar: initialUser?.avatar,
-  })
-  const [website, setWebsite] = useState<Website | null>(null)
+  
+  // Use the centralized auth store
+  const userData = useUserData()
+  const isLoading = useAuthLoading()
+  const { fetchFullUserData, logout, updateUserData } = useAuthStore()
 
-  // Helper to construct file URL with auth token
-  const getFileUrl = (storedUrl: string) => {
-    const fileIdMatch = storedUrl.match(/\/files\/([a-f0-9-]+)/)
-    if (fileIdMatch) {
-      const token = localStorage.getItem('auth_token')
-      return `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${fileIdMatch[1]}?token=${token}`
-    }
-    return storedUrl
-  }
-
-  // Load user and website data from API
+  // Fetch user data on mount
   useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true)
-      try {
-        // Fetch user info
-        const meData = await authAPI.me()
-        
-        // Fetch account data (name, avatar, etc.)
-        let accountData: Record<string, any> = {}
-        try {
-          const account = await accountsAPI.getAccount(meData.id)
-          accountData = account.data || {}
-        } catch (err) {
-          console.error('Failed to load account data:', err)
-        }
-        
-        // Process avatar URL to add token for display
-        let avatarUrl = accountData.avatar
-        if (avatarUrl && avatarUrl.includes('/files/')) {
-          avatarUrl = getFileUrl(avatarUrl)
-        }
-        
-        const userData: UserData = {
-          id: meData.id,
-          email: meData.email,
-          name: accountData.name || meData.email.split('@')[0],
-          avatar: avatarUrl,
-          plan: meData.plan,
-        }
-        setUser(userData)
-
-        // Fetch website info
-        try {
-          const websites = await websitesAPI.list()
-          if (websites.length > 0) {
-            setWebsite(websites[0])
-          }
-        } catch (err) {
-          console.error('Failed to load website:', err)
-        }
-      } catch (err) {
-        console.error('Failed to load user data:', err)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    loadData()
-  }, [])
+    fetchFullUserData()
+  }, [fetchFullUserData])
 
   const handleLogout = () => {
-    localStorage.removeItem('auth_token')
-    window.location.href = '/login'
+    logout()
   }
 
   const handleUserUpdate = (updatedData: Partial<UserData>) => {
-    setUser(prev => ({ ...prev, ...updatedData }))
+    updateUserData(updatedData)
   }
 
   const openSettings = (tab: 'account' | 'billing' = 'account') => {
@@ -134,7 +72,15 @@ export function HeaderUser({ user: initialUser }: HeaderUserProps) {
       .slice(0, 2) || '?'
   }
 
-  if (isLoading) {
+  // Use initial user or store user data
+  const user = userData || {
+    id: "",
+    email: initialUser?.email || "",
+    name: initialUser?.name || "",
+    avatar: initialUser?.avatar,
+  }
+
+  if (isLoading && !userData) {
     return (
       <div className="flex items-center gap-2">
         <Skeleton className="h-9 w-9 rounded-md" />
