@@ -1,5 +1,42 @@
 # Changelog - ASAP v2
 
+## 15 Décembre 2025 - Sprint 1: Gestion des Websites
+
+### 🚀 Nouvelles Fonctionnalités
+
+#### Frontend - Gestion Websites
+- ✅ **Liste des websites** (`WebsitesList.tsx`)
+  - Affichage de tous les sites de l'utilisateur
+  - État vide avec appel à l'action
+  - Carte d'ajout rapide de nouveau site
+  - Actualisation manuelle
+
+- ✅ **Création de website depuis preset** (`CreateWebsiteModal.tsx`)
+  - Sélection de preset par catégorie
+  - Formulaire en 2 étapes (preset → détails)
+  - Génération automatique du slug depuis le titre
+  - Validation des champs
+
+- ✅ **Carte website** (`WebsiteCard.tsx`)
+  - Affichage du statut (brouillon/publié)
+  - Actions rapides (éditer, voir, publier)
+  - Menu contextuel avec options avancées
+  - Suppression avec confirmation
+
+- ✅ **Nouveaux Hooks**
+  - `usePresets.ts` - Récupération et création depuis presets
+  - `useSections.ts` - Gestion complète des sections (CRUD, réordonnancement)
+
+#### Navigation
+- ✅ Ajout de la route `/app/websites` dans le router
+- ✅ Ajout de l'entrée "Mes sites" dans la sidebar
+
+### 📚 Documentation
+- Mise à jour de ACTION_PLAN_SHORT_TERM.md (critères Sprint 1 complétés)
+- Mise à jour de ROADMAP.md (progression Phase 5 à 45%)
+
+---
+
 ## Décembre 2025 - Fonctionnalités Temps Réel & PWA
 
 ### 🚀 Nouvelles Fonctionnalités Majeures

@@ -261,7 +261,7 @@ Construire une infrastructure backend robuste et complète avec support temps r�
 ## 🔨 Phase 5 : Frontend & UX (EN COURS)
 
 **Période :** Décembre 2025 - Février 2026  
-**Statut :** 🔨 En cours - 35% complété  
+**Statut :** 🔨 En cours - 45% complété  
 **Objectif :** Rendre le MVP utilisable avec une interface web complète
 
 ### Réalisations actuelles
@@ -289,6 +289,13 @@ Construire une infrastructure backend robuste et complète avec support temps r�
   - Toast notifications
   - Badge compteur non lus
 
+- ✅ **Gestion Websites (Sprint 1)**
+  - Liste websites avec WebsitesList
+  - Création depuis presets avec CreateWebsiteModal
+  - Suppression website avec confirmation
+  - Publication/dépublication rapide
+  - Hooks usePresets et useSections
+
 ### En cours de développement
 
 - 🔨 **Dashboard Principal**
@@ -297,19 +304,7 @@ Construire une infrastructure backend robuste et complète avec support temps r�
   - Actions rapides
   - Widgets personnalisables
 
-- 🔨 **Gestion Websites**
-  - Liste websites
-  - Création depuis presets
-  - Édition informations de base
-  - Publication/dépublication
-
 ### À développer
-
-- ⏳ **Sélecteur de Presets**
-  - Galerie de templates
-  - Prévisualisation presets
-  - Configuration initiale
-  - Création rapide
 
 - ⏳ **Éditeur de Sections**
   - Interface drag & drop

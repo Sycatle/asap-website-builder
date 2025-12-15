@@ -9,6 +9,7 @@ import {
   Mail,
   BarChart3,
   Palette,
+  Globe,
 } from "lucide-react"
 
 import {
@@ -54,6 +55,11 @@ export function AsapSidebar({ modules = [], user }: AsapSidebarProps) {
       title: "Dashboard",
       url: "/app/dashboard",
       icon: Home,
+    },
+    {
+      title: "Mes sites",
+      url: "/app/websites",
+      icon: Globe,
     },
     {
       title: "Modules",

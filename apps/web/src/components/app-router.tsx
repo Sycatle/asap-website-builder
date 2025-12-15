@@ -8,9 +8,11 @@ const Dashboard = lazy(() => import("@/components/Dashboard"))
 const ModulesManager = lazy(() => import("@/components/ModulesManager"))
 const ModuleConfig = lazy(() => import("@/components/ModuleConfig"))
 const CloudManager = lazy(() => import("@/components/CloudManager"))
+const WebsitesList = lazy(() => import("@/components/WebsitesList").then(m => ({ default: m.WebsitesList })))
 
 type Route = 
   | { page: "dashboard" }
+  | { page: "websites" }
   | { page: "modules" }
   | { page: "module-config"; moduleSlug: string }
   | { page: "cloud" }
@@ -24,6 +26,10 @@ function parseRoute(pathname: string): Route {
 
   if (path === "/app" || path === "/app/dashboard") {
     return { page: "dashboard" }
+  }
+  
+  if (path === "/app/websites") {
+    return { page: "websites" }
   }
   
   if (path === "/app/modules") {
@@ -57,6 +63,8 @@ function getPageTitle(route: Route): string {
   switch (route.page) {
     case "dashboard":
       return "Dashboard"
+    case "websites":
+      return "Mes sites"
     case "modules":
       return "Modules"
     case "module-config":
@@ -72,6 +80,8 @@ function getBreadcrumbs(route: Route): { label: string; href?: string }[] {
   switch (route.page) {
     case "dashboard":
       return [{ label: "Dashboard" }]
+    case "websites":
+      return [{ label: "Mes sites" }]
     case "modules":
       return [{ label: "Modules" }]
     case "module-config":
@@ -120,6 +130,8 @@ function PageContent({ route }: { route: Route }) {
   switch (route.page) {
     case "dashboard":
       return <Dashboard />
+    case "websites":
+      return <WebsitesList />
     case "modules":
       return <ModulesManager />
     case "module-config":

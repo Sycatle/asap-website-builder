@@ -227,12 +227,20 @@ describe('useWebsites', () => {
 - `apps/web/src/components/__tests__/WebsiteCard.test.tsx`
 
 ### Critères d'acceptation Sprint 1
-- [ ] Utilisateur authentifié voit la liste de ses websites
-- [ ] Utilisateur peut créer un website depuis un preset
-- [ ] Utilisateur peut supprimer un website
-- [ ] Interface responsive (mobile, tablet, desktop)
-- [ ] Messages d'erreur clairs
-- [ ] Loading states appropriés
+- [x] Utilisateur authentifié voit la liste de ses websites
+- [x] Utilisateur peut créer un website depuis un preset
+- [x] Utilisateur peut supprimer un website
+- [x] Interface responsive (mobile, tablet, desktop)
+- [x] Messages d'erreur clairs
+- [x] Loading states appropriés
+
+### Composants implémentés (Sprint 1)
+- `apps/web/src/hooks/usePresets.ts` - Hook pour gérer les presets
+- `apps/web/src/hooks/useSections.ts` - Hook pour gérer les sections de website
+- `apps/web/src/components/CreateWebsiteModal.tsx` - Modal de création de website avec sélecteur de preset
+- `apps/web/src/components/WebsiteCard.tsx` - Carte d'affichage de website avec actions
+- `apps/web/src/components/WebsitesList.tsx` - Liste de websites avec état vide
+- `apps/web/src/components/EmptyState.tsx` - Composant d'état vide réutilisable
 
 ---
 
