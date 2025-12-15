@@ -7,7 +7,7 @@ use axum::{
 };
 use sqlx::PgPool;
 use serde_json::json;
-use asap_core_shared::SharedConfig;
+use asap_core_shared::{SharedConfig, SharedWsBroadcaster, NoOpBroadcaster};
 
 async fn root() -> Json<serde_json::Value> {
     Json(json!({
@@ -19,6 +19,14 @@ async fn root() -> Json<serde_json::Value> {
 
 /// Creates the main API router with all routes
 pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
+    create_router_with_ws(pool, config, None)
+}
+
+/// Creates the main API router with WebSocket broadcaster support
+pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster: Option<SharedWsBroadcaster>) -> Router {
+    // Use no-op broadcaster if none provided
+    let broadcaster: SharedWsBroadcaster = ws_broadcaster.unwrap_or_else(|| NoOpBroadcaster::new());
+
     // Initialize file storage service
     let storage_service = std::sync::Arc::new(crate::storage::FileStorageService::new(pool.clone()));
 
@@ -102,6 +110,7 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
         .layer(Extension(storage_service.clone()))
         .layer(Extension(payment_gateway.clone()))
         .layer(Extension(config.clone()))
+        .layer(Extension(broadcaster.clone()))
         .with_state(pool.clone())
         .layer(middleware::from_fn_with_state(config.clone(), crate::middleware::auth_middleware));
 

@@ -17,5 +17,12 @@ pub mod webhooks;
 pub mod payment_checks;
 pub mod notifications;
 
-pub use routes::create_router;
-pub use asap_core_shared::{Claims, SharedConfig};
+pub use routes::{create_router, create_router_with_ws};
+pub use asap_core_shared::{Claims, SharedConfig, SharedWsBroadcaster, WsBroadcaster, WsBroadcastMessage};
+pub use asap_core_shared::{
+    NotificationPubSubEvent, 
+    NotificationPublisher, 
+    SharedNotificationPublisher,
+    NoOpPublisher,
+    CHANNEL_NOTIFICATIONS,
+};
