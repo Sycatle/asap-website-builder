@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 asap-core-domain = { path = "../../core/domain" }
 asap-core-payments = { path = "../../core/payments" }
+asap-core-shared = { path = "../../core/shared" }
 asap-github-generator = { path = "../../modules/github-generator", package = "asap-module-github-generator" }
 
 # Async runtime
@@ -23,6 +24,9 @@ num_cpus = "1.16"
 # Database
 sqlx = { workspace = true }
 
+# Redis
+redis = { workspace = true }
+
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -35,3 +39,7 @@ tracing-subscriber = { workspace = true }
 dotenv = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
+
+# Web Push notifications
+web-push = "0.10"
+base64 = "0.22"
