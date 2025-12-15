@@ -60,6 +60,8 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
   const reconnectTimer = useRef<NodeJS.Timeout>();
   const pingTimer = useRef<NodeJS.Timeout>();
   const mountedRef = useRef(true);
+  const reconnectAttemptsRef = useRef(0);
+  const isConnectingRef = useRef(false);
 
   const {
     url,
@@ -104,6 +106,18 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
       return;
     }
 
+    if (ws.current?.readyState === WebSocket.CONNECTING) {
+      console.log('[WS] Already connecting');
+      return;
+    }
+
+    if (isConnectingRef.current) {
+      console.log('[WS] Connection already in progress');
+      return;
+    }
+
+    isConnectingRef.current = true;
+
     try {
       console.log('[WS] Connecting to', url);
       ws.current = new WebSocket(url);
@@ -112,11 +126,13 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
         if (!mountedRef.current) return;
         
         console.log('[WS] Connected');
+        isConnectingRef.current = false;
         setIsConnected(true);
+        reconnectAttemptsRef.current = 0;
         setReconnectAttempts(0);
         
         // Authenticate with stored token
-        const token = localStorage.getItem('auth-token');
+        const token = localStorage.getItem('auth_token');
         if (token) {
           send('auth', { token });
         }
@@ -151,6 +167,7 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
         if (!mountedRef.current) return;
         
         console.error('[WS] Error:', error);
+        isConnectingRef.current = false;
         onError?.(error);
       };
 
@@ -158,33 +175,37 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
         if (!mountedRef.current) return;
         
         console.log('[WS] Disconnected');
+        isConnectingRef.current = false;
         setIsConnected(false);
         stopHeartbeat();
         onClose?.();
         
         // Auto-reconnect with exponential backoff
-        if (reconnectAttempts < maxReconnectAttempts && isOnline) {
+        const currentAttempts = reconnectAttemptsRef.current;
+        if (currentAttempts < maxReconnectAttempts && isOnline) {
           const delay = Math.min(
-            reconnectInterval * Math.pow(2, reconnectAttempts),
+            reconnectInterval * Math.pow(2, currentAttempts),
             30000 // Max 30 seconds
           );
           
-          console.log(`[WS] Reconnecting in ${delay}ms... (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
+          console.log(`[WS] Reconnecting in ${delay}ms... (attempt ${currentAttempts + 1}/${maxReconnectAttempts})`);
           
           reconnectTimer.current = setTimeout(() => {
             if (mountedRef.current) {
-              setReconnectAttempts(prev => prev + 1);
+              reconnectAttemptsRef.current = currentAttempts + 1;
+              setReconnectAttempts(currentAttempts + 1);
               connect();
             }
           }, delay);
-        } else if (reconnectAttempts >= maxReconnectAttempts) {
+        } else if (currentAttempts >= maxReconnectAttempts) {
           console.error('[WS] Max reconnect attempts reached');
         }
       };
     } catch (error) {
       console.error('[WS] Connection failed:', error);
+      isConnectingRef.current = false;
     }
-  }, [url, isOnline, reconnectAttempts, maxReconnectAttempts, reconnectInterval, onOpen, onClose, onError, startHeartbeat, stopHeartbeat]);
+  }, [url, isOnline, maxReconnectAttempts, reconnectInterval, onOpen, onClose, onError, startHeartbeat, stopHeartbeat]);
 
   // Disconnect from WebSocket
   const disconnect = useCallback(() => {
@@ -203,6 +224,7 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
     }
     
     setIsConnected(false);
+    reconnectAttemptsRef.current = 0;
     setReconnectAttempts(0);
   }, [stopHeartbeat]);
 
@@ -247,16 +269,19 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
       mountedRef.current = false;
       disconnect();
     };
-  }, [autoConnect, connect, disconnect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoConnect, url]);
 
   // Reconnect when coming back online
   useEffect(() => {
-    if (isOnline && !isConnected && reconnectAttempts > 0) {
+    if (isOnline && !isConnected && reconnectAttemptsRef.current > 0) {
       console.log('[WS] Coming back online, attempting to reconnect...');
+      reconnectAttemptsRef.current = 0;
       setReconnectAttempts(0);
       connect();
     }
-  }, [isOnline, isConnected, reconnectAttempts, connect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline]);
 
   return {
     isConnected,
