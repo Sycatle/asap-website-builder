@@ -36,11 +36,17 @@ interface NotificationsActions {
   fetchNotifications: (filters?: NotificationFilters, force?: boolean) => Promise<void>;
   fetchUnreadCount: () => Promise<void>;
   
-  // Actions
+  // Actions (with API calls)
   markAsRead: (notificationId: string) => Promise<void>;
   markMultipleAsRead: (notificationIds: string[]) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   deleteNotification: (notificationId: string) => Promise<void>;
+  
+  // WebSocket local updates (no API calls)
+  addNotification: (notification: Notification) => void;
+  removeNotification: (notificationId: string) => void;
+  setNotificationRead: (notificationIds: string[]) => void;
+  setUnreadCount: (count: number) => void;
   
   // UI Actions
   clearNewNotificationsIndicator: () => void;
@@ -297,6 +303,56 @@ export const useNotificationsStore = create<NotificationsState & NotificationsAc
           }
           document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
+      },
+
+      // ========== WEBSOCKET LOCAL UPDATES (no API calls) ==========
+      
+      /** Add a notification locally (from WebSocket) */
+      addNotification: (notification: Notification) => {
+        const { soundEnabled, vibrationEnabled, notifications } = get();
+        
+        // Check if notification already exists
+        if (notifications.some(n => n.id === notification.id)) {
+          return;
+        }
+        
+        set((state) => ({
+          notifications: [notification, ...state.notifications],
+          total: state.total + 1,
+          hasNewNotifications: true,
+        }));
+        
+        // Play notification sound/vibration
+        if (soundEnabled) {
+          playNotificationSound();
+        }
+        if (vibrationEnabled && 'vibrate' in navigator) {
+          navigator.vibrate([100, 50, 100]);
+        }
+      },
+      
+      /** Remove a notification locally (from WebSocket) */
+      removeNotification: (notificationId: string) => {
+        set((state) => ({
+          notifications: state.notifications.filter(n => n.id !== notificationId),
+          total: Math.max(0, state.total - 1),
+        }));
+      },
+      
+      /** Mark notifications as read locally (from WebSocket) */
+      setNotificationRead: (notificationIds: string[]) => {
+        set((state) => ({
+          notifications: state.notifications.map(n => 
+            notificationIds.includes(n.id)
+              ? { ...n, read: true, read_at: new Date().toISOString() }
+              : n
+          ),
+        }));
+      },
+      
+      /** Set unread count directly (from WebSocket) */
+      setUnreadCount: (count: number) => {
+        set({ unreadCount: count });
       },
 
       // ========== RESET ==========
