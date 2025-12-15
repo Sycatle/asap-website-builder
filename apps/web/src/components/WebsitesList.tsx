@@ -29,7 +29,7 @@ export function WebsitesList({ onSelectWebsite }: WebsitesListProps) {
     await refetch(true);
   };
 
-  const handleWebsiteCreated = (websiteId: string) => {
+  const handleWebsiteCreated = (_websiteId: string) => {
     // Refresh the list after creation
     refetch(true);
   };

@@ -1,4 +1,3 @@
-import * as React from "react"
 import { useEffect, useState, Suspense, lazy } from "react"
 import { AppShell } from "@/components/app-shell"
 import { Loader2 } from "lucide-react"

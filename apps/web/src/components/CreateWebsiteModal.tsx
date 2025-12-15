@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { usePresets, useCreateWebsiteFromPreset } from '@/hooks/usePresets';
 import { useCacheActions } from '@/hooks/useCache';
+import { slugify } from '@/lib/utils/formatters';
 import {
   Dialog,
   DialogContent,
@@ -88,17 +89,10 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
     return grouped;
   }, [presets]);
 
-  // Generate slug from title
+  // Generate slug from title using utility function
   const handleTitleChange = (value: string) => {
     setTitle(value);
-    // Auto-generate slug from title
-    const generatedSlug = value
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove accents
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    setSlug(generatedSlug);
+    setSlug(slugify(value));
   };
 
   const handlePresetSelect = (presetId: string) => {
@@ -286,7 +280,11 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
                 <Input
                   id="slug"
                   value={slug}
-                  onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                  onChange={(e) => {
+                    const value = e.target.value.toLowerCase();
+                    // Filter to only allow valid slug characters
+                    setSlug(value.replace(/[^a-z0-9-]/g, ''));
+                  }}
                   className="rounded-l-none"
                   placeholder="mon-site"
                 />

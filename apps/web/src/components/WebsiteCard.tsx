@@ -71,7 +71,7 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
     setIsPublishing(true);
     
     try {
-      const result = await websitesAPI.publish(website.id);
+      await websitesAPI.publish(website.id);
       updateWebsiteCache({ ...website, status: 'published' });
       toast.success('Site publié avec succès !');
     } catch (error) {

@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
-import { sectionsAPI, type Section, type CreateSectionRequest, type UpdateSectionRequest, type ReorderSectionsRequest } from '../lib/api';
+import { sectionsAPI, type Section, type CreateSectionRequest, type UpdateSectionRequest } from '../lib/api';
 
 // ============================================
 // useSections - Hook for managing website sections
@@ -175,7 +175,37 @@ export function useSections(websiteId: string | null, options: UseSectionsOption
 // Section Types and Constants
 // ============================================
 
-export const SECTION_TYPES = [
+/** Available section types */
+export type SectionTypeValue = 
+  | 'hero' 
+  | 'about' 
+  | 'projects' 
+  | 'skills' 
+  | 'experience' 
+  | 'education' 
+  | 'contact' 
+  | 'blog' 
+  | 'gallery' 
+  | 'testimonials' 
+  | 'services' 
+  | 'pricing' 
+  | 'faq' 
+  | 'custom';
+
+/** Section type definition */
+export interface SectionTypeDefinition {
+  value: SectionTypeValue;
+  label: string;
+  description: string;
+}
+
+/** Available layout definition */
+export interface LayoutDefinition {
+  value: string;
+  label: string;
+}
+
+export const SECTION_TYPES: SectionTypeDefinition[] = [
   { value: 'hero', label: 'Hero', description: "Section d'accueil principale" },
   { value: 'about', label: 'À propos', description: 'Présentation personnelle/entreprise' },
   { value: 'projects', label: 'Projets', description: 'Galerie de projets' },
@@ -190,9 +220,9 @@ export const SECTION_TYPES = [
   { value: 'pricing', label: 'Tarifs', description: 'Grille tarifaire' },
   { value: 'faq', label: 'FAQ', description: 'Questions fréquentes' },
   { value: 'custom', label: 'Personnalisé', description: 'Section personnalisée' },
-] as const;
+];
 
-export const SECTION_LAYOUTS: Record<string, { value: string; label: string }[]> = {
+export const SECTION_LAYOUTS: Record<SectionTypeValue, LayoutDefinition[]> = {
   hero: [{ value: 'full', label: 'Plein écran' }],
   about: [
     { value: 'full', label: 'Plein écran' },
@@ -239,6 +269,7 @@ export const SECTION_LAYOUTS: Record<string, { value: string; label: string }[]>
   ],
 };
 
-export function getLayoutsForType(sectionType: string): { value: string; label: string }[] {
-  return SECTION_LAYOUTS[sectionType] || SECTION_LAYOUTS.custom;
+export function getLayoutsForType(sectionType: string): LayoutDefinition[] {
+  const key = sectionType as SectionTypeValue;
+  return SECTION_LAYOUTS[key] || SECTION_LAYOUTS.custom;
 }

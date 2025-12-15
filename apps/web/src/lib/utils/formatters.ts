@@ -20,11 +20,21 @@ export function formatRelativeTime(date: string | Date): string {
   return formatDistanceToNow(new Date(date), { addSuffix: true });
 }
 
+/**
+ * Converts text to a URL-safe slug.
+ * Handles special characters, accents, and ensures proper formatting.
+ * @param text The text to convert to a slug
+ * @returns A URL-safe slug string
+ */
 export function slugify(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/--+/g, '-')
-    .trim();
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^a-z0-9]+/g, '-')     // Replace non-alphanumeric with hyphens
+    .replace(/^-+|-+$/g, '')          // Remove leading/trailing hyphens
+    .replace(/--+/g, '-');            // Collapse multiple hyphens
 }
+
+/** Regex pattern for validating slugs */
+export const SLUG_REGEX = /^[a-z0-9-]+$/;
