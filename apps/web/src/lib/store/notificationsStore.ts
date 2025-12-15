@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useShallow } from 'zustand/react/shallow';
 import { notificationsAPI, type Notification, type NotificationFilters } from '../api/notifications';
 
 // ============================================
@@ -360,10 +361,10 @@ export const useUnreadCount = () => {
   return useNotificationsStore((state) => state.unreadCount);
 };
 
-// Get only unread notifications
+// Get only unread notifications (uses shallow comparison for array stability)
 export const useUnreadNotifications = () => {
-  return useNotificationsStore((state) => 
-    state.notifications.filter((n) => !n.read)
+  return useNotificationsStore(
+    useShallow((state) => state.notifications.filter((n) => !n.read))
   );
 };
 
@@ -392,9 +393,12 @@ export const useVibrationEnabled = () => {
   return useNotificationsStore((state) => state.vibrationEnabled);
 };
 
-// Get notification settings (stable reference)
+// Get notification settings (stable reference with shallow comparison)
 export const useNotificationSettings = () => {
-  const soundEnabled = useNotificationsStore((state) => state.soundEnabled);
-  const vibrationEnabled = useNotificationsStore((state) => state.vibrationEnabled);
-  return { soundEnabled, vibrationEnabled };
+  return useNotificationsStore(
+    useShallow((state) => ({
+      soundEnabled: state.soundEnabled,
+      vibrationEnabled: state.vibrationEnabled,
+    }))
+  );
 };
