@@ -1,5 +1,75 @@
 # Changelog - ASAP v2
 
+## 16 Décembre 2025 - Architecture Unifiée Preview/Production
+
+### 🏗️ Refactoring Majeur
+
+#### Package Partagé `@asap/renderers`
+- ✅ **Création du package packages/renderers**
+  - Renderers React unifiés pour tous les types de sections
+  - Types TypeScript partagés
+  - Utilitaires de conversion de données
+  - 100% TailwindCSS (aucun style inline)
+
+- ✅ **14 Renderers de Sections**
+  - Hero, About, Skills, Projects
+  - Experience, Education, Contact
+  - Testimonials, Services, Pricing
+  - FAQ, Gallery, Blog, Custom
+
+#### Application Sites Publics (`apps/sites`)
+- ✅ **Nouvelle app dédiée aux sites publics**
+  - Astro + React + TailwindCSS
+  - Utilise les renderers partagés
+  - SSR dynamique pour tous les sites
+  - Une seule base de code pour tous les sites
+
+- ✅ **SEO Avancé**
+  - Composant SEO.astro complet
+  - Open Graph, Twitter Cards
+  - JSON-LD structured data
+  - Meta robots configurables
+  - Canonical URLs
+
+- ✅ **Thème Dynamique**
+  - CSS custom properties par site
+  - Support dark/light mode
+  - Fonts Google personnalisables
+  - Couleurs configurables
+
+#### Preview Synchronisée
+- ✅ **Parité visuelle 100%**
+  - Preview et production utilisent les mêmes renderers
+  - Ce que vous voyez dans le dashboard = le site final
+  - Plus de divergence entre preview et production
+
+### 📁 Structure des fichiers
+```
+packages/
+  renderers/
+    src/
+      types.ts       # Types partagés
+      utils.ts       # Utilitaires
+      renderers.tsx  # Tous les renderers React
+      index.ts       # Exports
+
+apps/
+  sites/             # Nouvelle app sites publics
+    src/
+      pages/[slug].astro
+      layouts/BaseLayout.astro
+      components/SEO.astro
+      lib/api.ts
+      styles/global.css
+```
+
+### 🔧 Modifications
+- `apps/web/src/components/preview/section-renderers.tsx` - Re-export depuis @asap/renderers
+- Suppression de `apps/web/src/pages/[slug].astro` (déplacé vers apps/sites)
+- Suppression de `apps/web/src/components/public/` (déplacé vers packages/renderers)
+
+---
+
 ## 16 Décembre 2025 - Sprint 4: Pages Publiques et Finalisation
 
 ### 🚀 Nouvelles Fonctionnalités
