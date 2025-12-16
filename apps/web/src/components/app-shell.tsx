@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useEffect, useState, useMemo, useCallback } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { AsapSidebar } from "@/components/asap-sidebar"
 import { SidebarProvider, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -12,10 +12,10 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { type WebsiteModule } from "@/lib/api"
+import { type WebsiteModule, type Website } from "@/lib/api"
 import { useWebsites, useWebsiteModules } from "@/hooks/useCache"
 import { HeaderUser } from "@/components/header-user"
-import { useKeyboardShortcuts, KeyboardShortcut, getModifierKey } from "@/hooks/useKeyboardShortcuts"
+import { useKeyboardShortcuts, getModifierKey } from "@/hooks/useKeyboardShortcuts"
 import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket"
 import { toast } from "sonner"
 import {
@@ -62,14 +62,27 @@ export function AppShell({ children, title, breadcrumbs = [] }: AppShellProps) {
 
   // Use cache hooks for websites and modules - this ensures sidebar updates when modules change
   const { websites, isLoading: websitesLoading } = useWebsites()
-  const currentWebsiteId = websites.length > 0 ? websites[0].id : null
-  const { modules: allModules, isLoading: modulesLoading } = useWebsiteModules(currentWebsiteId)
+  
+  // Current website is the first one (or can be stored in localStorage for persistence)
+  const [currentWebsiteIndex, setCurrentWebsiteIndex] = useState(0)
+  const currentWebsite = websites.length > 0 ? websites[currentWebsiteIndex] || websites[0] : null
+  const currentWebsiteId = currentWebsite?.id ?? null
+  
+  const { modules: allModules } = useWebsiteModules(currentWebsiteId)
   
   // Filter to get only enabled modules for sidebar
   const modules = React.useMemo(() => 
     allModules.filter(m => m.enabled), 
     [allModules]
   )
+
+  // Handle website change from the switcher
+  const handleWebsiteChange = useCallback((website: Website) => {
+    const index = websites.findIndex(w => w.id === website.id)
+    if (index !== -1) {
+      setCurrentWebsiteIndex(index)
+    }
+  }, [websites])
 
   useEffect(() => {
     // Check authentication
@@ -88,7 +101,11 @@ export function AppShell({ children, title, breadcrumbs = [] }: AppShellProps) {
   return (
     <SidebarProvider>
       <AppShellContent 
-        modules={modules} 
+        modules={modules}
+        websites={websites}
+        currentWebsite={currentWebsite}
+        onWebsiteChange={handleWebsiteChange}
+        isLoadingWebsites={websitesLoading}
         title={title} 
         breadcrumbs={breadcrumbs}
         showShortcutsHelp={showShortcutsHelp}
@@ -104,6 +121,10 @@ export function AppShell({ children, title, breadcrumbs = [] }: AppShellProps) {
 interface AppShellContentProps {
   children: React.ReactNode
   modules: WebsiteModule[]
+  websites: Website[]
+  currentWebsite: Website | null
+  onWebsiteChange: (website: Website) => void
+  isLoadingWebsites: boolean
   title?: string
   breadcrumbs: { label: string; href?: string }[]
   showShortcutsHelp: boolean
@@ -112,7 +133,11 @@ interface AppShellContentProps {
 
 function AppShellContent({ 
   children, 
-  modules, 
+  modules,
+  websites,
+  currentWebsite,
+  onWebsiteChange,
+  isLoadingWebsites,
   title, 
   breadcrumbs,
   showShortcutsHelp,
@@ -204,7 +229,13 @@ function AppShellContent({
 
   return (
     <>
-      <AsapSidebar modules={modules} />
+      <AsapSidebar 
+        modules={modules}
+        websites={websites}
+        currentWebsite={currentWebsite}
+        onWebsiteChange={onWebsiteChange}
+        isLoadingWebsites={isLoadingWebsites}
+      />
       <SidebarInset>
         <header className="sticky top-0 z-40 flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 sm:px-4">
           <SidebarTrigger className="-ml-1" />

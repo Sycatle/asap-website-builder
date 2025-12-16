@@ -1,7 +1,6 @@
 import * as React from "react"
 import {
   Home,
-  FileText,
   Cloud,
   Puzzle,
   Github,
@@ -9,7 +8,6 @@ import {
   Mail,
   BarChart3,
   Palette,
-  Globe,
 } from "lucide-react"
 
 import {
@@ -24,7 +22,8 @@ import {
   SidebarGroupContent,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import type { WebsiteModule } from "@/lib/api"
+import { SiteSwitcher } from "@/components/SiteSwitcher"
+import type { WebsiteModule, Website } from "@/lib/api"
 
 // Icon mapping for modules
 const moduleIcons: Record<string, React.ElementType> = {
@@ -42,24 +41,24 @@ const moduleIcons: Record<string, React.ElementType> = {
 
 interface AsapSidebarProps {
   modules?: WebsiteModule[]
-  user?: {
-    name: string
-    email: string
-    avatar?: string
-  }
+  websites?: Website[]
+  currentWebsite?: Website | null
+  onWebsiteChange?: (website: Website) => void
+  isLoadingWebsites?: boolean
 }
 
-export function AsapSidebar({ modules = [], user }: AsapSidebarProps) {
+export function AsapSidebar({ 
+  modules = [], 
+  websites = [],
+  currentWebsite = null,
+  onWebsiteChange,
+  isLoadingWebsites = false
+}: AsapSidebarProps) {
   const navMain = [
     {
       title: "Dashboard",
       url: "/app/dashboard",
       icon: Home,
-    },
-    {
-      title: "Mes sites",
-      url: "/app/websites",
-      icon: Globe,
     },
     {
       title: "Modules",
@@ -79,21 +78,12 @@ export function AsapSidebar({ modules = [], user }: AsapSidebarProps) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <a href="/app/dashboard">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
-                  A
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">ASAP</span>
-                  <span className="truncate text-xs text-muted-foreground">Dashboard</span>
-                </div>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <SiteSwitcher
+          websites={websites}
+          currentWebsite={currentWebsite}
+          onWebsiteChange={onWebsiteChange}
+          isLoading={isLoadingWebsites}
+        />
       </SidebarHeader>
       <SidebarContent>
         {/* Main Navigation */}
