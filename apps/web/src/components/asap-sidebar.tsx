@@ -23,7 +23,8 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { SiteSwitcher } from "@/components/SiteSwitcher"
-import type { WebsiteModule, Website } from "@/lib/api"
+import { PagesList } from "@/components/PagesList"
+import type { WebsiteModule, Website, Page } from "@/lib/api"
 
 // Icon mapping for modules
 const moduleIcons: Record<string, React.ElementType> = {
@@ -45,6 +46,8 @@ interface AsapSidebarProps {
   currentWebsite?: Website | null
   onWebsiteChange?: (website: Website) => void
   isLoadingWebsites?: boolean
+  currentPageId?: string
+  onPageSelect?: (page: Page) => void
 }
 
 export function AsapSidebar({ 
@@ -52,7 +55,9 @@ export function AsapSidebar({
   websites = [],
   currentWebsite = null,
   onWebsiteChange,
-  isLoadingWebsites = false
+  isLoadingWebsites = false,
+  currentPageId,
+  onPageSelect
 }: AsapSidebarProps) {
   const navMain = [
     {
@@ -103,6 +108,16 @@ export function AsapSidebar({
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Pages - Only show when a website is selected */}
+        {currentWebsite && (
+          <PagesList
+            websiteId={currentWebsite.id}
+            websiteSlug={currentWebsite.slug}
+            currentPageId={currentPageId}
+            onPageSelect={onPageSelect}
+          />
+        )}
 
         {/* Dynamic Modules */}
         {enabledModules.length > 0 && (

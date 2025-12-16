@@ -69,6 +69,13 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         .route("/websites/:id/sections/reorder", post(crate::websites::reorder_sections))
         .route("/websites/:id/sections/:section_id", patch(crate::websites::update_section))
         .route("/websites/:id/sections/:section_id", delete(crate::websites::delete_section))
+        // Website pages routes
+        .route("/websites/:id/pages", get(crate::websites::list_website_pages))
+        .route("/websites/:id/pages", post(crate::websites::create_page))
+        .route("/websites/:id/pages/reorder", post(crate::websites::reorder_pages))
+        .route("/websites/:id/pages/:page_id", get(crate::websites::get_page))
+        .route("/websites/:id/pages/:page_id", patch(crate::websites::update_page))
+        .route("/websites/:id/pages/:page_id", delete(crate::websites::delete_page))
         // Presets routes
         .route("/presets", get(crate::websites::list_presets))
         .route("/websites/from-preset", post(crate::websites::create_website_from_preset))

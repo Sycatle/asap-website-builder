@@ -1,5 +1,49 @@
 # Changelog - ASAP v2
 
+## 16 Décembre 2025 - Gestion des Pages
+
+### 🚀 Nouvelles Fonctionnalités
+
+#### Backend - API Pages
+- ✅ **Routes CRUD pour les pages**
+  - `GET /websites/:id/pages` - Lister les pages
+  - `POST /websites/:id/pages` - Créer une page
+  - `GET /websites/:id/pages/:page_id` - Obtenir une page
+  - `PATCH /websites/:id/pages/:page_id` - Modifier une page
+  - `DELETE /websites/:id/pages/:page_id` - Supprimer une page
+  - `POST /websites/:id/pages/reorder` - Réorganiser les pages
+
+- ✅ **Tables de base de données**
+  - `website_pages` - Pages du site (slug, titre, description, homepage)
+  - `page_sections` - Junction table pour les sections par page
+
+#### Frontend - Composants Pages
+- ✅ **PagesList dans la sidebar**
+  - Affichage des pages avec icônes contextuelles
+  - Indicateur page d'accueil et visibilité
+  - Drag & drop pour réorganiser
+  - Menu contextuel (modifier, masquer, supprimer)
+
+- ✅ **Modales de gestion**
+  - Création de page avec slug auto-généré
+  - Modification des propriétés
+  - Confirmation de suppression
+  - Toggle visibilité rapide
+
+- ✅ **Hook usePages**
+  - Gestion d'état React
+  - Opérations CRUD optimistes
+  - Helpers (getHomepage, getPageBySlug)
+
+### 📁 Fichiers ajoutés
+- `infra/migrations/20251216152300_add_website_pages.sql`
+- `core/api/src/websites/pages.rs`
+- `apps/web/src/lib/api/pages.ts`
+- `apps/web/src/hooks/usePages.ts`
+- `apps/web/src/components/PagesList.tsx`
+
+---
+
 ## 16 Décembre 2025 - Sprint 3: Système de Prévisualisation
 
 ### 🚀 Nouvelles Fonctionnalités
