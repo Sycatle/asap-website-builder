@@ -48,7 +48,7 @@ export function useSections(websiteId: string | null, options: UseSectionsOption
       setSections(data);
       return data;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch sections';
+      const message = err instanceof Error ? err.message : 'Échec du chargement des sections';
       setError(message);
       return [];
     } finally {
@@ -67,6 +67,7 @@ export function useSections(websiteId: string | null, options: UseSectionsOption
   useEffect(() => {
     hasFetched.current = false;
     setSections([]);
+    setError(null);
   }, [websiteId]);
 
   const createSection = useCallback(async (data: CreateSectionRequest): Promise<Section> => {

@@ -14,6 +14,7 @@ interface UsePresetsReturn {
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<Preset[]>;
+  retry: () => void;
 }
 
 export function usePresets(options: UsePresetsOptions = {}): UsePresetsReturn {
@@ -24,6 +25,8 @@ export function usePresets(options: UsePresetsOptions = {}): UsePresetsReturn {
   const [error, setError] = useState<string | null>(null);
   
   const hasFetched = useRef(false);
+  const retryCount = useRef(0);
+  const maxRetries = 3;
 
   const fetchPresets = useCallback(async (): Promise<Preset[]> => {
     setIsLoading(true);
@@ -32,15 +35,23 @@ export function usePresets(options: UsePresetsOptions = {}): UsePresetsReturn {
     try {
       const data = await presetsAPI.list();
       setPresets(data);
+      retryCount.current = 0; // Reset retry count on success
       return data;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch presets';
+      const message = err instanceof Error ? err.message : 'Échec du chargement des templates';
       setError(message);
       return [];
     } finally {
       setIsLoading(false);
     }
   }, []);
+
+  const retry = useCallback(() => {
+    if (retryCount.current < maxRetries) {
+      retryCount.current += 1;
+      fetchPresets();
+    }
+  }, [fetchPresets]);
 
   useEffect(() => {
     if (autoFetch && !hasFetched.current) {
@@ -54,6 +65,7 @@ export function usePresets(options: UsePresetsOptions = {}): UsePresetsReturn {
     isLoading,
     error,
     refetch: fetchPresets,
+    retry,
   };
 }
 

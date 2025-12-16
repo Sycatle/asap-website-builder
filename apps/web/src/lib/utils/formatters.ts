@@ -1,5 +1,22 @@
 import { format, formatDistanceToNow } from 'date-fns';
 
+// ============================================
+// Configuration constants
+// ============================================
+
+/** The base domain for ASAP sites */
+export const ASAP_DOMAIN = 'asap.cool';
+
+/** Minimum length for slugs */
+export const SLUG_MIN_LENGTH = 3;
+
+/** Regex pattern for validating slugs */
+export const SLUG_REGEX = /^[a-z0-9-]+$/;
+
+// ============================================
+// Formatting utilities
+// ============================================
+
 export function formatBytes(bytes: number, decimals: number = 2): string {
   if (bytes === 0) return '0 Bytes';
 
@@ -36,5 +53,41 @@ export function slugify(text: string): string {
     .replace(/--+/g, '-');            // Collapse multiple hyphens
 }
 
-/** Regex pattern for validating slugs */
-export const SLUG_REGEX = /^[a-z0-9-]+$/;
+/**
+ * Validates a slug format.
+ * @param slug The slug to validate
+ * @returns Object with isValid boolean and optional error message
+ */
+export function validateSlug(slug: string): { isValid: boolean; error?: string } {
+  if (!slug || slug.trim().length === 0) {
+    return { isValid: false, error: 'Veuillez entrer une URL pour votre site' };
+  }
+  
+  if (slug.length < SLUG_MIN_LENGTH) {
+    return { isValid: false, error: `L'URL doit contenir au moins ${SLUG_MIN_LENGTH} caractères` };
+  }
+  
+  if (!SLUG_REGEX.test(slug)) {
+    return { isValid: false, error: "L'URL ne peut contenir que des lettres minuscules, des chiffres et des tirets" };
+  }
+  
+  return { isValid: true };
+}
+
+/**
+ * Generates the full URL for a website.
+ * @param slug The website slug
+ * @returns The full public URL
+ */
+export function getWebsiteUrl(slug: string): string {
+  return `https://${slug}.${ASAP_DOMAIN}`;
+}
+
+/**
+ * Generates the display URL (without protocol).
+ * @param slug The website slug
+ * @returns The display URL string
+ */
+export function getWebsiteDisplayUrl(slug: string): string {
+  return `${slug}.${ASAP_DOMAIN}`;
+}

@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { usePresets, useCreateWebsiteFromPreset } from '@/hooks/usePresets';
 import { useCacheActions } from '@/hooks/useCache';
-import { slugify } from '@/lib/utils/formatters';
+import { slugify, validateSlug, getWebsiteDisplayUrl } from '@/lib/utils/formatters';
 import {
   Dialog,
   DialogContent,
@@ -118,22 +118,39 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedPresetId || !slug || !title) {
-      toast.error('Veuillez remplir tous les champs');
+    // Validate required fields
+    if (!selectedPresetId) {
+      toast.error('Veuillez sélectionner un template');
+      return;
+    }
+    
+    if (!title.trim()) {
+      toast.error('Veuillez entrer un nom pour votre site');
+      return;
+    }
+    
+    // Validate slug using utility function
+    const slugValidation = validateSlug(slug);
+    if (!slugValidation.isValid) {
+      toast.error(slugValidation.error);
       return;
     }
 
     try {
       const response = await createWebsite({
         preset_id: selectedPresetId,
-        slug,
-        title,
+        slug: slug.trim(),
+        title: title.trim(),
       });
       
       // Invalidate websites cache to refresh the list
       invalidate('websites');
       
-      toast.success('Site créé avec succès !');
+      const displayUrl = getWebsiteDisplayUrl(slug.trim());
+      
+      toast.success('Site créé avec succès !', {
+        description: `Votre site est prêt à l'adresse ${displayUrl}`,
+      });
       
       // Reset form
       setStep('preset');
@@ -147,7 +164,17 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
         onSuccess(response.website.id);
       }
     } catch (err) {
-      toast.error('Erreur lors de la création du site');
+      const message = err instanceof Error ? err.message : 'Une erreur est survenue';
+      // Check for specific error messages from the API
+      if (message.includes('slug') || message.includes('URL')) {
+        toast.error('Cette URL est déjà utilisée', {
+          description: 'Veuillez choisir une autre URL pour votre site.',
+        });
+      } else {
+        toast.error('Erreur lors de la création du site', {
+          description: message,
+        });
+      }
     }
   };
 

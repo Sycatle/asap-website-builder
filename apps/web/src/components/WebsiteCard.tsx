@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import type { Website } from '@/lib/api';
 import { websitesAPI } from '@/lib/api';
 import { useCacheActions } from '@/hooks/useCache';
+import { getWebsiteDisplayUrl, getWebsiteUrl } from '@/lib/utils/formatters';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { 
   Globe, 
@@ -36,6 +42,7 @@ import {
   CheckCircle2,
   Clock,
   Loader2,
+  Copy,
 } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -52,83 +59,144 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
   
   const { removeWebsiteFromCache, updateWebsiteCache } = useCacheActions();
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     setIsDeleting(true);
     
     try {
       await websitesAPI.delete(website.id);
       removeWebsiteFromCache(website.id);
-      toast.success('Site supprimé avec succès');
+      toast.success('Site supprimé avec succès', {
+        description: `Le site "${website.title}" a été supprimé définitivement.`,
+      });
     } catch (error) {
-      toast.error('Erreur lors de la suppression du site');
+      const message = error instanceof Error ? error.message : 'Une erreur est survenue';
+      toast.error('Erreur lors de la suppression du site', {
+        description: message,
+      });
     } finally {
       setIsDeleting(false);
       setShowDeleteDialog(false);
     }
-  };
+  }, [website.id, website.title, removeWebsiteFromCache]);
 
-  const handlePublish = async () => {
+  const handlePublish = useCallback(async () => {
     setIsPublishing(true);
+    
+    const displayUrl = getWebsiteDisplayUrl(website.slug);
+    const fullUrl = getWebsiteUrl(website.slug);
     
     try {
       await websitesAPI.publish(website.id);
       updateWebsiteCache({ ...website, status: 'published' });
-      toast.success('Site publié avec succès !');
+      toast.success('Site publié avec succès !', {
+        description: `Votre site est maintenant accessible à l'adresse ${displayUrl}`,
+        action: {
+          label: 'Voir le site',
+          onClick: () => window.open(fullUrl, '_blank'),
+        },
+      });
     } catch (error) {
-      toast.error('Erreur lors de la publication');
+      const message = error instanceof Error ? error.message : 'Une erreur est survenue';
+      toast.error('Erreur lors de la publication', {
+        description: message,
+      });
     } finally {
       setIsPublishing(false);
     }
-  };
+  }, [website, updateWebsiteCache]);
+
+  const handleCopyUrl = useCallback(() => {
+    const url = getWebsiteUrl(website.slug);
+    navigator.clipboard.writeText(url);
+    toast.success('URL copiée !', {
+      description: url,
+    });
+  }, [website.slug]);
 
   const isPublished = website.status === 'published';
   const createdAt = website.created_at ? new Date(website.created_at) : new Date();
+  const displayUrl = getWebsiteDisplayUrl(website.slug);
+  const fullUrl = getWebsiteUrl(website.slug);
 
   return (
     <>
-      <Card className="group relative overflow-hidden hover:shadow-lg transition-all duration-300 animate-fade-in-up">
+      <Card className="group relative overflow-hidden hover:shadow-lg transition-all duration-300">
         {/* Gradient background effect */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
         
         <CardHeader className="pb-2 relative">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
-                <Globe className="h-5 w-5 text-primary" />
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center transition-transform duration-200 group-hover:scale-105 cursor-default">
+                    <Globe className="h-5 w-5 text-primary" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>{displayUrl}</p>
+                </TooltipContent>
+              </Tooltip>
               {isPublished ? (
-                <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20">
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                  En ligne
-                </Badge>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20 cursor-default">
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      En ligne
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>Ce site est accessible publiquement</p>
+                  </TooltipContent>
+                </Tooltip>
               ) : (
-                <Badge variant="secondary">
-                  <Clock className="w-3 h-3 mr-1" />
-                  Brouillon
-                </Badge>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="secondary" className="cursor-default">
+                      <Clock className="w-3 h-3 mr-1" />
+                      Brouillon
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>Ce site n'est pas encore publié</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                  aria-label="Actions du site"
+                >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={() => onSelect?.(website)}>
                   <Edit className="h-4 w-4 mr-2" />
                   Modifier
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <a href={`/${website.slug}`} target="_blank" rel="noopener noreferrer">
+                  <a href={fullUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-4 w-4 mr-2" />
                     Voir le site
                   </a>
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleCopyUrl}>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copier l'URL
+                </DropdownMenuItem>
                 {!isPublished && (
                   <DropdownMenuItem onClick={handlePublish} disabled={isPublishing}>
-                    <Rocket className="h-4 w-4 mr-2" />
+                    {isPublishing ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Rocket className="h-4 w-4 mr-2" />
+                    )}
                     Publier
                   </DropdownMenuItem>
                 )}
@@ -147,7 +215,7 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
           <div className="mt-3">
             <CardTitle className="text-lg line-clamp-1">{website.title || 'Sans titre'}</CardTitle>
             <CardDescription className="mt-1 line-clamp-1">
-              <span className="font-mono text-xs">{website.slug}.asap.cool</span>
+              <span className="font-mono text-xs">{displayUrl}</span>
             </CardDescription>
           </div>
         </CardHeader>
