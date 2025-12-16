@@ -10,3 +10,4 @@ export * from './presets';
 export * from './modules';
 export * from './integrations';
 export * from './notifications';
+export * from './public';

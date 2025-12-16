@@ -259,3 +259,39 @@ pub async fn reorder_website_sections(
     tx.commit().await?;
     Ok(())
 }
+
+/// List public sections for a website (no account verification, for published sites)
+pub async fn list_public_website_sections(
+    pool: &PgPool,
+    website_id: Uuid,
+) -> Result<Vec<WebsiteSectionRow>, Box<dyn std::error::Error + Send + Sync>> {
+    let rows = sqlx::query_as::<_, (Uuid, Uuid, Option<Uuid>, String, String, String, i32, String, JsonValue, JsonValue, bool)>(
+        r#"
+        SELECT 
+            id, website_id, module_id, section_type, slug, title,
+            "order", layout, settings, data, visible
+        FROM website_sections
+        WHERE website_id = $1 AND visible = true
+        ORDER BY "order"
+        "#
+    )
+    .bind(website_id)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows.into_iter().map(|(id, website_id, module_id, section_type, slug, title, order, layout, settings, data, visible)| {
+        WebsiteSectionRow {
+            id,
+            website_id,
+            module_id,
+            section_type,
+            slug,
+            title,
+            order,
+            layout,
+            settings,
+            data,
+            visible,
+        }
+    }).collect())
+}

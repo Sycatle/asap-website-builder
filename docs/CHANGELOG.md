@@ -1,5 +1,48 @@
 # Changelog - ASAP v2
 
+## 16 Décembre 2025 - Sprint 4: Pages Publiques et Finalisation
+
+### 🚀 Nouvelles Fonctionnalités
+
+#### Backend - API Publique
+- ✅ **Route publique pour les sections**
+  - `GET /public/websites/:slug/sections` - Obtenir les sections d'un site publié
+  - Filtrage automatique des sections visibles uniquement
+  - Format de réponse adapté pour le rendu frontend
+
+#### Frontend - Pages Publiques
+- ✅ **Page dynamique `[slug].astro`**
+  - Rendu SSG/SSR des sites publiés
+  - Récupération des données via API publique
+  - Meta tags SEO (Open Graph, Twitter)
+  - Thème personnalisé via CSS variables
+
+- ✅ **Composant PublicSite**
+  - Renderers complets pour 7 types de sections
+  - Hero avec gradient et CTA animé
+  - À propos avec image et bio
+  - Compétences par catégories avec tags
+  - Projets en grid avec hover effects
+  - Expérience en timeline verticale
+  - Contact avec liens sociaux
+  - Design minimalist moderne dark mode
+
+- ✅ **API Client Public**
+  - `publicAPI.getWebsiteBySlug()` - Récupérer un site par slug
+  - `publicAPI.getWebsiteSections()` - Récupérer les sections d'un site
+
+### 📁 Fichiers ajoutés
+- `apps/web/src/pages/[slug].astro`
+- `apps/web/src/components/public/PublicSite.tsx`
+- `apps/web/src/lib/api/public.ts`
+
+### 🔧 Modifications Backend
+- `core/api/src/routes.rs` - Ajout route publique sections
+- `core/api/src/websites/sections.rs` - Handler `get_public_website_sections`
+- `core/api/src/queries/sections.rs` - Query `list_public_website_sections`
+
+---
+
 ## 16 Décembre 2025 - Gestion des Pages
 
 ### 🚀 Nouvelles Fonctionnalités
