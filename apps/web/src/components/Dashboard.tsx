@@ -47,10 +47,12 @@ import {
   Loader2,
   Settings,
   LayoutDashboard,
-  RefreshCw
+  RefreshCw,
+  Layers,
 } from "lucide-react";
 import { FormActions } from "@/components/ui/form-actions";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { SectionsTab } from "@/components/sections/SectionsTab";
 
 export default function Dashboard() {
   // Use cached data
@@ -354,17 +356,22 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Tabs for Overview / Site Settings */}
+      {/* Tabs for Overview / Sections / Site Settings */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-        <TabsList className="grid w-full grid-cols-2 h-auto">
+        <TabsList className="grid w-full grid-cols-3 h-auto">
           <TabsTrigger value="overview" className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm py-2 sm:py-2.5 transition-all duration-200 data-[state=active]:scale-[1.02]">
             <LayoutDashboard className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden xs:inline">Vue d'ensemble</span>
-            <span className="xs:hidden">Accueil</span>
+            <span className="hidden sm:inline">Vue d'ensemble</span>
+            <span className="sm:hidden">Accueil</span>
+          </TabsTrigger>
+          <TabsTrigger value="sections" className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm py-2 sm:py-2.5 transition-all duration-200 data-[state=active]:scale-[1.02]">
+            <Layers className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Sections
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm py-2 sm:py-2.5 transition-all duration-200 data-[state=active]:scale-[1.02]">
             <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            Mon Site
+            <span className="hidden sm:inline">Paramètres</span>
+            <span className="sm:hidden">Config</span>
           </TabsTrigger>
         </TabsList>
 
@@ -656,6 +663,11 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Sections Tab */}
+        <TabsContent value="sections" className="animate-fade-in">
+          <SectionsTab websiteId={website?.id ?? null} />
         </TabsContent>
 
         {/* Site Settings Tab */}

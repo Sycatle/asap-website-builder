@@ -1,5 +1,52 @@
 # Changelog - ASAP v2
 
+## 16 Décembre 2025 - Sprint 2: Édition des Sections
+
+### 🚀 Nouvelles Fonctionnalités
+
+#### Frontend - Gestion des Sections
+- ✅ **Onglet Sections** dans le Dashboard
+  - Vue des sections avec état vide
+  - Indicateur de réorganisation en cours
+  - Actualisation manuelle
+
+- ✅ **Carte de section** (`SectionCard.tsx`)
+  - Icône par type de section
+  - Badge indiquant le type
+  - Toggle de visibilité
+  - Menu d'actions (modifier, masquer, supprimer)
+  - Poignée de glisser-déposer
+
+- ✅ **Ajout de section** (`AddSectionModal.tsx`)
+  - Sélection du type en grille visuelle
+  - Formulaire en 2 étapes (type → configuration)
+  - Auto-remplissage du titre selon le type
+  - Sélection du layout adapté au type
+
+- ✅ **Édition de section** (`SectionEditor.tsx`)
+  - Panneau latéral (Sheet)
+  - Modification du titre et layout
+  - Toggle de visibilité
+  - Sauvegarde des modifications
+
+- ✅ **Réordonnancement par glisser-déposer**
+  - Drag & drop natif HTML5
+  - Indicateur visuel de position
+  - Mise à jour optimiste de l'ordre
+  - Retour arrière en cas d'erreur
+
+#### Architecture
+- ✅ **Constantes partagées** (`lib/constants/sections.ts`)
+  - Icônes centralisées par type de section
+  - Fonctions utilitaires (getSectionIcon, getSectionLabel)
+  - Réutilisation dans tous les composants sections
+
+### 📚 Documentation
+- Mise à jour de ACTION_PLAN_SHORT_TERM.md (critères Sprint 2 complétés)
+- Mise à jour de ROADMAP.md (progression Phase 5 à 55%)
+
+---
+
 ## 15 Décembre 2025 - Sprint 1: Gestion des Websites
 
 ### 🚀 Nouvelles Fonctionnalités

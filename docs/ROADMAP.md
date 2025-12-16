@@ -1,6 +1,6 @@
 # Roadmap ASAP - Plan de Développement
 
-**Dernière mise à jour :** 15 décembre 2025  
+**Dernière mise à jour :** 16 décembre 2025  
 **Version :** 2.0
 
 ---
@@ -14,7 +14,7 @@ ASAP est une plateforme SaaS centralisée pour créateurs et entrepreneurs, perm
 | Phase | Statut | Progression |
 |-------|--------|-------------|
 | Phase 1-4 : Backend Core | ✅ Terminé | 100% |
-| Phase 5 : Frontend & UX | 🔨 En cours | 35% |
+| Phase 5 : Frontend & UX | 🔨 En cours | 55% |
 | Phase 6 : Modules Avancés | 📋 Planifié | 0% |
 | Phase 7 : Monétisation | 📋 Planifié | 0% |
 | Phase 8 : Scale & Global | 📋 Planifié | 0% |

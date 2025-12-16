@@ -386,13 +386,20 @@ export const SectionEditor = ({ section, onSave }) => {
 - `apps/web/src/lib/constants/sections.ts`
 
 ### Critères d'acceptation Sprint 2
-- [ ] Utilisateur peut modifier titre et tagline d'un website
-- [ ] Utilisateur voit la liste des sections de son website
-- [ ] Utilisateur peut ajouter une nouvelle section
-- [ ] Utilisateur peut modifier une section existante
-- [ ] Utilisateur peut supprimer une section
-- [ ] Utilisateur peut réordonner les sections (drag & drop)
-- [ ] Utilisateur peut activer/désactiver la visibilité d'une section
+- [x] Utilisateur peut modifier titre et tagline d'un website
+- [x] Utilisateur voit la liste des sections de son website
+- [x] Utilisateur peut ajouter une nouvelle section
+- [x] Utilisateur peut modifier une section existante
+- [x] Utilisateur peut supprimer une section
+- [x] Utilisateur peut réordonner les sections (drag & drop)
+- [x] Utilisateur peut activer/désactiver la visibilité d'une section
+
+### Composants implémentés (Sprint 2)
+- `apps/web/src/components/sections/SectionCard.tsx` - Carte de section avec actions
+- `apps/web/src/components/sections/AddSectionModal.tsx` - Modal d'ajout de section
+- `apps/web/src/components/sections/SectionEditor.tsx` - Panneau d'édition de section
+- `apps/web/src/components/sections/SectionsTab.tsx` - Onglet gestion des sections
+- `apps/web/src/lib/constants/sections.ts` - Constantes partagées pour les sections
 
 ---
 
