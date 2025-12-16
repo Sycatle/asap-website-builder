@@ -1,5 +1,31 @@
 # Changelog - ASAP v2
 
+## 16 Décembre 2025 - Presets Portfolio Templates
+
+### 🚀 Nouvelles Fonctionnalités
+
+#### Database - Templates Presets
+- ✅ **Preset Portfolio Développeur** (`portfolio-dev`)
+  - Template complet avec toutes les sections essentielles
+  - Sections : Hero, À propos, Compétences, Projets, Expérience, Formation, Contact
+  - Configuration par défaut avec données de démonstration
+  - Thème moderne avec mode sombre
+
+- ✅ **Preset Portfolio Minimaliste** (`portfolio-minimal`)
+  - Template épuré avec 3 sections : Hero, Projets, Contact
+  - Style minimal et élégant
+  - Idéal pour designers et artistes
+
+- ✅ **Preset Portfolio Freelance** (`portfolio-freelance`)
+  - Template orienté business
+  - Sections : Hero, Services, Réalisations, Témoignages, Tarifs, Contact
+  - Optimisé pour la conversion client
+
+### 📁 Fichiers ajoutés
+- `infra/migrations/20251216144900_seed_portfolio_dev_preset.sql`
+
+---
+
 ## 16 Décembre 2025 - Sprint 2: Édition des Sections
 
 ### 🚀 Nouvelles Fonctionnalités
