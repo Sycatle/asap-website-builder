@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import { useDashboardData } from "@/hooks/useCache"
+import { useWebsiteContext } from "@/contexts/WebsiteContext"
 import { useSections } from "@/hooks/useSections"
 import type { Section, UpdateSectionRequest } from "@/lib/api"
 import { SectionRenderer } from "./section-renderers"
@@ -49,8 +49,8 @@ interface PreviewPageProps {
 }
 
 export default function PreviewPage({ onBack }: PreviewPageProps) {
-  // Data hooks
-  const { website, isLoading: isLoadingWebsite } = useDashboardData()
+  // Data hooks - use context for website
+  const { currentWebsite: website, isLoading: isLoadingWebsite } = useWebsiteContext()
   const { 
     sections, 
     isLoading: isLoadingSections, 

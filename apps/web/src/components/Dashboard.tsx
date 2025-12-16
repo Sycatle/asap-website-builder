@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useState, useMemo } from 'react';
-import { websitesAPI, authAPI, type Website, type UpdateWebsiteRequest } from '../lib/api';
-import { useDashboardData, useCacheActions } from '../hooks/useCache';
+import { websitesAPI, authAPI, type UpdateWebsiteRequest } from '../lib/api';
+import { useCacheActions } from '../hooks/useCache';
+import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { formatBytes } from '../lib/utils/formatters';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,12 +39,10 @@ import {
   Clock,
   Sparkles,
   Rocket,
-  Save,
   Github,
   Link2,
   Type,
   MessageSquare,
-  AlertCircle,
   Loader2,
   Settings,
   LayoutDashboard,
@@ -55,8 +54,8 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { SectionsTab } from "@/components/sections/SectionsTab";
 
 export default function Dashboard() {
-  // Use cached data
-  const { website, quota, modules, isLoading, refetchAll } = useDashboardData();
+  // Use website context for synchronized data
+  const { currentWebsite: website, quota, modules, isLoading, refetch: refetchAll } = useWebsiteContext();
   const { updateWebsiteCache } = useCacheActions();
   
   const [isSaving, setIsSaving] = useState(false);

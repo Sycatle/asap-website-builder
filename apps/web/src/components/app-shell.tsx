@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState } from "react"
 import { AsapSidebar } from "@/components/asap-sidebar"
 import { SidebarProvider, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -12,8 +12,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { type WebsiteModule, type Website } from "@/lib/api"
-import { useWebsites, useWebsiteModules } from "@/hooks/useCache"
+import { WebsiteProvider, useWebsiteContext } from "@/contexts/WebsiteContext"
 import { HeaderUser } from "@/components/header-user"
 import { useKeyboardShortcuts, getModifierKey } from "@/hooks/useKeyboardShortcuts"
 import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket"
@@ -60,30 +59,6 @@ export function AppShell({ children, title, breadcrumbs = [] }: AppShellProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(true)
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
 
-  // Use cache hooks for websites and modules - this ensures sidebar updates when modules change
-  const { websites, isLoading: websitesLoading } = useWebsites()
-  
-  // Current website is the first one (or can be stored in localStorage for persistence)
-  const [currentWebsiteIndex, setCurrentWebsiteIndex] = useState(0)
-  const currentWebsite = websites.length > 0 ? websites[currentWebsiteIndex] || websites[0] : null
-  const currentWebsiteId = currentWebsite?.id ?? null
-  
-  const { modules: allModules } = useWebsiteModules(currentWebsiteId)
-  
-  // Filter to get only enabled modules for sidebar
-  const modules = React.useMemo(() => 
-    allModules.filter(m => m.enabled), 
-    [allModules]
-  )
-
-  // Handle website change from the switcher
-  const handleWebsiteChange = useCallback((website: Website) => {
-    const index = websites.findIndex(w => w.id === website.id)
-    if (index !== -1) {
-      setCurrentWebsiteIndex(index)
-    }
-  }, [websites])
-
   useEffect(() => {
     // Check authentication
     const token = localStorage.getItem('auth_token')
@@ -99,32 +74,24 @@ export function AppShell({ children, title, breadcrumbs = [] }: AppShellProps) {
   }
 
   return (
-    <SidebarProvider>
-      <AppShellContent 
-        modules={modules}
-        websites={websites}
-        currentWebsite={currentWebsite}
-        onWebsiteChange={handleWebsiteChange}
-        isLoadingWebsites={websitesLoading}
-        title={title} 
-        breadcrumbs={breadcrumbs}
-        showShortcutsHelp={showShortcutsHelp}
-        setShowShortcutsHelp={setShowShortcutsHelp}
-      >
-        {children}
-      </AppShellContent>
-    </SidebarProvider>
+    <WebsiteProvider>
+      <SidebarProvider>
+        <AppShellContent 
+          title={title} 
+          breadcrumbs={breadcrumbs}
+          showShortcutsHelp={showShortcutsHelp}
+          setShowShortcutsHelp={setShowShortcutsHelp}
+        >
+          {children}
+        </AppShellContent>
+      </SidebarProvider>
+    </WebsiteProvider>
   )
 }
 
 // Inner component that can access sidebar context
 interface AppShellContentProps {
   children: React.ReactNode
-  modules: WebsiteModule[]
-  websites: Website[]
-  currentWebsite: Website | null
-  onWebsiteChange: (website: Website) => void
-  isLoadingWebsites: boolean
   title?: string
   breadcrumbs: { label: string; href?: string }[]
   showShortcutsHelp: boolean
@@ -133,11 +100,6 @@ interface AppShellContentProps {
 
 function AppShellContent({ 
   children, 
-  modules,
-  websites,
-  currentWebsite,
-  onWebsiteChange,
-  isLoadingWebsites,
   title, 
   breadcrumbs,
   showShortcutsHelp,
@@ -145,6 +107,15 @@ function AppShellContent({
 }: AppShellContentProps) {
   const { toggleSidebar } = useSidebar()
   const [pendingGoTo, setPendingGoTo] = useState(false)
+  
+  // Get data from context
+  const { 
+    enabledModules,
+    websites,
+    currentWebsite,
+    setCurrentWebsite,
+    isLoadingWebsites,
+  } = useWebsiteContext()
 
   // Real-time notifications via WebSocket
   useNotificationWebSocket({
@@ -230,10 +201,10 @@ function AppShellContent({
   return (
     <>
       <AsapSidebar 
-        modules={modules}
+        modules={enabledModules}
         websites={websites}
         currentWebsite={currentWebsite}
-        onWebsiteChange={onWebsiteChange}
+        onWebsiteChange={setCurrentWebsite}
         isLoadingWebsites={isLoadingWebsites}
       />
       <SidebarInset>
