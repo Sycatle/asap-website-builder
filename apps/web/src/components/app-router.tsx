@@ -7,12 +7,14 @@ const Dashboard = lazy(() => import("@/components/Dashboard"))
 const ModulesManager = lazy(() => import("@/components/ModulesManager"))
 const ModuleConfig = lazy(() => import("@/components/ModuleConfig"))
 const CloudManager = lazy(() => import("@/components/CloudManager"))
+const PreviewPage = lazy(() => import("@/components/preview/PreviewPage"))
 
 type Route = 
   | { page: "dashboard" }
   | { page: "modules" }
   | { page: "module-config"; moduleSlug: string }
   | { page: "cloud" }
+  | { page: "preview" }
   | { page: "not-found" }
 
 function parseRoute(pathname: string): Route {
@@ -49,6 +51,11 @@ function parseRoute(pathname: string): Route {
     return { page: "dashboard" }
   }
   
+  // Preview page
+  if (path === "/app/preview") {
+    return { page: "preview" }
+  }
+  
   return { page: "not-found" }
 }
 
@@ -62,6 +69,8 @@ function getPageTitle(route: Route): string {
       return "Configuration du module"
     case "cloud":
       return "Fichiers"
+    case "preview":
+      return "Aperçu"
     default:
       return "Page non trouvée"
   }
@@ -80,6 +89,11 @@ function getBreadcrumbs(route: Route): { label: string; href?: string }[] {
       ]
     case "cloud":
       return [{ label: "Fichiers" }]
+    case "preview":
+      return [
+        { label: "Dashboard", href: "/app/dashboard" },
+        { label: "Aperçu" }
+      ]
     default:
       return [{ label: "Page non trouvée" }]
   }
@@ -125,6 +139,8 @@ function PageContent({ route }: { route: Route }) {
       return <ModuleConfig slug={route.moduleSlug} />
     case "cloud":
       return <CloudManager />
+    case "preview":
+      return <PreviewPage onBack={() => navigate("/app/dashboard")} />
     case "not-found":
       return <NotFound />
   }

@@ -346,12 +346,20 @@ export default function Dashboard() {
             </Button>
           )}
           {website && (
-            <Button variant="outline" asChild className="w-full sm:w-auto group">
-              <a href={`/${website.slug}`} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 mr-2 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                Voir le site
-              </a>
-            </Button>
+            <>
+              <Button variant="default" asChild className="w-full sm:w-auto group">
+                <a href="/app/preview">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Éditer le site
+                </a>
+              </Button>
+              <Button variant="outline" asChild className="w-full sm:w-auto group">
+                <a href={`/${website.slug}`} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4 mr-2 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                  Voir le site
+                </a>
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -585,8 +593,8 @@ export default function Dashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-2 sm:gap-3 px-4 sm:px-6">
-                <button
-                  onClick={() => setActiveTab('settings')}
+                <a
+                  href="/app/preview"
                   className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-md text-left w-full active:scale-[0.99]"
                 >
                   <div className="flex items-center gap-3 sm:gap-4">
@@ -596,12 +604,12 @@ export default function Dashboard() {
                     <div>
                       <h3 className="font-semibold text-sm sm:text-base">Éditer mon site</h3>
                       <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
-                        Modifier le contenu et le design
+                        Aperçu en temps réel style Canva
                       </p>
                     </div>
                   </div>
                   <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200" />
-                </button>
+                </a>
 
                 <a
                   href="/app/modules"

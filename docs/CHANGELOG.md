@@ -1,5 +1,56 @@
 # Changelog - ASAP v2
 
+## 16 Décembre 2025 - Sprint 3: Système de Prévisualisation
+
+### 🚀 Nouvelles Fonctionnalités
+
+#### Frontend - Éditeur Visuel de Site
+- ✅ **Page de prévisualisation** (`/app/preview`)
+  - Éditeur visuel style Canva/Wix
+  - Interface 3 panneaux redimensionnables
+  - Prévisualisation en temps réel
+
+- ✅ **Renderers de sections**
+  - Hero avec background, titre, CTA
+  - À propos avec image et points forts
+  - Compétences par catégories
+  - Projets en grille avec tags
+  - Expérience en timeline
+  - Formation en cards
+  - Contact avec formulaire et réseaux sociaux
+  - Témoignages avec notes
+  - Services avec features
+  - Tarifs avec plans
+  - FAQ avec accordéon
+  - Galerie d'images
+  - Blog avec articles
+  - Section personnalisée
+
+- ✅ **Éditeurs de propriétés**
+  - Édition du titre et layout
+  - Toggle de visibilité
+  - Éditeurs spécialisés par type
+  - Sauvegarde en temps réel
+
+- ✅ **Interface utilisateur**
+  - Panneaux gauche/droite rétractables
+  - Preview responsive (Desktop/Tablet/Mobile)
+  - Drag & drop des sections
+  - Sélection visuelle des sections
+  - Bouton actualiser et voir le site
+
+### 📁 Fichiers ajoutés
+- `apps/web/src/components/preview/PreviewPage.tsx`
+- `apps/web/src/components/preview/section-renderers.tsx`
+- `apps/web/src/components/preview/property-editors.tsx`
+- `apps/web/src/components/preview/index.ts`
+- `apps/web/src/components/ui/resizable.tsx`
+
+### 📦 Dépendances ajoutées
+- `react-resizable-panels` - Panneaux redimensionnables
+
+---
+
 ## 16 Décembre 2025 - Presets Portfolio Templates
 
 ### 🚀 Nouvelles Fonctionnalités
