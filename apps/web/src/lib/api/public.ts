@@ -1,34 +1,17 @@
 /**
  * Public API client for fetching published website data
  * These endpoints don't require authentication
+ * 
+ * Uses types from @asap/shared for consistency
  */
+
+import type { Website, Section } from '@asap/shared';
 
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
 
-export interface PublicWebsite {
-  id: string;
-  account_id: string;
-  slug: string;
-  title: string;
-  tagline: string;
-  status: string;
-  creation_mode: string;
-  preset_id?: string;
-  metadata: Record<string, any>;
-  data: Record<string, any>;
-}
-
-export interface PublicSection {
-  id: string;
-  website_id: string;
-  section_type: string;
-  title: string;
-  layout: string;
-  content: Record<string, any>;
-  settings: Record<string, any>;
-  visible: boolean;
-  order_index: number;
-}
+// Re-export types for backward compatibility
+export type PublicWebsite = Website;
+export type PublicSection = Section;
 
 export const publicAPI = {
   /**

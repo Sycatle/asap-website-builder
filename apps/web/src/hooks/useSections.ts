@@ -1,6 +1,21 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { sectionsAPI, type Section, type CreateSectionRequest, type UpdateSectionRequest } from '../lib/api';
 
+// Re-export types and constants from @asap/shared
+export type { SectionType } from '@asap/shared';
+export {
+  SECTION_TYPES,
+  SECTION_LAYOUTS,
+  getSectionLabel,
+  getSectionDescription,
+  getLayoutsForType,
+  type SectionTypeDefinition,
+  type LayoutDefinition,
+} from '@asap/shared';
+
+// For backward compatibility, also export as SectionTypeValue
+export type { SectionType as SectionTypeValue } from '@asap/shared';
+
 // ============================================
 // useSections - Hook for managing website sections
 // ============================================
@@ -170,107 +185,4 @@ export function useSections(websiteId: string | null, options: UseSectionsOption
     isDeleting,
     isReordering,
   };
-}
-
-// ============================================
-// Section Types and Constants
-// ============================================
-
-/** Available section types */
-export type SectionTypeValue = 
-  | 'hero' 
-  | 'about' 
-  | 'projects' 
-  | 'skills' 
-  | 'experience' 
-  | 'education' 
-  | 'contact' 
-  | 'blog' 
-  | 'gallery' 
-  | 'testimonials' 
-  | 'services' 
-  | 'pricing' 
-  | 'faq' 
-  | 'custom';
-
-/** Section type definition */
-export interface SectionTypeDefinition {
-  value: SectionTypeValue;
-  label: string;
-  description: string;
-}
-
-/** Available layout definition */
-export interface LayoutDefinition {
-  value: string;
-  label: string;
-}
-
-export const SECTION_TYPES: SectionTypeDefinition[] = [
-  { value: 'hero', label: 'Hero', description: "Section d'accueil principale" },
-  { value: 'about', label: 'À propos', description: 'Présentation personnelle/entreprise' },
-  { value: 'projects', label: 'Projets', description: 'Galerie de projets' },
-  { value: 'skills', label: 'Compétences', description: 'Compétences techniques' },
-  { value: 'experience', label: 'Expérience', description: 'Parcours professionnel' },
-  { value: 'education', label: 'Formation', description: 'Parcours éducatif' },
-  { value: 'contact', label: 'Contact', description: 'Formulaire de contact' },
-  { value: 'blog', label: 'Blog', description: 'Articles de blog' },
-  { value: 'gallery', label: 'Galerie', description: "Galerie d'images" },
-  { value: 'testimonials', label: 'Témoignages', description: 'Témoignages clients' },
-  { value: 'services', label: 'Services', description: 'Services proposés' },
-  { value: 'pricing', label: 'Tarifs', description: 'Grille tarifaire' },
-  { value: 'faq', label: 'FAQ', description: 'Questions fréquentes' },
-  { value: 'custom', label: 'Personnalisé', description: 'Section personnalisée' },
-];
-
-export const SECTION_LAYOUTS: Record<SectionTypeValue, LayoutDefinition[]> = {
-  hero: [{ value: 'full', label: 'Plein écran' }],
-  about: [
-    { value: 'full', label: 'Plein écran' },
-    { value: 'split', label: 'Divisé' },
-  ],
-  projects: [
-    { value: 'grid', label: 'Grille' },
-    { value: 'cards', label: 'Cartes' },
-  ],
-  skills: [
-    { value: 'grid', label: 'Grille' },
-    { value: 'list', label: 'Liste' },
-  ],
-  experience: [
-    { value: 'timeline', label: 'Chronologie' },
-    { value: 'list', label: 'Liste' },
-  ],
-  education: [
-    { value: 'timeline', label: 'Chronologie' },
-    { value: 'list', label: 'Liste' },
-  ],
-  contact: [
-    { value: 'full', label: 'Plein écran' },
-    { value: 'split', label: 'Divisé' },
-  ],
-  blog: [
-    { value: 'list', label: 'Liste' },
-    { value: 'grid', label: 'Grille' },
-  ],
-  gallery: [{ value: 'grid', label: 'Grille' }],
-  testimonials: [{ value: 'cards', label: 'Cartes' }],
-  services: [
-    { value: 'cards', label: 'Cartes' },
-    { value: 'grid', label: 'Grille' },
-  ],
-  pricing: [{ value: 'cards', label: 'Cartes' }],
-  faq: [{ value: 'list', label: 'Liste' }],
-  custom: [
-    { value: 'full', label: 'Plein écran' },
-    { value: 'split', label: 'Divisé' },
-    { value: 'grid', label: 'Grille' },
-    { value: 'cards', label: 'Cartes' },
-    { value: 'list', label: 'Liste' },
-  ],
-};
-
-export function getLayoutsForType(sectionType: string): LayoutDefinition[] {
-  const key = sectionType as SectionTypeValue;
-  return SECTION_LAYOUTS[key] || SECTION_LAYOUTS.custom;
 }

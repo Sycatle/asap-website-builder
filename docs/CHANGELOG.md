@@ -1,5 +1,49 @@
 # Changelog - ASAP v2
 
+## 17 Décembre 2025 - DRY/KISS Refactoring
+
+### 🏗️ Consolidation des Types et Utilitaires
+
+#### Nouveau Package `@asap/shared`
+- ✅ **Single source of truth pour tous les types**
+  - Types Section, Website, Page, Theme
+  - Content types (Hero, About, Skills, etc.)
+  - SEOMetadata, WebsiteMetadata
+
+- ✅ **Constantes partagées**
+  - SECTION_TYPES avec labels et descriptions
+  - SECTION_LAYOUTS par type de section
+  - ASAP_DOMAIN, SLUG_REGEX, etc.
+
+- ✅ **Utilitaires consolidés**
+  - `slugify()` et `validateSlug()`
+  - `getWebsiteUrl()` et `getWebsiteDisplayUrl()`
+  - `hexToRgb()` et `buildThemeStyles()`
+  - `getData()`, `getContent()`, `cn()`
+
+#### Élimination des Duplications
+- ❌ Types SectionType définis 4x → maintenant 1x dans @asap/shared
+- ❌ slugify() défini 2x → maintenant 1x dans @asap/shared
+- ❌ Theme types définis 3x → maintenant 1x dans @asap/shared
+- ❌ SECTION_TYPES défini 2x → maintenant 1x dans @asap/shared
+
+### 📁 Structure mise à jour
+```
+packages/
+  shared/                    # Nouveau!
+    src/
+      types.ts              # Types partagés
+      constants.ts          # Constantes partagées
+      utils.ts              # Utilitaires partagés
+      index.ts              # Re-exports
+  renderers/                # Utilise @asap/shared
+    src/
+      types.ts              # Re-export depuis @asap/shared
+      utils.ts              # Re-export depuis @asap/shared
+```
+
+---
+
 ## 16 Décembre 2025 - Architecture Unifiée Preview/Production
 
 ### 🏗️ Refactoring Majeur

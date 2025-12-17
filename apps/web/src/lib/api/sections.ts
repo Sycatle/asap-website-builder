@@ -1,37 +1,13 @@
 import { apiClient } from './client';
+import type { Section as BaseSection, SectionType } from '@asap/shared';
 
-// SectionType union - matches @asap/renderers
-export type SectionType =
-  | 'hero'
-  | 'about'
-  | 'skills'
-  | 'projects'
-  | 'experience'
-  | 'education'
-  | 'contact'
-  | 'testimonials'
-  | 'services'
-  | 'pricing'
-  | 'faq'
-  | 'gallery'
-  | 'blog'
-  | 'custom';
+// Re-export SectionType from @asap/shared
+export type { SectionType } from '@asap/shared';
 
-export interface Section {
-  id: string;
-  website_id: string;
-  extension_id?: string;  // Backend includes optional extension_id
-  section_type: SectionType;
+// Extend Section with API-specific fields
+export interface Section extends BaseSection {
   slug: string;
-  title: string;
   order: number;
-  order_index: number; // Alias for order (for @asap/renderers compatibility)
-  layout: string; // 'full', 'split', 'grid', 'cards', 'timeline', 'list'
-  settings: Record<string, any>;
-  data: Record<string, any>;
-  visible: boolean;
-  created_at?: string;
-  updated_at?: string;
 }
 
 export interface CreateSectionRequest {
