@@ -4,7 +4,7 @@ export * from './auth';
 export * from './accounts';
 export * from './files';
 export * from './websites';
-export * from './sections';
+export * from './elements';
 export * from './pages';
 export * from './presets';
 export * from './extensions';
