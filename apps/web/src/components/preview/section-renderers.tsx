@@ -25,7 +25,7 @@ export {
   BlogRenderer,
   CustomRenderer,
   type SectionRendererProps,
-} from '../../../../packages/renderers/src/renderers';
+} from '@asap/renderers';
 
 // Re-export types
-export type { Section, Website } from '../../../../packages/renderers/src/types';
+export type { Section, Website } from '@asap/renderers';
