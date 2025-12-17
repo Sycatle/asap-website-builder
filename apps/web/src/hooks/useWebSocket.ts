@@ -57,8 +57,8 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
   
   const ws = useRef<WebSocket | null>(null);
   const eventHandlers = useRef<Map<string, Set<Function>>>(new Map());
-  const reconnectTimer = useRef<NodeJS.Timeout>();
-  const pingTimer = useRef<NodeJS.Timeout>();
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
   const reconnectAttemptsRef = useRef(0);
   const isConnectingRef = useRef(false);
@@ -90,7 +90,7 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
   const stopHeartbeat = useCallback(() => {
     if (pingTimer.current) {
       clearInterval(pingTimer.current);
-      pingTimer.current = undefined;
+      pingTimer.current = null;
     }
   }, []);
 
@@ -213,7 +213,7 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
     
     if (reconnectTimer.current) {
       clearTimeout(reconnectTimer.current);
-      reconnectTimer.current = undefined;
+      reconnectTimer.current = null;
     }
     
     stopHeartbeat();
