@@ -30,6 +30,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Keyboard } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface AppShellProps {
   children: React.ReactNode
@@ -281,7 +282,10 @@ function AppShellContent({
           
           <HeaderUser />
         </header>
-        <main className="flex-1 overflow-auto p-3 sm:p-4 md:p-6">
+        <main className={cn(
+          "flex-1 overflow-auto",
+          isStudioPage ? "p-0" : "p-3 sm:p-4 md:p-6"
+        )}>
           {children}
         </main>
       </SidebarInset>
