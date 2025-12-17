@@ -146,7 +146,7 @@ use asap_core_api::{
     SyncPubSubEvent,
     SyncPublisher,
     CHANNEL_SYNC_WEBSITE,
-    CHANNEL_SYNC_MODULE,
+    CHANNEL_SYNC_EXTENSION,
     CHANNEL_SYNC_FILE,
     CHANNEL_PRESENCE,
 };
@@ -201,11 +201,11 @@ impl RedisSyncSubscriber {
         // Subscribe to all sync channels
         let mut pubsub = conn.into_pubsub();
         pubsub.subscribe(CHANNEL_SYNC_WEBSITE).await?;
-        pubsub.subscribe(CHANNEL_SYNC_MODULE).await?;
+        pubsub.subscribe(CHANNEL_SYNC_EXTENSION).await?;
         pubsub.subscribe(CHANNEL_SYNC_FILE).await?;
         pubsub.subscribe(CHANNEL_PRESENCE).await?;
         
-        info!("Subscribed to sync channels: website, module, file, presence");
+        info!("Subscribed to sync channels: website, extension, file, presence");
         
         // Process messages
         loop {

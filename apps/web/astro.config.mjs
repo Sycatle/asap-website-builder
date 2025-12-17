@@ -14,6 +14,17 @@ export default defineConfig({
     host: true
   },
   vite: {
+    server: {
+      hmr: {
+        // Use the same port as the dev server for HMR WebSocket
+        port: 4321,
+        clientPort: 4321,
+        host: 'localhost',
+      },
+      watch: {
+        usePolling: true, // Required for Docker file watching
+      },
+    },
     resolve: {
       alias: {
         '@': '/src',

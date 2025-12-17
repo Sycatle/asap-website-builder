@@ -89,10 +89,6 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         .route("/events", get(crate::events::get_events))
         .route("/events", post(crate::events::create_event))
         .route("/events/:id", patch(crate::events::mark_processed))
-        // Extension config routes
-        .route("/extensions", get(crate::extensions::list_extensions))
-        .route("/extensions/:id/config", get(crate::extensions::get_extension_config))
-        .route("/extensions/:id/config", put(crate::extensions::update_extension_config))
         // Files routes (authenticated)
         .route("/files", post(crate::files::upload_file))
         .route("/files", get(crate::files::list_files))

@@ -4,7 +4,6 @@ pub mod accounts;
 pub mod integrations;
 pub mod websites;
 pub mod events;
-pub mod extensions;
 pub mod middleware;
 pub mod storage;
 pub mod files;
