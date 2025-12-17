@@ -44,11 +44,11 @@ import { cn } from "@/lib/utils"
 
 type DevicePreview = 'desktop' | 'tablet' | 'mobile'
 
-interface PreviewPageProps {
+interface StudioPageProps {
   onBack?: () => void
 }
 
-export default function PreviewPage({ onBack }: PreviewPageProps) {
+export default function StudioPage({ onBack }: StudioPageProps) {
   // Data hooks - use context for website
   const { currentWebsite: website, isLoading: isLoadingWebsite } = useWebsiteContext()
   const { 
