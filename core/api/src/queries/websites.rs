@@ -69,6 +69,21 @@ pub async fn list_websites_with_data(
     .await
 }
 
+/// Get website data only (without website metadata)
+pub async fn get_website_data(
+    pool: &PgPool,
+    website_id: Uuid,
+) -> Result<JsonValue, sqlx::Error> {
+    let result: Option<(JsonValue,)> = sqlx::query_as(
+        "SELECT COALESCE(data, '{}'::jsonb) FROM website_data WHERE website_id = $1"
+    )
+    .bind(website_id)
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(result.map(|r| r.0).unwrap_or_else(|| serde_json::json!({})))
+}
+
 /// Get public website by slug
 pub async fn get_public_website(
     pool: &PgPool,

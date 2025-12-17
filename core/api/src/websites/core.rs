@@ -94,6 +94,141 @@ pub async fn list_websites(
     }
 }
 
+/// Create a new website for the authenticated user
+pub async fn create_website(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<CreateWebsiteRequest>,
+) -> impl IntoResponse {
+    let account_id = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    // Validate slug
+    let slug = payload.slug.trim().to_lowercase();
+    if slug.is_empty() || slug.len() < 3 || slug.len() > 50 {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "Slug must be between 3 and 50 characters"
+        }))).into_response();
+    }
+    if !slug.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-') {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "Slug can only contain lowercase letters, numbers, and hyphens"
+        }))).into_response();
+    }
+    if slug.starts_with('-') || slug.ends_with('-') || slug.contains("--") {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "Slug cannot start/end with hyphen or contain consecutive hyphens"
+        }))).into_response();
+    }
+    
+    // Reserved slugs
+    let reserved = ["api", "admin", "auth", "login", "signup", "public", "private", "health", "static", "assets", "www", "app"];
+    if reserved.contains(&slug.as_str()) {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "This slug is reserved"
+        }))).into_response();
+    }
+
+    let website_id = Uuid::new_v4();
+    let tagline = payload.tagline.unwrap_or_default();
+    let creation_mode = payload.creation_mode.unwrap_or_else(|| "onboarding".to_string());
+    let metadata = payload.metadata.unwrap_or_else(|| serde_json::json!({}));
+
+    // Start transaction
+    let mut tx = match pool.begin().await {
+        Ok(tx) => tx,
+        Err(e) => {
+            tracing::error!("Failed to start transaction: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    // Check if slug already exists
+    let slug_exists: Option<bool> = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM websites WHERE slug = $1)"
+    )
+    .bind(&slug)
+    .fetch_one(&mut *tx)
+    .await
+    .ok();
+
+    if slug_exists == Some(true) {
+        let _ = tx.rollback().await;
+        return (StatusCode::CONFLICT, Json(serde_json::json!({
+            "error": "This slug is already taken"
+        }))).into_response();
+    }
+
+    // Create website
+    let result = sqlx::query(
+        "INSERT INTO websites (id, account_id, slug, title, tagline, status, creation_mode, preset_id, metadata) 
+         VALUES ($1, $2, $3, $4, $5, 'draft', $6, $7, $8)"
+    )
+    .bind(website_id)
+    .bind(account_id)
+    .bind(&slug)
+    .bind(&payload.title)
+    .bind(&tagline)
+    .bind(&creation_mode)
+    .bind(payload.preset_id.as_ref().and_then(|s| Uuid::parse_str(s).ok()))
+    .bind(&metadata)
+    .execute(&mut *tx)
+    .await;
+
+    if let Err(e) = result {
+        tracing::error!("Failed to create website: {}", e);
+        let _ = tx.rollback().await;
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+            "error": "Failed to create website"
+        }))).into_response();
+    }
+
+    // Create website_data entry
+    if let Err(e) = sqlx::query(
+        "INSERT INTO website_data (website_id, data) VALUES ($1, '{}'::jsonb)"
+    )
+    .bind(website_id)
+    .execute(&mut *tx)
+    .await {
+        tracing::error!("Failed to create website_data: {}", e);
+        let _ = tx.rollback().await;
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+            "error": "Internal server error"
+        }))).into_response();
+    }
+
+    // Commit transaction
+    if let Err(e) = tx.commit().await {
+        tracing::error!("Failed to commit transaction: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+            "error": "Internal server error"
+        }))).into_response();
+    }
+
+    tracing::info!("Website {} created for account {}", slug, account_id);
+
+    (StatusCode::CREATED, Json(Website {
+        id: website_id.to_string(),
+        account_id: account_id.to_string(),
+        slug,
+        title: payload.title,
+        tagline,
+        status: "draft".to_string(),
+        creation_mode,
+        preset_id: payload.preset_id,
+        metadata,
+        data: serde_json::json!({}),
+    })).into_response()
+}
+
 pub async fn get_website(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
@@ -199,6 +334,62 @@ pub async fn update_website(
         }
         Err(e) => {
             tracing::error!("Database error updating website: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response()
+        }
+    }
+}
+
+/// Get website data only (without website metadata)
+pub async fn get_website_data(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let website_id = match Uuid::parse_str(&id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid website ID format"
+            }))).into_response();
+        }
+    };
+
+    let account_id = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    use crate::queries;
+    
+    match queries::verify_website_ownership(&pool, website_id, account_id).await {
+        Ok(true) => {}
+        Ok(false) => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Website not found"
+            }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Database error verifying website: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    }
+
+    let result = queries::get_website_data(&pool, website_id).await;
+
+    match result {
+        Ok(data) => {
+            (StatusCode::OK, Json(data)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Database error fetching website data: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()
