@@ -4,19 +4,19 @@ pub mod events;
 pub mod integrations;
 pub mod errors;
 pub mod storage;
-pub mod module_schema;
+pub mod extension_schema;
 
 pub use users::{Account, AccountData};
 pub use websites::{
     Website, WebsiteData, WebsiteStatus, CreationMode,
-    Module, WebsiteModule, WebsiteSection, SectionType, SectionLayout,
+    Extension, WebsiteExtension, WebsiteSection, SectionType, SectionLayout,
     Preset, PresetConfig, PresetSectionConfig,
 };
 pub use events::{Event, EventType};
 pub use integrations::{Integration, GitHubIntegration};
 pub use errors::{DomainError, Result};
 pub use storage::{File, AccountStorageQuota, FileUploadRequest, FileUploadResponse, StorageQuotaResponse};
-pub use module_schema::{
+pub use extension_schema::{
     ConfigSchema, ConfigField, ConfigAction, ConfigSection,
     DataDisplay, DataDisplayField, FieldType, FieldValidation,
     ActionStyle, HttpMethod, DataDisplayType, DisplayFieldType,
