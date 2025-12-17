@@ -96,10 +96,10 @@
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Modules",
-      "short_name": "Modules",
-      "description": "Gérer vos modules",
-      "url": "/app/modules?source=shortcut",
+      "name": "Extensions",
+      "short_name": "Extensions",
+      "description": "Gérer vos extensions",
+      "url": "/app/extensions?source=shortcut",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {

@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 pub const CHANNEL_NOTIFICATIONS: &str = "asap:notifications";
 pub const CHANNEL_SYNC_WEBSITE: &str = "asap:sync:website";
-pub const CHANNEL_SYNC_MODULE: &str = "asap:sync:module";
+pub const CHANNEL_SYNC_EXTENSION: &str = "asap:sync:module";
 pub const CHANNEL_SYNC_FILE: &str = "asap:sync:file";
 pub const CHANNEL_PRESENCE: &str = "asap:presence";
 
@@ -271,35 +271,35 @@ pub enum SyncPubSubEvent {
     },
     
     // Module Events
-    #[serde(rename = "sync:module:activated")]
-    ModuleActivated {
+    #[serde(rename = "sync:extension:activated")]
+    ExtensionActivated {
         account_id: String,
         website_id: String,
-        module_slug: String,
+        extension_slug: String,
         user_name: Option<String>,
     },
     
-    #[serde(rename = "sync:module:deactivated")]
-    ModuleDeactivated {
+    #[serde(rename = "sync:extension:deactivated")]
+    ExtensionDeactivated {
         account_id: String,
         website_id: String,
-        module_slug: String,
+        extension_slug: String,
         user_name: Option<String>,
     },
     
-    #[serde(rename = "sync:module:configured")]
-    ModuleConfigured {
+    #[serde(rename = "sync:extension:configured")]
+    ExtensionConfigured {
         account_id: String,
         website_id: String,
-        module_slug: String,
+        extension_slug: String,
         config: serde_json::Value,
         user_name: Option<String>,
     },
     
-    #[serde(rename = "sync:module:catalog:updated")]
-    ModuleCatalogUpdated {
+    #[serde(rename = "sync:extension:catalog:updated")]
+    ExtensionCatalogUpdated {
         account_id: String,
-        modules_count: usize,
+        extensions_count: usize,
     },
     
     // File Events
@@ -395,10 +395,10 @@ impl SyncPubSubEvent {
             Self::WebsiteDeleted { account_id, .. } => account_id,
             Self::WebsitePublished { account_id, .. } => account_id,
             Self::WebsiteUnpublished { account_id, .. } => account_id,
-            Self::ModuleActivated { account_id, .. } => account_id,
-            Self::ModuleDeactivated { account_id, .. } => account_id,
-            Self::ModuleConfigured { account_id, .. } => account_id,
-            Self::ModuleCatalogUpdated { account_id, .. } => account_id,
+            Self::ExtensionActivated { account_id, .. } => account_id,
+            Self::ExtensionDeactivated { account_id, .. } => account_id,
+            Self::ExtensionConfigured { account_id, .. } => account_id,
+            Self::ExtensionCatalogUpdated { account_id, .. } => account_id,
             Self::FileUploaded { account_id, .. } => account_id,
             Self::FileDeleted { account_id, .. } => account_id,
             Self::UploadProgress { account_id, .. } => account_id,
@@ -420,10 +420,10 @@ impl SyncPubSubEvent {
             Self::WebsitePublished { .. } | 
             Self::WebsiteUnpublished { .. } => CHANNEL_SYNC_WEBSITE,
             
-            Self::ModuleActivated { .. } | 
-            Self::ModuleDeactivated { .. } | 
-            Self::ModuleConfigured { .. } | 
-            Self::ModuleCatalogUpdated { .. } => CHANNEL_SYNC_MODULE,
+            Self::ExtensionActivated { .. } | 
+            Self::ExtensionDeactivated { .. } | 
+            Self::ExtensionConfigured { .. } | 
+            Self::ExtensionCatalogUpdated { .. } => CHANNEL_SYNC_EXTENSION,
             
             Self::FileUploaded { .. } | 
             Self::FileDeleted { .. } | 
@@ -490,13 +490,13 @@ pub trait SyncPublisher: Send + Sync {
         &self,
         account_id: &str,
         website_id: &str,
-        module_slug: &str,
+        extension_slug: &str,
         user_name: Option<String>,
     ) -> anyhow::Result<()> {
-        self.publish(SyncPubSubEvent::ModuleActivated {
+        self.publish(SyncPubSubEvent::ExtensionActivated {
             account_id: account_id.to_string(),
             website_id: website_id.to_string(),
-            module_slug: module_slug.to_string(),
+            extension_slug: extension_slug.to_string(),
             user_name,
         }).await
     }

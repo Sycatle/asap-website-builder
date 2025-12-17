@@ -1,0 +1,661 @@
+//! Website pages management
+
+use axum::{
+    extract::{Path, State, Extension},
+    response::IntoResponse,
+    http::StatusCode,
+    Json,
+};
+use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
+use uuid::Uuid;
+
+use asap_core_shared::Claims;
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct WebsitePage {
+    pub id: Uuid,
+    pub website_id: Uuid,
+    pub slug: String,
+    pub title: String,
+    pub description: String,
+    pub is_homepage: bool,
+    pub order: i32,
+    pub visible: bool,
+    pub metadata: serde_json::Value,
+}
+
+#[derive(Debug, Serialize)]
+pub struct WebsitePageResponse {
+    pub id: String,
+    pub website_id: String,
+    pub slug: String,
+    pub title: String,
+    pub description: String,
+    pub is_homepage: bool,
+    pub order: i32,
+    pub visible: bool,
+    pub metadata: serde_json::Value,
+}
+
+impl From<WebsitePage> for WebsitePageResponse {
+    fn from(page: WebsitePage) -> Self {
+        Self {
+            id: page.id.to_string(),
+            website_id: page.website_id.to_string(),
+            slug: page.slug,
+            title: page.title,
+            description: page.description,
+            is_homepage: page.is_homepage,
+            order: page.order,
+            visible: page.visible,
+            metadata: page.metadata,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreatePageRequest {
+    pub slug: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub is_homepage: Option<bool>,
+    pub order: Option<i32>,
+    pub visible: Option<bool>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdatePageRequest {
+    pub slug: Option<String>,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub is_homepage: Option<bool>,
+    pub order: Option<i32>,
+    pub visible: Option<bool>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ReorderPagesRequest {
+    pub page_ids: Vec<String>,
+}
+
+// List all pages for a website
+pub async fn list_website_pages(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Path(website_id): Path<String>,
+) -> impl IntoResponse {
+    let website_uuid = match Uuid::parse_str(&website_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid website ID format"
+            }))).into_response();
+        }
+    };
+
+    let account_id = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    // Verify website ownership
+    let website_exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND account_id = $2)"
+    )
+    .bind(website_uuid)
+    .bind(account_id)
+    .fetch_one(&pool)
+    .await;
+
+    match website_exists {
+        Ok(false) => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Website not found"
+            }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Database error verifying website: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+        _ => {}
+    }
+
+    let result = sqlx::query_as::<_, WebsitePage>(
+        r#"
+        SELECT id, website_id, slug, title, description, is_homepage, "order", visible, metadata
+        FROM website_pages
+        WHERE website_id = $1
+        ORDER BY "order" ASC, created_at ASC
+        "#
+    )
+    .bind(website_uuid)
+    .fetch_all(&pool)
+    .await;
+
+    match result {
+        Ok(pages) => {
+            let response: Vec<WebsitePageResponse> = pages.into_iter().map(Into::into).collect();
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Database error listing pages: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response()
+        }
+    }
+}
+
+// Get a single page
+pub async fn get_page(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Path((website_id, page_id)): Path<(String, String)>,
+) -> impl IntoResponse {
+    let website_uuid = match Uuid::parse_str(&website_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid website ID format"
+            }))).into_response();
+        }
+    };
+
+    let page_uuid = match Uuid::parse_str(&page_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid page ID format"
+            }))).into_response();
+        }
+    };
+
+    let account_id = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    let result = sqlx::query_as::<_, WebsitePage>(
+        r#"
+        SELECT p.id, p.website_id, p.slug, p.title, p.description, p.is_homepage, p."order", p.visible, p.metadata
+        FROM website_pages p
+        JOIN websites w ON p.website_id = w.id
+        WHERE p.id = $1 AND p.website_id = $2 AND w.account_id = $3
+        "#
+    )
+    .bind(page_uuid)
+    .bind(website_uuid)
+    .bind(account_id)
+    .fetch_optional(&pool)
+    .await;
+
+    match result {
+        Ok(Some(page)) => {
+            (StatusCode::OK, Json(WebsitePageResponse::from(page))).into_response()
+        }
+        Ok(None) => {
+            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Page not found"
+            }))).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Database error fetching page: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response()
+        }
+    }
+}
+
+// Create a new page
+pub async fn create_page(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Path(website_id): Path<String>,
+    Json(payload): Json<CreatePageRequest>,
+) -> impl IntoResponse {
+    let website_uuid = match Uuid::parse_str(&website_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid website ID format"
+            }))).into_response();
+        }
+    };
+
+    let account_id = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    // Verify website ownership
+    let website_exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND account_id = $2)"
+    )
+    .bind(website_uuid)
+    .bind(account_id)
+    .fetch_one(&pool)
+    .await;
+
+    match website_exists {
+        Ok(false) => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Website not found"
+            }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Database error verifying website: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+        _ => {}
+    }
+
+    // If this is set as homepage, unset other homepages
+    if payload.is_homepage.unwrap_or(false) {
+        let _ = sqlx::query(
+            "UPDATE website_pages SET is_homepage = false WHERE website_id = $1"
+        )
+        .bind(website_uuid)
+        .execute(&pool)
+        .await;
+    }
+
+    // Get next order value
+    let next_order = sqlx::query_scalar::<_, i32>(
+        r#"SELECT COALESCE(MAX("order"), 0) + 1 FROM website_pages WHERE website_id = $1"#
+    )
+    .bind(website_uuid)
+    .fetch_one(&pool)
+    .await
+    .unwrap_or(0);
+
+    let page_id = Uuid::new_v4();
+    let result = sqlx::query(
+        r#"
+        INSERT INTO website_pages (id, website_id, slug, title, description, is_homepage, "order", visible, metadata)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        "#
+    )
+    .bind(page_id)
+    .bind(website_uuid)
+    .bind(&payload.slug)
+    .bind(&payload.title)
+    .bind(payload.description.as_deref().unwrap_or(""))
+    .bind(payload.is_homepage.unwrap_or(false))
+    .bind(payload.order.unwrap_or(next_order))
+    .bind(payload.visible.unwrap_or(true))
+    .bind(payload.metadata.as_ref().unwrap_or(&serde_json::json!({})))
+    .execute(&pool)
+    .await;
+
+    match result {
+        Ok(_) => {
+            // Create event
+            let event_payload = serde_json::json!({
+                "website_id": website_id,
+                "page_id": page_id.to_string(),
+                "slug": payload.slug
+            });
+
+            let _ = sqlx::query(
+                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'PAGE_CREATED', $2)"
+            )
+            .bind(account_id)
+            .bind(&event_payload)
+            .execute(&pool)
+            .await;
+
+            (StatusCode::CREATED, Json(serde_json::json!({
+                "id": page_id.to_string(),
+                "message": "Page created successfully"
+            }))).into_response()
+        }
+        Err(e) => {
+            if e.to_string().contains("unique constraint") {
+                return (StatusCode::CONFLICT, Json(serde_json::json!({
+                    "error": "A page with this slug already exists"
+                }))).into_response();
+            }
+            tracing::error!("Database error creating page: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response()
+        }
+    }
+}
+
+// Update a page
+pub async fn update_page(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Path((website_id, page_id)): Path<(String, String)>,
+    Json(payload): Json<UpdatePageRequest>,
+) -> impl IntoResponse {
+    let website_uuid = match Uuid::parse_str(&website_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid website ID format"
+            }))).into_response();
+        }
+    };
+
+    let page_uuid = match Uuid::parse_str(&page_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid page ID format"
+            }))).into_response();
+        }
+    };
+
+    let account_id = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    // Verify ownership
+    let page_exists = sqlx::query_scalar::<_, bool>(
+        r#"
+        SELECT EXISTS(
+            SELECT 1 FROM website_pages p
+            JOIN websites w ON p.website_id = w.id
+            WHERE p.id = $1 AND p.website_id = $2 AND w.account_id = $3
+        )
+        "#
+    )
+    .bind(page_uuid)
+    .bind(website_uuid)
+    .bind(account_id)
+    .fetch_one(&pool)
+    .await;
+
+    match page_exists {
+        Ok(false) => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Page not found"
+            }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Database error verifying page: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+        _ => {}
+    }
+
+    // If setting as homepage, unset others
+    if payload.is_homepage.unwrap_or(false) {
+        let _ = sqlx::query(
+            "UPDATE website_pages SET is_homepage = false WHERE website_id = $1 AND id != $2"
+        )
+        .bind(website_uuid)
+        .bind(page_uuid)
+        .execute(&pool)
+        .await;
+    }
+
+    // Build dynamic update query
+    let mut query = String::from("UPDATE website_pages SET ");
+    let mut params: Vec<String> = vec![];
+    let mut param_count = 1;
+
+    if payload.slug.is_some() {
+        params.push(format!("slug = ${}", param_count));
+        param_count += 1;
+    }
+    if payload.title.is_some() {
+        params.push(format!("title = ${}", param_count));
+        param_count += 1;
+    }
+    if payload.description.is_some() {
+        params.push(format!("description = ${}", param_count));
+        param_count += 1;
+    }
+    if payload.is_homepage.is_some() {
+        params.push(format!("is_homepage = ${}", param_count));
+        param_count += 1;
+    }
+    if payload.order.is_some() {
+        params.push(format!("\"order\" = ${}", param_count));
+        param_count += 1;
+    }
+    if payload.visible.is_some() {
+        params.push(format!("visible = ${}", param_count));
+        param_count += 1;
+    }
+    if payload.metadata.is_some() {
+        params.push(format!("metadata = ${}", param_count));
+        param_count += 1;
+    }
+
+    if params.is_empty() {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "No fields to update"
+        }))).into_response();
+    }
+
+    query.push_str(&params.join(", "));
+    query.push_str(&format!(" WHERE id = ${} AND website_id = ${}", param_count, param_count + 1));
+
+    // Execute with sqlx raw query
+    let mut q = sqlx::query(&query);
+    
+    if let Some(ref slug) = payload.slug {
+        q = q.bind(slug);
+    }
+    if let Some(ref title) = payload.title {
+        q = q.bind(title);
+    }
+    if let Some(ref description) = payload.description {
+        q = q.bind(description);
+    }
+    if let Some(is_homepage) = payload.is_homepage {
+        q = q.bind(is_homepage);
+    }
+    if let Some(order) = payload.order {
+        q = q.bind(order);
+    }
+    if let Some(visible) = payload.visible {
+        q = q.bind(visible);
+    }
+    if let Some(ref metadata) = payload.metadata {
+        q = q.bind(metadata);
+    }
+    
+    q = q.bind(page_uuid).bind(website_uuid);
+
+    match q.execute(&pool).await {
+        Ok(_) => {
+            (StatusCode::OK, Json(serde_json::json!({
+                "message": "Page updated successfully"
+            }))).into_response()
+        }
+        Err(e) => {
+            if e.to_string().contains("unique constraint") {
+                return (StatusCode::CONFLICT, Json(serde_json::json!({
+                    "error": "A page with this slug already exists"
+                }))).into_response();
+            }
+            tracing::error!("Database error updating page: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response()
+        }
+    }
+}
+
+// Delete a page
+pub async fn delete_page(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Path((website_id, page_id)): Path<(String, String)>,
+) -> impl IntoResponse {
+    let website_uuid = match Uuid::parse_str(&website_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid website ID format"
+            }))).into_response();
+        }
+    };
+
+    let page_uuid = match Uuid::parse_str(&page_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid page ID format"
+            }))).into_response();
+        }
+    };
+
+    let account_id = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    let result = sqlx::query(
+        r#"
+        DELETE FROM website_pages p
+        USING websites w
+        WHERE p.id = $1 AND p.website_id = $2 AND w.id = p.website_id AND w.account_id = $3
+        "#
+    )
+    .bind(page_uuid)
+    .bind(website_uuid)
+    .bind(account_id)
+    .execute(&pool)
+    .await;
+
+    match result {
+        Ok(r) if r.rows_affected() > 0 => {
+            // Create event
+            let event_payload = serde_json::json!({
+                "website_id": website_id,
+                "page_id": page_id
+            });
+
+            let _ = sqlx::query(
+                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'PAGE_DELETED', $2)"
+            )
+            .bind(account_id)
+            .bind(&event_payload)
+            .execute(&pool)
+            .await;
+
+            (StatusCode::OK, Json(serde_json::json!({
+                "message": "Page deleted successfully"
+            }))).into_response()
+        }
+        Ok(_) => {
+            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Page not found"
+            }))).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Database error deleting page: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response()
+        }
+    }
+}
+
+// Reorder pages
+pub async fn reorder_pages(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Path(website_id): Path<String>,
+    Json(payload): Json<ReorderPagesRequest>,
+) -> impl IntoResponse {
+    let website_uuid = match Uuid::parse_str(&website_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid website ID format"
+            }))).into_response();
+        }
+    };
+
+    let account_id = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    // Verify website ownership
+    let website_exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND account_id = $2)"
+    )
+    .bind(website_uuid)
+    .bind(account_id)
+    .fetch_one(&pool)
+    .await;
+
+    match website_exists {
+        Ok(false) => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Website not found"
+            }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Database error verifying website: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+        _ => {}
+    }
+
+    // Update order for each page
+    for (index, page_id) in payload.page_ids.iter().enumerate() {
+        let page_uuid = match Uuid::parse_str(page_id) {
+            Ok(id) => id,
+            Err(_) => continue,
+        };
+
+        let _ = sqlx::query(
+            r#"UPDATE website_pages SET "order" = $1 WHERE id = $2 AND website_id = $3"#
+        )
+        .bind(index as i32)
+        .bind(page_uuid)
+        .bind(website_uuid)
+        .execute(&pool)
+        .await;
+    }
+
+    (StatusCode::OK, Json(serde_json::json!({
+        "message": "Pages reordered successfully"
+    }))).into_response()
+}

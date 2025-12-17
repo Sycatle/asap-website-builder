@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { modulesAPI } from '../lib/api';
-import type { Module, WebsiteModule, ConfigSchema, ConfigAction } from '../lib/api/modules';
+import { extensionsAPI } from '../lib/api';
+import type { Extension, WebsiteExtension, ConfigSchema, ConfigAction } from '../lib/api/extensions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,11 +17,11 @@ import { Button } from '@/components/ui/button';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import SchemaRenderer from './SchemaRenderer';
-import { useWebsites, useModuleCatalog, useWebsiteModules, useModuleData, useCacheActions } from '@/hooks/useCache';
+import { useWebsites, useExtensionCatalog, useWebsiteExtensions, useExtensionData } from '@/hooks/useCache';
 import { FormActions } from '@/components/ui/form-actions';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
-interface ModuleConfigProps {
+interface ExtensionConfigProps {
   slug: string;
 }
 
@@ -76,9 +76,9 @@ const Icons = {
   ),
 };
 
-// Default schema for modules without config_schema (fallback)
-const getDefaultSchema = (module: Module): ConfigSchema => {
-  const defaultSettings = module.default_settings || {};
+// Default schema for extensions without config_schema (fallback)
+const getDefaultSchema = (extension: Extension): ConfigSchema => {
+  const defaultSettings = extension.default_settings || {};
   const fields = Object.entries(defaultSettings).map(([key, value]) => ({
     key,
     label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
@@ -113,7 +113,7 @@ const getCategoryLabel = (category: string) => {
   return labels[category] || category;
 };
 
-const getModuleIcon = (category: string) => {
+const getExtensionIcon = (category: string) => {
   const iconClass = "w-6 h-6";
   const icons: Record<string, React.ReactNode> = {
     'integration': (
@@ -159,32 +159,30 @@ interface ChangelogEntry {
   details?: Record<string, any>;
 }
 
-export default function ModuleConfig({ slug }: ModuleConfigProps) {
+export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
   // Cache hooks
   const { websites, isLoading: websitesLoading } = useWebsites();
-  const { modules: catalogModules, isLoading: catalogLoading } = useModuleCatalog();
+  const { extensions: catalogExtensions, isLoading: catalogLoading } = useExtensionCatalog();
   const websiteId = websites[0]?.id || null;
-  const { modules: websiteModules, isLoading: modulesLoading, refetch: refetchModules } = useWebsiteModules(websiteId);
-  const { data: moduleDataResponse, isLoading: moduleDataLoading, refetch: refetchModuleData } = useModuleData(websiteId, slug);
-  const { invalidateWebsiteData } = useCacheActions();
+  const { extensions: websiteExtensions, isLoading: extensionsLoading, refetch: refetchExtensions } = useWebsiteExtensions(websiteId);
+  const { data: extensionDataResponse, isLoading: extensionDataLoading, refetch: refetchExtensionData } = useExtensionData(websiteId, slug);
+  // Derive extension from catalog
+  const extension = useMemo(() => {
+    if (!catalogExtensions.length) return null;
+    return catalogExtensions.find((e: Extension) => e.slug === slug) || null;
+  }, [catalogExtensions, slug]);
 
-  // Derive module from catalog
-  const module = useMemo(() => {
-    if (!catalogModules.length) return null;
-    return catalogModules.find((m: Module) => m.slug === slug) || null;
-  }, [catalogModules, slug]);
-
-  // Derive websiteModule from cached modules
-  const websiteModule = useMemo(() => {
-    if (!websiteModules.length) return null;
-    return websiteModules.find((m: WebsiteModule) => m.module_slug === slug) || null;
-  }, [websiteModules, slug]);
+  // Derive websiteExtension from cached extensions
+  const websiteExtension = useMemo(() => {
+    if (!websiteExtensions.length) return null;
+    return websiteExtensions.find((e: WebsiteExtension) => e.extension_slug === slug) || null;
+  }, [websiteExtensions, slug]);
 
   // Local state for settings and UI
-  const [isModuleEnabled, setIsModuleEnabled] = useState(false);
+  const [isExtensionEnabled, setIsExtensionEnabled] = useState(false);
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [initialSettings, setInitialSettings] = useState<Record<string, any>>({});
-  const [moduleData, setModuleData] = useState<Record<string, any>>({});
+  const [extensionData, setExtensionData] = useState<Record<string, any>>({});
   const [changelog, setChangelog] = useState<ChangelogEntry[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [executingAction, setExecutingAction] = useState<string | null>(null);
@@ -193,7 +191,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
   const [isDeactivating, setIsDeactivating] = useState(false);
 
   // Combined loading state
-  const isLoading = websitesLoading || catalogLoading || modulesLoading || moduleDataLoading;
+  const isLoading = websitesLoading || catalogLoading || extensionsLoading || extensionDataLoading;
   
   // Track if settings have changed
   const isSettingsDirty = useMemo(() => {
@@ -202,28 +200,28 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
 
   // Update local state when cached data changes
   useEffect(() => {
-    if (websiteModule) {
-      setIsModuleEnabled(websiteModule.enabled);
-      const newSettings = websiteModule.settings || module?.default_settings || {};
+    if (websiteExtension) {
+      setIsExtensionEnabled(websiteExtension.enabled);
+      const newSettings = websiteExtension.settings || extension?.default_settings || {};
       setSettings(newSettings);
       setInitialSettings(newSettings);
-    } else if (module) {
-      const newSettings = module.default_settings || {};
+    } else if (extension) {
+      const newSettings = extension.default_settings || {};
       setSettings(newSettings);
       setInitialSettings(newSettings);
-      setIsModuleEnabled(false);
+      setIsExtensionEnabled(false);
     }
-  }, [websiteModule, module]);
+  }, [websiteExtension, extension]);
 
-  // Update module data from cache
+  // Update extension data from cache
   useEffect(() => {
-    if (moduleDataResponse) {
-      setModuleData(moduleDataResponse.data || {});
-      if (moduleDataResponse.enabled !== undefined) {
-        setIsModuleEnabled(moduleDataResponse.enabled);
+    if (extensionDataResponse) {
+      setExtensionData(extensionDataResponse.data || {});
+      if (extensionDataResponse.enabled !== undefined) {
+        setIsExtensionEnabled(extensionDataResponse.enabled);
       }
     }
-  }, [moduleDataResponse]);
+  }, [extensionDataResponse]);
 
   // Initialize changelog (mock data)
   useEffect(() => {
@@ -243,7 +241,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       {
         id: '3',
         action: 'enabled',
-        description: 'Module activé',
+        description: 'Extension activée',
         timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
       },
     ]);
@@ -293,34 +291,31 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
   useKeyboardShortcuts(shortcuts);
 
   const handleSaveSettings = async () => {
-    if (!module || !websiteId) return;
+    if (!extension || !websiteId) return;
 
     setIsSaving(true);
 
     const savePromise = async () => {
-      if (websiteModule) {
-        await modulesAPI.updateSettings(websiteId, websiteModule.module_id, { settings });
+      if (websiteExtension) {
+        await extensionsAPI.updateSettings(websiteId, websiteExtension.extension_id, { settings });
       } else {
-        await modulesAPI.activate(websiteId, {
-          module_id: module.id,
+        await extensionsAPI.activate(websiteId, {
+          extension_id: extension.id,
           settings,
         });
       }
       // Update initial settings after save
       setInitialSettings(settings);
-      // Invalidate cache and refetch
-      invalidateWebsiteData(websiteId);
-      await Promise.all([refetchModules(true), refetchModuleData(true)]);
+      // Refetch extension data only (don't invalidate all website data)
+      await Promise.all([refetchExtensions(true), refetchExtensionData(true)]);
     };
 
-    toast.promise(savePromise(), {
-      loading: 'Enregistrement en cours...',
-      success: 'Configuration enregistrée',
-      error: 'Erreur lors de l\'enregistrement',
-    });
-
     try {
-      await savePromise();
+      await toast.promise(savePromise(), {
+        loading: 'Enregistrement en cours...',
+        success: 'Configuration enregistrée',
+        error: 'Erreur lors de l\'enregistrement',
+      });
     } catch (err) {
       console.error('Failed to save settings:', err);
     } finally {
@@ -328,17 +323,16 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
     }
   };
 
-  // Refresh data from cache
+  // Refresh data from cache (only extension-related data)
   const refreshData = async () => {
     if (!websiteId) return;
-    invalidateWebsiteData(websiteId);
-    await Promise.all([refetchModules(true), refetchModuleData(true)]);
+    await Promise.all([refetchExtensions(true), refetchExtensionData(true)]);
   };
 
   const handleAction = async (actionKey: string) => {
     if (!websiteId) return;
     
-    const action = module?.config_schema?.actions?.find((a: ConfigAction) => a.key === actionKey);
+    const action = extension?.config_schema?.actions?.find((a: ConfigAction) => a.key === actionKey);
     
     // Handle confirmation
     if (action?.confirm && pendingConfirm !== actionKey) {
@@ -350,20 +344,18 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
     setExecutingAction(actionKey);
 
     const actionPromise = async () => {
-      await modulesAPI.executeAction(websiteId, slug, actionKey, settings);
+      await extensionsAPI.executeAction(websiteId, slug, actionKey, settings);
       if (action?.refreshAfter !== false) {
         setTimeout(refreshData, 2000);
       }
     };
 
-    toast.promise(actionPromise(), {
-      loading: `Exécution de "${action?.label || actionKey}"...`,
-      success: `Action "${action?.label || actionKey}" exécutée`,
-      error: `Erreur lors de l'exécution de l'action`,
-    });
-
     try {
-      await actionPromise();
+      await toast.promise(actionPromise(), {
+        loading: `Exécution de "${action?.label || actionKey}"...`,
+        success: `Action "${action?.label || actionKey}" exécutée`,
+        error: `Erreur lors de l'exécution de l'action`,
+      });
     } catch (err) {
       console.error('Failed to execute action:', err);
     } finally {
@@ -371,37 +363,35 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
     }
   };
 
-  const handleToggleModule = async () => {
-    if (!module || !websiteId) return;
+  const handleToggleExtension = async () => {
+    if (!extension || !websiteId) return;
     
-    if (isModuleEnabled) {
+    if (isExtensionEnabled) {
       // Show confirmation dialog instead of native confirm
       setShowDeactivateConfirm(true);
     } else {
       const activatePromise = async () => {
-        await modulesAPI.activate(websiteId, {
-          module_id: module.id,
-          settings: module.default_settings || {},
+        await extensionsAPI.activate(websiteId, {
+          extension_id: extension.id,
+          settings: extension.default_settings || {},
         });
         await refreshData();
       };
 
-      toast.promise(activatePromise(), {
-        loading: 'Activation en cours...',
-        success: 'Module activé',
-        error: 'Erreur lors de l\'activation',
-      });
-
       try {
-        await activatePromise();
+        await toast.promise(activatePromise(), {
+          loading: 'Activation en cours...',
+          success: 'Extension activée',
+          error: 'Erreur lors de l\'activation',
+        });
       } catch (err) {
-        console.error('Failed to activate module:', err);
+        console.error('Failed to activate extension:', err);
       }
     }
   };
 
-  const confirmDeactivateModule = async () => {
-    if (!websiteId || !websiteModule) {
+  const confirmDeactivateExtension = async () => {
+    if (!websiteId || !websiteExtension) {
       toast.error('Données manquantes pour la désactivation');
       return;
     }
@@ -409,11 +399,11 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
     setIsDeactivating(true);
     
     try {
-      await modulesAPI.deactivate(websiteId, websiteModule.id);
+      await extensionsAPI.deactivate(websiteId, websiteExtension.id);
       await refreshData();
-      toast.success('Module désactivé');
+      toast.success('Extension désactivée');
     } catch (err) {
-      console.error('Failed to deactivate module:', err);
+      console.error('Failed to deactivate extension:', err);
       toast.error('Erreur lors de la désactivation');
     } finally {
       setIsDeactivating(false);
@@ -423,14 +413,14 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
 
   // Find sync action from schema
   const getSyncAction = (): ConfigAction | undefined => {
-    return module?.config_schema?.actions?.find(
+    return extension?.config_schema?.actions?.find(
       (a: ConfigAction) => a.key === 'sync' || a.key.includes('sync')
     );
   };
 
   // Get other actions (non-sync)
   const getOtherActions = (): ConfigAction[] => {
-    return module?.config_schema?.actions?.filter(
+    return extension?.config_schema?.actions?.filter(
       (a: ConfigAction) => a.key !== 'sync' && !a.key.includes('sync')
     ) || [];
   };
@@ -524,27 +514,27 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
     );
   }
 
-  // Module not found
-  if (!module) {
+  // Extension not found
+  if (!extension) {
     return (
       <div className="max-w-2xl mx-auto text-center py-16">
         <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
           {Icons.error}
         </div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">Module non trouvé</h3>
-        <p className="text-gray-500 mb-6">Le module "{slug}" n'existe pas ou n'est pas disponible.</p>
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">Extension non trouvée</h3>
+        <p className="text-gray-500 mb-6">L'extension "{slug}" n'existe pas ou n'est pas disponible.</p>
         <a 
-          href="/app/modules" 
+          href="/app/extensions" 
           className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-medium"
         >
           {Icons.back}
-          Retour aux modules
+          Retour aux extensions
         </a>
       </div>
     );
   }
 
-  const schema = module.config_schema || getDefaultSchema(module);
+  const schema = extension.config_schema || getDefaultSchema(extension);
   const syncAction = getSyncAction();
   const hasData = schema.dataDisplay && schema.dataDisplay.length > 0;
   const hasConfig = schema.fields && schema.fields.length > 0;
@@ -556,40 +546,40 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
     <div className="max-w-4xl mx-auto">
       {/* Back link */}
       <a 
-        href="/app/modules" 
+        href="/app/extensions" 
         className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-gray-500 hover:text-gray-700 mb-4 sm:mb-6 transition-colors"
       >
         {Icons.back}
-        Modules
+        Extensions
       </a>
 
       {/* Header Card */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 sm:mb-6">
         <div className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            {/* Module info */}
+            {/* Extension info */}
             <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
-              <div className={`w-10 h-10 sm:w-12 sm:h-12 ${getCategoryColor(module.category)} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
-                {getModuleIcon(module.category)}
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 ${getCategoryColor(extension.category)} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
+                {getExtensionIcon(extension.category)}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <h1 className="text-lg sm:text-xl font-bold text-gray-900">{module.name}</h1>
+                  <h1 className="text-lg sm:text-xl font-bold text-gray-900">{extension.name}</h1>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${
-                    isModuleEnabled 
+                    isExtensionEnabled 
                       ? 'bg-green-100 text-green-700' 
                       : 'bg-gray-100 text-gray-600'
                   }`}>
-                    {isModuleEnabled ? 'Actif' : 'Inactif'}
+                    {isExtensionEnabled ? 'Actif' : 'Inactif'}
                   </span>
                 </div>
-                <p className="mt-1 text-xs sm:text-sm text-gray-600 line-clamp-2">{module.description}</p>
+                <p className="mt-1 text-xs sm:text-sm text-gray-600 line-clamp-2">{extension.description}</p>
                 <div className="mt-1.5 sm:mt-2 flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-gray-500">
                   <span className="inline-flex items-center gap-1">
-                    {getCategoryLabel(module.category)}
+                    {getCategoryLabel(extension.category)}
                   </span>
                   <span>•</span>
-                  <span>v{module.version}</span>
+                  <span>v{extension.version}</span>
                 </div>
               </div>
             </div>
@@ -597,7 +587,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
             {/* Actions */}
             <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
               {/* Sync button */}
-              {syncAction && isModuleEnabled && (
+              {syncAction && isExtensionEnabled && (
                 <button
                   onClick={() => handleAction(syncAction.key)}
                   disabled={executingAction === syncAction.key}
@@ -611,15 +601,15 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
               
               {/* Enable/Disable toggle */}
               <button
-                onClick={handleToggleModule}
+                onClick={handleToggleExtension}
                 className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
-                  isModuleEnabled
+                  isExtensionEnabled
                     ? 'text-red-600 bg-red-50 border border-red-200 hover:bg-red-100'
                     : 'text-white bg-primary-600 hover:bg-primary-700'
                 }`}
               >
                 {Icons.power}
-                {isModuleEnabled ? 'Désactiver' : 'Activer'}
+                {isExtensionEnabled ? 'Désactiver' : 'Activer'}
               </button>
             </div>
           </div>
@@ -630,7 +620,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
           <div className="px-4 sm:px-6 py-3 sm:py-4 border-t bg-amber-50 border-amber-100">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <span className="text-xs sm:text-sm text-amber-700">
-                {module.config_schema?.actions?.find((a: ConfigAction) => a.key === pendingConfirm)?.confirm || 'Confirmer cette action ?'}
+                {extension.config_schema?.actions?.find((a: ConfigAction) => a.key === pendingConfirm)?.confirm || 'Confirmer cette action ?'}
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -652,7 +642,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       </div>
 
       {/* Tabs Content */}
-      {isModuleEnabled && (
+      {isExtensionEnabled && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-4 sm:p-6">
             <Tabs defaultValue={defaultTab}>
@@ -668,9 +658,9 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
                   <TabsTrigger value="data" className="gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
                     {Icons.data}
                     Données
-                    {Object.keys(moduleData).length > 0 && (
+                    {Object.keys(extensionData).length > 0 && (
                       <Badge variant="secondary" className="ml-1 text-[10px] sm:text-xs h-4 sm:h-5">
-                        {Object.values(moduleData).flat().length}
+                        {Object.values(extensionData).flat().length}
                       </Badge>
                     )}
                   </TabsTrigger>
@@ -695,7 +685,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
                     <SchemaRenderer
                       schema={{ ...schema, actions: [], dataDisplay: [] }}
                       settings={settings}
-                      data={moduleData}
+                      data={extensionData}
                       onSettingsChange={setSettings}
                       onAction={handleAction}
                       isExecutingAction={executingAction}
@@ -736,7 +726,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
                   <SchemaRenderer
                     schema={{ dataDisplay: schema.dataDisplay }}
                     settings={settings}
-                    data={moduleData}
+                    data={extensionData}
                     onSettingsChange={setSettings}
                     onAction={handleAction}
                     isExecutingAction={executingAction}
@@ -785,21 +775,21 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
       )}
 
       {/* Not enabled state */}
-      {!isModuleEnabled && (
+      {!isExtensionEnabled && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8 text-center">
           <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3 sm:mb-4 text-gray-400">
             {Icons.power}
           </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1.5 sm:mb-2">Module désactivé</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1.5 sm:mb-2">Extension désactivée</h3>
           <p className="text-xs sm:text-sm text-gray-500 mb-4 sm:mb-6 max-w-md mx-auto">
-            Activez ce module pour accéder à sa configuration.
+            Activez cette extension pour accéder à sa configuration.
           </p>
           <button
-            onClick={handleToggleModule}
+            onClick={handleToggleExtension}
             className="inline-flex items-center gap-2 px-5 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
           >
             {Icons.check}
-            Activer le module
+            Activer l'extension
           </button>
         </div>
       )}
@@ -812,18 +802,18 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
         onCancel={handleCancelChanges}
       />
 
-      {/* Deactivate Module Confirmation Dialog */}
+      {/* Deactivate Extension Confirmation Dialog */}
       <Dialog open={showDeactivateConfirm} onOpenChange={setShowDeactivateConfirm}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
-              Désactiver le module
+              Désactiver l'extension
             </DialogTitle>
             <DialogDescription className="pt-2">
-              Êtes-vous sûr de vouloir désactiver le module <span className="font-medium text-foreground">{module?.name}</span> ?
+              Êtes-vous sûr de vouloir désactiver l'extension <span className="font-medium text-foreground">{extension?.name}</span> ?
               <br />
-              <span className="text-muted-foreground">Vous pourrez le réactiver à tout moment.</span>
+              <span className="text-muted-foreground">Vous pourrez la réactiver à tout moment.</span>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -836,7 +826,7 @@ export default function ModuleConfig({ slug }: ModuleConfigProps) {
             </Button>
             <Button
               variant="destructive"
-              onClick={confirmDeactivateModule}
+              onClick={confirmDeactivateExtension}
               disabled={isDeactivating}
             >
               {isDeactivating ? (

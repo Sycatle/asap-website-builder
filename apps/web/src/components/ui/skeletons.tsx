@@ -94,7 +94,7 @@ export function SkeletonStatCard({ className }: { className?: string }) {
   )
 }
 
-export function SkeletonModuleCard({ className }: { className?: string }) {
+export function SkeletonExtensionCard({ className }: { className?: string }) {
   return (
     <Card className={cn("p-4", className)}>
       <div className="flex items-start gap-4">
@@ -347,7 +347,7 @@ export function SkeletonDashboard({ className }: { className?: string }) {
   )
 }
 
-export function SkeletonModulesPage({ className }: { className?: string }) {
+export function SkeletonExtensionsPage({ className }: { className?: string }) {
   return (
     <div className={cn("space-y-8", className)}>
       <div className="space-y-2">
@@ -356,7 +356,7 @@ export function SkeletonModulesPage({ className }: { className?: string }) {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {Array.from({ length: 8 }).map((_, i) => (
-          <SkeletonModuleCard key={i} />
+          <SkeletonExtensionCard key={i} />
         ))}
       </div>
     </div>

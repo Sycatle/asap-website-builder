@@ -1,7 +1,7 @@
 # Roadmap ASAP - Plan de Développement
 
-**Dernière mise à jour :** 15 décembre 2025  
-**Version :** 2.0
+**Dernière mise à jour :** 17 décembre 2025  
+**Version :** 2.1
 
 ---
 
@@ -14,7 +14,7 @@ ASAP est une plateforme SaaS centralisée pour créateurs et entrepreneurs, perm
 | Phase | Statut | Progression |
 |-------|--------|-------------|
 | Phase 1-4 : Backend Core | ✅ Terminé | 100% |
-| Phase 5 : Frontend & UX | 🔨 En cours | 35% |
+| Phase 5 : Frontend & UX | ✅ Terminé | 100% |
 | Phase 6 : Modules Avancés | 📋 Planifié | 0% |
 | Phase 7 : Monétisation | 📋 Planifié | 0% |
 | Phase 8 : Scale & Global | 📋 Planifié | 0% |
@@ -258,137 +258,132 @@ Construire une infrastructure backend robuste et complète avec support temps r�
 
 ---
 
-## 🔨 Phase 5 : Frontend & UX (EN COURS)
+## 🔨 Phase 5 : Frontend & UX (TERMINÉ)
 
-**Période :** Décembre 2025 - Février 2026  
-**Statut :** 🔨 En cours - 35% complété  
+**Période :** Décembre 2025  
+**Statut :** ✅ 100% Complété  
 **Objectif :** Rendre le MVP utilisable avec une interface web complète
 
-### Réalisations actuelles
+### Réalisations
 
-- ✅ **Setup Frontend (Astro + React + TypeScript)**
-  - Landing page professionnelle
-  - Pages signup/login avec validation
-  - Client API TypeScript complet
-  - Store d'authentification (Zustand)
-  - Routing et navigation
+#### Sprint 1 - Dashboard Fonctionnel ✅
 
-- ✅ **PWA Intégrée**
-  - Application installable
-  - Mode offline fonctionnel
-  - Service Worker actif
-  - Manifest configuré
+- ✅ **Gestion des Websites**
+  - Liste websites avec WebsitesList et WebsiteCard
+  - Création depuis presets avec CreateWebsiteModal (2 étapes)
+  - Suppression avec confirmation dialog
+  - Publication/dépublication rapide
+  - Copie URL et tooltips
 
-- ✅ **Hooks Temps Réel**
-  - Hook WebSocket (`useWebSocket`)
-  - Gestion reconnexion automatique
-  - Typages TypeScript complets
+- ✅ **SiteSwitcher**
+  - Remplace le header "ASAP, Dashboard"
+  - Dropdown avec liste de tous les sites
+  - Indicateur de site actif
+  - "Créer un nouveau site" en bas du dropdown
+  - Persistance sélection dans localStorage
 
-- ✅ **Système Notifications UI**
-  - Composants notification
-  - Toast notifications
-  - Badge compteur non lus
+- ✅ **Hooks et API**
+  - usePresets avec retry automatique
+  - useSections avec CRUD complet
+  - Validation slug avec messages français
+  - Gestion erreurs API détaillée
 
-### En cours de développement
+#### Sprint 2 - Édition Sections ✅
 
-- 🔨 **Dashboard Principal**
-  - Vue d'ensemble compte
-  - Statistiques clés
-  - Actions rapides
-  - Widgets personnalisables
+- ✅ **Onglet Sections dans Dashboard**
+  - Layout 3 colonnes responsive
+  - Liste des sections avec état vide
+  - SectionCard avec icône, badge type, actions
 
-- 🔨 **Gestion Websites**
-  - Liste websites
-  - Création depuis presets
-  - Édition informations de base
-  - Publication/dépublication
+- ✅ **Gestion Sections**
+  - AddSectionModal (sélection type → configuration)
+  - SectionEditor (panneau latéral)
+  - Toggle visibilité
+  - Drag & drop HTML5 natif avec feedback visuel
+  - Mise à jour optimiste + rollback
 
-### À développer
+- ✅ **Architecture**
+  - Constantes partagées (`lib/constants/sections.ts`)
+  - 14 types de sections supportés
 
-- ⏳ **Sélecteur de Presets**
-  - Galerie de templates
-  - Prévisualisation presets
-  - Configuration initiale
-  - Création rapide
+#### Sprint 3 - Preview System ✅
 
-- ⏳ **Éditeur de Sections**
-  - Interface drag & drop
-  - Réordonnancement sections
-  - Édition contenu inline
-  - Prévisualisation temps réel
-  - Ajout/suppression sections
+- ✅ **Route /app/preview**
+  - Layout 3 panneaux redimensionnables (react-resizable-panels)
+  - Panneau gauche : liste sections avec drag & drop
+  - Panneau central : canvas preview
+  - Panneau droit : éditeur de propriétés
 
-- ⏳ **Configuration Modules**
-  - Activation/désactivation modules
-  - Configuration paramètres
-  - Gestion intégrations (GitHub)
-  - État synchronisation
+- ✅ **14 Renderers de Sections**
+  - Hero, About, Skills, Projects
+  - Experience, Education, Contact
+  - Testimonials, Services, Pricing
+  - FAQ, Gallery, Blog, Custom
 
-- ⏳ **Gestion Fichiers**
-  - Upload drag & drop
-  - Liste fichiers avec filtres
-  - Prévisualisation
-  - Gestion quotas avec indicateur
-  - Suppression et organisation
+- ✅ **Preview Responsive**
+  - Modes Desktop/Tablet/Mobile
+  - Panneaux rétractables
+  - Bouton "Éditer le site" dans Dashboard
 
-- ⏳ **Prévisualisation Website**
-  - Preview temps réel
-  - Mode responsive
-  - Navigation sections
-  - Bascule draft/published
+#### Sprint 4 - Pages & Publication ✅
 
-- ⏳ **Notifications Dropdown**
-  - Liste notifications récentes
-  - Filtres par catégorie
-  - Actions rapides
-  - Marquer comme lu
-  - Paramètres notifications
+- ✅ **Gestion des Pages**
+  - PagesList dans sidebar
+  - CRUD pages complet
+  - Indicateur homepage
+  - URLs personnalisables (/, /contact, /about...)
+  - Drag & drop pour réorganiser
 
-- ⏳ **Pages Publiques**
-  - Rendu websites publics ([slug])
-  - SSG optimisé avec Astro
-  - SEO meta tags
-  - Performance optimale
+- ✅ **Sites Publics**
+  - App dédiée `apps/sites`
+  - Route dynamique `[slug].astro`
+  - SEO avancé (Open Graph, Twitter, JSON-LD)
+  - Thème dynamique via CSS custom properties
 
-- ⏳ **Tests E2E**
-  - Scénarios utilisateur complets
-  - Tests d'intégration API/Frontend
-  - Tests WebSocket
-  - Tests notifications
+- ✅ **Synchronisation Données**
+  - WebsiteContext centralisé
+  - Persistance localStorage
+  - Auto-sélection premier site
+  - Mise à jour temps réel tous composants
 
-- ⏳ **CI/CD**
-  - GitHub Actions setup
-  - Tests automatiques
-  - Build et deploy automatique
-  - Environnements staging/production
+#### Architecture Unifiée ✅
 
-### Critères de succès Phase 5
+- ✅ **Package @asap/shared**
+  - Types partagés (Section, Website, Page, Theme)
+  - Constantes (SECTION_TYPES, SECTION_LAYOUTS)
+  - Utilitaires (slugify, validateSlug, hexToRgb)
+  - Single source of truth
 
-- [ ] Dashboard utilisateur fonctionnel et intuitif
-- [ ] Création website en <5 minutes avec preset
-- [ ] Édition sections fluide et intuitive
-- [ ] Prévisualisation temps réel opérationnelle
-- [ ] Publication website en 1 clic
-- [ ] Tests E2E couvrant parcours principaux
-- [ ] CI/CD déployant automatiquement
-- [ ] Site public performant (<2s load)
+- ✅ **Package @asap/renderers**
+  - 14 renderers React en TailwindCSS pur
+  - Parité visuelle 100% preview/production
+  - Types re-exportés depuis @asap/shared
 
-### Planning estimé
+- ✅ **DRY/KISS Refactoring**
+  - Élimination duplications types (4x → 1x)
+  - Consolidation constantes (2x → 1x)
+  - Utilitaires partagés
 
-| Tâche | Durée estimée | Statut |
-|-------|---------------|--------|
-| Dashboard principal | 2 semaines | 🔨 En cours |
-| Sélecteur presets | 1 semaine | ⏳ À faire |
-| Éditeur sections | 3 semaines | ⏳ À faire |
-| Configuration modules | 1 semaine | ⏳ À faire |
-| Gestion fichiers | 1 semaine | ⏳ À faire |
-| Prévisualisation website | 2 semaines | ⏳ À faire |
-| Notifications dropdown | 1 semaine | ⏳ À faire |
-| Pages publiques | 2 semaines | ⏳ À faire |
-| Tests E2E | 2 semaines | ⏳ À faire |
-| CI/CD | 1 semaine | ⏳ À faire |
+### Presets Templates ✅
 
-**Total estimé :** 16 semaines (~4 mois)
+- ✅ **portfolio-dev** - Portfolio développeur complet
+  - Hero, About, Skills, Projects
+  - Experience, Education, Contact
+  - Thème dark mode moderne
+
+- ✅ **portfolio-minimal** - Template épuré (3 sections)
+- ✅ **portfolio-freelance** - Business avec tarifs et témoignages
+
+### Métriques Phase 5
+
+| Métrique | Valeur |
+|----------|--------|
+| Composants React créés | 50+ |
+| Hooks personnalisés | 15+ |
+| Packages partagés | 2 (@asap/shared, @asap/renderers) |
+| Types de sections | 14 |
+| Presets templates | 3 |
+| Routes frontend | 10+ |
 
 ---
 

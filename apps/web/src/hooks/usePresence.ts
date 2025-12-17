@@ -95,7 +95,7 @@ export function usePresence(options: UsePresenceOptions = {}): UsePresenceReturn
   const [isTracking, setIsTracking] = useState(false);
   
   const isEditingRef = useRef(false);
-  const heartbeatTimerRef = useRef<NodeJS.Timeout>();
+  const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Start editing - send presence update
   const startEditing = useCallback(() => {
@@ -116,7 +116,7 @@ export function usePresence(options: UsePresenceOptions = {}): UsePresenceReturn
       resource_type: resourceType,
       resource_id: resourceId,
       user_id: user?.id,
-      username: user?.username
+      username: user?.email
     });
 
     if (debug) console.log('[Presence] Started editing', { resourceType, resourceId });
@@ -144,7 +144,7 @@ export function usePresence(options: UsePresenceOptions = {}): UsePresenceReturn
 
     if (heartbeatTimerRef.current) {
       clearInterval(heartbeatTimerRef.current);
-      heartbeatTimerRef.current = undefined;
+      heartbeatTimerRef.current = null;
     }
 
     if (ws.isConnected && resourceType && resourceId) {

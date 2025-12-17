@@ -66,9 +66,9 @@ impl WebsiteData {
     }
 }
 
-/// Module represents an available module in the system catalog
+/// Extension represents an available extension in the system catalog
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Module {
+pub struct Extension {
     pub id: Uuid,
     pub name: String,
     pub slug: String,
@@ -80,12 +80,12 @@ pub struct Module {
     pub created_at: DateTime<Utc>,
 }
 
-/// WebsiteModule represents an activated module for a specific website
+/// WebsiteExtension represents an activated extension for a specific website
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WebsiteModule {
+pub struct WebsiteExtension {
     pub id: Uuid,
     pub website_id: Uuid,
-    pub module_id: Uuid,
+    pub extension_id: Uuid,
     pub settings: serde_json::Value,
     pub enabled: bool,
     pub activated_at: DateTime<Utc>,
@@ -386,8 +386,8 @@ mod tests {
     }
 
     #[test]
-    fn test_module_creation() {
-        let module = Module {
+    fn test_extension_creation() {
+        let extension = Extension {
             id: Uuid::new_v4(),
             name: "GitHub Sync".to_string(),
             slug: "github-sync".to_string(),
@@ -399,25 +399,25 @@ mod tests {
             created_at: Utc::now(),
         };
 
-        assert_eq!(module.name, "GitHub Sync");
-        assert_eq!(module.slug, "github-sync");
-        assert!(module.enabled);
+        assert_eq!(extension.name, "GitHub Sync");
+        assert_eq!(extension.slug, "github-sync");
+        assert!(extension.enabled);
     }
 
     #[test]
-    fn test_website_module_creation() {
-        let website_module = WebsiteModule {
+    fn test_website_extension_creation() {
+        let website_extension = WebsiteExtension {
             id: Uuid::new_v4(),
             website_id: Uuid::new_v4(),
-            module_id: Uuid::new_v4(),
+            extension_id: Uuid::new_v4(),
             settings: serde_json::json!({"sync_interval": 3600}),
             enabled: true,
             activated_at: Utc::now(),
             updated_at: Utc::now(),
         };
 
-        assert!(website_module.enabled);
-        assert_eq!(website_module.settings["sync_interval"], 3600);
+        assert!(website_extension.enabled);
+        assert_eq!(website_extension.settings["sync_interval"], 3600);
     }
 
     #[test]

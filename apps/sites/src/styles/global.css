@@ -1,0 +1,192 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+@layer base {
+  :root {
+    /* Default theme colors (can be overridden per site) */
+    --color-primary: 99 102 241; /* indigo-500 */
+    --color-secondary: 139 92 246; /* violet-500 */
+    --color-accent: 236 72 153; /* pink-500 */
+    --color-background: 15 23 42; /* slate-900 */
+    --color-foreground: 248 250 252; /* slate-50 */
+    --color-muted: 148 163 184; /* slate-400 */
+    --color-border: 51 65 85; /* slate-700 */
+  }
+
+  .light {
+    --color-background: 255 255 255;
+    --color-foreground: 15 23 42;
+    --color-muted: 100 116 139;
+    --color-border: 226 232 240;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* Selection color */
+  ::selection {
+    @apply bg-primary/30 text-foreground;
+  }
+
+  /* Focus styles */
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+}
+
+/* Component styles */
+@layer components {
+  /* Section base */
+  .section {
+    @apply w-full py-16 md:py-24;
+  }
+
+  .section-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .section-header {
+    @apply text-center mb-12 md:mb-16;
+  }
+
+  .section-title {
+    @apply text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4;
+  }
+
+  .section-subtitle {
+    @apply text-lg md:text-xl text-muted max-w-2xl mx-auto;
+  }
+
+  /* Button styles */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5;
+  }
+
+  .btn-secondary {
+    @apply btn bg-foreground/10 text-foreground hover:bg-foreground/20 border border-border;
+  }
+
+  .btn-ghost {
+    @apply btn hover:bg-foreground/10 text-foreground;
+  }
+
+  .btn-lg {
+    @apply px-8 py-4 text-lg;
+  }
+
+  .btn-md {
+    @apply px-6 py-3;
+  }
+
+  .btn-sm {
+    @apply px-4 py-2 text-sm;
+  }
+
+  /* Card styles */
+  .card {
+    @apply rounded-xl bg-foreground/5 border border-border p-6 transition-all duration-300;
+  }
+
+  .card-hover {
+    @apply hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1;
+  }
+
+  /* Badge styles */
+  .badge {
+    @apply inline-flex items-center rounded-full px-3 py-1 text-sm font-medium;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary/20 text-primary;
+  }
+
+  .badge-secondary {
+    @apply badge bg-foreground/10 text-muted;
+  }
+
+  /* Link styles */
+  .link {
+    @apply text-primary hover:text-accent transition-colors duration-200 underline-offset-4 hover:underline;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-accent to-secondary;
+  }
+
+  /* Hero gradient background */
+  .hero-gradient {
+    @apply absolute inset-0 bg-gradient-radial from-primary/20 via-transparent to-transparent pointer-events-none;
+  }
+
+  /* Timeline styles */
+  .timeline {
+    @apply relative pl-8 border-l-2 border-primary/30;
+  }
+
+  .timeline-item {
+    @apply relative pb-8 last:pb-0;
+  }
+
+  .timeline-dot {
+    @apply absolute -left-[25px] w-4 h-4 rounded-full bg-primary border-4 border-background;
+  }
+
+  /* Grid layouts */
+  .grid-auto {
+    @apply grid gap-6;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  }
+
+  .grid-projects {
+    @apply grid gap-6;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr));
+  }
+
+  .grid-skills {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  }
+}
+
+/* Animation utilities */
+@layer utilities {
+  .animate-delay-100 { animation-delay: 100ms; }
+  .animate-delay-200 { animation-delay: 200ms; }
+  .animate-delay-300 { animation-delay: 300ms; }
+  .animate-delay-400 { animation-delay: 400ms; }
+  .animate-delay-500 { animation-delay: 500ms; }
+
+  /* Gradient background radial */
+  .bg-gradient-radial {
+    background: radial-gradient(ellipse at center, var(--tw-gradient-stops));
+  }
+
+  /* Text balance for headings */
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Print styles */
+@media print {
+  body {
+    @apply bg-white text-black;
+  }
+  
+  .no-print {
+    @apply hidden;
+  }
+}

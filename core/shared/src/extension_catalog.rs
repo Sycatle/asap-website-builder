@@ -1,11 +1,11 @@
-//! Module Catalog - Centralized module definitions
+//! Extension Catalog - Centralized extension definitions
 //!
 //! This module provides the catalog of all available modules with their
 //! configuration schemas. The schemas are defined in code, not in the database,
-//! ensuring type safety and co-location with module logic.
+//! ensuring type safety and co-location with extension logic.
 //!
 //! Used by:
-//! - API: To return module schemas to the frontend
+//! - API: To return extension schemas to the frontend
 //! - Worker: To validate module configurations
 
 use asap_core_domain::{
@@ -14,9 +14,9 @@ use asap_core_domain::{
 };
 use serde::{Deserialize, Serialize};
 
-/// Module definition with full metadata and schema
+/// Extension definition with full metadata and schema
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModuleDefinition {
+pub struct ExtensionDefinition {
     pub slug: String,
     pub name: String,
     pub version: String,
@@ -33,27 +33,27 @@ pub struct ModuleDefinition {
     pub sidebar_label: Option<String>,
 }
 
-/// Get all available module definitions
+/// Get all available extension definitions
 /// 
 /// This is the single source of truth for module metadata and schemas.
-pub fn get_module_catalog() -> Vec<ModuleDefinition> {
+pub fn get_extension_catalog() -> Vec<ExtensionDefinition> {
     vec![
-        github_sync_module(),
-        blog_engine_module(),
-        contact_form_module(),
-        analytics_tracker_module(),
-        theme_engine_module(),
+        github_sync_extension(),
+        blog_engine_extension(),
+        contact_form_extension(),
+        analytics_tracker_extension(),
+        theme_engine_extension(),
     ]
 }
 
 /// Get a module definition by slug
-pub fn get_module_by_slug(slug: &str) -> Option<ModuleDefinition> {
-    get_module_catalog().into_iter().find(|m| m.slug == slug)
+pub fn get_extension_by_slug(slug: &str) -> Option<ExtensionDefinition> {
+    get_extension_catalog().into_iter().find(|m| m.slug == slug)
 }
 
 /// Get only account-configurable modules (for catalog display)
-pub fn get_user_modules() -> Vec<ModuleDefinition> {
-    get_module_catalog()
+pub fn get_user_extensions() -> Vec<ExtensionDefinition> {
+    get_extension_catalog()
         .into_iter()
         .filter(|m| m.user_configurable)
         .collect()
@@ -63,8 +63,8 @@ pub fn get_user_modules() -> Vec<ModuleDefinition> {
 // Module Definitions
 // ============================================================================
 
-fn github_sync_module() -> ModuleDefinition {
-    ModuleDefinition {
+fn github_sync_extension() -> ExtensionDefinition {
+    ExtensionDefinition {
         slug: "github-sync".to_string(),
         name: "GitHub Integration".to_string(),
         version: "1.0.0".to_string(),
@@ -129,8 +129,8 @@ fn github_sync_module() -> ModuleDefinition {
     }
 }
 
-fn blog_engine_module() -> ModuleDefinition {
-    ModuleDefinition {
+fn blog_engine_extension() -> ExtensionDefinition {
+    ExtensionDefinition {
         slug: "blog-engine".to_string(),
         name: "Blog".to_string(),
         version: "1.0.0".to_string(),
@@ -190,8 +190,8 @@ fn blog_engine_module() -> ModuleDefinition {
     }
 }
 
-fn contact_form_module() -> ModuleDefinition {
-    ModuleDefinition {
+fn contact_form_extension() -> ExtensionDefinition {
+    ExtensionDefinition {
         slug: "contact-form".to_string(),
         name: "Formulaire de contact".to_string(),
         version: "1.0.0".to_string(),
@@ -251,8 +251,8 @@ fn contact_form_module() -> ModuleDefinition {
     }
 }
 
-fn analytics_tracker_module() -> ModuleDefinition {
-    ModuleDefinition {
+fn analytics_tracker_extension() -> ExtensionDefinition {
+    ExtensionDefinition {
         slug: "analytics-tracker".to_string(),
         name: "Analytics".to_string(),
         version: "1.0.0".to_string(),
@@ -303,8 +303,8 @@ fn analytics_tracker_module() -> ModuleDefinition {
     }
 }
 
-fn theme_engine_module() -> ModuleDefinition {
-    ModuleDefinition {
+fn theme_engine_extension() -> ExtensionDefinition {
+    ExtensionDefinition {
         slug: "theme-engine".to_string(),
         name: "Thème".to_string(),
         version: "1.0.0".to_string(),
@@ -369,8 +369,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_get_module_catalog() {
-        let catalog = get_module_catalog();
+    fn test_get_extension_catalog() {
+        let catalog = get_extension_catalog();
         assert!(!catalog.is_empty());
         
         // All modules should have required fields
@@ -382,18 +382,18 @@ mod tests {
     }
 
     #[test]
-    fn test_get_module_by_slug() {
-        let github = get_module_by_slug("github-sync");
+    fn test_get_extension_by_slug() {
+        let github = get_extension_by_slug("github-sync");
         assert!(github.is_some());
         assert_eq!(github.unwrap().name, "GitHub Integration");
 
-        let nonexistent = get_module_by_slug("nonexistent");
+        let nonexistent = get_extension_by_slug("nonexistent");
         assert!(nonexistent.is_none());
     }
 
     #[test]
     fn test_github_module_schema() {
-        let github = get_module_by_slug("github-sync").unwrap();
+        let github = get_extension_by_slug("github-sync").unwrap();
         let schema = github.config_schema.unwrap();
         
         assert!(schema.fields.is_some());
@@ -403,13 +403,13 @@ mod tests {
 
     #[test]
     fn test_schema_serialization() {
-        let catalog = get_module_catalog();
+        let catalog = get_extension_catalog();
         for module in catalog {
             let json = serde_json::to_string(&module).unwrap();
             assert!(!json.is_empty());
             
             // Should deserialize back
-            let _: ModuleDefinition = serde_json::from_str(&json).unwrap();
+            let _: ExtensionDefinition = serde_json::from_str(&json).unwrap();
         }
     }
 }

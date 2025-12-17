@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useEffect, useState, useMemo, useCallback } from "react"
+import { useEffect, useState } from "react"
 import { AsapSidebar } from "@/components/asap-sidebar"
 import { SidebarProvider, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -12,10 +12,9 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { type WebsiteModule } from "@/lib/api"
-import { useWebsites, useWebsiteModules } from "@/hooks/useCache"
+import { WebsiteProvider, useWebsiteContext } from "@/contexts/WebsiteContext"
 import { HeaderUser } from "@/components/header-user"
-import { useKeyboardShortcuts, KeyboardShortcut, getModifierKey } from "@/hooks/useKeyboardShortcuts"
+import { useKeyboardShortcuts, getModifierKey } from "@/hooks/useKeyboardShortcuts"
 import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket"
 import { toast } from "sonner"
 import {
@@ -31,18 +30,20 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Keyboard } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface AppShellProps {
   children: React.ReactNode
   title?: string
   breadcrumbs?: { label: string; href?: string }[]
+  isStudioPage?: boolean
 }
 
 // Keyboard shortcuts help dialog content
 const shortcuts = [
   { category: "Navigation", items: [
     { keys: ["g", "d"], description: "Aller au Dashboard" },
-    { keys: ["g", "m"], description: "Aller aux Modules" },
+    { keys: ["g", "e"], description: "Aller aux Extensions" },
     { keys: ["g", "c"], description: "Aller au Cloud" },
   ]},
   { category: "Actions", items: [
@@ -56,20 +57,9 @@ const shortcuts = [
   ]},
 ]
 
-export function AppShell({ children, title, breadcrumbs = [] }: AppShellProps) {
+export function AppShell({ children, title, breadcrumbs = [], isStudioPage = false }: AppShellProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(true)
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
-
-  // Use cache hooks for websites and modules - this ensures sidebar updates when modules change
-  const { websites, isLoading: websitesLoading } = useWebsites()
-  const currentWebsiteId = websites.length > 0 ? websites[0].id : null
-  const { modules: allModules, isLoading: modulesLoading } = useWebsiteModules(currentWebsiteId)
-  
-  // Filter to get only enabled modules for sidebar
-  const modules = React.useMemo(() => 
-    allModules.filter(m => m.enabled), 
-    [allModules]
-  )
 
   useEffect(() => {
     // Check authentication
@@ -86,40 +76,65 @@ export function AppShell({ children, title, breadcrumbs = [] }: AppShellProps) {
   }
 
   return (
-    <SidebarProvider>
-      <AppShellContent 
-        modules={modules} 
-        title={title} 
-        breadcrumbs={breadcrumbs}
-        showShortcutsHelp={showShortcutsHelp}
-        setShowShortcutsHelp={setShowShortcutsHelp}
-      >
-        {children}
-      </AppShellContent>
-    </SidebarProvider>
+    <WebsiteProvider>
+      <SidebarProvider defaultOpen={!isStudioPage}>
+        <AppShellContent 
+          title={title} 
+          breadcrumbs={breadcrumbs}
+          showShortcutsHelp={showShortcutsHelp}
+          setShowShortcutsHelp={setShowShortcutsHelp}
+          isStudioPage={isStudioPage}
+        >
+          {children}
+        </AppShellContent>
+      </SidebarProvider>
+    </WebsiteProvider>
   )
 }
 
 // Inner component that can access sidebar context
 interface AppShellContentProps {
   children: React.ReactNode
-  modules: WebsiteModule[]
   title?: string
   breadcrumbs: { label: string; href?: string }[]
   showShortcutsHelp: boolean
   setShowShortcutsHelp: (show: boolean) => void
+  isStudioPage?: boolean
 }
 
 function AppShellContent({ 
   children, 
-  modules, 
   title, 
   breadcrumbs,
   showShortcutsHelp,
-  setShowShortcutsHelp 
+  setShowShortcutsHelp,
+  isStudioPage = false
 }: AppShellContentProps) {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, setOpen, open } = useSidebar()
   const [pendingGoTo, setPendingGoTo] = useState(false)
+  const previousSidebarStateRef = React.useRef<boolean | null>(null)
+  
+  // Get data from context
+  const { 
+    enabledExtensions,
+    websites,
+    currentWebsite,
+    setCurrentWebsite,
+    isLoadingWebsites,
+  } = useWebsiteContext()
+
+  // Auto-collapse sidebar when entering studio page, restore when leaving
+  useEffect(() => {
+    if (isStudioPage) {
+      // Save current state before collapsing
+      previousSidebarStateRef.current = open
+      setOpen(false)
+    } else if (previousSidebarStateRef.current !== null) {
+      // Restore previous state when leaving studio
+      setOpen(previousSidebarStateRef.current)
+      previousSidebarStateRef.current = null
+    }
+  }, [isStudioPage]) // Don't include open/setOpen to avoid loops
 
   // Real-time notifications via WebSocket
   useNotificationWebSocket({
@@ -158,7 +173,7 @@ function AppShellContent({
       key: 'g',
       action: () => {
         setPendingGoTo(true)
-        toast.info('Go to... (d: Dashboard, m: Modules, c: Cloud)', { duration: 2000 })
+        toast.info('Go to... (d: Dashboard, e: Extensions, c: Cloud)', { duration: 2000 })
         // Auto-reset after 2 seconds
         setTimeout(() => setPendingGoTo(false), 2000)
       }
@@ -174,10 +189,10 @@ function AppShellContent({
       }
     },
     {
-      key: 'm',
+      key: 'e',
       action: () => {
         if (pendingGoTo) {
-          window.location.href = '/app/modules'
+          window.location.href = '/app/extensions'
           setPendingGoTo(false)
         }
       }
@@ -204,7 +219,13 @@ function AppShellContent({
 
   return (
     <>
-      <AsapSidebar modules={modules} />
+      <AsapSidebar 
+        extensions={enabledExtensions}
+        websites={websites}
+        currentWebsite={currentWebsite}
+        onWebsiteChange={setCurrentWebsite}
+        isLoadingWebsites={isLoadingWebsites}
+      />
       <SidebarInset>
         <header className="sticky top-0 z-40 flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 sm:px-4">
           <SidebarTrigger className="-ml-1" />
@@ -261,7 +282,10 @@ function AppShellContent({
           
           <HeaderUser />
         </header>
-        <main className="flex-1 overflow-auto p-3 sm:p-4 md:p-6">
+        <main className={cn(
+          "flex-1 overflow-auto",
+          isStudioPage ? "p-0" : "p-3 sm:p-4 md:p-6"
+        )}>
           {children}
         </main>
       </SidebarInset>

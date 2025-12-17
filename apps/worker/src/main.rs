@@ -3,7 +3,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 mod config;
 mod db;
 mod event_processor;
-mod module_executor;
+mod extension_executor;
 mod file_cleanup;
 mod parallel_processor;
 mod registry;

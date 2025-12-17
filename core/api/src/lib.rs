@@ -4,7 +4,6 @@ pub mod accounts;
 pub mod integrations;
 pub mod websites;
 pub mod events;
-pub mod modules;
 pub mod middleware;
 pub mod storage;
 pub mod files;
@@ -31,7 +30,7 @@ pub use asap_core_shared::{
     SharedSyncPublisher,
     NoOpSyncPublisher,
     CHANNEL_SYNC_WEBSITE,
-    CHANNEL_SYNC_MODULE,
+    CHANNEL_SYNC_EXTENSION,
     CHANNEL_SYNC_FILE,
     CHANNEL_PRESENCE,
 };

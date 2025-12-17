@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { modulesAPI } from '../lib/api';
-import type { Module, WebsiteModule } from '../lib/api/modules';
-import { useWebsites, useModuleCatalog, useWebsiteModules, useCacheActions } from '../hooks/useCache';
+import { extensionsAPI } from '../lib/api';
+import type { Extension, WebsiteExtension } from '../lib/api/extensions';
+import { useWebsites, useExtensionCatalog, useWebsiteExtensions } from '../hooks/useCache';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,34 +47,32 @@ const categoryLabels: Record<string, string> = {
   'appearance': 'Apparence',
 };
 
-export default function ModulesManager() {
+export default function ExtensionsManager() {
   // Use cached data
   const { websites, isLoading: websitesLoading } = useWebsites();
-  const { modules: catalogModules, isLoading: catalogLoading } = useModuleCatalog();
+  const { extensions: catalogExtensions, isLoading: catalogLoading } = useExtensionCatalog();
   
   const currentWebsiteId = websites.length > 0 ? websites[0].id : null;
   
   const { 
-    modules: activeModules, 
-    isLoading: modulesLoading, 
-    refetch: refetchModules 
-  } = useWebsiteModules(currentWebsiteId);
+    extensions: activeExtensions, 
+    isLoading: extensionsLoading, 
+    refetch: refetchExtensions 
+  } = useWebsiteExtensions(currentWebsiteId);
   
-  const { invalidateWebsiteData } = useCacheActions();
+  const [activatingExtension, setActivatingExtension] = useState<string | null>(null);
   
-  const [activatingModule, setActivatingModule] = useState<string | null>(null);
-  
-  const isLoading = websitesLoading || catalogLoading || modulesLoading;
+  const isLoading = websitesLoading || catalogLoading || extensionsLoading;
 
-  // Filter active and suggested modules
-  const enabledActiveModules = useMemo(() => 
-    activeModules.filter(m => m.enabled), [activeModules]
+  // Filter active and suggested extensions
+  const enabledActiveExtensions = useMemo(() => 
+    activeExtensions.filter(m => m.enabled), [activeExtensions]
   );
   
-  const suggestedModules = useMemo(() => 
-    catalogModules.filter(m => 
-      !activeModules.some(am => am.module_slug === m.id || am.module_slug === m.slug)
-    ), [catalogModules, activeModules]
+  const suggestedExtensions = useMemo(() => 
+    catalogExtensions.filter(m => 
+      !activeExtensions.some(am => am.extension_slug === m.id || am.extension_slug === m.slug)
+    ), [catalogExtensions, activeExtensions]
   );
 
   // Track if initial load has completed to avoid showing error toast prematurely
@@ -89,81 +87,77 @@ export default function ModulesManager() {
     
     // Only show error after we've loaded and confirmed no websites
     if (hasLoadedOnce.current && !websitesLoading && websites.length === 0) {
-      toast.error('Aucun site web trouvé. Créez un site pour gérer les modules.');
+      toast.error('Aucun site web trouvé. Créez un site pour gérer les extensions.');
     }
   }, [websitesLoading, websites.length]);
 
-  const handleActivateModule = async (module: Module) => {
+  const handleActivateExtension = async (extension: Extension) => {
     if (!currentWebsiteId) {
       toast.error('Aucun site web sélectionné');
       return;
     }
 
-    setActivatingModule(module.id);
+    setActivatingExtension(extension.id);
 
     const activatePromise = async () => {
-      await modulesAPI.activate(currentWebsiteId, {
-        module_id: module.id,
-        settings: module.default_settings || {},
+      await extensionsAPI.activate(currentWebsiteId, {
+        extension_id: extension.id,
+        settings: extension.default_settings || {},
       });
-      // Refresh modules cache
-      await refetchModules(true);
-      return module.name;
+      // Refresh extensions cache
+      await refetchExtensions(true);
+      return extension.name;
     };
 
-    toast.promise(activatePromise(), {
-      loading: `Activation de ${module.name}...`,
-      success: (name) => `Module ${name} activé !`,
-      error: `Erreur lors de l'activation du module ${module.name}`,
-    });
-
     try {
-      await activatePromise();
+      await toast.promise(activatePromise(), {
+        loading: `Activation de ${extension.name}...`,
+        success: (name) => `Extension ${name} activée !`,
+        error: `Erreur lors de l'activation de l'extension ${extension.name}`,
+      });
     } catch (err) {
-      console.error('Failed to activate module:', err);
+      console.error('Failed to activate extension:', err);
     } finally {
-      setActivatingModule(null);
+      setActivatingExtension(null);
     }
   };
 
-  const handleDeactivateModule = async (moduleId: string) => {
+  const handleDeactivateExtension = async (extensionId: string) => {
     if (!currentWebsiteId) {
       toast.error('Aucun site web sélectionné');
       return;
     }
 
-    setActivatingModule(moduleId);
+    setActivatingExtension(extensionId);
 
     const deactivatePromise = async () => {
-      await modulesAPI.deactivate(currentWebsiteId, moduleId);
-      // Refresh modules cache
-      await refetchModules(true);
+      await extensionsAPI.deactivate(currentWebsiteId, extensionId);
+      // Refresh extensions cache
+      await refetchExtensions(true);
     };
 
-    toast.promise(deactivatePromise(), {
-      loading: 'Désactivation en cours...',
-      success: 'Module désactivé',
-      error: 'Erreur lors de la désactivation du module',
-    });
-
     try {
-      await deactivatePromise();
+      await toast.promise(deactivatePromise(), {
+        loading: 'Désactivation en cours...',
+        success: 'Extension désactivée',
+        error: "Erreur lors de la désactivation de l'extension",
+      });
     } catch (err) {
-      console.error('Failed to deactivate module:', err);
+      console.error('Failed to deactivate extension:', err);
     } finally {
-      setActivatingModule(null);
+      setActivatingExtension(null);
     }
   };
 
-  const getModuleIcon = (category: string) => {
+  const getExtensionIcon = (category: string) => {
     const IconComponent = categoryIcons[category] || Puzzle;
     return <IconComponent className="h-5 w-5" />;
   };
 
-  // Check if a module is active (compare by slug)
-  const isModuleActive = (moduleIdOrSlug: string) => {
-    return activeModules.some(m => 
-      m.module_slug === moduleIdOrSlug && m.enabled
+  // Check if an extension is active (compare by slug)
+  const isExtensionActive = (extensionIdOrSlug: string) => {
+    return activeExtensions.some(m => 
+      m.extension_slug === extensionIdOrSlug && m.enabled
     );
   };
 
@@ -179,7 +173,7 @@ export default function ModulesManager() {
           <Skeleton className="h-5 w-96" />
         </div>
         
-        {/* Active Modules Skeleton */}
+        {/* Active Extensions Skeleton */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Skeleton className="h-6 w-32" />
@@ -241,30 +235,30 @@ export default function ModulesManager() {
       {/* Header */}
       <div className="flex flex-col gap-1.5 sm:gap-2 animate-fade-in-down">
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Modules</h1>
-          <Badge variant="outline" className="text-xs">{catalogModules.length} disponibles</Badge>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Extensions</h1>
+          <Badge variant="outline" className="text-xs">{catalogExtensions.length} disponibles</Badge>
         </div>
         <p className="text-sm sm:text-base text-muted-foreground">
-          Activez des modules pour débloquer de nouvelles fonctionnalités
+          Activez des extensions pour débloquer de nouvelles fonctionnalités
         </p>
       </div>
 
-      {/* Active Modules */}
-      {enabledActiveModules.length > 0 && (
+      {/* Active Extensions */}
+      {enabledActiveExtensions.length > 0 && (
         <div>
           <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-            Modules activés ({enabledActiveModules.length})
+            Extensions activées ({enabledActiveExtensions.length})
           </h2>
           <div 
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4"
           >
-            {enabledActiveModules.map((websiteModule, index) => {
-              const catalogModule = catalogModules.find(cm => cm.slug === websiteModule.module_slug);
-              if (!catalogModule) return null;
+            {enabledActiveExtensions.map((websiteExtension, index) => {
+              const catalogExtension = catalogExtensions.find(cm => cm.slug === websiteExtension.extension_slug);
+              if (!catalogExtension) return null;
 
               return (
-                <ContextMenu key={websiteModule.id}>
+                <ContextMenu key={websiteExtension.id}>
                   <ContextMenuTrigger asChild>
                     <Card 
                       className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up"
@@ -273,27 +267,27 @@ export default function ModulesManager() {
                       <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
                         <div className="flex items-start justify-between">
                           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110 group-hover:bg-primary/20">
-                            {getModuleIcon(catalogModule.category)}
+                            {getExtensionIcon(catalogExtension.category)}
                       </div>
                       <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-xs transition-transform duration-200 hover:scale-105">
                         Actif
                       </Badge>
                     </div>
-                    <CardTitle className="text-sm sm:text-base mt-2 sm:mt-3">{catalogModule.name}</CardTitle>
+                    <CardTitle className="text-sm sm:text-base mt-2 sm:mt-3">{catalogExtension.name}</CardTitle>
                     <CardDescription className="line-clamp-2 text-xs sm:text-sm">
-                      {catalogModule.description}
+                      {catalogExtension.description}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pt-2 px-3 sm:px-6 pb-3 sm:pb-6">
                     <div className="flex items-center gap-2 mb-3 sm:mb-4">
                       <Badge variant="outline" className="text-[10px] sm:text-xs">
-                        {categoryLabels[catalogModule.category] || catalogModule.category}
+                        {categoryLabels[catalogExtension.category] || catalogExtension.category}
                       </Badge>
-                      <span className="text-[10px] sm:text-xs text-muted-foreground">v{catalogModule.version}</span>
+                      <span className="text-[10px] sm:text-xs text-muted-foreground">v{catalogExtension.version}</span>
                     </div>
                     <div className="flex gap-2">
                       <Button asChild variant="secondary" size="sm" className="flex-1 h-8 sm:h-9 text-xs sm:text-sm group/btn">
-                        <a href={`/app/modules/${catalogModule.slug}`}>
+                        <a href={`/app/extensions/${catalogExtension.slug}`}>
                           <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 transition-transform group-hover/btn:rotate-90" />
                           Configurer
                         </a>
@@ -301,11 +295,11 @@ export default function ModulesManager() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDeactivateModule(websiteModule.id)}
-                        disabled={activatingModule === websiteModule.id}
+                        onClick={() => handleDeactivateExtension(websiteExtension.id)}
+                        disabled={activatingExtension === websiteExtension.id}
                         className="text-destructive hover:text-destructive h-8 sm:h-9 w-8 sm:w-9 p-0"
                       >
-                        {activatingModule === websiteModule.id ? (
+                        {activatingExtension === websiteExtension.id ? (
                           <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
                         ) : (
                           <Power className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -317,7 +311,7 @@ export default function ModulesManager() {
               </ContextMenuTrigger>
               <ContextMenuContent className="w-56">
                 <ContextMenuItem asChild>
-                  <a href={`/app/modules/${catalogModule.slug}`}>
+                  <a href={`/app/extensions/${catalogExtension.slug}`}>
                     <Settings className="mr-2 h-4 w-4" />
                     Configurer
                   </a>
@@ -325,8 +319,8 @@ export default function ModulesManager() {
                 <ContextMenuSeparator />
                 <ContextMenuItem
                   className="text-destructive focus:text-destructive"
-                  onClick={() => handleDeactivateModule(websiteModule.id)}
-                  disabled={activatingModule === websiteModule.id}
+                  onClick={() => handleDeactivateExtension(websiteExtension.id)}
+                  disabled={activatingExtension === websiteExtension.id}
                 >
                   <Power className="mr-2 h-4 w-4" />
                   Désactiver
@@ -339,24 +333,24 @@ export default function ModulesManager() {
         </div>
       )}
 
-      {/* Suggested Modules */}
+      {/* Suggested Extensions */}
       <div>
         <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
           <Star className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500 animate-pulse-soft" />
-          Modules suggérés ({suggestedModules.length})
+          Extensions suggérées ({suggestedExtensions.length})
         </h2>
-        {suggestedModules.length === 0 ? (
+        {suggestedExtensions.length === 0 ? (
           <Card className="animate-fade-in">
             <CardContent className="py-6 sm:py-8 text-center text-sm text-muted-foreground">
-              Tous les modules disponibles sont déjà activés !
+              Toutes les extensions disponibles sont déjà activées !
             </CardContent>
           </Card>
         ) : (
           <div 
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4"
           >
-            {suggestedModules.map((module, index) => (
-                <ContextMenu key={module.id}>
+            {suggestedExtensions.map((extension, index) => (
+                <ContextMenu key={extension.id}>
                   <ContextMenuTrigger asChild>
                     <Card 
                       className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up"
@@ -364,27 +358,27 @@ export default function ModulesManager() {
                     >
                       <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
                         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110 group-hover:bg-primary/10">
-                          {getModuleIcon(module.category)}
+                          {getExtensionIcon(extension.category)}
                         </div>
-                        <CardTitle className="text-sm sm:text-base mt-2 sm:mt-3">{module.name}</CardTitle>
+                        <CardTitle className="text-sm sm:text-base mt-2 sm:mt-3">{extension.name}</CardTitle>
                         <CardDescription className="line-clamp-2 text-xs sm:text-sm">
-                          {module.description}
+                          {extension.description}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="pt-2 px-3 sm:px-6 pb-3 sm:pb-6">
                         <div className="flex items-center gap-2 mb-3 sm:mb-4">
                           <Badge variant="outline" className="text-[10px] sm:text-xs transition-colors group-hover:bg-muted">
-                            {categoryLabels[module.category] || module.category}
+                            {categoryLabels[extension.category] || extension.category}
                           </Badge>
-                          <span className="text-[10px] sm:text-xs text-muted-foreground">v{module.version}</span>
+                          <span className="text-[10px] sm:text-xs text-muted-foreground">v{extension.version}</span>
                         </div>
                         <Button
-                          onClick={() => handleActivateModule(module)}
-                          disabled={activatingModule === module.id}
+                          onClick={() => handleActivateExtension(extension)}
+                          disabled={activatingExtension === extension.id}
                           className="w-full h-8 sm:h-9 text-xs sm:text-sm group/activate"
                           size="sm"
                         >
-                          {activatingModule === module.id ? (
+                          {activatingExtension === extension.id ? (
                             <>
                               <Loader2 className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
                               Activation...
@@ -400,16 +394,16 @@ export default function ModulesManager() {
                   </ContextMenuTrigger>
                   <ContextMenuContent className="w-56">
                     <ContextMenuItem
-                      onClick={() => handleActivateModule(module)}
-                      disabled={activatingModule === module.id}
+                      onClick={() => handleActivateExtension(extension)}
+                      disabled={activatingExtension === extension.id}
                     >
                       <Play className="mr-2 h-4 w-4" />
-                      Activer le module
+                      Activer l'extension
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem disabled>
                       <Info className="mr-2 h-4 w-4" />
-                      {module.description}
+                      {extension.description}
                     </ContextMenuItem>
                   </ContextMenuContent>
                 </ContextMenu>

@@ -10,11 +10,11 @@ use anyhow::Result;
 use sqlx::PgPool;
 use asap_core_domain::events::EventType;
 
-use crate::module_executor::{
-    ModuleExecutorRegistry, 
+use crate::extension_executor::{
+    ExtensionExecutorRegistry, 
     GitHubIntegrationExecutor, 
-    WebsiteModuleExecutor,
-    ModuleInfo,
+    WebsiteExtensionExecutor,
+    ExtensionInfo,
 };
 
 /// Configuration for module registration
@@ -60,8 +60,8 @@ impl ModuleRegistryConfig {
 /// let config = ModuleRegistryConfig::new(pool, api_url);
 /// let registry = register_all_modules(config)?;
 /// ```
-pub fn register_all_modules(config: ModuleRegistryConfig) -> Result<ModuleExecutorRegistry> {
-    let mut registry = ModuleExecutorRegistry::new();
+pub fn register_all_modules(config: ModuleRegistryConfig) -> Result<ExtensionExecutorRegistry> {
+    let mut registry = ExtensionExecutorRegistry::new();
     let mut registered_count = 0;
 
     // =========================================================================
@@ -82,7 +82,7 @@ pub fn register_all_modules(config: ModuleRegistryConfig) -> Result<ModuleExecut
     // Website Module (handles website lifecycle events)
     // =========================================================================
     if config.enable_website {
-        let website_executor = WebsiteModuleExecutor::new(config.pool.clone());
+        let website_executor = WebsiteExtensionExecutor::new(config.pool.clone());
         
         log_module_registration(&website_executor);
         registry.register(Box::new(website_executor));
@@ -126,7 +126,7 @@ pub fn register_all_modules(config: ModuleRegistryConfig) -> Result<ModuleExecut
 }
 
 /// Log module registration with metadata
-fn log_module_registration<T: ModuleInfo>(module: &T) {
+fn log_module_registration<T: ExtensionInfo>(module: &T) {
     let events: Vec<String> = module
         .handled_events()
         .iter()

@@ -1,12 +1,12 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useCacheStore, useIsLoading, CACHE_TTL } from '../lib/store/cacheStore';
-import type { Website, QuotaUsage, WebsiteModule, Module, ModuleData, FileMetadata } from '../lib/api';
+import type { Website, QuotaUsage, WebsiteExtension, Extension, ExtensionData, FileMetadata } from '../lib/api';
 
 // Stable default values to avoid infinite loops with useSyncExternalStore
 const EMPTY_ARRAY: readonly any[] = [];
 const EMPTY_WEBSITES: Website[] = EMPTY_ARRAY as Website[];
-const EMPTY_MODULES: Module[] = EMPTY_ARRAY as Module[];
-const EMPTY_WEBSITE_MODULES: WebsiteModule[] = EMPTY_ARRAY as WebsiteModule[];
+const EMPTY_EXTENSIONS: Extension[] = EMPTY_ARRAY as Extension[];
+const EMPTY_WEBSITE_EXTENSIONS: WebsiteExtension[] = EMPTY_ARRAY as WebsiteExtension[];
 const EMPTY_FILES: FileMetadata[] = EMPTY_ARRAY as FileMetadata[];
 
 // ============================================
@@ -234,47 +234,47 @@ export function useFiles(options: UseFilesOptions = {}): UseFilesReturn {
 }
 
 // ============================================
-// useModuleCatalog - Hook for module catalog
+// useExtensionCatalog - Hook for extension catalog
 // ============================================
 
-interface UseModuleCatalogOptions {
+interface UseExtensionCatalogOptions {
   autoFetch?: boolean;
 }
 
-interface UseModuleCatalogReturn {
-  modules: Module[];
+interface UseExtensionCatalogReturn {
+  extensions: Extension[];
   isLoading: boolean;
   error: string | null;
-  refetch: (force?: boolean) => Promise<Module[]>;
+  refetch: (force?: boolean) => Promise<Extension[]>;
 }
 
-export function useModuleCatalog(options: UseModuleCatalogOptions = {}): UseModuleCatalogReturn {
+export function useExtensionCatalog(options: UseExtensionCatalogOptions = {}): UseExtensionCatalogReturn {
   const { autoFetch = true } = options;
   
-  const modules = useCacheStore((state) => state.moduleCatalog?.data ?? EMPTY_MODULES);
-  const moduleCatalogEntry = useCacheStore((state) => state.moduleCatalog);
-  const fetchModuleCatalog = useCacheStore((state) => state.fetchModuleCatalog);
+  const extensions = useCacheStore((state) => state.extensionCatalog?.data ?? EMPTY_EXTENSIONS);
+  const extensionCatalogEntry = useCacheStore((state) => state.extensionCatalog);
+  const fetchExtensionCatalog = useCacheStore((state) => state.fetchExtensionCatalog);
   const isStale = useCacheStore((state) => state.isStale);
-  const isLoading = useIsLoading('moduleCatalog');
-  const error = useCacheStore((state) => state.errors['moduleCatalog'] ?? null);
+  const isLoading = useIsLoading('extensionCatalog');
+  const error = useCacheStore((state) => state.errors['extensionCatalog'] ?? null);
   
   const hasFetched = useRef(false);
 
   useEffect(() => {
     if (autoFetch && !hasFetched.current) {
       hasFetched.current = true;
-      if (!moduleCatalogEntry || isStale(moduleCatalogEntry, CACHE_TTL.modules)) {
-        fetchModuleCatalog();
+      if (!extensionCatalogEntry || isStale(extensionCatalogEntry, CACHE_TTL.extensions)) {
+        fetchExtensionCatalog();
       }
     }
-  }, [autoFetch, moduleCatalogEntry, isStale, fetchModuleCatalog]);
+  }, [autoFetch, extensionCatalogEntry, isStale, fetchExtensionCatalog]);
 
   const refetch = useCallback(async (force = true) => {
-    return fetchModuleCatalog(force);
-  }, [fetchModuleCatalog]);
+    return fetchExtensionCatalog(force);
+  }, [fetchExtensionCatalog]);
 
   return {
-    modules,
+    extensions,
     isLoading,
     error,
     refetch,
@@ -282,39 +282,39 @@ export function useModuleCatalog(options: UseModuleCatalogOptions = {}): UseModu
 }
 
 // ============================================
-// useWebsiteModules - Hook for website modules
+// useWebsiteExtensions - Hook for website extensions
 // ============================================
 
-interface UseWebsiteModulesOptions {
+interface UseWebsiteExtensionsOptions {
   autoFetch?: boolean;
 }
 
-interface UseWebsiteModulesReturn {
-  modules: WebsiteModule[];
+interface UseWebsiteExtensionsReturn {
+  extensions: WebsiteExtension[];
   isLoading: boolean;
   error: string | null;
-  refetch: (force?: boolean) => Promise<WebsiteModule[]>;
+  refetch: (force?: boolean) => Promise<WebsiteExtension[]>;
   invalidate: () => void;
 }
 
-export function useWebsiteModules(
+export function useWebsiteExtensions(
   websiteId: string | null, 
-  options: UseWebsiteModulesOptions = {}
-): UseWebsiteModulesReturn {
+  options: UseWebsiteExtensionsOptions = {}
+): UseWebsiteExtensionsReturn {
   const { autoFetch = true } = options;
   
-  const modules = useCacheStore((state) => 
-    websiteId ? (state.websiteModules[websiteId]?.data ?? EMPTY_WEBSITE_MODULES) : EMPTY_WEBSITE_MODULES
+  const extensions = useCacheStore((state) => 
+    websiteId ? (state.websiteExtensions[websiteId]?.data ?? EMPTY_WEBSITE_EXTENSIONS) : EMPTY_WEBSITE_EXTENSIONS
   );
-  const modulesEntry = useCacheStore((state) => 
-    websiteId ? state.websiteModules[websiteId] : null
+  const extensionsEntry = useCacheStore((state) => 
+    websiteId ? state.websiteExtensions[websiteId] : null
   );
-  const fetchWebsiteModules = useCacheStore((state) => state.fetchWebsiteModules);
+  const fetchWebsiteExtensions = useCacheStore((state) => state.fetchWebsiteExtensions);
   const invalidateWebsiteData = useCacheStore((state) => state.invalidateWebsiteData);
   const isStale = useCacheStore((state) => state.isStale);
-  const isLoading = useIsLoading(websiteId ? `websiteModules:${websiteId}` : 'websiteModules');
+  const isLoading = useIsLoading(websiteId ? `websiteExtensions:${websiteId}` : 'websiteExtensions');
   const error = useCacheStore((state) => 
-    websiteId ? state.errors[`websiteModules:${websiteId}`] ?? null : null
+    websiteId ? state.errors[`websiteExtensions:${websiteId}`] ?? null : null
   );
   
   const hasFetched = useRef(false);
@@ -322,11 +322,11 @@ export function useWebsiteModules(
   useEffect(() => {
     if (autoFetch && websiteId && !hasFetched.current) {
       hasFetched.current = true;
-      if (!modulesEntry || isStale(modulesEntry, CACHE_TTL.websiteModules)) {
-        fetchWebsiteModules(websiteId);
+      if (!extensionsEntry || isStale(extensionsEntry, CACHE_TTL.websiteExtensions)) {
+        fetchWebsiteExtensions(websiteId);
       }
     }
-  }, [autoFetch, websiteId, modulesEntry, isStale, fetchWebsiteModules]);
+  }, [autoFetch, websiteId, extensionsEntry, isStale, fetchWebsiteExtensions]);
 
   // Reset hasFetched when websiteId changes
   useEffect(() => {
@@ -335,8 +335,8 @@ export function useWebsiteModules(
 
   const refetch = useCallback(async (force = true) => {
     if (!websiteId) return [];
-    return fetchWebsiteModules(websiteId, force);
-  }, [websiteId, fetchWebsiteModules]);
+    return fetchWebsiteExtensions(websiteId, force);
+  }, [websiteId, fetchWebsiteExtensions]);
 
   const handleInvalidate = useCallback(() => {
     if (websiteId) {
@@ -345,7 +345,7 @@ export function useWebsiteModules(
   }, [websiteId, invalidateWebsiteData]);
 
   return {
-    modules,
+    extensions,
     isLoading,
     error,
     refetch,
@@ -354,78 +354,78 @@ export function useWebsiteModules(
 }
 
 // ============================================
-// useModuleData - Hook for module data
+// useExtensionData - Hook for extension data
 // ============================================
 
-interface UseModuleDataOptions {
+interface UseExtensionDataOptions {
   autoFetch?: boolean;
 }
 
-interface UseModuleDataReturn {
-  data: ModuleData | null;
+interface UseExtensionDataReturn {
+  data: ExtensionData | null;
   isLoading: boolean;
   error: string | null;
-  refetch: (force?: boolean) => Promise<ModuleData | null>;
-  update: (data: Partial<ModuleData>) => void;
+  refetch: (force?: boolean) => Promise<ExtensionData | null>;
+  update: (data: Partial<ExtensionData>) => void;
   invalidate: () => void;
 }
 
-export function useModuleData(
+export function useExtensionData(
   websiteId: string | null,
-  moduleSlug: string | null,
-  options: UseModuleDataOptions = {}
-): UseModuleDataReturn {
+  extensionSlug: string | null,
+  options: UseExtensionDataOptions = {}
+): UseExtensionDataReturn {
   const { autoFetch = true } = options;
   
-  const cacheKey = websiteId && moduleSlug ? `${websiteId}:${moduleSlug}` : null;
+  const cacheKey = websiteId && extensionSlug ? `${websiteId}:${extensionSlug}` : null;
   
   const data = useCacheStore((state) => 
-    cacheKey ? state.moduleData[cacheKey]?.data ?? null : null
+    cacheKey ? state.extensionData[cacheKey]?.data ?? null : null
   );
   const dataEntry = useCacheStore((state) => 
-    cacheKey ? state.moduleData[cacheKey] : null
+    cacheKey ? state.extensionData[cacheKey] : null
   );
-  const fetchModuleData = useCacheStore((state) => state.fetchModuleData);
-  const updateModuleDataCache = useCacheStore((state) => state.updateModuleDataCache);
-  const invalidateModuleData = useCacheStore((state) => state.invalidateModuleData);
+  const fetchExtensionData = useCacheStore((state) => state.fetchExtensionData);
+  const updateExtensionDataCache = useCacheStore((state) => state.updateExtensionDataCache);
+  const invalidateExtensionData = useCacheStore((state) => state.invalidateExtensionData);
   const isStale = useCacheStore((state) => state.isStale);
-  const isLoading = useIsLoading(cacheKey ? `moduleData:${cacheKey}` : 'moduleData');
+  const isLoading = useIsLoading(cacheKey ? `extensionData:${cacheKey}` : 'extensionData');
   const error = useCacheStore((state) => 
-    cacheKey ? state.errors[`moduleData:${cacheKey}`] ?? null : null
+    cacheKey ? state.errors[`extensionData:${cacheKey}`] ?? null : null
   );
   
   const hasFetched = useRef(false);
 
   useEffect(() => {
-    if (autoFetch && websiteId && moduleSlug && !hasFetched.current) {
+    if (autoFetch && websiteId && extensionSlug && !hasFetched.current) {
       hasFetched.current = true;
-      if (!dataEntry || isStale(dataEntry, CACHE_TTL.moduleData)) {
-        fetchModuleData(websiteId, moduleSlug);
+      if (!dataEntry || isStale(dataEntry, CACHE_TTL.extensionData)) {
+        fetchExtensionData(websiteId, extensionSlug);
       }
     }
-  }, [autoFetch, websiteId, moduleSlug, dataEntry, isStale, fetchModuleData]);
+  }, [autoFetch, websiteId, extensionSlug, dataEntry, isStale, fetchExtensionData]);
 
   // Reset hasFetched when params change
   useEffect(() => {
     hasFetched.current = false;
-  }, [websiteId, moduleSlug]);
+  }, [websiteId, extensionSlug]);
 
   const refetch = useCallback(async (force = true) => {
-    if (!websiteId || !moduleSlug) return null;
-    return fetchModuleData(websiteId, moduleSlug, force);
-  }, [websiteId, moduleSlug, fetchModuleData]);
+    if (!websiteId || !extensionSlug) return null;
+    return fetchExtensionData(websiteId, extensionSlug, force);
+  }, [websiteId, extensionSlug, fetchExtensionData]);
 
-  const update = useCallback((newData: Partial<ModuleData>) => {
-    if (websiteId && moduleSlug) {
-      updateModuleDataCache(websiteId, moduleSlug, newData);
+  const update = useCallback((newData: Partial<ExtensionData>) => {
+    if (websiteId && extensionSlug) {
+      updateExtensionDataCache(websiteId, extensionSlug, newData);
     }
-  }, [websiteId, moduleSlug, updateModuleDataCache]);
+  }, [websiteId, extensionSlug, updateExtensionDataCache]);
 
   const handleInvalidate = useCallback(() => {
-    if (websiteId && moduleSlug) {
-      invalidateModuleData(websiteId, moduleSlug);
+    if (websiteId && extensionSlug) {
+      invalidateExtensionData(websiteId, extensionSlug);
     }
-  }, [websiteId, moduleSlug, invalidateModuleData]);
+  }, [websiteId, extensionSlug, invalidateExtensionData]);
 
   return {
     data,
@@ -445,7 +445,7 @@ interface UseDashboardDataReturn {
   website: Website | null;
   websites: Website[];
   quota: QuotaUsage | null;
-  modules: WebsiteModule[];
+  extensions: WebsiteExtension[];
   isLoading: boolean;
   error: string | null;
   refetchAll: () => Promise<void>;
@@ -458,29 +458,29 @@ export function useDashboardData(): UseDashboardDataReturn {
   // Get first website
   const website = websites.length > 0 ? websites[0] : null;
   
-  const { modules, isLoading: modulesLoading, error: modulesError } = useWebsiteModules(
+  const { extensions, isLoading: extensionsLoading, error: extensionsError } = useWebsiteExtensions(
     website?.id ?? null
   );
   
   const fetchWebsites = useCacheStore((state) => state.fetchWebsites);
   const fetchQuota = useCacheStore((state) => state.fetchQuota);
-  const fetchWebsiteModules = useCacheStore((state) => state.fetchWebsiteModules);
+  const fetchWebsiteExtensions = useCacheStore((state) => state.fetchWebsiteExtensions);
 
   const refetchAll = useCallback(async () => {
     const websitesData = await fetchWebsites(true);
     await fetchQuota(true);
     if (websitesData.length > 0) {
-      await fetchWebsiteModules(websitesData[0].id, true);
+      await fetchWebsiteExtensions(websitesData[0].id, true);
     }
-  }, [fetchWebsites, fetchQuota, fetchWebsiteModules]);
+  }, [fetchWebsites, fetchQuota, fetchWebsiteExtensions]);
 
   return {
     website,
     websites,
     quota,
-    modules,
-    isLoading: websitesLoading || quotaLoading || modulesLoading,
-    error: websitesError || quotaError || modulesError,
+    extensions,
+    isLoading: websitesLoading || quotaLoading || extensionsLoading,
+    error: websitesError || quotaError || extensionsError,
     refetchAll,
   };
 }

@@ -67,7 +67,7 @@ var CACHE_BLACKLIST = [
 
 // API endpoints that can be cached briefly
 var CACHEABLE_API = [
-  /\/api\/modules\/catalog/,
+  /\/api\/extensions\/catalog/,
   /\/api\/websites$/,
   /\/api\/notifications\/unread-count/
 ];

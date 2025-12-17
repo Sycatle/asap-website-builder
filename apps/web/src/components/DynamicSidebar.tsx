@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
-import type { WebsiteModule } from '../lib/api';
-import { useWebsites, useWebsiteModules } from '../hooks/useCache';
+import type { WebsiteExtension } from '../lib/api';
+import { useWebsites, useWebsiteExtensions } from '../hooks/useCache';
 
-// Icon mapping for common module icons
-const moduleIcons: Record<string, React.ReactNode> = {
+// Icon mapping for common extension icons
+const extensionIcons: Record<string, React.ReactNode> = {
   'github': (
     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
       <path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z" clipRule="evenodd"/>
@@ -36,53 +36,53 @@ const moduleIcons: Record<string, React.ReactNode> = {
   ),
 };
 
-// Get icon for module (website module doesn't have icon field, guess from slug)
-function getModuleIcon(moduleSlug: string): React.ReactNode {
+// Get icon for extension (website extension doesn't have icon field, guess from slug)
+function getExtensionIcon(extensionSlug: string): React.ReactNode {
   // Guess from slug
-  if (moduleSlug.includes('github')) return moduleIcons['github'];
-  if (moduleSlug.includes('blog')) return moduleIcons['blog'];
-  if (moduleSlug.includes('contact')) return moduleIcons['contact'];
-  if (moduleSlug.includes('analytics')) return moduleIcons['analytics'];
-  if (moduleSlug.includes('theme')) return moduleIcons['theme'];
+  if (extensionSlug.includes('github')) return extensionIcons['github'];
+  if (extensionSlug.includes('blog')) return extensionIcons['blog'];
+  if (extensionSlug.includes('contact')) return extensionIcons['contact'];
+  if (extensionSlug.includes('analytics')) return extensionIcons['analytics'];
+  if (extensionSlug.includes('theme')) return extensionIcons['theme'];
   
-  return moduleIcons['default'];
+  return extensionIcons['default'];
 }
 
 export default function DynamicSidebar() {
-  // Use cache hooks for real-time updates - when modules change elsewhere, sidebar updates automatically
+  // Use cache hooks for real-time updates - when extensions change elsewhere, sidebar updates automatically
   const { websites, isLoading: websitesLoading } = useWebsites();
   const currentWebsiteId = websites.length > 0 ? websites[0].id : null;
-  const { modules: allModules, isLoading: modulesLoading } = useWebsiteModules(currentWebsiteId);
+  const { extensions: allExtensions, isLoading: extensionsLoading } = useWebsiteExtensions(currentWebsiteId);
   
-  // Filter to get only enabled modules
-  const modules = useMemo(() => 
-    allModules.filter(m => m.enabled), 
-    [allModules]
+  // Filter to get only enabled extensions
+  const extensions = useMemo(() => 
+    allExtensions.filter(m => m.enabled), 
+    [allExtensions]
   );
 
-  const loading = websitesLoading || modulesLoading;
+  const loading = websitesLoading || extensionsLoading;
 
-  // Don't render anything if loading or no modules
-  if (loading || modules.length === 0) {
+  // Don't render anything if loading or no extensions
+  if (loading || extensions.length === 0) {
     return null;
   }
 
   return (
     <div className="mt-4">
       <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-        Modules
+        Extensions
       </div>
       <nav className="space-y-1">
-        {modules.map((module) => (
+        {extensions.map((extension) => (
           <a
-            key={module.id}
-            href={`/app/modules/${module.module_slug}`}
+            key={extension.id}
+            href={`/app/extensions/${extension.extension_slug}`}
             className="flex items-center gap-3 px-4 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
           >
             <span className="text-gray-600">
-              {getModuleIcon(module.module_slug)}
+              {getExtensionIcon(extension.extension_slug)}
             </span>
-            <span>{module.module_name}</span>
+            <span>{extension.extension_name}</span>
           </a>
         ))}
       </nav>

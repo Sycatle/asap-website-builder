@@ -1,4 +1,4 @@
-//! Module catalog (available modules listing and actions)
+//! Extension catalog (available extensions listing and actions)
 
 use axum::{
     extract::{Path, State, Extension},
@@ -9,64 +9,64 @@ use axum::{
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use asap_core_shared::{Claims, module_catalog};
+use asap_core_shared::{Claims, extension_catalog};
 
-/// List available modules from the code-defined catalog
-/// Modules are no longer stored in database - schemas are defined in code
-pub async fn list_available_modules(
+/// List available extensions from the code-defined catalog
+/// Extensions are no longer stored in database - schemas are defined in code
+pub async fn list_available_extensions(
     Extension(_claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    let modules = module_catalog::get_user_modules();
+    let extensions = extension_catalog::get_user_extensions();
     
-    let response: Vec<serde_json::Value> = modules.into_iter().map(|m| {
+    let response: Vec<serde_json::Value> = extensions.into_iter().map(|e| {
         serde_json::json!({
-            "id": m.slug.clone(),
-            "name": m.name,
-            "slug": m.slug,
-            "version": m.version,
-            "description": m.description,
-            "category": m.category,
-            "default_settings": m.default_settings,
-            "config_schema": m.config_schema,
-            "icon": m.icon
+            "id": e.slug.clone(),
+            "name": e.name,
+            "slug": e.slug,
+            "version": e.version,
+            "description": e.description,
+            "category": e.category,
+            "default_settings": e.default_settings,
+            "config_schema": e.config_schema,
+            "icon": e.icon
         })
     }).collect();
     
     (StatusCode::OK, Json(response)).into_response()
 }
 
-/// Get a single module by slug from the code-defined catalog
-pub async fn get_module_by_slug(
+/// Get a single extension by slug from the code-defined catalog
+pub async fn get_extension_by_slug(
     Extension(_claims): Extension<Claims>,
     Path(slug): Path<String>,
 ) -> impl IntoResponse {
-    match module_catalog::get_module_by_slug(&slug) {
-        Some(m) => {
+    match extension_catalog::get_extension_by_slug(&slug) {
+        Some(e) => {
             (StatusCode::OK, Json(serde_json::json!({
-                "id": m.slug.clone(),
-                "name": m.name,
-                "slug": m.slug,
-                "version": m.version,
-                "description": m.description,
-                "category": m.category,
-                "default_settings": m.default_settings,
-                "config_schema": m.config_schema,
-                "icon": m.icon
+                "id": e.slug.clone(),
+                "name": e.name,
+                "slug": e.slug,
+                "version": e.version,
+                "description": e.description,
+                "category": e.category,
+                "default_settings": e.default_settings,
+                "config_schema": e.config_schema,
+                "icon": e.icon
             }))).into_response()
         }
         None => {
             (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Module not found"
+                "error": "Extension not found"
             }))).into_response()
         }
     }
 }
 
-/// Get module data for a website (includes settings, module info, and dynamic data)
-pub async fn get_website_module_data(
+/// Get extension data for a website (includes settings, extension info, and dynamic data)
+pub async fn get_website_extension_data(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
-    Path((website_id, module_slug)): Path<(String, String)>,
+    Path((website_id, extension_slug)): Path<(String, String)>,
 ) -> impl IntoResponse {
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
@@ -108,33 +108,33 @@ pub async fn get_website_module_data(
         }))).into_response();
     }
 
-    let module_def = match module_catalog::get_module_by_slug(&module_slug) {
-        Some(m) => m,
+    let extension_def = match extension_catalog::get_extension_by_slug(&extension_slug) {
+        Some(e) => e,
         None => {
             return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Module not found"
+                "error": "Extension not found"
             }))).into_response();
         }
     };
 
-    let website_module = sqlx::query_as::<_, (serde_json::Value, bool)>(
+    let website_extension = sqlx::query_as::<_, (serde_json::Value, bool)>(
         r#"
-        SELECT wm.settings, wm.enabled
-        FROM website_modules wm
-        INNER JOIN modules m ON m.id = wm.module_id
-        WHERE wm.website_id = $1 AND m.slug = $2
+        SELECT we.settings, we.enabled
+        FROM website_extensions we
+        INNER JOIN extensions e ON e.id = we.extension_id
+        WHERE we.website_id = $1 AND e.slug = $2
         "#
     )
     .bind(website_uuid)
-    .bind(&module_slug)
+    .bind(&extension_slug)
     .fetch_optional(&pool)
     .await;
 
-    let (settings, enabled) = match website_module {
+    let (settings, enabled) = match website_extension {
         Ok(Some((s, e))) => (s, e),
-        Ok(None) => (module_def.default_settings.clone(), false),
+        Ok(None) => (extension_def.default_settings.clone(), false),
         Err(e) => {
-            tracing::error!("Database error getting website module: {}", e);
+            tracing::error!("Database error getting website extension: {}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response();
@@ -143,7 +143,7 @@ pub async fn get_website_module_data(
 
     let mut data = serde_json::json!({});
     
-    if module_slug == "github-sync" {
+    if extension_slug == "github-sync" {
         let website_data = sqlx::query_as::<_, (serde_json::Value, chrono::DateTime<chrono::Utc>)>(
             r#"SELECT data, updated_at FROM website_data WHERE website_id = $1"#
         )
@@ -167,16 +167,16 @@ pub async fn get_website_module_data(
     }
 
     (StatusCode::OK, Json(serde_json::json!({
-        "module": {
-            "id": module_def.slug.clone(),
-            "name": module_def.name,
-            "slug": module_def.slug,
-            "version": module_def.version,
-            "description": module_def.description,
-            "category": module_def.category,
-            "default_settings": module_def.default_settings,
-            "config_schema": module_def.config_schema,
-            "icon": module_def.icon
+        "extension": {
+            "id": extension_def.slug.clone(),
+            "name": extension_def.name,
+            "slug": extension_def.slug,
+            "version": extension_def.version,
+            "description": extension_def.description,
+            "category": extension_def.category,
+            "default_settings": extension_def.default_settings,
+            "config_schema": extension_def.config_schema,
+            "icon": extension_def.icon
         },
         "settings": settings,
         "enabled": enabled,
@@ -184,11 +184,11 @@ pub async fn get_website_module_data(
     }))).into_response()
 }
 
-/// Execute a module action (e.g., sync GitHub)
-pub async fn execute_module_action(
+/// Execute an extension action (e.g., sync GitHub)
+pub async fn execute_extension_action(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
-    Path((website_id, module_slug, action_key)): Path<(String, String, String)>,
+    Path((website_id, extension_slug, action_key)): Path<(String, String, String)>,
     Json(payload): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     let website_uuid = match Uuid::parse_str(&website_id) {
@@ -231,7 +231,7 @@ pub async fn execute_module_action(
         }))).into_response();
     }
 
-    match (module_slug.as_str(), action_key.as_str()) {
+    match (extension_slug.as_str(), action_key.as_str()) {
         ("github-sync", "sync") => {
             let github_username = payload.get("github_username")
                 .and_then(|v| v.as_str())
@@ -269,7 +269,7 @@ pub async fn execute_module_action(
         }
         _ => {
             (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": format!("Action '{}' not found for module '{}'", action_key, module_slug)
+                "error": format!("Action '{}' not found for extension '{}'", action_key, extension_slug)
             }))).into_response()
         }
     }

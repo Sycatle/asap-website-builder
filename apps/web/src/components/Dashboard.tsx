@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useState, useMemo } from 'react';
-import { websitesAPI, authAPI, type Website, type UpdateWebsiteRequest } from '../lib/api';
-import { useDashboardData, useCacheActions } from '../hooks/useCache';
+import { websitesAPI, authAPI, type UpdateWebsiteRequest } from '../lib/api';
+import { useCacheActions } from '../hooks/useCache';
+import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { formatBytes } from '../lib/utils/formatters';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,23 +39,23 @@ import {
   Clock,
   Sparkles,
   Rocket,
-  Save,
   Github,
   Link2,
   Type,
   MessageSquare,
-  AlertCircle,
   Loader2,
   Settings,
   LayoutDashboard,
-  RefreshCw
+  RefreshCw,
+  Layers,
 } from "lucide-react";
 import { FormActions } from "@/components/ui/form-actions";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { SectionsTab } from "@/components/sections/SectionsTab";
 
 export default function Dashboard() {
-  // Use cached data
-  const { website, quota, modules, isLoading, refetchAll } = useDashboardData();
+  // Use website context for synchronized data
+  const { currentWebsite: website, quota, extensions, isLoading, refetch: refetchAll } = useWebsiteContext();
   const { updateWebsiteCache } = useCacheActions();
   
   const [isSaving, setIsSaving] = useState(false);
@@ -211,7 +212,7 @@ export default function Dashboard() {
     }
   };
 
-  const enabledModulesCount = modules.filter(m => m.enabled).length;
+  const enabledExtensionsCount = extensions.filter(e => e.enabled).length;
 
   // Chart configuration for storage
   const storageChartConfig = {
@@ -344,27 +345,40 @@ export default function Dashboard() {
             </Button>
           )}
           {website && (
-            <Button variant="outline" asChild className="w-full sm:w-auto group">
-              <a href={`/${website.slug}`} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 mr-2 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                Voir le site
-              </a>
-            </Button>
+            <>
+              <Button variant="default" asChild className="w-full sm:w-auto group">
+                <a href="/app/studio">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Ouvrir le Studio
+                </a>
+              </Button>
+              <Button variant="outline" asChild className="w-full sm:w-auto group">
+                <a href={`/${website.slug}`} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4 mr-2 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                  Voir le site
+                </a>
+              </Button>
+            </>
           )}
         </div>
       </div>
 
-      {/* Tabs for Overview / Site Settings */}
+      {/* Tabs for Overview / Sections / Site Settings */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-        <TabsList className="grid w-full grid-cols-2 h-auto">
+        <TabsList className="grid w-full grid-cols-3 h-auto">
           <TabsTrigger value="overview" className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm py-2 sm:py-2.5 transition-all duration-200 data-[state=active]:scale-[1.02]">
             <LayoutDashboard className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden xs:inline">Vue d'ensemble</span>
-            <span className="xs:hidden">Accueil</span>
+            <span className="hidden sm:inline">Vue d'ensemble</span>
+            <span className="sm:hidden">Accueil</span>
+          </TabsTrigger>
+          <TabsTrigger value="sections" className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm py-2 sm:py-2.5 transition-all duration-200 data-[state=active]:scale-[1.02]">
+            <Layers className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Sections
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm py-2 sm:py-2.5 transition-all duration-200 data-[state=active]:scale-[1.02]">
             <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            Mon Site
+            <span className="hidden sm:inline">Paramètres</span>
+            <span className="sm:hidden">Config</span>
           </TabsTrigger>
         </TabsList>
 
@@ -429,28 +443,28 @@ export default function Dashboard() {
               </div>
             </Card>
 
-            {/* Modules */}
+            {/* Extensions */}
             <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
               <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Modules</CardTitle>
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Extensions</CardTitle>
                 <Puzzle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform group-hover:rotate-12" />
               </CardHeader>
               <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-                <div className="text-lg sm:text-2xl font-bold">{enabledModulesCount}</div>
+                <div className="text-lg sm:text-2xl font-bold">{enabledExtensionsCount}</div>
                 <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                  sur {modules.length} disponibles
+                  sur {extensions.length} disponibles
                 </p>
                 <div className="flex gap-0.5 sm:gap-1 mt-1.5 sm:mt-2">
-                  {modules.slice(0, 4).map((m, index) => (
+                  {extensions.slice(0, 4).map((e, index) => (
                     <div
-                      key={m.module_id}
-                      className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full transition-all duration-300 ${m.enabled ? 'bg-primary scale-100' : 'bg-muted scale-90'}`}
+                      key={e.extension_id}
+                      className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full transition-all duration-300 ${e.enabled ? 'bg-primary scale-100' : 'bg-muted scale-90'}`}
                       style={{ animationDelay: `${index * 0.05}s` }}
-                      title={m.module_slug}
+                      title={e.extension_slug}
                     />
                   ))}
-                  {modules.length > 4 && (
-                    <span className="text-[10px] sm:text-xs text-muted-foreground">+{modules.length - 4}</span>
+                  {extensions.length > 4 && (
+                    <span className="text-[10px] sm:text-xs text-muted-foreground">+{extensions.length - 4}</span>
                   )}
                 </div>
               </CardContent>
@@ -578,8 +592,8 @@ export default function Dashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-2 sm:gap-3 px-4 sm:px-6">
-                <button
-                  onClick={() => setActiveTab('settings')}
+                <a
+                  href="/app/studio"
                   className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-md text-left w-full active:scale-[0.99]"
                 >
                   <div className="flex items-center gap-3 sm:gap-4">
@@ -587,17 +601,17 @@ export default function Dashboard() {
                       <Edit className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-sm sm:text-base">Éditer mon site</h3>
+                      <h3 className="font-semibold text-sm sm:text-base">Ouvrir le Studio</h3>
                       <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
-                        Modifier le contenu et le design
+                        Éditeur visuel en temps réel
                       </p>
                     </div>
                   </div>
                   <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200" />
-                </button>
+                </a>
 
                 <a
-                  href="/app/modules"
+                  href="/app/extensions"
                   className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-md active:scale-[0.99]"
                 >
                   <div className="flex items-center gap-3 sm:gap-4">
@@ -605,9 +619,9 @@ export default function Dashboard() {
                       <Puzzle className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:rotate-12" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-sm sm:text-base">Gérer les modules</h3>
+                      <h3 className="font-semibold text-sm sm:text-base">Gérer les extensions</h3>
                       <p className="text-xs sm:text-sm text-muted-foreground">
-                        {enabledModulesCount} module{enabledModulesCount > 1 ? 's' : ''} actif{enabledModulesCount > 1 ? 's' : ''}
+                        {enabledExtensionsCount} extension{enabledExtensionsCount > 1 ? 's' : ''} active{enabledExtensionsCount > 1 ? 's' : ''}
                       </p>
                     </div>
                   </div>
@@ -656,6 +670,11 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Sections Tab */}
+        <TabsContent value="sections" className="animate-fade-in">
+          <SectionsTab websiteId={website?.id ?? null} />
         </TabsContent>
 
         {/* Site Settings Tab */}

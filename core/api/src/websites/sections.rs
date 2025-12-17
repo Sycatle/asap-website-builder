@@ -16,7 +16,7 @@ use asap_core_shared::Claims;
 pub struct WebsiteSectionResponse {
     pub id: String,
     pub website_id: String,
-    pub module_id: Option<String>,
+    pub extension_id: Option<String>,
     pub section_type: String,
     pub slug: String,
     pub title: String,
@@ -36,7 +36,7 @@ pub struct CreateSectionRequest {
     pub layout: Option<String>,
     pub settings: Option<serde_json::Value>,
     pub data: Option<serde_json::Value>,
-    pub module_id: Option<String>,
+    pub extension_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -116,12 +116,12 @@ pub async fn create_section(
         }
     };
 
-    let module_uuid = match payload.module_id {
+    let extension_uuid = match payload.extension_id {
         Some(ref id) => match Uuid::parse_str(id) {
             Ok(uuid) => Some(uuid),
             Err(_) => {
                 return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                    "error": "Invalid module ID format"
+                    "error": "Invalid extension ID format"
                 }))).into_response();
             }
         },
@@ -133,7 +133,7 @@ pub async fn create_section(
         &pool,
         website_uuid,
         account_id,
-        module_uuid,
+        extension_uuid,
         &payload.section_type,
         &payload.slug,
         &payload.title,
@@ -369,6 +369,63 @@ pub async fn reorder_sections(
         }
         Err(e) => {
             tracing::error!("Database error reordering sections: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response()
+        }
+    }
+}
+
+/// Get public sections for a published website (no auth required)
+pub async fn get_public_website_sections(
+    State(pool): State<PgPool>,
+    Path(slug): Path<String>,
+) -> impl IntoResponse {
+    use crate::queries;
+    
+    // First get the website by slug to verify it's published
+    let website_result = queries::get_public_website(&pool, &slug).await;
+    
+    let website = match website_result {
+        Ok(Some(w)) => w,
+        Ok(None) => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Website not found or not published"
+            }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Database error fetching website: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+    
+    // Get sections for this website (public - only visible ones)
+    let result = queries::list_public_website_sections(&pool, website.id).await;
+
+    match result {
+        Ok(sections) => {
+            // Map to response format
+            let response: Vec<serde_json::Value> = sections
+                .into_iter()
+                .map(|s| serde_json::json!({
+                    "id": s.id.to_string(),
+                    "website_id": s.website_id.to_string(),
+                    "section_type": s.section_type,
+                    "title": s.title,
+                    "layout": s.layout,
+                    "content": s.data,
+                    "settings": s.settings,
+                    "visible": s.visible,
+                    "order_index": s.order
+                }))
+                .collect();
+            
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Database error listing public sections: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()

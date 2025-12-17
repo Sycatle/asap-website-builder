@@ -1,5 +1,20 @@
 import { format, formatDistanceToNow } from 'date-fns';
 
+// Re-export shared constants and utilities from @asap/shared
+export {
+  ASAP_DOMAIN,
+  SLUG_MIN_LENGTH,
+  SLUG_REGEX,
+  slugify,
+  validateSlug,
+  getWebsiteUrl,
+  getWebsiteDisplayUrl,
+} from '@asap/shared';
+
+// ============================================
+// Formatting utilities (web app specific)
+// ============================================
+
 export function formatBytes(bytes: number, decimals: number = 2): string {
   if (bytes === 0) return '0 Bytes';
 
@@ -18,13 +33,4 @@ export function formatDate(date: string | Date): string {
 
 export function formatRelativeTime(date: string | Date): string {
   return formatDistanceToNow(new Date(date), { addSuffix: true });
-}
-
-export function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/--+/g, '-')
-    .trim();
 }

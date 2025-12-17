@@ -1,5 +1,7 @@
 # Architecture Overview
 
+**Dernière mise à jour :** 17 décembre 2025
+
 ## Contexte global
 
 ASAP est une plateforme de génération de sites web ultra-rapides basée sur une architecture **core + modules**. Le core expose une API unifiée de gestion des utilisateurs et des données, tandis que les modules implémentent toutes les fonctionnalités (générateurs, rendus, analytics, etc.).
@@ -9,6 +11,7 @@ Cette approche permet :
 - **Séparation des préoccupations** : le core gère l'authentification, l'isolation multi-tenant et la persistance
 - **Réutilisabilité** : les modules peuvent être développés indépendamment et consommer les données du core
 - **Extensibilité** : ajouter de nouvelles fonctionnalités sans modifier le core
+- **DRY/KISS** : packages partagés pour éviter la duplication de code
 
 ---
 
@@ -243,3 +246,164 @@ Intégration **Stripe** pour la monétisation :
    ├─> Astro lit data/sites/<slug>.json
    └─> Rendu utilisateur
 ```
+
+---
+
+## Packages Partagés (Monorepo)
+
+### @asap/shared
+
+Package central contenant tous les types, constantes et utilitaires partagés entre les applications.
+
+```
+packages/shared/
+├── src/
+│   ├── types.ts      # Types: Section, Website, Page, Theme, etc.
+│   ├── constants.ts  # SECTION_TYPES, SECTION_LAYOUTS, ASAP_DOMAIN
+│   ├── utils.ts      # slugify, validateSlug, hexToRgb, buildThemeStyles
+│   └── index.ts      # Re-exports
+├── package.json
+└── tsconfig.json
+```
+
+**Principe DRY :** Ce package élimine la duplication de types définis précédemment dans 4+ fichiers différents.
+
+### @asap/renderers
+
+Package contenant les 14 renderers de sections React, utilisés à la fois par le preview dashboard et les sites publics.
+
+```
+packages/renderers/
+├── src/
+│   ├── renderers.tsx # HeroRenderer, AboutRenderer, etc.
+│   ├── types.ts      # Re-export depuis @asap/shared
+│   ├── utils.ts      # Re-export depuis @asap/shared
+│   └── index.ts      # Re-exports
+├── package.json
+└── tsconfig.json
+```
+
+**Principe KISS :** Un seul renderer par type de section, réutilisé partout.
+
+### Types de Sections Supportés
+
+| Type | Description | Layouts |
+|------|-------------|---------|
+| `hero` | Section d'accueil principale | full |
+| `about` | Présentation personnelle | full, split |
+| `skills` | Compétences techniques | grid, list |
+| `projects` | Galerie de projets | grid, cards |
+| `experience` | Parcours professionnel | timeline, list |
+| `education` | Parcours éducatif | timeline, list |
+| `contact` | Formulaire de contact | full, split |
+| `testimonials` | Témoignages clients | cards |
+| `services` | Services proposés | cards, grid |
+| `pricing` | Grille tarifaire | cards |
+| `faq` | Questions fréquentes | list |
+| `gallery` | Galerie d'images | grid |
+| `blog` | Articles de blog | list, grid |
+| `custom` | Section personnalisée | full, split, grid, cards, list |
+
+---
+
+## Applications Frontend
+
+### apps/web - Dashboard Principal
+
+Application Astro + React pour le dashboard utilisateur.
+
+```
+apps/web/
+├── src/
+│   ├── components/
+│   │   ├── sections/       # SectionCard, AddSectionModal, SectionEditor
+│   │   ├── preview/        # PreviewPage, property-editors
+│   │   ├── ui/             # Button, Card, Badge, Modal, etc.
+│   │   └── *.tsx           # CreateWebsiteModal, SiteSwitcher, PagesList
+│   ├── hooks/
+│   │   ├── usePresets.ts   # Gestion presets
+│   │   ├── useSections.ts  # CRUD sections
+│   │   ├── usePages.ts     # CRUD pages
+│   │   └── *.ts            # Autres hooks
+│   ├── contexts/
+│   │   └── WebsiteContext.tsx  # État website sélectionné
+│   ├── lib/
+│   │   ├── api/            # Clients API (auth, websites, sections, etc.)
+│   │   └── constants/      # Constantes UI (SECTION_ICONS)
+│   └── pages/
+│       └── app/            # Routes dashboard
+├── package.json
+└── astro.config.mjs
+```
+
+### apps/sites - Sites Publics
+
+Application Astro dédiée au rendu des sites publiés.
+
+```
+apps/sites/
+├── src/
+│   ├── components/
+│   │   └── SEO.astro       # Meta tags, Open Graph, JSON-LD
+│   ├── layouts/
+│   │   └── BaseLayout.astro
+│   ├── lib/
+│   │   └── api.ts          # Client API public
+│   ├── pages/
+│   │   └── [slug].astro    # Route dynamique
+│   └── styles/
+│       └── global.css      # Styles TailwindCSS
+├── package.json
+└── astro.config.mjs
+```
+
+**Séparation des responsabilités :**
+- `apps/web` = Interface d'administration (authentifiée)
+- `apps/sites` = Rendu public (non authentifié)
+
+---
+
+## Flux de Données Frontend
+
+### Synchronisation Website Context
+
+```
+1. Utilisateur se connecte
+   └─> WebsiteContext initialisé
+
+2. Chargement websites
+   ├─> API GET /websites
+   ├─> WebsiteContext.setWebsites()
+   └─> localStorage persist sélection
+
+3. Sélection website (SiteSwitcher)
+   ├─> WebsiteContext.setCurrentWebsite()
+   ├─> localStorage.setItem('selectedWebsiteId')
+   └─> Tous composants mis à jour:
+       ├─> Dashboard
+       ├─> SectionsTab
+       ├─> PagesList
+       └─> PreviewPage
+
+4. Édition sections
+   ├─> useSections.updateSection()
+   ├─> API PATCH /websites/:id/sections/:id
+   ├─> Mise à jour optimiste UI
+   └─> Preview synchronisé temps réel
+```
+
+### Parité Preview/Production
+
+```
+Preview (apps/web)                    Production (apps/sites)
+       │                                      │
+       ├─> @asap/renderers ◄────────────────►─┤
+       │   HeroRenderer                       │
+       │   AboutRenderer                      │
+       │   SkillsRenderer                     │
+       │   ...                                │
+       │                                      │
+       └─> Même CSS (TailwindCSS) ◄──────────►─┘
+```
+
+**Garantie :** Ce que l'utilisateur voit dans le preview = le rendu final du site publié.

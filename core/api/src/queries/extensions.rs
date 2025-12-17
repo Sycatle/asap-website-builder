@@ -1,28 +1,28 @@
-//! Website module queries
+//! Website extension queries
 
 use sqlx::PgPool;
 use uuid::Uuid;
 use serde_json::Value as JsonValue;
 use chrono::{DateTime, Utc};
-use asap_core_shared::module_catalog;
+use asap_core_shared::extension_catalog;
 
-use super::types::WebsiteModuleRow;
+use super::types::WebsiteExtensionRow;
 
-/// Sync all modules from the catalog to the database
+/// Sync all extensions from the catalog to the database
 /// 
-/// This should be called at startup to ensure all modules defined in code
+/// This should be called at startup to ensure all extensions defined in code
 /// exist in the database with their latest metadata.
-pub async fn sync_modules_catalog(pool: &PgPool) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
-    let modules = module_catalog::get_module_catalog();
+pub async fn sync_extensions_catalog(pool: &PgPool) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
+    let extensions = extension_catalog::get_extension_catalog();
     let mut synced = 0;
     
-    for module in modules {
-        let config_schema = module.config_schema.as_ref()
+    for extension in extensions {
+        let config_schema = extension.config_schema.as_ref()
             .and_then(|s| serde_json::to_value(s).ok());
         
         let result = sqlx::query(
             r#"
-            INSERT INTO modules (id, name, slug, version, description, category, icon, default_settings, config_schema, sidebar_order, sidebar_label, enabled)
+            INSERT INTO extensions (id, name, slug, version, description, category, icon, default_settings, config_schema, sidebar_order, sidebar_label, enabled)
             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true)
             ON CONFLICT (slug) DO UPDATE SET
                 name = EXCLUDED.name,
@@ -36,16 +36,16 @@ pub async fn sync_modules_catalog(pool: &PgPool) -> Result<usize, Box<dyn std::e
                 sidebar_label = EXCLUDED.sidebar_label
             "#
         )
-        .bind(&module.name)
-        .bind(&module.slug)
-        .bind(&module.version)
-        .bind(&module.description)
-        .bind(&module.category)
-        .bind(&module.icon)
-        .bind(&module.default_settings)
+        .bind(&extension.name)
+        .bind(&extension.slug)
+        .bind(&extension.version)
+        .bind(&extension.description)
+        .bind(&extension.category)
+        .bind(&extension.icon)
+        .bind(&extension.default_settings)
         .bind(&config_schema)
-        .bind(module.sidebar_order)
-        .bind(&module.sidebar_label)
+        .bind(extension.sidebar_order)
+        .bind(&extension.sidebar_label)
         .execute(pool)
         .await?;
         
@@ -57,34 +57,34 @@ pub async fn sync_modules_catalog(pool: &PgPool) -> Result<usize, Box<dyn std::e
     Ok(synced)
 }
 
-/// List modules activated for a website
-pub async fn list_website_modules(
+/// List extensions activated for a website
+pub async fn list_website_extensions(
     pool: &PgPool,
     website_id: Uuid,
-) -> Result<Vec<WebsiteModuleRow>, Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<Vec<WebsiteExtensionRow>, Box<dyn std::error::Error + Send + Sync>> {
     let rows = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, JsonValue, bool, DateTime<Utc>)>(
         r#"
         SELECT 
-            wm.id, wm.website_id, wm.module_id, 
-            m.name as module_name, m.slug as module_slug,
-            wm.settings, wm.enabled, wm.activated_at
-        FROM website_modules wm
-        JOIN modules m ON wm.module_id = m.id
-        WHERE wm.website_id = $1
-        ORDER BY wm.activated_at
+            we.id, we.website_id, we.extension_id, 
+            e.name as extension_name, e.slug as extension_slug,
+            we.settings, we.enabled, we.activated_at
+        FROM website_extensions we
+        JOIN extensions e ON we.extension_id = e.id
+        WHERE we.website_id = $1
+        ORDER BY we.activated_at
         "#
     )
     .bind(website_id)
     .fetch_all(pool)
     .await?;
 
-    Ok(rows.into_iter().map(|(id, website_id, module_id, module_name, module_slug, settings, enabled, activated_at)| {
-        WebsiteModuleRow {
+    Ok(rows.into_iter().map(|(id, website_id, extension_id, extension_name, extension_slug, settings, enabled, activated_at)| {
+        WebsiteExtensionRow {
             id,
             website_id,
-            module_id,
-            module_name,
-            module_slug,
+            extension_id,
+            extension_name,
+            extension_slug,
             settings,
             enabled,
             activated_at,
@@ -92,11 +92,11 @@ pub async fn list_website_modules(
     }).collect())
 }
 
-/// Activate a module for a website
-pub async fn activate_website_module(
+/// Activate an extension for a website
+pub async fn activate_website_extension(
     pool: &PgPool,
     website_id: Uuid,
-    module_id: Uuid,
+    extension_id: Uuid,
     account_id: Uuid,
     settings: JsonValue,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -113,17 +113,17 @@ pub async fn activate_website_module(
         return Err("Website not found".into());
     }
 
-    // Insert or update module activation
+    // Insert or update extension activation
     sqlx::query(
         r#"
-        INSERT INTO website_modules (website_id, module_id, settings, enabled)
+        INSERT INTO website_extensions (website_id, extension_id, settings, enabled)
         VALUES ($1, $2, $3, true)
-        ON CONFLICT (website_id, module_id)
+        ON CONFLICT (website_id, extension_id)
         DO UPDATE SET settings = $3, enabled = true, updated_at = now()
         "#
     )
     .bind(website_id)
-    .bind(module_id)
+    .bind(extension_id)
     .bind(&settings)
     .execute(pool)
     .await?;
@@ -131,11 +131,11 @@ pub async fn activate_website_module(
     Ok(())
 }
 
-/// Update a website module
-pub async fn update_website_module(
+/// Update a website extension
+pub async fn update_website_extension(
     pool: &PgPool,
     website_id: Uuid,
-    module_id: Uuid,
+    extension_id: Uuid,
     account_id: Uuid,
     settings: &JsonValue,
     enabled: Option<bool>,
@@ -155,21 +155,21 @@ pub async fn update_website_module(
 
     let result = if let Some(en) = enabled {
         sqlx::query(
-            "UPDATE website_modules SET settings = $1, enabled = $2, updated_at = now() WHERE website_id = $3 AND module_id = $4"
+            "UPDATE website_extensions SET settings = $1, enabled = $2, updated_at = now() WHERE website_id = $3 AND extension_id = $4"
         )
         .bind(settings)
         .bind(en)
         .bind(website_id)
-        .bind(module_id)
+        .bind(extension_id)
         .execute(pool)
         .await?
     } else {
         sqlx::query(
-            "UPDATE website_modules SET settings = $1, updated_at = now() WHERE website_id = $2 AND module_id = $3"
+            "UPDATE website_extensions SET settings = $1, updated_at = now() WHERE website_id = $2 AND extension_id = $3"
         )
         .bind(settings)
         .bind(website_id)
-        .bind(module_id)
+        .bind(extension_id)
         .execute(pool)
         .await?
     };
@@ -177,12 +177,12 @@ pub async fn update_website_module(
     Ok(result.rows_affected() > 0)
 }
 
-/// Deactivate (delete) a module from a website
-/// module_id_or_row_id can be either the module_id (from modules table) or the id (from website_modules table)
-pub async fn deactivate_website_module(
+/// Deactivate (delete) an extension from a website
+/// extension_id_or_row_id can be either the extension_id (from extensions table) or the id (from website_extensions table)
+pub async fn deactivate_website_extension(
     pool: &PgPool,
     website_id: Uuid,
-    module_id_or_row_id: Uuid,
+    extension_id_or_row_id: Uuid,
     account_id: Uuid,
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
     // Verify website belongs to account
@@ -198,12 +198,12 @@ pub async fn deactivate_website_module(
         return Ok(false);
     }
 
-    // Delete the module from the website - try both id (row id) and module_id
+    // Delete the extension from the website - try both id (row id) and extension_id
     let result = sqlx::query(
-        "DELETE FROM website_modules WHERE website_id = $1 AND (id = $2 OR module_id = $2)"
+        "DELETE FROM website_extensions WHERE website_id = $1 AND (id = $2 OR extension_id = $2)"
     )
     .bind(website_id)
-    .bind(module_id_or_row_id)
+    .bind(extension_id_or_row_id)
     .execute(pool)
     .await?;
 

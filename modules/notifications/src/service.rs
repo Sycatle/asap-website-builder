@@ -477,11 +477,11 @@ pub mod helpers {
         CreateNotificationRequest {
             account_id,
             title: "Bienvenue sur ASAP ! 🎉".to_string(),
-            message: "Créez votre site web professionnel en quelques minutes. Explorez les modules disponibles pour personnaliser votre site.".to_string(),
+            message: "Créez votre site web professionnel en quelques minutes. Explorez les extensions disponibles pour personnaliser votre site.".to_string(),
             notification_type: Some(NotificationType::WelcomeMessage.to_string()),
             category: Some(NotificationCategory::System),
             priority: Some(NotificationPriority::Normal),
-            action_url: Some("/app/modules".to_string()),
+            action_url: Some("/app/extensions".to_string()),
             icon: Some("sparkles".to_string()),
             metadata: None,
         }
@@ -517,16 +517,16 @@ pub mod helpers {
         }
     }
 
-    /// Create a module activated notification
-    pub fn module_activated_notification(account_id: Uuid, module_name: &str) -> CreateNotificationRequest {
+    /// Create an extension activated notification
+    pub fn extension_activated_notification(account_id: Uuid, extension_name: &str) -> CreateNotificationRequest {
         CreateNotificationRequest {
             account_id,
-            title: format!("Module {} activé", module_name),
-            message: format!("Le module {} a été activé sur votre site.", module_name),
+            title: format!("Extension {} activée", extension_name),
+            message: format!("L'extension {} a été activée sur votre site.", extension_name),
             notification_type: Some(NotificationType::ModuleActivated.to_string()),
             category: Some(NotificationCategory::Module),
             priority: Some(NotificationPriority::Normal),
-            action_url: Some("/app/modules".to_string()),
+            action_url: Some("/app/extensions".to_string()),
             icon: Some("puzzle".to_string()),
             metadata: None,
         }

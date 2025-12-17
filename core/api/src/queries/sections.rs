@@ -28,7 +28,7 @@ pub async fn list_website_sections(
     let rows = sqlx::query_as::<_, (Uuid, Uuid, Option<Uuid>, String, String, String, i32, String, JsonValue, JsonValue, bool)>(
         r#"
         SELECT 
-            id, website_id, module_id, section_type, slug, title,
+            id, website_id, extension_id, section_type, slug, title,
             "order", layout, settings, data, visible
         FROM website_sections
         WHERE website_id = $1
@@ -39,11 +39,11 @@ pub async fn list_website_sections(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows.into_iter().map(|(id, website_id, module_id, section_type, slug, title, order, layout, settings, data, visible)| {
+    Ok(rows.into_iter().map(|(id, website_id, extension_id, section_type, slug, title, order, layout, settings, data, visible)| {
         WebsiteSectionRow {
             id,
             website_id,
-            module_id,
+            extension_id,
             section_type,
             slug,
             title,
@@ -61,7 +61,7 @@ pub async fn create_website_section(
     pool: &PgPool,
     website_id: Uuid,
     account_id: Uuid,
-    module_id: Option<Uuid>,
+    extension_id: Option<Uuid>,
     section_type: &str,
     slug: &str,
     title: &str,
@@ -86,13 +86,13 @@ pub async fn create_website_section(
     let section_id = Uuid::new_v4();
     sqlx::query(
         r#"
-        INSERT INTO website_sections (id, website_id, module_id, section_type, slug, title, "order", layout, settings, data)
+        INSERT INTO website_sections (id, website_id, extension_id, section_type, slug, title, "order", layout, settings, data)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         "#
     )
     .bind(section_id)
     .bind(website_id)
-    .bind(module_id)
+    .bind(extension_id)
     .bind(section_type)
     .bind(slug)
     .bind(title)
@@ -258,4 +258,40 @@ pub async fn reorder_website_sections(
 
     tx.commit().await?;
     Ok(())
+}
+
+/// List public sections for a website (no account verification, for published sites)
+pub async fn list_public_website_sections(
+    pool: &PgPool,
+    website_id: Uuid,
+) -> Result<Vec<WebsiteSectionRow>, Box<dyn std::error::Error + Send + Sync>> {
+    let rows = sqlx::query_as::<_, (Uuid, Uuid, Option<Uuid>, String, String, String, i32, String, JsonValue, JsonValue, bool)>(
+        r#"
+        SELECT 
+            id, website_id, extension_id, section_type, slug, title,
+            "order", layout, settings, data, visible
+        FROM website_sections
+        WHERE website_id = $1 AND visible = true
+        ORDER BY "order"
+        "#
+    )
+    .bind(website_id)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows.into_iter().map(|(id, website_id, extension_id, section_type, slug, title, order, layout, settings, data, visible)| {
+        WebsiteSectionRow {
+            id,
+            website_id,
+            extension_id,
+            section_type,
+            slug,
+            title,
+            order,
+            layout,
+            settings,
+            data,
+            visible,
+        }
+    }).collect())
 }
