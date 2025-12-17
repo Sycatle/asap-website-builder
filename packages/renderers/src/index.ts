@@ -11,3 +11,6 @@
 export * from './types';
 export * from './utils';
 export * from './renderers';
+
+// V1 MVP: Freelance Portfolio Renderer
+export * from './freelance-renderer';

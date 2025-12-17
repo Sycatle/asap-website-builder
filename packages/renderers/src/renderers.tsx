@@ -983,7 +983,7 @@ export function CustomRenderer({ section, isSelected, onClick }: SectionRenderer
 
   return (
     <section 
-      id={section.section_type}
+      id={section.element_type}
       className={cn(
         'py-20 md:py-28 px-6 bg-slate-50 dark:bg-slate-900/50',
         isSelected && 'ring-2 ring-indigo-500 ring-offset-2'
@@ -1030,7 +1030,7 @@ const renderers: Record<string, React.ComponentType<SectionRendererProps>> = {
 };
 
 export function SectionRenderer({ section, website, isSelected, isEditable, onClick }: SectionRendererProps) {
-  const Renderer = renderers[section.section_type] || CustomRenderer;
+  const Renderer = renderers[section.element_type] || CustomRenderer;
   return <Renderer section={section} website={website} isSelected={isSelected} isEditable={isEditable} onClick={onClick} />;
 }
 

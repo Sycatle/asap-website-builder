@@ -39,3 +39,6 @@ export type {
   BlogContent,
   CustomContent,
 } from '@asap/shared';
+
+// V1 backward compatibility: Section is now Element
+export type { Element as Section } from '@asap/shared';
