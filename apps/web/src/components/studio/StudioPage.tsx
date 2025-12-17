@@ -2,12 +2,12 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react"
 import { useWebsiteContext } from "@/contexts/WebsiteContext"
-import { useSections } from "@/hooks/useSections"
+import { useElements } from "@/hooks/useElements"
 import { usePages } from "@/hooks/usePages"
-import type { Section, UpdateSectionRequest } from "@/lib/api"
+import type { WebsiteElement, UpdateElementRequest } from "@/lib/api"
 import { SectionRenderer } from "./section-renderers"
 import { PropertyEditor } from "./property-editors"
-import { getSectionIcon, getSectionLabel } from "@/lib/constants/sections"
+import { getElementIcon, getElementLabel } from "@/lib/constants/elements"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -46,14 +46,11 @@ import {
   FileText,
   Home,
   MoreHorizontal,
-  X,
   ChevronLeft,
   ChevronRight,
-  PanelLeftClose,
-  PanelRightClose,
 } from "lucide-react"
 import { toast } from "sonner"
-import { AddSectionModal } from "@/components/sections/AddSectionModal"
+import { AddElementModal } from "@/components/elements/AddElementModal"
 import { cn } from "@/lib/utils"
 
 type DevicePreview = 'desktop' | 'tablet' | 'mobile'
@@ -82,14 +79,14 @@ export default function StudioPage({ onBack }: StudioPageProps) {
   // Data hooks
   const { currentWebsite: website, isLoading: isLoadingWebsite } = useWebsiteContext()
   const { 
-    sections, 
-    isLoading: isLoadingSections, 
-    updateSection,
-    createSection,
-    reorderSections,
+    elements, 
+    isLoading: isLoadingElements, 
+    updateElement,
+    createElement,
+    reorderElements,
     isUpdating,
     refetch,
-  } = useSections(website?.id ?? null)
+  } = useElements(website?.id ?? null)
   
   const { 
     pages, 
@@ -99,7 +96,7 @@ export default function StudioPage({ onBack }: StudioPageProps) {
 
   // UI state
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null)
-  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null)
   const [devicePreview, setDevicePreview] = useState<DevicePreview>('desktop')
   const [leftPanelOpen, setLeftPanelOpen] = useState(true)
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
@@ -133,46 +130,46 @@ export default function StudioPage({ onBack }: StudioPageProps) {
     return pages.find(p => p.id === selectedPageId) ?? null
   }, [pages, selectedPageId])
 
-  // Get selected section
-  const selectedSection = sections.find(s => s.id === selectedSectionId) || null
+  // Get selected element
+  const selectedElement = elements.find(e => e.id === selectedElementId) || null
 
-  // Open right panel when section is selected (only on mobile)
+  // Open right panel when element is selected (only on mobile)
   useEffect(() => {
-    if (selectedSectionId && isMobile && !rightPanelOpen) {
+    if (selectedElementId && isMobile && !rightPanelOpen) {
       setRightPanelOpen(true)
     }
-  }, [selectedSectionId, isMobile, rightPanelOpen])
+  }, [selectedElementId, isMobile, rightPanelOpen])
 
-  // Handle section selection
-  const handleSectionClick = useCallback((section: Section) => {
-    setSelectedSectionId(section.id)
+  // Handle element selection
+  const handleElementClick = useCallback((element: WebsiteElement) => {
+    setSelectedElementId(element.id)
     if (isMobile) {
       setLeftPanelOpen(false)
       setRightPanelOpen(true)
     }
   }, [isMobile])
 
-  // Handle section update
-  const handleUpdateSection = useCallback(async (sectionId: string, data: UpdateSectionRequest) => {
-    return updateSection(sectionId, data)
-  }, [updateSection])
+  // Handle element update
+  const handleUpdateElement = useCallback(async (elementId: string, data: UpdateElementRequest) => {
+    return updateElement(elementId, data)
+  }, [updateElement])
 
-  // Handle add section
-  const handleAddSection = useCallback(async (data: import("@/lib/api").CreateSectionRequest) => {
+  // Handle add element
+  const handleAddElement = useCallback(async (data: import("@/lib/api").CreateElementRequest) => {
     try {
-      await createSection(data)
+      await createElement(data)
       setShowAddModal(false)
-      toast.success('Section ajoutée')
+      toast.success('Élément ajouté')
     } catch (error) {
-      toast.error('Erreur lors de l\'ajout de la section')
+      toast.error('Erreur lors de l\'ajout de l\'élément')
       throw error
     }
-  }, [createSection])
+  }, [createElement])
 
   // Handle drag and drop (desktop only)
-  const handleDragStart = useCallback((e: React.DragEvent, sectionId: string) => {
+  const handleDragStart = useCallback((e: React.DragEvent, elementId: string) => {
     if (isMobile) return
-    e.dataTransfer.setData('sectionId', sectionId)
+    e.dataTransfer.setData('elementId', elementId)
     e.dataTransfer.effectAllowed = 'move'
   }, [isMobile])
 
@@ -192,22 +189,22 @@ export default function StudioPage({ onBack }: StudioPageProps) {
     e.preventDefault()
     setDragOverIndex(null)
     
-    const sectionId = e.dataTransfer.getData('sectionId')
-    const sourceIndex = sections.findIndex(s => s.id === sectionId)
+    const elementId = e.dataTransfer.getData('elementId')
+    const sourceIndex = elements.findIndex(el => el.id === elementId)
     
     if (sourceIndex === -1 || sourceIndex === targetIndex) return
     
-    const newOrder = [...sections]
+    const newOrder = [...elements]
     const [moved] = newOrder.splice(sourceIndex, 1)
     newOrder.splice(targetIndex, 0, moved)
     
     try {
-      await reorderSections(newOrder.map(s => s.id))
-      toast.success('Sections réorganisées')
+      await reorderElements(newOrder.map(el => el.id))
+      toast.success('Éléments réorganisés')
     } catch {
       toast.error('Erreur lors de la réorganisation')
     }
-  }, [isMobile, sections, reorderSections])
+  }, [isMobile, elements, reorderElements])
 
   // Device preview sizes
   const deviceSizes = {
@@ -216,14 +213,14 @@ export default function StudioPage({ onBack }: StudioPageProps) {
     mobile: 'max-w-[375px]',
   }
 
-  // Sort sections
-  const sortedSections = [...sections].sort((a, b) => a.order - b.order)
-  const visibleSections = sortedSections.filter(s => s.visible)
+  // Sort elements
+  const sortedElements = [...elements].sort((a, b) => a.order - b.order)
+  const visibleElements = sortedElements.filter(e => e.visible)
 
   // Loading state
   if (isLoadingWebsite) {
     return (
-      <div className="h-[100dvh] flex items-center justify-center" role="status" aria-live="polite">
+      <div className="h-full flex items-center justify-center" role="status" aria-live="polite">
         <div className="text-center space-y-4">
           <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground" aria-hidden="true" />
           <p className="text-muted-foreground">Chargement...</p>
@@ -236,7 +233,7 @@ export default function StudioPage({ onBack }: StudioPageProps) {
   // No website state
   if (!website) {
     return (
-      <div className="h-[100dvh] flex items-center justify-center p-4" role="alert">
+      <div className="h-full flex items-center justify-center p-4" role="alert">
         <div className="text-center space-y-4">
           <Layers className="h-12 w-12 mx-auto text-muted-foreground" aria-hidden="true" />
           <h2 className="text-xl font-semibold">Aucun site sélectionné</h2>
@@ -252,14 +249,14 @@ export default function StudioPage({ onBack }: StudioPageProps) {
     )
   }
 
-  // Section list content (shared between desktop panel and mobile sheet)
-  const SectionListContent = () => (
-    <div className="flex flex-col h-full" role="region" aria-label="Liste des sections">
+  // Element list content (shared between desktop panel and mobile sheet)
+  const ElementListContent = () => (
+    <div className="flex flex-col h-full" role="region" aria-label="Liste des éléments">
       <div className="sticky top-0 z-10 p-3 sm:p-4 border-b bg-background flex items-center justify-between">
         <div>
-          <h3 className="font-semibold text-sm flex items-center gap-2" id="sections-title">
+          <h3 className="font-semibold text-sm flex items-center gap-2" id="elements-title">
             <Layers className="h-4 w-4" aria-hidden="true" />
-            Sections
+            Éléments
           </h3>
           {currentPage && (
             <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
@@ -273,7 +270,7 @@ export default function StudioPage({ onBack }: StudioPageProps) {
           size="sm"
           onClick={() => setShowAddModal(true)}
           className="h-8"
-          aria-label="Ajouter une nouvelle section"
+          aria-label="Ajouter un nouvel élément"
         >
           <Plus className="h-4 w-4 mr-1" aria-hidden="true" />
           <span className="hidden sm:inline">Ajouter</span>
@@ -281,56 +278,56 @@ export default function StudioPage({ onBack }: StudioPageProps) {
       </div>
       
       <ScrollArea className="flex-1 p-2">
-        {isLoadingSections ? (
-          <div className="space-y-2" role="status" aria-label="Chargement des sections">
+        {isLoadingElements ? (
+          <div className="space-y-2" role="status" aria-label="Chargement des éléments">
             {[1, 2, 3].map(i => (
               <Skeleton key={i} className="h-14 w-full rounded-lg" />
             ))}
-            <span className="sr-only">Chargement des sections...</span>
+            <span className="sr-only">Chargement des éléments...</span>
           </div>
-        ) : sortedSections.length === 0 ? (
+        ) : sortedElements.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground" role="status">
             <Layers className="h-10 w-10 mx-auto mb-3 opacity-50" aria-hidden="true" />
-            <p className="text-sm font-medium">Aucune section</p>
-            <p className="text-xs mt-1 mb-4">Commencez par ajouter votre première section</p>
+            <p className="text-sm font-medium">Aucun élément</p>
+            <p className="text-xs mt-1 mb-4">Commencez par ajouter votre premier élément</p>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowAddModal(true)}
-              aria-label="Ajouter votre première section"
+              aria-label="Ajouter votre premier élément"
             >
               <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
-              Ajouter une section
+              Ajouter un élément
             </Button>
           </div>
         ) : (
-          <div className="space-y-1" role="listbox" aria-labelledby="sections-title" aria-activedescendant={selectedSectionId || undefined}>
-            {sortedSections.map((section, index) => {
-              const Icon = getSectionIcon(section.section_type)
-              const isSelected = selectedSectionId === section.id
+          <div className="space-y-1" role="listbox" aria-labelledby="elements-title" aria-activedescendant={selectedElementId || undefined}>
+            {sortedElements.map((element, index) => {
+              const Icon = getElementIcon(element.element_type)
+              const isSelected = selectedElementId === element.id
               const isDragOver = dragOverIndex === index
-              const sectionLabel = section.title || getSectionLabel(section.section_type)
+              const elementLabel = element.title || getElementLabel(element.element_type)
               
               return (
                 <button
-                  key={section.id}
-                  id={section.id}
+                  key={element.id}
+                  id={element.id}
                   role="option"
                   aria-selected={isSelected}
-                  aria-label={`${sectionLabel}${!section.visible ? ' (masquée)' : ''}, ${getSectionLabel(section.section_type)}`}
+                  aria-label={`${elementLabel}${!element.visible ? ' (masqué)' : ''}, ${getElementLabel(element.element_type)}`}
                   draggable={!isMobile}
-                  onDragStart={(e) => handleDragStart(e, section.id)}
+                  onDragStart={(e) => handleDragStart(e, element.id)}
                   onDragOver={(e) => handleDragOver(e, index)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, index)}
-                  onClick={() => handleSectionClick(section)}
+                  onClick={() => handleElementClick(element)}
                   className={cn(
                     "w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left",
                     "hover:bg-accent/50 active:scale-[0.98]",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                     isSelected && "bg-accent ring-2 ring-primary shadow-sm",
                     isDragOver && "border-t-2 border-primary",
-                    !section.visible && "opacity-50"
+                    !element.visible && "opacity-50"
                   )}
                 >
                   {!isMobile && (
@@ -344,20 +341,20 @@ export default function StudioPage({ onBack }: StudioPageProps) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
-                      {sectionLabel}
+                      {elementLabel}
                     </p>
                     <p className="text-xs text-muted-foreground capitalize">
-                      {getSectionLabel(section.section_type)}
+                      {getElementLabel(element.element_type)}
                     </p>
                   </div>
-                  {!section.visible && (
-                    <EyeOff className="h-4 w-4 text-muted-foreground shrink-0" aria-label="Section masquée" />
+                  {!element.visible && (
+                    <EyeOff className="h-4 w-4 text-muted-foreground shrink-0" aria-label="Élément masqué" />
                   )}
                 </button>
               )
             })}
             {/* Desktop drag hint */}
-            {!isMobile && sortedSections.length > 1 && (
+            {!isMobile && sortedElements.length > 1 && (
               <p className="text-[10px] text-muted-foreground text-center mt-3 px-2">
                 <GripVertical className="h-3 w-3 inline mr-1" aria-hidden="true" />
                 Glissez pour réorganiser
@@ -377,24 +374,24 @@ export default function StudioPage({ onBack }: StudioPageProps) {
           <Settings2 className="h-4 w-4" aria-hidden="true" />
           Propriétés
         </h3>
-        {selectedSection && (
+        {selectedElement && (
           <Badge variant="secondary" className="text-xs">
-            {getSectionLabel(selectedSection.section_type)}
+            {getElementLabel(selectedElement.element_type)}
           </Badge>
         )}
       </div>
       
       <ScrollArea className="flex-1 p-4">
-        {selectedSection ? (
+        {selectedElement ? (
           <PropertyEditor
-            section={selectedSection}
-            onUpdate={handleUpdateSection}
+            element={selectedElement}
+            onUpdate={handleUpdateElement}
             isUpdating={isUpdating}
           />
         ) : (
           <div className="text-center py-12 text-muted-foreground" role="status">
             <Settings2 className="h-10 w-10 mx-auto mb-3 opacity-50" aria-hidden="true" />
-            <p className="text-sm font-medium">Sélectionnez une section</p>
+            <p className="text-sm font-medium">Sélectionnez un élément</p>
             <p className="text-xs mt-1">pour modifier ses propriétés</p>
           </div>
         )}
@@ -405,7 +402,7 @@ export default function StudioPage({ onBack }: StudioPageProps) {
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header - Responsive & Sticky */}
-      <header className="sticky top-0 z-30 h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-3 sm:px-4 md:px-6 shrink-0 gap-2\">
+      <header className="sticky top-0 z-30 h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-3 sm:px-4 md:px-6 shrink-0 gap-2">
         {/* Left section */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {onBack && (
@@ -523,12 +520,12 @@ export default function StudioPage({ onBack }: StudioPageProps) {
             variant="ghost"
             size="icon"
             onClick={() => refetch()}
-            disabled={isLoadingSections}
+            disabled={isLoadingElements}
             className="h-9 w-9"
-            aria-label={isLoadingSections ? "Chargement en cours" : "Actualiser les sections"}
+            aria-label={isLoadingElements ? "Chargement en cours" : "Actualiser les éléments"}
           >
-            <RefreshCw className={cn("h-4 w-4", isLoadingSections && "animate-spin")} aria-hidden="true" />
-            <span className="sr-only">{isLoadingSections ? "Chargement..." : "Actualiser"}</span>
+            <RefreshCw className={cn("h-4 w-4", isLoadingElements && "animate-spin")} aria-hidden="true" />
+            <span className="sr-only">{isLoadingElements ? "Chargement..." : "Actualiser"}</span>
           </Button>
           
           {website.slug && (
@@ -627,10 +624,10 @@ export default function StudioPage({ onBack }: StudioPageProps) {
             "hidden md:flex flex-col border-r bg-background transition-all duration-200 relative",
             leftPanelOpen ? "w-72" : "w-0 border-r-0 overflow-hidden"
           )}
-          aria-label="Panneau des sections"
+          aria-label="Panneau des éléments"
           aria-hidden={!leftPanelOpen}
         >
-          {leftPanelOpen && <SectionListContent />}
+          {leftPanelOpen && <ElementListContent />}
         </aside>
 
 
@@ -642,17 +639,17 @@ export default function StudioPage({ onBack }: StudioPageProps) {
         >
           {/* Preview indicator with panel toggles - Sticky */}
           <div className="sticky top-0 z-10 p-2 sm:p-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 flex items-center justify-between gap-2">
-            {/* Left toggle - Sections */}
+            {/* Left toggle - Elements */}
             <Button
               variant={leftPanelOpen ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setLeftPanelOpen(!leftPanelOpen)}
               className="hidden md:flex h-8 gap-2 focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={leftPanelOpen ? "Masquer les sections" : "Afficher les sections"}
+              aria-label={leftPanelOpen ? "Masquer les éléments" : "Afficher les éléments"}
               aria-pressed={leftPanelOpen}
             >
               {leftPanelOpen ? <ChevronLeft className="h-4 w-4" aria-hidden="true" /> : <Layers className="h-4 w-4" aria-hidden="true" />}
-              <span className="text-xs">Sections</span>
+              <span className="text-xs">Éléments</span>
             </Button>
             <div className="md:hidden w-8" /> {/* Spacer for mobile */}
             
@@ -692,32 +689,32 @@ export default function StudioPage({ onBack }: StudioPageProps) {
                 isMobile && "rounded-none shadow-none"
               )}
             >
-              {visibleSections.length === 0 ? (
+              {visibleElements.length === 0 ? (
                 <div className="min-h-[60vh] flex items-center justify-center text-muted-foreground p-6" role="status">
                   <div className="text-center">
                     <Layers className="h-12 w-12 mx-auto mb-4 opacity-50" aria-hidden="true" />
-                    <p className="font-medium">Aucune section visible</p>
-                    <p className="text-sm mt-1">Ajoutez des sections pour commencer</p>
+                    <p className="font-medium">Aucun élément visible</p>
+                    <p className="text-sm mt-1">Ajoutez des éléments pour commencer</p>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => isMobile ? setLeftPanelOpen(true) : setShowAddModal(true)}
                       className="mt-4"
-                      aria-label="Ajouter votre première section"
+                      aria-label="Ajouter votre premier élément"
                     >
                       <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
-                      Ajouter une section
+                      Ajouter un élément
                     </Button>
                   </div>
                 </div>
               ) : (
                 <div>
-                  {visibleSections.map((section) => (
+                  {visibleElements.map((element) => (
                     <SectionRenderer
-                      key={section.id}
-                      section={section}
-                      isSelected={selectedSectionId === section.id}
-                      onClick={() => handleSectionClick(section)}
+                      key={element.id}
+                      element={element}
+                      isSelected={selectedElementId === element.id}
+                      onClick={() => handleElementClick(element)}
                     />
                   ))}
                 </div>
@@ -758,11 +755,11 @@ export default function StudioPage({ onBack }: StudioPageProps) {
               "flex-1 h-12 flex-col gap-0.5 focus-visible:ring-2 focus-visible:ring-ring",
               leftPanelOpen && "ring-2 ring-primary"
             )}
-            aria-label={leftPanelOpen ? "Fermer les sections" : "Ouvrir les sections"}
+            aria-label={leftPanelOpen ? "Fermer les éléments" : "Ouvrir les éléments"}
             aria-pressed={leftPanelOpen}
           >
             <Layers className="h-5 w-5" aria-hidden="true" />
-            <span className="text-[10px] font-medium">Sections</span>
+            <span className="text-[10px] font-medium">Éléments</span>
           </Button>
           
           <Button
@@ -770,7 +767,7 @@ export default function StudioPage({ onBack }: StudioPageProps) {
             size="lg"
             onClick={() => setShowAddModal(true)}
             className="h-14 w-14 rounded-full p-0 shadow-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            aria-label="Ajouter une nouvelle section"
+            aria-label="Ajouter un nouvel élément"
           >
             <Plus className="h-6 w-6" aria-hidden="true" />
             <span className="sr-only">Ajouter</span>
@@ -786,10 +783,10 @@ export default function StudioPage({ onBack }: StudioPageProps) {
             className={cn(
               "flex-1 h-12 flex-col gap-0.5 focus-visible:ring-2 focus-visible:ring-ring",
               rightPanelOpen && "ring-2 ring-primary",
-              !selectedSection && "opacity-50"
+              !selectedElement && "opacity-50"
             )}
-            disabled={!selectedSection}
-            aria-label={selectedSection ? (rightPanelOpen ? "Fermer les propriétés" : "Ouvrir les propriétés") : "Sélectionnez d'abord une section"}
+            disabled={!selectedElement}
+            aria-label={selectedElement ? (rightPanelOpen ? "Fermer les propriétés" : "Ouvrir les propriétés") : "Sélectionnez d'abord un élément"}
             aria-pressed={rightPanelOpen}
           >
             <Settings2 className="h-5 w-5" aria-hidden="true" />
@@ -803,11 +800,11 @@ export default function StudioPage({ onBack }: StudioPageProps) {
         <SheetContent 
           side="left" 
           className="w-[85vw] sm:w-[400px] p-0"
-          aria-label="Liste des sections"
+          aria-label="Liste des éléments"
         >
-          <SheetTitle className="sr-only">Sections</SheetTitle>
-          <SheetDescription className="sr-only">Gérer les sections de votre page</SheetDescription>
-          <SectionListContent />
+          <SheetTitle className="sr-only">Éléments</SheetTitle>
+          <SheetDescription className="sr-only">Gérer les éléments de votre page</SheetDescription>
+          <ElementListContent />
         </SheetContent>
       </Sheet>
 
@@ -815,20 +812,20 @@ export default function StudioPage({ onBack }: StudioPageProps) {
         <SheetContent 
           side="right" 
           className="w-[85vw] sm:w-[400px] p-0"
-          aria-label="Propriétés de la section"
+          aria-label="Propriétés de l'élément"
         >
           <SheetTitle className="sr-only">Propriétés</SheetTitle>
-          <SheetDescription className="sr-only">Modifier les propriétés de la section sélectionnée</SheetDescription>
+          <SheetDescription className="sr-only">Modifier les propriétés de l'élément sélectionné</SheetDescription>
           <PropertyEditorContent />
         </SheetContent>
       </Sheet>
 
-      {/* Add Section Modal */}
-      <AddSectionModal
+      {/* Add Element Modal */}
+      <AddElementModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onAdd={handleAddSection}
-        existingSectionsCount={sections.length}
+        onAdd={handleAddElement}
+        existingElementsCount={elements.length}
       />
     </div>
   )
