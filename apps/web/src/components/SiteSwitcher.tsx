@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react"
 import { ChevronsUpDown, Plus, CheckCircle2, Clock, Loader2, Globe } from "lucide-react"
 import type { Website } from "@/lib/api"
-import { CreateWebsiteModal } from "./CreateWebsiteModal"
+import { OnboardingModal } from "./onboarding/OnboardingModal"
 import { useCacheActions } from "@/hooks/useCache"
 import { useWebsiteContext } from "@/contexts/WebsiteContext"
 import { getWebsiteDisplayUrl } from "@/lib/utils/formatters"
@@ -127,7 +127,7 @@ export function SiteSwitcher({
           </SidebarMenuItem>
         </SidebarMenu>
 
-        <CreateWebsiteModal
+        <OnboardingModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onSuccess={handleCreateSuccess}
@@ -232,7 +232,7 @@ export function SiteSwitcher({
         </SidebarMenuItem>
       </SidebarMenu>
 
-      <CreateWebsiteModal
+      <OnboardingModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSuccess={handleCreateSuccess}

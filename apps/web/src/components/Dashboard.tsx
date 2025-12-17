@@ -52,7 +52,7 @@ import {
 import { FormActions } from "@/components/ui/form-actions";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { SectionsTab } from "@/components/sections/SectionsTab";
-import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
+import { PresetOnboardingRouter } from "@/components/onboarding/presets";
 
 export default function Dashboard() {
   // Use website context for synchronized data
@@ -308,8 +308,8 @@ export default function Dashboard() {
   // Show onboarding flow for users without any websites
   if (!isLoading && websites.length === 0) {
     return (
-      <OnboardingFlow 
-        onComplete={(newWebsiteId) => {
+      <PresetOnboardingRouter 
+        onComplete={(_newWebsiteId: string) => {
           // Refetch websites to get the new one
           refetchAll();
         }} 

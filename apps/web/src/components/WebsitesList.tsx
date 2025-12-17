@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useWebsites } from '@/hooks/useCache';
 import type { Website } from '@/lib/api';
 import { WebsiteCard } from './WebsiteCard';
-import { CreateWebsiteModal } from './CreateWebsiteModal';
+import { OnboardingModal } from './onboarding/OnboardingModal';
 import { EmptyState } from './EmptyState';
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -152,8 +152,8 @@ export function WebsitesList({ onSelectWebsite }: WebsitesListProps) {
         </div>
       )}
 
-      {/* Create website modal */}
-      <CreateWebsiteModal
+      {/* Onboarding modal */}
+      <OnboardingModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSuccess={handleWebsiteCreated}
