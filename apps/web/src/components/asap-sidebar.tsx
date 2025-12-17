@@ -1,13 +1,16 @@
 import * as React from "react"
 import {
   Home,
-  Cloud,
+  ImageIcon,
   Puzzle,
-  Github,
+  Link,
   BookOpen,
   Mail,
   BarChart3,
   Palette,
+  Pencil,
+  Settings,
+  FileText,
 } from "lucide-react"
 
 import {
@@ -21,27 +24,23 @@ import {
   SidebarGroupLabel,
   SidebarGroupContent,
   SidebarRail,
+  SidebarSeparator,
 } from "@/components/ui/sidebar"
 import { SiteSwitcher } from "@/components/SiteSwitcher"
 import { PagesList } from "@/components/PagesList"
-import type { WebsiteModule, Website, Page } from "@/lib/api"
+import type { WebsiteExtension, Website, Page } from "@/lib/api"
 
-// Icon mapping for modules
-const moduleIcons: Record<string, React.ElementType> = {
-  'github': Github,
-  'github-sync': Github,
-  'blog': BookOpen,
-  'blog-engine': BookOpen,
-  'contact': Mail,
-  'contact-form': Mail,
+// Icon mapping for extension categories (same as ExtensionsManager)
+const categoryIcons: Record<string, React.ElementType> = {
+  'integration': Link,
+  'content': BookOpen,
+  'engagement': Mail,
   'analytics': BarChart3,
-  'analytics-tracker': BarChart3,
-  'theme': Palette,
-  'theme-engine': Palette,
+  'appearance': Palette,
 }
 
 interface AsapSidebarProps {
-  modules?: WebsiteModule[]
+  extensions?: WebsiteExtension[]
   websites?: Website[]
   currentWebsite?: Website | null
   onWebsiteChange?: (website: Website) => void
@@ -51,7 +50,7 @@ interface AsapSidebarProps {
 }
 
 export function AsapSidebar({ 
-  modules = [], 
+  extensions = [], 
   websites = [],
   currentWebsite = null,
   onWebsiteChange,
@@ -59,26 +58,13 @@ export function AsapSidebar({
   currentPageId,
   onPageSelect
 }: AsapSidebarProps) {
-  const navMain = [
-    {
-      title: "Dashboard",
-      url: "/app/dashboard",
-      icon: Home,
-    },
-    {
-      title: "Modules",
-      url: "/app/modules",
-      icon: Puzzle,
-    },
-    {
-      title: "Cloud",
-      url: "/app/cloud",
-      icon: Cloud,
-    },
-  ]
+  // Filter enabled extensions
+  const enabledExtensions = extensions.filter(e => e.enabled)
 
-  // Filter enabled modules
-  const enabledModules = modules.filter(m => m.enabled)
+  // Get icon for an extension based on its category
+  const getExtensionIcon = (category: string): React.ElementType => {
+    return categoryIcons[category] || Puzzle
+  }
 
   return (
     <Sidebar collapsible="icon">
@@ -91,25 +77,111 @@ export function AsapSidebar({
         />
       </SidebarHeader>
       <SidebarContent>
-        {/* Main Navigation */}
+        {/* Accueil */}
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navMain.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild tooltip={item.title}>
-                    <a href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Accueil">
+                  <a href="/app/dashboard">
+                    <Home />
+                    <span>Accueil</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Pages - Only show when a website is selected */}
+        {/* Création - Only when website selected */}
+        {currentWebsite && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Création</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Studio">
+                    <a href="/app/studio">
+                      <Pencil />
+                      <span>Studio</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Pages">
+                    <a href="/app/pages">
+                      <FileText />
+                      <span>Pages</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Médias">
+                    <a href="/app/cloud">
+                      <ImageIcon />
+                      <span>Médias</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* Configuration */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Configuration</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {currentWebsite && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Paramètres">
+                    <a href="/app/settings">
+                      <Settings />
+                      <span>Paramètres</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Extensions">
+                  <a href="/app/extensions">
+                    <Puzzle />
+                    <span>Extensions</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Active Extensions */}
+        {enabledExtensions.length > 0 && (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {enabledExtensions.map((extension) => {
+                    const IconComponent = getExtensionIcon(extension.category)
+                    return (
+                      <SidebarMenuItem key={extension.id}>
+                        <SidebarMenuButton asChild tooltip={extension.extension_name}>
+                          <a href={`/app/extensions/${extension.extension_slug}`}>
+                            <IconComponent />
+                            <span>{extension.extension_name}</span>
+                          </a>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
+
+        {/* Pages List - Collapsible when website selected */}
         {currentWebsite && (
           <PagesList
             websiteId={currentWebsite.id}
@@ -117,30 +189,6 @@ export function AsapSidebar({
             currentPageId={currentPageId}
             onPageSelect={onPageSelect}
           />
-        )}
-
-        {/* Dynamic Modules */}
-        {enabledModules.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Modules</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {enabledModules.map((module) => {
-                  const IconComponent = moduleIcons[module.module_slug] || Puzzle
-                  return (
-                    <SidebarMenuItem key={module.id}>
-                      <SidebarMenuButton asChild tooltip={module.module_name}>
-                        <a href={`/app/modules/${module.module_slug}`}>
-                          <IconComponent />
-                          <span>{module.module_name}</span>
-                        </a>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
         )}
       </SidebarContent>
       <SidebarRail />

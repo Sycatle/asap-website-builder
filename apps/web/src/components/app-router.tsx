@@ -4,17 +4,17 @@ import { Loader2 } from "lucide-react"
 
 // Lazy load page components
 const Dashboard = lazy(() => import("@/components/Dashboard"))
-const ModulesManager = lazy(() => import("@/components/ModulesManager"))
-const ModuleConfig = lazy(() => import("@/components/ModuleConfig"))
+const ExtensionsManager = lazy(() => import("@/components/ExtensionsManager"))
+const ExtensionConfig = lazy(() => import("@/components/ExtensionConfig"))
 const CloudManager = lazy(() => import("@/components/CloudManager"))
-const PreviewPage = lazy(() => import("@/components/preview/PreviewPage"))
+const StudioPage = lazy(() => import("@/components/studio/StudioPage"))
 
 type Route = 
   | { page: "dashboard" }
-  | { page: "modules" }
-  | { page: "module-config"; moduleSlug: string }
+  | { page: "extensions" }
+  | { page: "extension-config"; extensionSlug: string }
   | { page: "cloud" }
-  | { page: "preview" }
+  | { page: "studio" }
   | { page: "not-found" }
 
 function parseRoute(pathname: string): Route {
@@ -27,14 +27,15 @@ function parseRoute(pathname: string): Route {
     return { page: "dashboard" }
   }
   
-  if (path === "/app/modules") {
-    return { page: "modules" }
+  // Extensions routes
+  if (path === "/app/extensions") {
+    return { page: "extensions" }
   }
   
-  // Match /app/modules/:slug
-  const moduleMatch = path.match(/^\/app\/modules\/([^/]+)$/)
-  if (moduleMatch) {
-    return { page: "module-config", moduleSlug: moduleMatch[1] }
+  // Match /app/extensions/:slug
+  const extensionMatch = path.match(/^\/app\/extensions\/([^/]+)$/)
+  if (extensionMatch) {
+    return { page: "extension-config", extensionSlug: extensionMatch[1] }
   }
   
   // Website page merged into dashboard
@@ -51,9 +52,14 @@ function parseRoute(pathname: string): Route {
     return { page: "dashboard" }
   }
   
-  // Preview page
+  // Studio page (real-time editor)
+  if (path === "/app/studio") {
+    return { page: "studio" }
+  }
+  
+  // Legacy preview route - redirect to studio
   if (path === "/app/preview") {
-    return { page: "preview" }
+    return { page: "studio" }
   }
   
   return { page: "not-found" }
@@ -62,15 +68,15 @@ function parseRoute(pathname: string): Route {
 function getPageTitle(route: Route): string {
   switch (route.page) {
     case "dashboard":
-      return "Dashboard"
-    case "modules":
-      return "Modules"
-    case "module-config":
-      return "Configuration du module"
+      return "Tableau de bord"
+    case "extensions":
+      return "Extensions"
+    case "extension-config":
+      return "Configuration de l'extension"
     case "cloud":
       return "Fichiers"
-    case "preview":
-      return "Aperçu"
+    case "studio":
+      return "Studio"
     default:
       return "Page non trouvée"
   }
@@ -79,20 +85,20 @@ function getPageTitle(route: Route): string {
 function getBreadcrumbs(route: Route): { label: string; href?: string }[] {
   switch (route.page) {
     case "dashboard":
-      return [{ label: "Dashboard" }]
-    case "modules":
-      return [{ label: "Modules" }]
-    case "module-config":
+      return [{ label: "Tableau de bord" }]
+    case "extensions":
+      return [{ label: "Extensions" }]
+    case "extension-config":
       return [
-        { label: "Modules", href: "/app/modules" },
-        { label: route.moduleSlug }
+        { label: "Extensions", href: "/app/extensions" },
+        { label: route.extensionSlug }
       ]
     case "cloud":
       return [{ label: "Fichiers" }]
-    case "preview":
+    case "studio":
       return [
-        { label: "Dashboard", href: "/app/dashboard" },
-        { label: "Aperçu" }
+        { label: "Tableau de bord", href: "/app/dashboard" },
+        { label: "Studio" }
       ]
     default:
       return [{ label: "Page non trouvée" }]
@@ -133,14 +139,14 @@ function PageContent({ route }: { route: Route }) {
   switch (route.page) {
     case "dashboard":
       return <Dashboard />
-    case "modules":
-      return <ModulesManager />
-    case "module-config":
-      return <ModuleConfig slug={route.moduleSlug} />
+    case "extensions":
+      return <ExtensionsManager />
+    case "extension-config":
+      return <ExtensionConfig slug={route.extensionSlug} />
     case "cloud":
       return <CloudManager />
-    case "preview":
-      return <PreviewPage onBack={() => navigate("/app/dashboard")} />
+    case "studio":
+      return <StudioPage onBack={() => navigate("/app/dashboard")} />
     case "not-found":
       return <NotFound />
   }

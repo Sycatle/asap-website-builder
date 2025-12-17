@@ -54,7 +54,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { filesAPI, websitesAPI, modulesAPI, authAPI, accountsAPI, type QuotaUsage, type FileMetadata, type Website, type WebsiteModule } from "@/lib/api"
+import { filesAPI, websitesAPI, extensionsAPI, authAPI, accountsAPI, type QuotaUsage, type FileMetadata, type Website, type WebsiteExtension } from "@/lib/api"
 import { formatBytes } from "@/lib/utils/formatters"
 import { FilePickerDialog } from "@/components/file-picker-dialog"
 
@@ -98,7 +98,7 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
   const [quota, setQuota] = useState<QuotaUsage | null>(null)
   const [files, setFiles] = useState<FileMetadata[]>([])
   const [websites, setWebsites] = useState<Website[]>([])
-  const [modules, setModules] = useState<WebsiteModule[]>([])
+  const [extensions, setExtensions] = useState<WebsiteExtension[]>([])
 
   // Load data when modal opens
   useEffect(() => {
@@ -127,16 +127,16 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
         }))
       }
       
-      // Load modules for the first website
-      let modulesData: WebsiteModule[] = []
+      // Load extensions for the first website
+      let extensionsData: WebsiteExtension[] = []
       if (websitesData.length > 0) {
-        modulesData = await modulesAPI.listForWebsite(websitesData[0].id).catch(() => [])
+        extensionsData = await extensionsAPI.listForWebsite(websitesData[0].id).catch(() => [])
       }
       
       setQuota(quotaData)
       setFiles(filesData)
       setWebsites(websitesData)
-      setModules(modulesData)
+      setExtensions(extensionsData)
     } catch (error) {
       console.error('Failed to load settings data:', error)
     } finally {
@@ -253,7 +253,7 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
               {activeTab === 'security' && <SecuritySettings />}
               {activeTab === 'billing' && <BillingSettings />}
               {activeTab === 'cloud' && <CloudSettings quota={quota} files={files} isLoading={isLoading} />}
-              {activeTab === 'plan' && <PlanSettings quota={quota} websites={websites} modules={modules} isLoading={isLoading} />}
+              {activeTab === 'plan' && <PlanSettings quota={quota} websites={websites} extensions={extensions} isLoading={isLoading} />}
               {activeTab === 'notifications' && <NotificationsSettings />}
               {activeTab === 'appearance' && <AppearanceSettings />}
             </div>
@@ -982,12 +982,12 @@ function CloudSettings({ quota, files, isLoading }: CloudSettingsProps) {
 interface PlanSettingsProps {
   quota: QuotaUsage | null
   websites: Website[]
-  modules: WebsiteModule[]
+  extensions: WebsiteExtension[]
   isLoading: boolean
 }
 
-function PlanSettings({ quota, websites, modules, isLoading }: PlanSettingsProps) {
-  const enabledModules = modules.filter(m => m.enabled).length
+function PlanSettings({ quota, websites, extensions, isLoading }: PlanSettingsProps) {
+  const enabledExtensions = extensions.filter(e => e.enabled).length
   
   // For now, assume free plan limits (can be enhanced with actual plan data from API)
   const plan = {
@@ -1125,8 +1125,8 @@ function PlanSettings({ quota, websites, modules, isLoading }: PlanSettingsProps
           </div>
           <div>
             <div className="flex justify-between text-xs sm:text-sm mb-1">
-              <span>Modules actifs</span>
-              <span>{enabledModules}</span>
+              <span>Extensions actives</span>
+              <span>{enabledExtensions}</span>
             </div>
           </div>
         </CardContent>

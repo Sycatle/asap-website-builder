@@ -230,7 +230,7 @@ function FeaturesSection() {
     },
     {
       icon: Puzzle,
-      title: 'Modules extensibles',
+      title: 'Extensions modulaires',
       description: 'Analytics, thèmes premium, projections : activez uniquement ce dont vous avez besoin.',
     },
     {

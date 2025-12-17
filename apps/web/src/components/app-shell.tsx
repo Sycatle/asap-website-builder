@@ -41,7 +41,7 @@ interface AppShellProps {
 const shortcuts = [
   { category: "Navigation", items: [
     { keys: ["g", "d"], description: "Aller au Dashboard" },
-    { keys: ["g", "m"], description: "Aller aux Modules" },
+    { keys: ["g", "e"], description: "Aller aux Extensions" },
     { keys: ["g", "c"], description: "Aller au Cloud" },
   ]},
   { category: "Actions", items: [
@@ -110,7 +110,7 @@ function AppShellContent({
   
   // Get data from context
   const { 
-    enabledModules,
+    enabledExtensions,
     websites,
     currentWebsite,
     setCurrentWebsite,
@@ -154,7 +154,7 @@ function AppShellContent({
       key: 'g',
       action: () => {
         setPendingGoTo(true)
-        toast.info('Go to... (d: Dashboard, m: Modules, c: Cloud)', { duration: 2000 })
+        toast.info('Go to... (d: Dashboard, e: Extensions, c: Cloud)', { duration: 2000 })
         // Auto-reset after 2 seconds
         setTimeout(() => setPendingGoTo(false), 2000)
       }
@@ -170,10 +170,10 @@ function AppShellContent({
       }
     },
     {
-      key: 'm',
+      key: 'e',
       action: () => {
         if (pendingGoTo) {
-          window.location.href = '/app/modules'
+          window.location.href = '/app/extensions'
           setPendingGoTo(false)
         }
       }
@@ -201,7 +201,7 @@ function AppShellContent({
   return (
     <>
       <AsapSidebar 
-        modules={enabledModules}
+        extensions={enabledExtensions}
         websites={websites}
         currentWebsite={currentWebsite}
         onWebsiteChange={setCurrentWebsite}

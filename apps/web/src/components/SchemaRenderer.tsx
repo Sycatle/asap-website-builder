@@ -5,7 +5,7 @@ import type {
   ConfigAction, 
   DataDisplay,
   DataDisplayField 
-} from '../lib/api/modules';
+} from '../lib/api/extensions';
 
 interface SchemaRendererProps {
   schema: ConfigSchema;
