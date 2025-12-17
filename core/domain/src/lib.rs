@@ -9,8 +9,8 @@ pub mod extension_schema;
 pub use users::{Account, AccountData};
 pub use websites::{
     Website, WebsiteData, WebsiteStatus, CreationMode,
-    Extension, WebsiteExtension, WebsiteSection, SectionType, SectionLayout,
-    Preset, PresetConfig, PresetSectionConfig,
+    Extension, WebsiteExtension, WebsiteElement, ElementType, ElementLayout,
+    Preset, PresetConfig, PresetElementConfig,
 };
 pub use events::{Event, EventType};
 pub use integrations::{Integration, GitHubIntegration};

@@ -92,10 +92,10 @@ pub struct WebsiteExtension {
     pub updated_at: DateTime<Utc>,
 }
 
-/// Section type for website content blocks
+/// Element type for website content blocks
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-pub enum SectionType {
+pub enum ElementType {
     Hero,
     About,
     Projects,
@@ -112,16 +112,16 @@ pub enum SectionType {
     Custom,
 }
 
-impl Default for SectionType {
+impl Default for ElementType {
     fn default() -> Self {
         Self::Custom
     }
 }
 
-/// Section layout options
+/// Element layout options
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-pub enum SectionLayout {
+pub enum ElementLayout {
     Full,
     Split,
     Grid,
@@ -131,23 +131,23 @@ pub enum SectionLayout {
     Custom,
 }
 
-impl Default for SectionLayout {
+impl Default for ElementLayout {
     fn default() -> Self {
         Self::Full
     }
 }
 
-/// WebsiteSection represents a content block within a website
+/// WebsiteElement represents a content block within a website
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WebsiteSection {
+pub struct WebsiteElement {
     pub id: Uuid,
     pub website_id: Uuid,
     pub module_id: Option<Uuid>,
-    pub section_type: SectionType,
+    pub element_type: ElementType,
     pub slug: String,
     pub title: String,
     pub order: i32,
-    pub layout: SectionLayout,
+    pub layout: ElementLayout,
     pub settings: serde_json::Value,
     pub data: serde_json::Value,
     pub visible: bool,
@@ -159,18 +159,18 @@ pub struct WebsiteSection {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PresetConfig {
     pub modules: Vec<String>,
-    pub sections: Vec<PresetSectionConfig>,
+    pub elements: Vec<PresetElementConfig>,
     pub default_settings: serde_json::Value,
 }
 
-/// Section configuration within a preset
+/// Element configuration within a preset
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PresetSectionConfig {
-    pub section_type: SectionType,
+pub struct PresetElementConfig {
+    pub element_type: ElementType,
     pub slug: String,
     pub title: String,
     pub order: i32,
-    pub layout: SectionLayout,
+    pub layout: ElementLayout,
     pub settings: serde_json::Value,
 }
 
@@ -353,7 +353,7 @@ mod tests {
         let mut website_data = WebsiteData::new(website_id);
         website_data.data = serde_json::json!({
             "title": "My Website",
-            "sections": ["about", "projects", "contact"]
+            "elements": ["about", "projects", "contact"]
         });
 
         let serialized = serde_json::to_string(&website_data).unwrap();
@@ -421,42 +421,42 @@ mod tests {
     }
 
     #[test]
-    fn test_section_types() {
-        let section_types = vec![
-            SectionType::Hero,
-            SectionType::About,
-            SectionType::Projects,
-            SectionType::Skills,
-            SectionType::Experience,
-            SectionType::Education,
-            SectionType::Contact,
-            SectionType::Blog,
-            SectionType::Gallery,
-            SectionType::Testimonials,
-            SectionType::Services,
-            SectionType::Pricing,
-            SectionType::Faq,
-            SectionType::Custom,
+    fn test_element_types() {
+        let element_types = vec![
+            ElementType::Hero,
+            ElementType::About,
+            ElementType::Projects,
+            ElementType::Skills,
+            ElementType::Experience,
+            ElementType::Education,
+            ElementType::Contact,
+            ElementType::Blog,
+            ElementType::Gallery,
+            ElementType::Testimonials,
+            ElementType::Services,
+            ElementType::Pricing,
+            ElementType::Faq,
+            ElementType::Custom,
         ];
 
-        for section_type in section_types {
-            let serialized = serde_json::to_string(&section_type).unwrap();
-            let deserialized: SectionType = serde_json::from_str(&serialized).unwrap();
-            assert_eq!(section_type, deserialized);
+        for element_type in element_types {
+            let serialized = serde_json::to_string(&element_type).unwrap();
+            let deserialized: ElementType = serde_json::from_str(&serialized).unwrap();
+            assert_eq!(element_type, deserialized);
         }
     }
 
     #[test]
-    fn test_website_section_creation() {
-        let section = WebsiteSection {
+    fn test_website_element_creation() {
+        let element = WebsiteElement {
             id: Uuid::new_v4(),
             website_id: Uuid::new_v4(),
             module_id: Some(Uuid::new_v4()),
-            section_type: SectionType::Projects,
+            element_type: ElementType::Projects,
             slug: "projects".to_string(),
             title: "My Projects".to_string(),
             order: 1,
-            layout: SectionLayout::Grid,
+            layout: ElementLayout::Grid,
             settings: serde_json::json!({}),
             data: serde_json::json!({}),
             visible: true,
@@ -464,9 +464,9 @@ mod tests {
             updated_at: Utc::now(),
         };
 
-        assert_eq!(section.section_type, SectionType::Projects);
-        assert_eq!(section.layout, SectionLayout::Grid);
-        assert!(section.visible);
+        assert_eq!(element.element_type, ElementType::Projects);
+        assert_eq!(element.layout, ElementLayout::Grid);
+        assert!(element.visible);
     }
 
     #[test]
@@ -479,21 +479,21 @@ mod tests {
             category: "professional".to_string(),
             config: PresetConfig {
                 modules: vec!["github-sync".to_string(), "analytics-tracker".to_string()],
-                sections: vec![
-                    PresetSectionConfig {
-                        section_type: SectionType::Hero,
+                elements: vec![
+                    PresetElementConfig {
+                        element_type: ElementType::Hero,
                         slug: "hero".to_string(),
                         title: "Welcome".to_string(),
                         order: 0,
-                        layout: SectionLayout::Full,
+                        layout: ElementLayout::Full,
                         settings: serde_json::json!({}),
                     },
-                    PresetSectionConfig {
-                        section_type: SectionType::Projects,
+                    PresetElementConfig {
+                        element_type: ElementType::Projects,
                         slug: "projects".to_string(),
                         title: "Projects".to_string(),
                         order: 1,
-                        layout: SectionLayout::Grid,
+                        layout: ElementLayout::Grid,
                         settings: serde_json::json!({}),
                     },
                 ],
@@ -507,7 +507,7 @@ mod tests {
 
         assert_eq!(preset.name, "Developer Website");
         assert_eq!(preset.config.modules.len(), 2);
-        assert_eq!(preset.config.sections.len(), 2);
+        assert_eq!(preset.config.elements.len(), 2);
         assert!(preset.enabled);
     }
 
@@ -515,7 +515,7 @@ mod tests {
     fn test_preset_config_serialization() {
         let config = PresetConfig {
             modules: vec!["github-sync".to_string()],
-            sections: vec![],
+            elements: vec![],
             default_settings: serde_json::json!({}),
         };
 

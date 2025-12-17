@@ -26,11 +26,11 @@ pub enum EventType {
     // GitHub events
     GitHubSyncRequested,
     
-    // Section events
-    SectionCreated,
-    SectionUpdated,
-    SectionDeleted,
-    SectionReordered,
+    // Element events
+    ElementCreated,
+    ElementUpdated,
+    ElementDeleted,
+    ElementReordered,
     
     // Preset events
     PresetApplied,
@@ -81,10 +81,10 @@ mod tests {
             EventType::ModuleActivated,
             EventType::ModuleDeactivated,
             EventType::ModuleConfigured,
-            EventType::SectionCreated,
-            EventType::SectionUpdated,
-            EventType::SectionDeleted,
-            EventType::SectionReordered,
+            EventType::ElementCreated,
+            EventType::ElementUpdated,
+            EventType::ElementDeleted,
+            EventType::ElementReordered,
             EventType::PresetApplied,
         ];
 
@@ -204,10 +204,10 @@ mod tests {
             Event::new(account_id, EventType::ModuleActivated, serde_json::json!({})),
             Event::new(account_id, EventType::ModuleDeactivated, serde_json::json!({})),
             Event::new(account_id, EventType::ModuleConfigured, serde_json::json!({})),
-            Event::new(account_id, EventType::SectionCreated, serde_json::json!({})),
-            Event::new(account_id, EventType::SectionUpdated, serde_json::json!({})),
-            Event::new(account_id, EventType::SectionDeleted, serde_json::json!({})),
-            Event::new(account_id, EventType::SectionReordered, serde_json::json!({})),
+            Event::new(account_id, EventType::ElementCreated, serde_json::json!({})),
+            Event::new(account_id, EventType::ElementUpdated, serde_json::json!({})),
+            Event::new(account_id, EventType::ElementDeleted, serde_json::json!({})),
+            Event::new(account_id, EventType::ElementReordered, serde_json::json!({})),
             Event::new(account_id, EventType::PresetApplied, serde_json::json!({})),
         ];
 
