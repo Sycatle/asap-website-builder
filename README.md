@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/status-Backend%20Complete%20|%20Frontend%20In%20Progress-blue" alt="Status">
+  <img src="https://img.shields.io/badge/status-MVP%20Complete-success" alt="Status">
   <img src="https://img.shields.io/badge/license-Open--Core-blue" alt="License">
   <img src="https://img.shields.io/badge/rust-1.70+-orange" alt="Rust">
   <img src="https://img.shields.io/badge/tests-100%2B%20passing-green" alt="Tests">
@@ -263,14 +263,19 @@ asap/
 │   ├── analytics/                 # Analytics
 │   └── projections/               # Génération projections
 │
+├── packages/                      # Packages TypeScript partagés
+│   ├── shared/                    # @asap/shared - Types, constantes, utils
+│   └── renderers/                 # @asap/renderers - 14 renderers sections
+│
 ├── apps/                          # Applications
-│   ├── api/                       # Core API executable
-│   ├── worker/                    # Module task executor
-│   └── web/                       # Frontend Astro (React + TypeScript)
+│   ├── api/                       # Core API executable (Rust)
+│   ├── worker/                    # Module task executor (Rust)
+│   ├── web/                       # Dashboard Astro (React + TypeScript)
+│   └── sites/                     # Sites publics Astro
 │
 ├── infra/                         # Infrastructure
 │   ├── docker-compose.yml
-│   ├── migrations/                # 6 migrations SQL
+│   ├── migrations/                # 8+ migrations SQL
 │   └── env.example
 │
 ├── data/                          # Runtime (non versionné)
@@ -285,12 +290,13 @@ asap/
 | Dossier | Responsabilité |
 |---------|-----------------|
 | `core/` | Gestion utilisateurs, websites, sections, modules, événements (open-source) |
-| `core/domain/` | Types métier: Website, WebsiteSection, WebsiteModule, Preset, etc. |
-| `core/shared/` | Configuration centralisée, JWT, gestion des erreurs |
+| `packages/shared/` | Types, constantes, utilitaires partagés (DRY) |
+| `packages/renderers/` | 14 renderers React pour sections |
 | `modules/` | Implémentent les features (GitHub, Themes, Analytics, Projections) |
 | `apps/api/` | Core API executable (Rust) |
 | `apps/worker/` | Event processor et module executor (Rust) |
-| `apps/web/` | Frontend dashboard + pages publiques (Astro + React) |
+| `apps/web/` | Frontend dashboard (Astro + React) |
+| `apps/sites/` | Sites publics (Astro + React) |
 | `infra/` | Docker, migrations, configuration |
 
 ---
@@ -773,113 +779,44 @@ Site Public
 > **Statut :** Backend complet avec architecture Website/Sections modulaire
 
 - [x] **Core API** (auth, multi-tenant, users, websites, sections, modules, events)
-  - [x] Authentification JWT complète
-  - [x] Gestion utilisateurs et tenants
-  - [x] Architecture Website avec Sections modulaires
-  - [x] Système de Presets (templates prédéfinis)
-  - [x] Catalogue de Modules activables par website
-  - [x] Système d'événements avec retry
-  - [x] Intégrations (GitHub)
-  - [x] File storage avec quotas
 - [x] **Worker** (event processor + module executor)
-  - [x] Event processor avec polling
-  - [x] Traitement parallèle des événements
-  - [x] Module executor framework
-  - [x] Retry mechanism avancé
-- [x] **Modules initiaux**
-  - [x] GitHub Sync (import repos)
-  - [x] Theme Engine (système complet)
-  - [x] Projections (génération JSON)
-  - [x] Analytics Tracker (tracking événements)
-  - [x] Blog Engine (structure)
-  - [x] Contact Form (structure)
-- [x] **Optimisations avancées**
-  - [x] Redis caching pour sites publics
-  - [x] Compression multi-format (gzip, brotli, zstd)
-  - [x] Parallel event processing
-  - [x] Query optimization avec indexes
-  - [x] File storage avec audit trail
-- [x] **Fonctionnalités temps réel**
-  - [x] WebSocket avec authentification JWT
-  - [x] Redis Pub/Sub pour distribution multi-instances
-  - [x] Contrôle d'accès basé sur les comptes
-  - [x] Synchronisation temps réel (websites, modules, fichiers)
-  - [x] Système de notifications in-app et push
-  - [x] Notification queue avec consolidation
-- [x] **Intégration paiements**
-  - [x] Stripe provider intégré
-  - [x] Checkout sessions
-  - [x] Webhooks Stripe
-- [x] **Progressive Web App**
-  - [x] Service Worker (802 lignes)
-  - [x] Manifest complet avec Share Target
-  - [x] Support offline et caching avancé
-  - [x] Score PWA : 93/100
+- [x] **Modules initiaux** (GitHub Sync, Theme Engine, Projections, Analytics, Blog, Contact)
+- [x] **Optimisations** (Redis caching, compression, parallel processing)
+- [x] **Temps réel** (WebSocket, Redis Pub/Sub, notifications)
+- [x] **Paiements** (Stripe integration)
+- [x] **PWA** (Score 93/100)
 
-**📊 Métriques:** 100+ tests unitaires | ~15,000 lignes Rust | 7 migrations SQL
+**📊 Métriques:** 100+ tests | ~15,000 lignes Rust | 8+ migrations SQL
 
-### 🔨 Phase Actuelle - Frontend & UX (En cours)
+### ✅ Phase 5 - Frontend & UX (Terminé)
 
-> **Focus :** Rendre le MVP utilisable avec interface web complète
+> **Statut :** MVP utilisable avec interface web complète
 
-- [x] **Setup Frontend (Astro + React)**
-  - [x] Landing page
-  - [x] Pages signup/login
-  - [x] Client API TypeScript
-  - [x] Store d'authentification
-  - [x] PWA complète (installable, offline)
-  - [x] Hook WebSocket temps réel
-  - [x] Système de notifications UI
-- [ ] **Dashboard principal**
-  - [ ] Dashboard utilisateur
-  - [ ] Sélecteur de Presets
-  - [ ] Éditeur de Sections
-  - [ ] Configuration modules
-  - [ ] Upload fichiers
-  - [ ] Prévisualisation website
-  - [ ] Notifications dropdown
-- [ ] **Pages publiques**
-  - [ ] Website public ([slug])
-  - [ ] SSG optimisé
-- [ ] **Tests E2E**
-  - [ ] Scénarios utilisateur complets
-  - [ ] Tests d'intégration
-- [ ] **CI/CD**
-  - [ ] GitHub Actions
-  - [ ] Deploy automatique
+- [x] **Dashboard principal**
+  - [x] Liste websites avec création/suppression
+  - [x] SiteSwitcher avec dropdown
+  - [x] Gestion sections (CRUD, drag & drop)
+  - [x] Gestion pages (CRUD, homepage)
+  - [x] Preview system complet
+- [x] **Architecture partagée**
+  - [x] @asap/shared - Types, constantes, utils
+  - [x] @asap/renderers - 14 renderers sections
+  - [x] apps/sites - Sites publics séparés
+- [x] **Presets templates**
+  - [x] portfolio-dev
+  - [x] portfolio-minimal
+  - [x] portfolio-freelance
+- [x] **SEO avancé** (Open Graph, Twitter, JSON-LD)
 
-**🎯 Objectif:** MVP démontrable et utilisable
+**🎯 MVP démontrable et utilisable**
 
-### Phase Future - Modules Avancés & Marketplace 📦
+### 📋 Phase 6+ - À venir
 
-> **Focus :** Monétisation et écosystème de modules
-
-- [ ] AI Generator module (text/image avec quotas tokens)
-- [ ] Analytics avancées (page views, heatmaps, funnels)
-- [ ] Custom domains (DNS + SSL automatique)
-- [ ] Module marketplace (thèmes payants, plugins)
-- [ ] Advanced dashboard (graphs, KPIs temps réel)
-- [ ] Rate limiting global
-- [ ] Monitoring production (Prometheus/Grafana)
-
-### Phase Future - Facturation & Enterprise 💳
-
-- [ ] Stripe integration (récurrent + usage-based)
-- [ ] Invoicing automatique
-- [ ] Webhooks publics & API access
-- [ ] Self-hosted licensing
-- [ ] White-label options
-- [ ] Multi-language support
-- [ ] Advanced permissions (RBAC)
-
-### Phase Future - Scale & Global 🌍
-
-- [ ] Edge rendering (Cloudflare Workers)
-- [ ] Custom modules SDK public
-- [ ] Mobile app (React Native)
-- [ ] International expansion
-- [ ] Enterprise features (SSO, audit logs)
-- [ ] Partnerships & intégrations
+- [ ] **Modules avancés** (AI Generator, Analytics)
+- [ ] **Custom domains** (DNS + SSL)
+- [ ] **Marketplace** (thèmes, plugins)
+- [ ] **Enterprise** (RBAC, SSO)
+- [ ] **Mobile** (React Native)
 
 ---
 
