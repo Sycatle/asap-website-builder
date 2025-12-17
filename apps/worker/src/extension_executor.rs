@@ -9,7 +9,7 @@ use sqlx::PgPool;
 
 /// Trait providing metadata about a module executor.
 /// 
-/// This trait should be implemented alongside `ModuleExecutor` to provide
+/// This trait should be implemented alongside `ExtensionExecutor` to provide
 /// information for logging, debugging, and module discovery.
 /// 
 /// The `config_schema()` method returns the UI schema for configuration,
@@ -18,7 +18,7 @@ use sqlx::PgPool;
 /// - Co-location with module logic
 /// - Automatic versioning with the module
 #[allow(dead_code)]
-pub trait ModuleInfo {
+pub trait ExtensionInfo {
     /// The unique slug identifier for this module (e.g., "github-sync")
     fn slug(&self) -> &'static str;
     
@@ -59,10 +59,10 @@ pub trait ModuleInfo {
 
 /// Trait for module executors that process events.
 /// 
-/// Implementors should also implement `ModuleInfo` for metadata.
+/// Implementors should also implement `ExtensionInfo` for metadata.
 #[async_trait::async_trait]
 #[allow(dead_code)]
-pub trait ModuleExecutor: ModuleInfo + Send + Sync {
+pub trait ExtensionExecutor: ExtensionInfo + Send + Sync {
     /// Execute the module logic for the given event.
     /// 
     /// This method is called when an event matching `can_handle` is received.
@@ -71,7 +71,7 @@ pub trait ModuleExecutor: ModuleInfo + Send + Sync {
     
     /// Check if this executor can handle the given event type.
     /// 
-    /// Default implementation uses `handled_events()` from `ModuleInfo`.
+    /// Default implementation uses `handled_events()` from `ExtensionInfo`.
     fn can_handle(&self, event_type: &EventType) -> bool {
         self.handled_events().contains(event_type)
     }
@@ -93,18 +93,18 @@ pub trait ModuleExecutor: ModuleInfo + Send + Sync {
     }
 }
 
-pub struct ModuleExecutorRegistry {
-    executors: Vec<Box<dyn ModuleExecutor>>,
+pub struct ExtensionExecutorRegistry {
+    executors: Vec<Box<dyn ExtensionExecutor>>,
 }
 
-impl ModuleExecutorRegistry {
+impl ExtensionExecutorRegistry {
     pub fn new() -> Self {
         Self {
             executors: Vec::new(),
         }
     }
 
-    pub fn register(&mut self, executor: Box<dyn ModuleExecutor>) {
+    pub fn register(&mut self, executor: Box<dyn ExtensionExecutor>) {
         self.executors.push(executor);
     }
 
@@ -152,7 +152,7 @@ impl GitHubIntegrationExecutor {
     }
 }
 
-impl ModuleInfo for GitHubIntegrationExecutor {
+impl ExtensionInfo for GitHubIntegrationExecutor {
     fn slug(&self) -> &'static str {
         "github-sync"
     }
@@ -246,7 +246,7 @@ impl ModuleInfo for GitHubIntegrationExecutor {
 }
 
 #[async_trait::async_trait]
-impl ModuleExecutor for GitHubIntegrationExecutor {
+impl ExtensionExecutor for GitHubIntegrationExecutor {
 
     async fn execute(&self, event: &Event) -> Result<()> {
         tracing::info!("Processing GitHub integration for event {}", event.id);
@@ -279,7 +279,7 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
                         r#"
                         SELECT mc.config 
                         FROM module_configs mc
-                        JOIN modules m ON mc.module_id = m.id
+                        JOIN extensions m ON mc.module_id = m.id
                         WHERE mc.account_id = $1 AND m.slug = 'github-sync'
                         "#
                     )
@@ -383,18 +383,18 @@ impl ModuleExecutor for GitHubIntegrationExecutor {
 /// NOTE: Prepared for handling website lifecycle events.
 /// Will be fully integrated when website event processing is implemented.
 #[allow(dead_code)]
-pub struct WebsiteModuleExecutor {
+pub struct WebsiteExtensionExecutor {
     pool: PgPool,
 }
 
 #[allow(dead_code)]
-impl WebsiteModuleExecutor {
+impl WebsiteExtensionExecutor {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 }
 
-impl ModuleInfo for WebsiteModuleExecutor {
+impl ExtensionInfo for WebsiteExtensionExecutor {
     fn slug(&self) -> &'static str {
         "website-lifecycle"
     }
@@ -433,7 +433,7 @@ impl ModuleInfo for WebsiteModuleExecutor {
 }
 
 #[async_trait::async_trait]
-impl ModuleExecutor for WebsiteModuleExecutor {
+impl ExtensionExecutor for WebsiteExtensionExecutor {
     async fn execute(&self, event: &Event) -> Result<()> {
         match event.event_type {
             EventType::WebsiteCreated => {
@@ -471,7 +471,7 @@ impl ModuleExecutor for WebsiteModuleExecutor {
                 tracing::info!("Preset {} applied to website {}", preset_id, website_id);
             }
             _ => {
-                tracing::debug!("Unhandled event type in WebsiteModuleExecutor: {:?}", event.event_type);
+                tracing::debug!("Unhandled event type in WebsiteExtensionExecutor: {:?}", event.event_type);
             }
         }
         Ok(())
