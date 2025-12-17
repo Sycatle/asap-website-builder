@@ -25,14 +25,14 @@ pub struct WebsiteWithData {
     pub updated_at: DateTime<Utc>,
 }
 
-/// Website module response
+/// Website extension response
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WebsiteModuleRow {
+pub struct WebsiteExtensionRow {
     pub id: Uuid,
     pub website_id: Uuid,
-    pub module_id: Uuid,
-    pub module_name: String,
-    pub module_slug: String,
+    pub extension_id: Uuid,
+    pub extension_name: String,
+    pub extension_slug: String,
     pub settings: JsonValue,
     pub enabled: bool,
     pub activated_at: DateTime<Utc>,
@@ -43,7 +43,7 @@ pub struct WebsiteModuleRow {
 pub struct WebsiteSectionRow {
     pub id: Uuid,
     pub website_id: Uuid,
-    pub module_id: Option<Uuid>,
+    pub extension_id: Option<Uuid>,
     pub section_type: String,
     pub slug: String,
     pub title: String,
@@ -112,19 +112,19 @@ mod tests {
     }
 
     #[test]
-    fn test_website_module_row_serialization() {
-        let module = WebsiteModuleRow {
+    fn test_website_extension_row_serialization() {
+        let extension = WebsiteExtensionRow {
             id: Uuid::new_v4(),
             website_id: Uuid::new_v4(),
-            module_id: Uuid::new_v4(),
-            module_name: "GitHub Sync".to_string(),
-            module_slug: "github-sync".to_string(),
+            extension_id: Uuid::new_v4(),
+            extension_name: "GitHub Sync".to_string(),
+            extension_slug: "github-sync".to_string(),
             settings: serde_json::json!({"auto_sync": true}),
             enabled: true,
             activated_at: Utc::now(),
         };
 
-        let json = serde_json::to_string(&module).unwrap();
+        let json = serde_json::to_string(&extension).unwrap();
         assert!(json.contains("github-sync"));
         assert!(json.contains("auto_sync"));
     }
@@ -134,7 +134,7 @@ mod tests {
         let section = WebsiteSectionRow {
             id: Uuid::new_v4(),
             website_id: Uuid::new_v4(),
-            module_id: Some(Uuid::new_v4()),
+            extension_id: Some(Uuid::new_v4()),
             section_type: "projects".to_string(),
             slug: "my-projects".to_string(),
             title: "My Projects".to_string(),
@@ -159,7 +159,7 @@ mod tests {
             description: "Perfect for developers".to_string(),
             category: "professional".to_string(),
             config: serde_json::json!({
-                "modules": ["github-sync"],
+                "extensions": ["github-sync"],
                 "sections": []
             }),
             thumbnail_url: Some("https://example.com/thumb.jpg".to_string()),

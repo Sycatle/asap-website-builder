@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State, Extension},
+    extract::{Path, State, Extension as AxumExtension},
     response::IntoResponse,
     http::StatusCode,
     Json,
@@ -11,7 +11,7 @@ use uuid::Uuid;
 use asap_core_shared::Claims;
 
 #[derive(Debug, Serialize)]
-pub struct Module {
+pub struct ExtensionInfo {
     pub id: String,
     pub name: String,
     pub version: String,
@@ -20,20 +20,20 @@ pub struct Module {
 }
 
 #[derive(Debug, Serialize)]
-pub struct ModuleConfig {
-    pub module_id: String,
-    pub module_name: String,
+pub struct ExtensionConfig {
+    pub extension_id: String,
+    pub extension_name: String,
     pub config: serde_json::Value,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct UpdateModuleConfigRequest {
+pub struct UpdateExtensionConfigRequest {
     pub config: serde_json::Value,
 }
 
-pub async fn list_modules(
+pub async fn list_extensions(
     State(pool): State<PgPool>,
-    Extension(claims): Extension<Claims>,
+    AxumExtension(claims): AxumExtension<Claims>,
 ) -> impl IntoResponse {
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
@@ -44,20 +44,20 @@ pub async fn list_modules(
         }
     };
 
-    // Get all modules with their configuration status for this account
+    // Get all extensions with their configuration status for this account
     let result = sqlx::query!(
         r#"
         SELECT 
-            m.id,
-            m.name,
-            m.version,
-            m.description,
-            m.enabled,
-            CASE WHEN mc.id IS NOT NULL THEN true ELSE false END as "has_config!"
-        FROM modules m
-        LEFT JOIN module_configs mc ON m.id = mc.module_id AND mc.account_id = $1
-        WHERE m.enabled = true
-        ORDER BY m.name
+            e.id,
+            e.name,
+            e.version,
+            e.description,
+            e.enabled,
+            CASE WHEN ec.id IS NOT NULL THEN true ELSE false END as "has_config!"
+        FROM extensions e
+        LEFT JOIN extension_configs ec ON e.id = ec.extension_id AND ec.account_id = $1
+        WHERE e.enabled = true
+        ORDER BY e.name
         "#,
         account_id
     )
@@ -65,23 +65,23 @@ pub async fn list_modules(
     .await;
 
     match result {
-        Ok(modules) => {
-            let modules: Vec<serde_json::Value> = modules
+        Ok(extensions) => {
+            let extensions: Vec<serde_json::Value> = extensions
                 .into_iter()
-                .map(|m| serde_json::json!({
-                    "id": m.id.to_string(),
-                    "name": m.name,
-                    "version": m.version,
-                    "description": m.description,
-                    "enabled": m.enabled,
-                    "configured": m.has_config
+                .map(|e| serde_json::json!({
+                    "id": e.id.to_string(),
+                    "name": e.name,
+                    "version": e.version,
+                    "description": e.description,
+                    "enabled": e.enabled,
+                    "configured": e.has_config
                 }))
                 .collect();
 
-            (StatusCode::OK, Json(modules)).into_response()
+            (StatusCode::OK, Json(extensions)).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error listing modules: {}", e);
+            tracing::error!("Database error listing extensions: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()
@@ -89,16 +89,16 @@ pub async fn list_modules(
     }
 }
 
-pub async fn get_module_config(
+pub async fn get_extension_config(
     State(pool): State<PgPool>,
-    Extension(claims): Extension<Claims>,
+    AxumExtension(claims): AxumExtension<Claims>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let module_id = match Uuid::parse_str(&id) {
+    let extension_id = match Uuid::parse_str(&id) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid module ID format"
+                "error": "Invalid extension ID format"
             }))).into_response();
         }
     };
@@ -115,34 +115,34 @@ pub async fn get_module_config(
     let result = sqlx::query!(
         r#"
         SELECT 
-            mc.module_id,
-            m.name,
-            COALESCE(mc.config, '{}'::jsonb) as "config!"
-        FROM modules m
-        LEFT JOIN module_configs mc ON m.id = mc.module_id AND mc.account_id = $1
-        WHERE m.id = $2
+            ec.extension_id,
+            e.name,
+            COALESCE(ec.config, '{}'::jsonb) as "config!"
+        FROM extensions e
+        LEFT JOIN extension_configs ec ON e.id = ec.extension_id AND ec.account_id = $1
+        WHERE e.id = $2
         "#,
         account_id,
-        module_id
+        extension_id
     )
     .fetch_optional(&pool)
     .await;
 
     match result {
         Ok(Some(config)) => {
-            (StatusCode::OK, Json(ModuleConfig {
-                module_id: config.module_id.to_string(),
-                module_name: config.name,
+            (StatusCode::OK, Json(ExtensionConfig {
+                extension_id: config.extension_id.to_string(),
+                extension_name: config.name,
                 config: config.config,
             })).into_response()
         }
         Ok(None) => {
             (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Module not found"
+                "error": "Extension not found"
             }))).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error fetching module config: {}", e);
+            tracing::error!("Database error fetching extension config: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()
@@ -150,17 +150,17 @@ pub async fn get_module_config(
     }
 }
 
-pub async fn update_module_config(
+pub async fn update_extension_config(
     State(pool): State<PgPool>,
-    Extension(claims): Extension<Claims>,
+    AxumExtension(claims): AxumExtension<Claims>,
     Path(id): Path<String>,
-    Json(payload): Json<UpdateModuleConfigRequest>,
+    Json(payload): Json<UpdateExtensionConfigRequest>,
 ) -> impl IntoResponse {
-    let module_id = match Uuid::parse_str(&id) {
+    let extension_id = match Uuid::parse_str(&id) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid module ID format"
+                "error": "Invalid extension ID format"
             }))).into_response();
         }
     };
@@ -174,22 +174,22 @@ pub async fn update_module_config(
         }
     };
 
-    // Verify module exists
-    let module_exists = sqlx::query!(
-        "SELECT id FROM modules WHERE id = $1 AND enabled = true",
-        module_id
+    // Verify extension exists
+    let extension_exists = sqlx::query!(
+        "SELECT id FROM extensions WHERE id = $1 AND enabled = true",
+        extension_id
     )
     .fetch_optional(&pool)
     .await;
 
-    match module_exists {
+    match extension_exists {
         Ok(None) => {
             return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Module not found or disabled"
+                "error": "Extension not found or disabled"
             }))).into_response();
         }
         Err(e) => {
-            tracing::error!("Database error verifying module: {}", e);
+            tracing::error!("Database error verifying extension: {}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response();
@@ -197,16 +197,16 @@ pub async fn update_module_config(
         _ => {}
     }
 
-    // Insert or update module config
+    // Insert or update extension config
     let result = sqlx::query!(
         r#"
-        INSERT INTO module_configs (account_id, module_id, config)
+        INSERT INTO extension_configs (account_id, extension_id, config)
         VALUES ($1, $2, $3)
-        ON CONFLICT (account_id, module_id)
+        ON CONFLICT (account_id, extension_id)
         DO UPDATE SET config = $3, updated_at = now()
         "#,
         account_id,
-        module_id,
+        extension_id,
         payload.config
     )
     .execute(&pool)
@@ -214,13 +214,13 @@ pub async fn update_module_config(
 
     match result {
         Ok(_) => {
-            tracing::info!("Module config updated: {} for account {}", module_id, account_id);
+            tracing::info!("Extension config updated: {} for account {}", extension_id, account_id);
             (StatusCode::OK, Json(serde_json::json!({
-                "message": "Module configuration updated successfully"
+                "message": "Extension configuration updated successfully"
             }))).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error updating module config: {}", e);
+            tracing::error!("Database error updating extension config: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()

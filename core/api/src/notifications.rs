@@ -767,11 +767,11 @@ pub async fn create_welcome_notification(pool: &PgPool, account_id: Uuid) -> Res
         pool,
         account_id,
         "Bienvenue sur ASAP ! 🎉",
-        "Créez votre site web professionnel en quelques minutes. Explorez les modules disponibles pour personnaliser votre site.",
+        "Créez votre site web professionnel en quelques minutes. Explorez les extensions disponibles pour personnaliser votre site.",
         "welcome_message",
         "system",
         "normal",
-        Some("/app/modules"),
+        Some("/app/extensions"),
         Some("sparkles"),
     ).await?;
     
@@ -915,22 +915,22 @@ pub async fn create_new_login_notification(pool: &PgPool, account_id: Uuid, devi
 }
 
 // ============================================================================
-// Module Notifications
+// Extension Notifications
 // ============================================================================
 
-/// Queue notification for module activated (uses queue for consolidation)
-pub async fn create_module_activated_notification(pool: &PgPool, account_id: Uuid, module_name: &str) -> Result<(), sqlx::Error> {
-    let dedup_key = format!("module:{}", module_name.to_lowercase());
+/// Queue notification for extension activated (uses queue for consolidation)
+pub async fn create_extension_activated_notification(pool: &PgPool, account_id: Uuid, extension_name: &str) -> Result<(), sqlx::Error> {
+    let dedup_key = format!("extension:{}", extension_name.to_lowercase());
     
     queue_notification(
         pool,
         account_id,
-        &format!("Module {} activé ✓", module_name),
-        &format!("Le module {} a été activé sur votre site. Configurez-le pour commencer à l'utiliser.", module_name),
-        "module_activated",
-        "module",
+        &format!("Extension {} activée ✓", extension_name),
+        &format!("L'extension {} a été activée sur votre site. Configurez-la pour commencer à l'utiliser.", extension_name),
+        "extension_activated",
+        "extension",
         "normal",
-        Some("/app/modules"),
+        Some("/app/extensions"),
         Some("puzzle"),
         &dedup_key,
     ).await?;
@@ -938,19 +938,19 @@ pub async fn create_module_activated_notification(pool: &PgPool, account_id: Uui
     Ok(())
 }
 
-/// Queue notification for module deactivated (uses queue for consolidation)
-pub async fn create_module_deactivated_notification(pool: &PgPool, account_id: Uuid, module_name: &str) -> Result<(), sqlx::Error> {
-    let dedup_key = format!("module:{}", module_name.to_lowercase());
+/// Queue notification for extension deactivated (uses queue for consolidation)
+pub async fn create_extension_deactivated_notification(pool: &PgPool, account_id: Uuid, extension_name: &str) -> Result<(), sqlx::Error> {
+    let dedup_key = format!("extension:{}", extension_name.to_lowercase());
     
     queue_notification(
         pool,
         account_id,
-        &format!("Module {} désactivé", module_name),
-        &format!("Le module {} a été désactivé de votre site.", module_name),
-        "module_deactivated",
-        "module",
+        &format!("Extension {} désactivée", extension_name),
+        &format!("L'extension {} a été désactivée de votre site.", extension_name),
+        "extension_deactivated",
+        "extension",
         "low",
-        Some("/app/modules"),
+        Some("/app/extensions"),
         Some("puzzle"),
         &dedup_key,
     ).await?;

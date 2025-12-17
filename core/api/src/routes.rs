@@ -58,11 +58,11 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         .route("/websites/:id", put(crate::websites::update_website))
         .route("/websites/:id/data", patch(crate::websites::patch_website_data))
         .route("/websites/:id/publish", post(crate::websites::publish_website))
-        // Website modules routes (LEGACY - kept for backward compatibility)
-        .route("/websites/:id/modules", get(crate::websites::list_website_modules))
-        .route("/websites/:id/modules", post(crate::websites::activate_module))
-        .route("/websites/:id/modules/:module_id", patch(crate::websites::update_website_module))
-        .route("/websites/:id/modules/:module_id", delete(crate::websites::deactivate_module))
+        // Website extensions routes
+        .route("/websites/:id/extensions", get(crate::websites::list_website_extensions))
+        .route("/websites/:id/extensions", post(crate::websites::activate_extension))
+        .route("/websites/:id/extensions/:extension_id", patch(crate::websites::update_website_extension))
+        .route("/websites/:id/extensions/:extension_id", delete(crate::websites::deactivate_extension))
         // Website sections routes
         .route("/websites/:id/sections", get(crate::websites::list_website_sections))
         .route("/websites/:id/sections", post(crate::websites::create_section))
@@ -79,20 +79,20 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         // Presets routes
         .route("/presets", get(crate::websites::list_presets))
         .route("/websites/from-preset", post(crate::websites::create_website_from_preset))
-        // Module catalog routes
-        .route("/modules/catalog", get(crate::websites::list_available_modules))
-        .route("/modules/:slug", get(crate::websites::get_module_by_slug))
-        // Website module data and actions
-        .route("/websites/:id/modules/:module_slug/data", get(crate::websites::get_website_module_data))
-        .route("/websites/:id/modules/:module_slug/actions/:action_key", post(crate::websites::execute_module_action))
+        // Extension catalog routes
+        .route("/extensions/catalog", get(crate::websites::list_available_extensions))
+        .route("/extensions/:slug", get(crate::websites::get_extension_by_slug))
+        // Website extension data and actions
+        .route("/websites/:id/extensions/:extension_slug/data", get(crate::websites::get_website_extension_data))
+        .route("/websites/:id/extensions/:extension_slug/actions/:action_key", post(crate::websites::execute_extension_action))
         // Events routes
         .route("/events", get(crate::events::get_events))
         .route("/events", post(crate::events::create_event))
         .route("/events/:id", patch(crate::events::mark_processed))
-        // Module config routes
-        .route("/modules", get(crate::modules::list_modules))
-        .route("/modules/:id/config", get(crate::modules::get_module_config))
-        .route("/modules/:id/config", put(crate::modules::update_module_config))
+        // Extension config routes
+        .route("/extensions", get(crate::extensions::list_extensions))
+        .route("/extensions/:id/config", get(crate::extensions::get_extension_config))
+        .route("/extensions/:id/config", put(crate::extensions::update_extension_config))
         // Files routes (authenticated)
         .route("/files", post(crate::files::upload_file))
         .route("/files", get(crate::files::list_files))
@@ -172,11 +172,11 @@ mod tests {
             "/accounts/:id/integrations/github",
             "/websites",
             "/websites/:id",
-            "/websites/:id/modules",
+            "/websites/:id/extensions",
             "/websites/:id/sections",
             "/presets",
             "/events",
-            "/modules",
+            "/extensions",
             "/public/websites/:slug",
         ];
 
@@ -193,7 +193,7 @@ mod tests {
             "/accounts/:id",
             "/websites",
             "/events",
-            "/modules",
+            "/extensions",
             "/presets",
         ];
 
@@ -223,10 +223,10 @@ mod tests {
         let parameterized_routes = vec![
             "/accounts/:id",
             "/websites/:id",
-            "/websites/:id/modules/:module_id",
+            "/websites/:id/extensions/:extension_id",
             "/websites/:id/sections/:section_id",
             "/events/:id",
-            "/modules/:id/config",
+            "/extensions/:id/config",
             "/public/websites/:slug",
         ];
 
@@ -254,8 +254,8 @@ mod tests {
             "/websites/:id",       // Get/Update
             "/websites/:id/data",  // Patch data
             "/websites/:id/publish", // Publish action
-            "/websites/:id/modules", // List/Activate modules
-            "/websites/:id/modules/:module_id", // Update module
+            "/websites/:id/extensions", // List/Activate extensions
+            "/websites/:id/extensions/:extension_id", // Update extension
             "/websites/:id/sections", // List/Create sections
             "/websites/:id/sections/:section_id", // Update/Delete section
             "/websites/:id/sections/reorder", // Reorder sections
@@ -293,16 +293,16 @@ mod tests {
     }
 
     #[test]
-    fn test_module_configuration_routes() {
-        // Test module configuration routes
-        let module_routes = vec![
-            "/modules",           // List
-            "/modules/:id/config", // Get/Update config
-            "/modules/catalog",   // Module catalog
+    fn test_extension_configuration_routes() {
+        // Test extension configuration routes
+        let extension_routes = vec![
+            "/extensions",           // List
+            "/extensions/:id/config", // Get/Update config
+            "/extensions/catalog",   // Extension catalog
         ];
 
-        for route in module_routes {
-            assert!(route.contains("/modules"));
+        for route in extension_routes {
+            assert!(route.contains("/extensions"));
         }
     }
 

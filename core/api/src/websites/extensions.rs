@@ -1,4 +1,4 @@
-//! Website modules management (legacy - per website)
+//! Website extensions management (legacy - per website)
 
 use axum::{
     extract::{Path, State, Extension},
@@ -10,51 +10,51 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use asap_core_shared::{Claims, module_catalog};
+use asap_core_shared::{Claims, extension_catalog};
 
 #[derive(Debug, Serialize)]
-pub struct WebsiteModuleResponse {
+pub struct WebsiteExtensionResponse {
     pub id: String,
     pub website_id: String,
-    pub module_id: String,
-    pub module_name: String,
-    pub module_slug: String,
+    pub extension_id: String,
+    pub extension_name: String,
+    pub extension_slug: String,
     pub settings: serde_json::Value,
     pub enabled: bool,
     pub activated_at: String,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ActivateModuleRequest {
-    pub module_id: String,  // Can be UUID or slug
+pub struct ActivateExtensionRequest {
+    pub extension_id: String,  // Can be UUID or slug
     pub settings: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct UpdateModuleSettingsRequest {
+pub struct UpdateExtensionSettingsRequest {
     pub settings: serde_json::Value,
     pub enabled: Option<bool>,
 }
 
-/// Resolve a module identifier (UUID or slug) to a module UUID
+/// Resolve an extension identifier (UUID or slug) to an extension UUID
 /// 
-/// This function first checks the module catalog (source of truth),
-/// then ensures the module exists in the database, creating it if needed.
-pub(crate) async fn resolve_module_id(pool: &PgPool, module_id_or_slug: &str) -> Result<Uuid, String> {
+/// This function first checks the extension catalog (source of truth),
+/// then ensures the extension exists in the database, creating it if needed.
+pub(crate) async fn resolve_extension_id(pool: &PgPool, extension_id_or_slug: &str) -> Result<Uuid, String> {
     // First try to parse as UUID
-    if let Ok(uuid) = Uuid::parse_str(module_id_or_slug) {
+    if let Ok(uuid) = Uuid::parse_str(extension_id_or_slug) {
         return Ok(uuid);
     }
     
-    // Look up in the module catalog (source of truth)
-    let module_def = module_catalog::get_module_by_slug(module_id_or_slug)
-        .ok_or_else(|| format!("Module not found: {}", module_id_or_slug))?;
+    // Look up in the extension catalog (source of truth)
+    let extension_def = extension_catalog::get_extension_by_slug(extension_id_or_slug)
+        .ok_or_else(|| format!("Extension not found: {}", extension_id_or_slug))?;
     
-    // Check if module exists in database
+    // Check if extension exists in database
     let existing = sqlx::query_as::<_, (Uuid,)>(
-        "SELECT id FROM modules WHERE slug = $1"
+        "SELECT id FROM extensions WHERE slug = $1"
     )
-    .bind(&module_def.slug)
+    .bind(&extension_def.slug)
     .fetch_optional(pool)
     .await
     .map_err(|e| format!("Database error: {}", e))?;
@@ -63,11 +63,11 @@ pub(crate) async fn resolve_module_id(pool: &PgPool, module_id_or_slug: &str) ->
         return Ok(id);
     }
     
-    // Module not in DB, insert it from the catalog
+    // Extension not in DB, insert it from the catalog
     let new_id = Uuid::new_v4();
     sqlx::query(
         r#"
-        INSERT INTO modules (id, name, slug, version, description, category, icon, default_settings, config_schema, sidebar_order, sidebar_label, enabled)
+        INSERT INTO extensions (id, name, slug, version, description, category, icon, default_settings, config_schema, sidebar_order, sidebar_label, enabled)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true)
         ON CONFLICT (slug) DO UPDATE SET
             name = EXCLUDED.name,
@@ -83,25 +83,25 @@ pub(crate) async fn resolve_module_id(pool: &PgPool, module_id_or_slug: &str) ->
         "#
     )
     .bind(new_id)
-    .bind(&module_def.name)
-    .bind(&module_def.slug)
-    .bind(&module_def.version)
-    .bind(&module_def.description)
-    .bind(&module_def.category)
-    .bind(&module_def.icon)
-    .bind(&module_def.default_settings)
-    .bind(module_def.config_schema.as_ref().map(|s| serde_json::to_value(s).ok()).flatten())
-    .bind(module_def.sidebar_order)
-    .bind(&module_def.sidebar_label)
+    .bind(&extension_def.name)
+    .bind(&extension_def.slug)
+    .bind(&extension_def.version)
+    .bind(&extension_def.description)
+    .bind(&extension_def.category)
+    .bind(&extension_def.icon)
+    .bind(&extension_def.default_settings)
+    .bind(extension_def.config_schema.as_ref().map(|s| serde_json::to_value(s).ok()).flatten())
+    .bind(extension_def.sidebar_order)
+    .bind(&extension_def.sidebar_label)
     .execute(pool)
     .await
-    .map_err(|e| format!("Failed to insert module: {}", e))?;
+    .map_err(|e| format!("Failed to insert extension: {}", e))?;
     
     // Fetch the actual ID (might be different if ON CONFLICT was triggered)
     let result = sqlx::query_as::<_, (Uuid,)>(
-        "SELECT id FROM modules WHERE slug = $1"
+        "SELECT id FROM extensions WHERE slug = $1"
     )
-    .bind(&module_def.slug)
+    .bind(&extension_def.slug)
     .fetch_one(pool)
     .await
     .map_err(|e| format!("Database error: {}", e))?;
@@ -109,7 +109,7 @@ pub(crate) async fn resolve_module_id(pool: &PgPool, module_id_or_slug: &str) ->
     Ok(result.0)
 }
 
-pub async fn list_website_modules(
+pub async fn list_website_extensions(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
     Path(website_id): Path<String>,
@@ -149,14 +149,14 @@ pub async fn list_website_modules(
         }
     }
 
-    let result = queries::list_website_modules(&pool, website_uuid).await;
+    let result = queries::list_website_extensions(&pool, website_uuid).await;
 
     match result {
-        Ok(modules) => {
-            (StatusCode::OK, Json(modules)).into_response()
+        Ok(extensions) => {
+            (StatusCode::OK, Json(extensions)).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error listing website modules: {}", e);
+            tracing::error!("Database error listing website extensions: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()
@@ -164,11 +164,11 @@ pub async fn list_website_modules(
     }
 }
 
-pub async fn activate_module(
+pub async fn activate_extension(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
     Path(website_id): Path<String>,
-    Json(payload): Json<ActivateModuleRequest>,
+    Json(payload): Json<ActivateExtensionRequest>,
 ) -> impl IntoResponse {
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
@@ -179,7 +179,7 @@ pub async fn activate_module(
         }
     };
 
-    let module_uuid = match resolve_module_id(&pool, &payload.module_id).await {
+    let extension_uuid = match resolve_extension_id(&pool, &payload.extension_id).await {
         Ok(id) => id,
         Err(e) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
@@ -198,21 +198,21 @@ pub async fn activate_module(
     };
 
     use crate::queries;
-    let result = queries::activate_website_module(
+    let result = queries::activate_website_extension(
         &pool,
         website_uuid,
-        module_uuid,
+        extension_uuid,
         account_id,
         payload.settings.unwrap_or(serde_json::json!({})),
     ).await;
 
     match result {
         Ok(_) => {
-            // Get module name for notification
-            let module_name: Option<String> = sqlx::query_scalar(
-                "SELECT name FROM modules WHERE id = $1"
+            // Get extension name for notification
+            let extension_name: Option<String> = sqlx::query_scalar(
+                "SELECT name FROM extensions WHERE id = $1"
             )
-            .bind(module_uuid)
+            .bind(extension_uuid)
             .fetch_optional(&pool)
             .await
             .ok()
@@ -220,30 +220,30 @@ pub async fn activate_module(
 
             let event_payload = serde_json::json!({
                 "website_id": website_id,
-                "module_id": payload.module_id
+                "extension_id": payload.extension_id
             });
 
             let _ = sqlx::query(
-                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'MODULE_ACTIVATED', $2)"
+                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'EXTENSION_ACTIVATED', $2)"
             )
             .bind(account_id)
             .bind(&event_payload)
             .execute(&pool)
             .await;
 
-            // Create notification for module activated
-            if let Some(name) = module_name {
-                if let Err(e) = crate::notifications::create_module_activated_notification(&pool, account_id, &name).await {
-                    tracing::error!("Failed to create module activated notification: {}", e);
+            // Create notification for extension activated
+            if let Some(name) = extension_name {
+                if let Err(e) = crate::notifications::create_extension_activated_notification(&pool, account_id, &name).await {
+                    tracing::error!("Failed to create extension activated notification: {}", e);
                 }
             }
 
             (StatusCode::OK, Json(serde_json::json!({
-                "message": "Module activated successfully"
+                "message": "Extension activated successfully"
             }))).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error activating module: {}", e);
+            tracing::error!("Database error activating extension: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()
@@ -251,11 +251,11 @@ pub async fn activate_module(
     }
 }
 
-pub async fn update_website_module(
+pub async fn update_website_extension(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
-    Path((website_id, module_id)): Path<(String, String)>,
-    Json(payload): Json<UpdateModuleSettingsRequest>,
+    Path((website_id, extension_id)): Path<(String, String)>,
+    Json(payload): Json<UpdateExtensionSettingsRequest>,
 ) -> impl IntoResponse {
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
@@ -266,7 +266,7 @@ pub async fn update_website_module(
         }
     };
 
-    let module_uuid = match resolve_module_id(&pool, &module_id).await {
+    let extension_uuid = match resolve_extension_id(&pool, &extension_id).await {
         Ok(id) => id,
         Err(e) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
@@ -285,10 +285,10 @@ pub async fn update_website_module(
     };
 
     use crate::queries;
-    let result = queries::update_website_module(
+    let result = queries::update_website_extension(
         &pool,
         website_uuid,
-        module_uuid,
+        extension_uuid,
         account_id,
         &payload.settings,
         payload.enabled,
@@ -297,16 +297,16 @@ pub async fn update_website_module(
     match result {
         Ok(updated) if updated => {
             (StatusCode::OK, Json(serde_json::json!({
-                "message": "Module updated successfully"
+                "message": "Extension updated successfully"
             }))).into_response()
         }
         Ok(_) => {
             (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Module not found for this website"
+                "error": "Extension not found for this website"
             }))).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error updating module: {}", e);
+            tracing::error!("Database error updating extension: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()
@@ -314,10 +314,10 @@ pub async fn update_website_module(
     }
 }
 
-pub async fn deactivate_module(
+pub async fn deactivate_extension(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
-    Path((website_id, module_id)): Path<(String, String)>,
+    Path((website_id, extension_id)): Path<(String, String)>,
 ) -> impl IntoResponse {
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
@@ -328,13 +328,13 @@ pub async fn deactivate_module(
         }
     };
 
-    // For deactivate, we accept either the website_modules.id or the module_id
+    // For deactivate, we accept either the website_extensions.id or the extension_id
     // Just parse as UUID directly (no slug resolution needed for delete)
-    let module_uuid = match Uuid::parse_str(&module_id) {
+    let extension_uuid = match Uuid::parse_str(&extension_id) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid module ID format"
+                "error": "Invalid extension ID format"
             }))).into_response();
         }
     };
@@ -350,26 +350,26 @@ pub async fn deactivate_module(
 
     use crate::queries;
     
-    // Get module name before deletion for notification
-    // Try both wm.id (row id) and wm.module_id to match how deactivate_website_module works
-    let module_name: Option<String> = sqlx::query_scalar(
+    // Get extension name before deletion for notification
+    // Try both we.id (row id) and we.extension_id to match how deactivate_website_extension works
+    let extension_name: Option<String> = sqlx::query_scalar(
         r#"
-        SELECT m.name FROM modules m
-        JOIN website_modules wm ON wm.module_id = m.id
-        WHERE wm.website_id = $1 AND (wm.id = $2 OR wm.module_id = $2)
+        SELECT e.name FROM extensions e
+        JOIN website_extensions we ON we.extension_id = e.id
+        WHERE we.website_id = $1 AND (we.id = $2 OR we.extension_id = $2)
         "#
     )
     .bind(website_uuid)
-    .bind(module_uuid)
+    .bind(extension_uuid)
     .fetch_optional(&pool)
     .await
     .ok()
     .flatten();
     
-    let result = queries::deactivate_website_module(
+    let result = queries::deactivate_website_extension(
         &pool,
         website_uuid,
-        module_uuid,
+        extension_uuid,
         account_id,
     ).await;
 
@@ -377,35 +377,35 @@ pub async fn deactivate_module(
         Ok(deleted) if deleted => {
             let event_payload = serde_json::json!({
                 "website_id": website_id,
-                "module_id": module_id
+                "extension_id": extension_id
             });
 
             let _ = sqlx::query(
-                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'MODULE_DEACTIVATED', $2)"
+                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'EXTENSION_DEACTIVATED', $2)"
             )
             .bind(account_id)
             .bind(&event_payload)
             .execute(&pool)
             .await;
 
-            // Create notification for module deactivated
-            if let Some(name) = module_name {
-                if let Err(e) = crate::notifications::create_module_deactivated_notification(&pool, account_id, &name).await {
-                    tracing::error!("Failed to create module deactivated notification: {}", e);
+            // Create notification for extension deactivated
+            if let Some(name) = extension_name {
+                if let Err(e) = crate::notifications::create_extension_deactivated_notification(&pool, account_id, &name).await {
+                    tracing::error!("Failed to create extension deactivated notification: {}", e);
                 }
             }
 
             (StatusCode::OK, Json(serde_json::json!({
-                "message": "Module deactivated successfully"
+                "message": "Extension deactivated successfully"
             }))).into_response()
         }
         Ok(_) => {
             (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Module not found for this website"
+                "error": "Extension not found for this website"
             }))).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error deactivating module: {}", e);
+            tracing::error!("Database error deactivating extension: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()

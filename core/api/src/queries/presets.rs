@@ -83,24 +83,24 @@ pub async fn create_website_from_preset(
     .execute(&mut *tx)
     .await?;
 
-    // Activate modules from preset config
-    if let Some(modules) = config.get("modules").and_then(|m| m.as_array()) {
-        for module_slug in modules {
-            if let Some(slug_str) = module_slug.as_str() {
-                // Get module ID by slug
-                let module: Option<(Uuid, JsonValue)> = sqlx::query_as(
-                    "SELECT id, default_settings FROM modules WHERE slug = $1 AND enabled = true"
+    // Activate extensions from preset config
+    if let Some(extensions) = config.get("extensions").and_then(|m| m.as_array()) {
+        for extension_slug in extensions {
+            if let Some(slug_str) = extension_slug.as_str() {
+                // Get extension ID by slug
+                let extension: Option<(Uuid, JsonValue)> = sqlx::query_as(
+                    "SELECT id, default_settings FROM extensions WHERE slug = $1 AND enabled = true"
                 )
                 .bind(slug_str)
                 .fetch_optional(&mut *tx)
                 .await?;
 
-                if let Some((module_id, default_settings)) = module {
+                if let Some((extension_id, default_settings)) = extension {
                     sqlx::query(
-                        "INSERT INTO website_modules (website_id, module_id, settings) VALUES ($1, $2, $3)"
+                        "INSERT INTO website_extensions (website_id, extension_id, settings) VALUES ($1, $2, $3)"
                     )
                     .bind(website_id)
-                    .bind(module_id)
+                    .bind(extension_id)
                     .bind(&default_settings)
                     .execute(&mut *tx)
                     .await?;

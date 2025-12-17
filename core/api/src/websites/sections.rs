@@ -16,7 +16,7 @@ use asap_core_shared::Claims;
 pub struct WebsiteSectionResponse {
     pub id: String,
     pub website_id: String,
-    pub module_id: Option<String>,
+    pub extension_id: Option<String>,
     pub section_type: String,
     pub slug: String,
     pub title: String,
@@ -36,7 +36,7 @@ pub struct CreateSectionRequest {
     pub layout: Option<String>,
     pub settings: Option<serde_json::Value>,
     pub data: Option<serde_json::Value>,
-    pub module_id: Option<String>,
+    pub extension_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -116,12 +116,12 @@ pub async fn create_section(
         }
     };
 
-    let module_uuid = match payload.module_id {
+    let extension_uuid = match payload.extension_id {
         Some(ref id) => match Uuid::parse_str(id) {
             Ok(uuid) => Some(uuid),
             Err(_) => {
                 return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                    "error": "Invalid module ID format"
+                    "error": "Invalid extension ID format"
                 }))).into_response();
             }
         },
@@ -133,7 +133,7 @@ pub async fn create_section(
         &pool,
         website_uuid,
         account_id,
-        module_uuid,
+        extension_uuid,
         &payload.section_type,
         &payload.slug,
         &payload.title,
