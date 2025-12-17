@@ -7,7 +7,7 @@ export * from './websites';
 export * from './sections';
 export * from './pages';
 export * from './presets';
-export * from './modules';
+export * from './extensions';
 export * from './integrations';
 export * from './notifications';
 export * from './public';

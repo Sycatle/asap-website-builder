@@ -23,7 +23,7 @@ export type NotificationCategory =
   | 'system' 
   | 'account' 
   | 'website' 
-  | 'module' 
+  | 'extension' 
   | 'billing' 
   | 'analytics' 
   | 'security';

@@ -72,7 +72,7 @@ export interface DataDisplay {
   }[];
 }
 
-// Complete configuration schema for a module
+// Complete configuration schema for an extension
 export interface ConfigSchema {
   fields?: ConfigField[];
   actions?: ConfigAction[];
@@ -86,10 +86,10 @@ export interface ConfigSchema {
 }
 
 // ============================================
-// MODULE TYPES
+// EXTENSION TYPES
 // ============================================
 
-export interface Module {
+export interface Extension {
   id: string;
   name: string;
   slug: string;
@@ -101,74 +101,75 @@ export interface Module {
   icon?: string;                 // Icon identifier or SVG
 }
 
-// Module data returned when fetching config (includes dynamic data)
-export interface ModuleData {
-  module: Module;
+// Extension data returned when fetching config (includes dynamic data)
+export interface ExtensionData {
+  extension: Extension;
   settings: Record<string, any>;
-  enabled?: boolean;             // Whether module is activated for website
+  enabled?: boolean;             // Whether extension is activated for website
   data?: Record<string, any>;    // Dynamic data (e.g., projects, stats)
   lastSync?: string;
 }
 
-export interface WebsiteModule {
+export interface WebsiteExtension {
   id: string;
   website_id: string;
-  module_id: string;
-  module_name: string;
-  module_slug: string;
+  extension_id: string;
+  extension_name: string;
+  extension_slug: string;
   settings: Record<string, any>;
   enabled: boolean;
   activated_at: string;
+  category: string;
 }
 
-export interface ActivateModuleRequest {
-  module_id: string;
+export interface ActivateExtensionRequest {
+  extension_id: string;
   settings?: Record<string, any>;
 }
 
-export interface UpdateModuleSettingsRequest {
+export interface UpdateExtensionSettingsRequest {
   settings: Record<string, any>;
   enabled?: boolean;
 }
 
-export const modulesAPI = {
-  // List all available modules (catalog)
-  async catalog(): Promise<Module[]> {
-    return apiClient.get<Module[]>('/modules/catalog');
+export const extensionsAPI = {
+  // List all available extensions (catalog)
+  async catalog(): Promise<Extension[]> {
+    return apiClient.get<Extension[]>('/extensions/catalog');
   },
 
-  // Get a single module by slug (with schema)
-  async getBySlug(slug: string): Promise<Module> {
-    return apiClient.get<Module>(`/modules/${slug}`);
+  // Get a single extension by slug (with schema)
+  async getBySlug(slug: string): Promise<Extension> {
+    return apiClient.get<Extension>(`/extensions/${slug}`);
   },
   
-  // List activated modules for a website
-  async listForWebsite(websiteId: string): Promise<WebsiteModule[]> {
-    return apiClient.get<WebsiteModule[]>(`/websites/${websiteId}/modules`);
+  // List activated extensions for a website
+  async listForWebsite(websiteId: string): Promise<WebsiteExtension[]> {
+    return apiClient.get<WebsiteExtension[]>(`/websites/${websiteId}/extensions`);
   },
 
-  // Get module data for configuration page (includes dynamic data)
-  async getModuleData(websiteId: string, moduleSlug: string): Promise<ModuleData> {
-    return apiClient.get<ModuleData>(`/websites/${websiteId}/modules/${moduleSlug}/data`);
+  // Get extension data for configuration page (includes dynamic data)
+  async getExtensionData(websiteId: string, extensionSlug: string): Promise<ExtensionData> {
+    return apiClient.get<ExtensionData>(`/websites/${websiteId}/extensions/${extensionSlug}/data`);
   },
   
-  // Activate a module for a website
-  async activate(websiteId: string, data: ActivateModuleRequest): Promise<WebsiteModule> {
-    return apiClient.post<WebsiteModule>(`/websites/${websiteId}/modules`, data);
+  // Activate an extension for a website
+  async activate(websiteId: string, data: ActivateExtensionRequest): Promise<WebsiteExtension> {
+    return apiClient.post<WebsiteExtension>(`/websites/${websiteId}/extensions`, data);
   },
   
-  // Update settings for an activated module
-  async updateSettings(websiteId: string, moduleId: string, data: UpdateModuleSettingsRequest): Promise<WebsiteModule> {
-    return apiClient.patch<WebsiteModule>(`/websites/${websiteId}/modules/${moduleId}`, data);
+  // Update settings for an activated extension
+  async updateSettings(websiteId: string, extensionId: string, data: UpdateExtensionSettingsRequest): Promise<WebsiteExtension> {
+    return apiClient.patch<WebsiteExtension>(`/websites/${websiteId}/extensions/${extensionId}`, data);
   },
   
-  // Deactivate a module for a website
-  async deactivate(websiteId: string, moduleId: string): Promise<void> {
-    return apiClient.delete<void>(`/websites/${websiteId}/modules/${moduleId}`);
+  // Deactivate an extension for a website
+  async deactivate(websiteId: string, extensionId: string): Promise<void> {
+    return apiClient.delete<void>(`/websites/${websiteId}/extensions/${extensionId}`);
   },
 
-  // Execute a module action (e.g., sync, test)
-  async executeAction(websiteId: string, moduleSlug: string, actionKey: string, payload?: Record<string, any>): Promise<any> {
-    return apiClient.post<any>(`/websites/${websiteId}/modules/${moduleSlug}/actions/${actionKey}`, payload || {});
+  // Execute an extension action (e.g., sync, test)
+  async executeAction(websiteId: string, extensionSlug: string, actionKey: string, payload?: Record<string, any>): Promise<any> {
+    return apiClient.post<any>(`/websites/${websiteId}/extensions/${extensionSlug}/actions/${actionKey}`, payload || {});
   },
 };

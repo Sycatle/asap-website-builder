@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { websitesAPI, filesAPI, modulesAPI, authAPI } from '../api';
+import { websitesAPI, filesAPI, extensionsAPI, authAPI } from '../api';
 import type { 
   Website, 
   QuotaUsage, 
-  WebsiteModule, 
-  Module, 
-  ModuleData, 
+  WebsiteExtension, 
+  Extension, 
+  ExtensionData, 
   MeResponse,
   FileMetadata,
 } from '../api';
@@ -20,9 +20,9 @@ export const CACHE_TTL = {
   user: 5 * 60 * 1000,         // 5 minutes - données utilisateur changent rarement
   websites: 2 * 60 * 1000,     // 2 minutes - liste des sites
   website: 2 * 60 * 1000,      // 2 minutes - détail d'un site
-  modules: 5 * 60 * 1000,      // 5 minutes - catalogue des modules
-  websiteModules: 2 * 60 * 1000, // 2 minutes - modules activés
-  moduleData: 1 * 60 * 1000,   // 1 minute - données de module (peut changer fréquemment)
+  extensions: 5 * 60 * 1000,   // 5 minutes - catalogue des extensions
+  websiteExtensions: 2 * 60 * 1000, // 2 minutes - extensions activées
+  extensionData: 1 * 60 * 1000,   // 1 minute - données d'extension (peut changer fréquemment)
   quota: 30 * 1000,            // 30 secondes - quota peut changer après upload
   files: 1 * 60 * 1000,        // 1 minute - liste des fichiers
 } as const;
@@ -44,10 +44,10 @@ interface CacheState {
   websites: CacheEntry<Website[]> | null;
   websiteById: Record<string, CacheEntry<Website>>;
   
-  // Modules cache  
-  moduleCatalog: CacheEntry<Module[]> | null;
-  websiteModules: Record<string, CacheEntry<WebsiteModule[]>>; // keyed by websiteId
-  moduleData: Record<string, CacheEntry<ModuleData>>; // keyed by `${websiteId}:${moduleSlug}`
+  // Extensions cache  
+  extensionCatalog: CacheEntry<Extension[]> | null;
+  websiteExtensions: Record<string, CacheEntry<WebsiteExtension[]>>; // keyed by websiteId
+  extensionData: Record<string, CacheEntry<ExtensionData>>; // keyed by `${websiteId}:${extensionSlug}`
   
   // Quota cache
   quota: CacheEntry<QuotaUsage> | null;
@@ -73,12 +73,12 @@ interface CacheActions {
   addWebsiteToCache: (website: Website) => void;
   removeWebsiteFromCache: (websiteId: string) => void;
   
-  // Module actions
-  fetchModuleCatalog: (force?: boolean) => Promise<Module[]>;
-  fetchWebsiteModules: (websiteId: string, force?: boolean) => Promise<WebsiteModule[]>;
-  fetchModuleData: (websiteId: string, moduleSlug: string, force?: boolean) => Promise<ModuleData | null>;
-  updateModuleDataCache: (websiteId: string, moduleSlug: string, data: Partial<ModuleData>) => void;
-  invalidateModuleData: (websiteId: string, moduleSlug: string) => void;
+  // Extension actions
+  fetchExtensionCatalog: (force?: boolean) => Promise<Extension[]>;
+  fetchWebsiteExtensions: (websiteId: string, force?: boolean) => Promise<WebsiteExtension[]>;
+  fetchExtensionData: (websiteId: string, extensionSlug: string, force?: boolean) => Promise<ExtensionData | null>;
+  updateExtensionDataCache: (websiteId: string, extensionSlug: string, data: Partial<ExtensionData>) => void;
+  invalidateExtensionData: (websiteId: string, extensionSlug: string) => void;
   
   // Quota actions
   fetchQuota: (force?: boolean) => Promise<QuotaUsage | null>;
@@ -110,9 +110,9 @@ const initialState: CacheState = {
   user: null,
   websites: null,
   websiteById: {},
-  moduleCatalog: null,
-  websiteModules: {},
-  moduleData: {},
+  extensionCatalog: null,
+  websiteExtensions: {},
+  extensionData: {},
   quota: null,
   files: null,
   loadingStates: {},
@@ -323,83 +323,83 @@ export const useCacheStore = create<CacheState & CacheActions>()(
           }
           
           // Also clean up related data
-          const newWebsiteModules = { ...state.websiteModules };
-          delete newWebsiteModules[websiteId];
+          const newWebsiteExtensions = { ...state.websiteExtensions };
+          delete newWebsiteExtensions[websiteId];
           
-          const newModuleData = { ...state.moduleData };
-          Object.keys(newModuleData).forEach((key) => {
+          const newExtensionData = { ...state.extensionData };
+          Object.keys(newExtensionData).forEach((key) => {
             if (key.startsWith(`${websiteId}:`)) {
-              delete newModuleData[key];
+              delete newExtensionData[key];
             }
           });
           
           return {
             websiteById: newWebsiteById,
             websites: newWebsites,
-            websiteModules: newWebsiteModules,
-            moduleData: newModuleData,
+            websiteExtensions: newWebsiteExtensions,
+            extensionData: newExtensionData,
           };
         });
       },
 
-      // ========== MODULES ==========
+      // ========== EXTENSIONS ==========
       
-      fetchModuleCatalog: async (force = false) => {
-        const { moduleCatalog, isStale, setLoading, setError } = get();
+      fetchExtensionCatalog: async (force = false) => {
+        const { extensionCatalog, isStale, setLoading, setError } = get();
         
-        if (!force && moduleCatalog && !isStale(moduleCatalog, CACHE_TTL.modules)) {
-          return moduleCatalog.data;
+        if (!force && extensionCatalog && !isStale(extensionCatalog, CACHE_TTL.extensions)) {
+          return extensionCatalog.data;
         }
 
-        const shouldBackgroundFetch = moduleCatalog && isStale(moduleCatalog, CACHE_TTL.modules);
+        const shouldBackgroundFetch = extensionCatalog && isStale(extensionCatalog, CACHE_TTL.extensions);
         
         if (!shouldBackgroundFetch) {
-          setLoading('moduleCatalog', true);
+          setLoading('extensionCatalog', true);
         }
 
         try {
-          const data = await modulesAPI.catalog();
+          const data = await extensionsAPI.catalog();
           set({
-            moduleCatalog: { data, timestamp: Date.now() },
+            extensionCatalog: { data, timestamp: Date.now() },
           });
-          setError('moduleCatalog', null);
+          setError('extensionCatalog', null);
           return data;
         } catch (error: unknown) {
-          const message = error instanceof Error ? error.message : 'Failed to fetch modules';
-          setError('moduleCatalog', message);
-          return moduleCatalog?.data ?? [];
+          const message = error instanceof Error ? error.message : 'Failed to fetch extensions';
+          setError('extensionCatalog', message);
+          return extensionCatalog?.data ?? [];
         } finally {
-          setLoading('moduleCatalog', false);
+          setLoading('extensionCatalog', false);
         }
       },
 
-      fetchWebsiteModules: async (websiteId, force = false) => {
-        const { websiteModules, isStale, setLoading, setError } = get();
-        const cached = websiteModules[websiteId];
+      fetchWebsiteExtensions: async (websiteId, force = false) => {
+        const { websiteExtensions, isStale, setLoading, setError } = get();
+        const cached = websiteExtensions[websiteId];
         
-        if (!force && cached && !isStale(cached, CACHE_TTL.websiteModules)) {
+        if (!force && cached && !isStale(cached, CACHE_TTL.websiteExtensions)) {
           return cached.data;
         }
 
-        const shouldBackgroundFetch = cached && isStale(cached, CACHE_TTL.websiteModules);
-        const loadingKey = `websiteModules:${websiteId}`;
+        const shouldBackgroundFetch = cached && isStale(cached, CACHE_TTL.websiteExtensions);
+        const loadingKey = `websiteExtensions:${websiteId}`;
         
         if (!shouldBackgroundFetch) {
           setLoading(loadingKey, true);
         }
 
         try {
-          const data = await modulesAPI.listForWebsite(websiteId);
+          const data = await extensionsAPI.listForWebsite(websiteId);
           set((state) => ({
-            websiteModules: {
-              ...state.websiteModules,
+            websiteExtensions: {
+              ...state.websiteExtensions,
               [websiteId]: { data, timestamp: Date.now() },
             },
           }));
           setError(loadingKey, null);
           return data;
         } catch (error: unknown) {
-          const message = error instanceof Error ? error.message : 'Failed to fetch website modules';
+          const message = error instanceof Error ? error.message : 'Failed to fetch website extensions';
           setError(loadingKey, message);
           return cached?.data ?? [];
         } finally {
@@ -407,34 +407,34 @@ export const useCacheStore = create<CacheState & CacheActions>()(
         }
       },
 
-      fetchModuleData: async (websiteId, moduleSlug, force = false) => {
-        const { moduleData, isStale, setLoading, setError } = get();
-        const cacheKey = `${websiteId}:${moduleSlug}`;
-        const cached = moduleData[cacheKey];
+      fetchExtensionData: async (websiteId, extensionSlug, force = false) => {
+        const { extensionData, isStale, setLoading, setError } = get();
+        const cacheKey = `${websiteId}:${extensionSlug}`;
+        const cached = extensionData[cacheKey];
         
-        if (!force && cached && !isStale(cached, CACHE_TTL.moduleData)) {
+        if (!force && cached && !isStale(cached, CACHE_TTL.extensionData)) {
           return cached.data;
         }
 
-        const shouldBackgroundFetch = cached && isStale(cached, CACHE_TTL.moduleData);
-        const loadingKey = `moduleData:${cacheKey}`;
+        const shouldBackgroundFetch = cached && isStale(cached, CACHE_TTL.extensionData);
+        const loadingKey = `extensionData:${cacheKey}`;
         
         if (!shouldBackgroundFetch) {
           setLoading(loadingKey, true);
         }
 
         try {
-          const data = await modulesAPI.getModuleData(websiteId, moduleSlug);
+          const data = await extensionsAPI.getExtensionData(websiteId, extensionSlug);
           set((state) => ({
-            moduleData: {
-              ...state.moduleData,
+            extensionData: {
+              ...state.extensionData,
               [cacheKey]: { data, timestamp: Date.now() },
             },
           }));
           setError(loadingKey, null);
           return data;
         } catch (error: unknown) {
-          const message = error instanceof Error ? error.message : 'Failed to fetch module data';
+          const message = error instanceof Error ? error.message : 'Failed to fetch extension data';
           setError(loadingKey, message);
           return cached?.data ?? null;
         } finally {
@@ -442,15 +442,15 @@ export const useCacheStore = create<CacheState & CacheActions>()(
         }
       },
 
-      updateModuleDataCache: (websiteId, moduleSlug, data) => {
-        const cacheKey = `${websiteId}:${moduleSlug}`;
+      updateExtensionDataCache: (websiteId, extensionSlug, data) => {
+        const cacheKey = `${websiteId}:${extensionSlug}`;
         set((state) => {
-          const existing = state.moduleData[cacheKey];
+          const existing = state.extensionData[cacheKey];
           if (!existing) return state;
           
           return {
-            moduleData: {
-              ...state.moduleData,
+            extensionData: {
+              ...state.extensionData,
               [cacheKey]: {
                 data: { ...existing.data, ...data },
                 timestamp: Date.now(),
@@ -460,12 +460,12 @@ export const useCacheStore = create<CacheState & CacheActions>()(
         });
       },
 
-      invalidateModuleData: (websiteId, moduleSlug) => {
-        const cacheKey = `${websiteId}:${moduleSlug}`;
+      invalidateExtensionData: (websiteId, extensionSlug) => {
+        const cacheKey = `${websiteId}:${extensionSlug}`;
         set((state) => {
-          const newModuleData = { ...state.moduleData };
-          delete newModuleData[cacheKey];
-          return { moduleData: newModuleData };
+          const newExtensionData = { ...state.extensionData };
+          delete newExtensionData[cacheKey];
+          return { extensionData: newExtensionData };
         });
       },
 
@@ -575,14 +575,14 @@ export const useCacheStore = create<CacheState & CacheActions>()(
           case 'website':
             set({ websites: null, websiteById: {} });
             break;
-          case 'modules':
-            set({ moduleCatalog: null });
+          case 'extensions':
+            set({ extensionCatalog: null });
             break;
-          case 'websiteModules':
-            set({ websiteModules: {} });
+          case 'websiteExtensions':
+            set({ websiteExtensions: {} });
             break;
-          case 'moduleData':
-            set({ moduleData: {} });
+          case 'extensionData':
+            set({ extensionData: {} });
             break;
           case 'quota':
             set({ quota: null });
@@ -595,25 +595,25 @@ export const useCacheStore = create<CacheState & CacheActions>()(
 
       invalidateWebsiteData: (websiteId) => {
         set((state) => {
-          // Remove all module data for this website
-          const newModuleData = { ...state.moduleData };
-          Object.keys(newModuleData).forEach((key) => {
+          // Remove all extension data for this website
+          const newExtensionData = { ...state.extensionData };
+          Object.keys(newExtensionData).forEach((key) => {
             if (key.startsWith(`${websiteId}:`)) {
-              delete newModuleData[key];
+              delete newExtensionData[key];
             }
           });
           
-          // Remove website modules
-          const newWebsiteModules = { ...state.websiteModules };
-          delete newWebsiteModules[websiteId];
+          // Remove website extensions
+          const newWebsiteExtensions = { ...state.websiteExtensions };
+          delete newWebsiteExtensions[websiteId];
           
           // Remove website from cache
           const newWebsiteById = { ...state.websiteById };
           delete newWebsiteById[websiteId];
           
           return {
-            moduleData: newModuleData,
-            websiteModules: newWebsiteModules,
+            extensionData: newExtensionData,
+            websiteExtensions: newWebsiteExtensions,
             websiteById: newWebsiteById,
             websites: null, // Invalidate list too
           };
@@ -626,26 +626,26 @@ export const useCacheStore = create<CacheState & CacheActions>()(
     }),
     {
       name: 'asap-dashboard-cache',
-      version: 2, // Incremented to clear stale websiteModules with old IDs
+      version: 2, // Incremented to clear stale websiteExtensions with old IDs
       partialize: (state) => ({
         // Only persist data entries, not loading/error states
         user: state.user,
         websites: state.websites,
         websiteById: state.websiteById,
-        moduleCatalog: state.moduleCatalog,
-        websiteModules: state.websiteModules,
-        moduleData: state.moduleData,
+        extensionCatalog: state.extensionCatalog,
+        websiteExtensions: state.websiteExtensions,
+        extensionData: state.extensionData,
         quota: state.quota,
         files: state.files,
       }),
       migrate: (persistedState: unknown, version: number) => {
-        // Migration from v1 to v2: clear websiteModules to avoid stale IDs
+        // Migration from v1 to v2: clear websiteExtensions to avoid stale IDs
         if (version < 2) {
           const state = persistedState as Partial<CacheState>;
           return {
             ...state,
-            websiteModules: {}, // Clear stale modules data
-            moduleData: {}, // Clear stale module data
+            websiteExtensions: {}, // Clear stale extensions data
+            extensionData: {}, // Clear stale extension data
           };
         }
         return persistedState as CacheState;
@@ -670,8 +670,8 @@ export const useError = (key: string) => {
 
 // Stable default values for selectors
 const EMPTY_WEBSITES: Website[] = [];
-const EMPTY_MODULES: Module[] = [];
-const EMPTY_WEBSITE_MODULES: WebsiteModule[] = [];
+const EMPTY_EXTENSIONS: Extension[] = [];
+const EMPTY_WEBSITE_EXTENSIONS: WebsiteExtension[] = [];
 const EMPTY_FILES: FileMetadata[] = [];
 
 // Hook to get cached websites
@@ -689,14 +689,14 @@ export const useCachedQuota = () => {
   return useCacheStore((state) => state.quota?.data ?? null);
 };
 
-// Hook to get cached module catalog
-export const useCachedModuleCatalog = () => {
-  return useCacheStore((state) => state.moduleCatalog?.data ?? EMPTY_MODULES);
+// Hook to get cached extension catalog
+export const useCachedExtensionCatalog = () => {
+  return useCacheStore((state) => state.extensionCatalog?.data ?? EMPTY_EXTENSIONS);
 };
 
-// Hook to get cached website modules
-export const useCachedWebsiteModules = (websiteId: string) => {
-  return useCacheStore((state) => state.websiteModules[websiteId]?.data ?? EMPTY_WEBSITE_MODULES);
+// Hook to get cached website extensions
+export const useCachedWebsiteExtensions = (websiteId: string) => {
+  return useCacheStore((state) => state.websiteExtensions[websiteId]?.data ?? EMPTY_WEBSITE_EXTENSIONS);
 };
 
 // Hook to get cached files
