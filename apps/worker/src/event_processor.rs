@@ -181,11 +181,11 @@ impl From<EventRow> for Event {
             // GitHub events
             "GITHUB_SYNC_REQUESTED" => EventType::GitHubSyncRequested,
             
-            // Section events
-            "SECTION_CREATED" => EventType::SectionCreated,
-            "SECTION_UPDATED" => EventType::SectionUpdated,
-            "SECTION_DELETED" => EventType::SectionDeleted,
-            "SECTION_REORDERED" => EventType::SectionReordered,
+            // Element events
+            "ELEMENT_CREATED" => EventType::ElementCreated,
+            "ELEMENT_UPDATED" => EventType::ElementUpdated,
+            "ELEMENT_DELETED" => EventType::ElementDeleted,
+            "ELEMENT_REORDERED" => EventType::ElementReordered,
             
             // Preset events
             "PRESET_APPLIED" => EventType::PresetApplied,

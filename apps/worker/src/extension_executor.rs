@@ -408,7 +408,7 @@ impl ExtensionInfo for WebsiteExtensionExecutor {
     }
 
     fn description(&self) -> &'static str {
-        "Handles website creation, publication, updates, and section management"
+        "Handles website creation, publication, updates, and element management"
     }
 
     fn category(&self) -> &'static str {
@@ -421,10 +421,10 @@ impl ExtensionInfo for WebsiteExtensionExecutor {
             EventType::WebsitePublished,
             EventType::WebsiteUpdated,
             EventType::WebsiteDeleted,
-            EventType::SectionCreated,
-            EventType::SectionUpdated,
-            EventType::SectionDeleted,
-            EventType::SectionReordered,
+            EventType::ElementCreated,
+            EventType::ElementUpdated,
+            EventType::ElementDeleted,
+            EventType::ElementReordered,
             EventType::PresetApplied,
         ]
     }
@@ -456,8 +456,8 @@ impl ExtensionExecutor for WebsiteExtensionExecutor {
                 tracing::info!("Processing website deletion for event {}", event.id);
                 // Could trigger cleanup of associated resources
             }
-            EventType::SectionCreated | EventType::SectionUpdated | EventType::SectionDeleted | EventType::SectionReordered => {
-                tracing::info!("Processing section change for event {}", event.id);
+            EventType::ElementCreated | EventType::ElementUpdated | EventType::ElementDeleted | EventType::ElementReordered => {
+                tracing::info!("Processing element change for event {}", event.id);
                 // Could trigger partial re-rendering
             }
             EventType::PresetApplied => {
