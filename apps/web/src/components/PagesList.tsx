@@ -311,32 +311,32 @@ export function PagesList({
     <>
       <Collapsible open={isOpen} onOpenChange={setIsOpen} className="group/collapsible">
         <SidebarGroup>
-          <SidebarGroupLabel asChild>
-            <CollapsibleTrigger className="flex w-full items-center justify-between">
-              <span className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Pages
-              </span>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-5 w-5"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    resetForm();
-                    setCreateDialogOpen(true);
-                  }}
-                >
-                  <Plus className="h-3 w-3" />
-                </Button>
+          <div className="relative">
+            <SidebarGroupLabel asChild>
+              <CollapsibleTrigger className="flex w-full items-center justify-between pr-8">
+                <span className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Pages
+                </span>
                 <ChevronRight className={cn(
                   "h-4 w-4 transition-transform",
                   isOpen && "rotate-90"
                 )} />
-              </div>
-            </CollapsibleTrigger>
-          </SidebarGroupLabel>
+              </CollapsibleTrigger>
+            </SidebarGroupLabel>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 absolute right-1 top-1/2 -translate-y-1/2"
+              onClick={(e) => {
+                e.stopPropagation();
+                resetForm();
+                setCreateDialogOpen(true);
+              }}
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          </div>
           <CollapsibleContent>
             <SidebarGroupContent>
               <SidebarMenu>
