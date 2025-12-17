@@ -1,0 +1,502 @@
+/**
+ * V1 MVP: Premium Element Previews
+ * 
+ * Visual previews of portfolio sections for the Studio editor.
+ * Uses shadcn/ui components for a premium look.
+ */
+
+"use client"
+
+import * as React from 'react';
+import type { WebsiteElement } from "@/lib/api";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import {
+  User,
+  Briefcase,
+  Code,
+  Zap,
+  MessageSquare,
+  Mail,
+  Star,
+  MapPin,
+  Calendar,
+  ExternalLink,
+  Github,
+  ArrowRight,
+  Quote,
+  TrendingUp,
+  Eye,
+  EyeOff,
+  GripVertical,
+} from 'lucide-react';
+
+// ============================================
+// Types
+// ============================================
+
+export interface ElementPreviewProps {
+  element: WebsiteElement;
+  isSelected?: boolean;
+  onClick?: () => void;
+  isDragging?: boolean;
+}
+
+// Type-safe data access helpers
+function getString(data: Record<string, unknown> | undefined, key: string, fallback: string = ''): string {
+  if (!data) return fallback;
+  const value = data[key];
+  return typeof value === 'string' ? value : fallback;
+}
+
+function getNumber(data: Record<string, unknown> | undefined, key: string, fallback: number = 0): number {
+  if (!data) return fallback;
+  const value = data[key];
+  return typeof value === 'number' ? value : fallback;
+}
+
+function getArray<T>(data: Record<string, unknown> | undefined, key: string): T[] {
+  if (!data) return [];
+  const value = data[key];
+  return Array.isArray(value) ? value : [];
+}
+
+// ============================================
+// Hero Preview
+// ============================================
+
+function HeroPreview({ element, isSelected }: ElementPreviewProps) {
+  const data = (element.content || element.data || {}) as Record<string, unknown>;
+  const name = getString(data, 'name', 'Votre Nom');
+  const title = getString(data, 'title', 'Développeur Full-Stack');
+  const tagline = getString(data, 'tagline', 'Transformez vos idées en réalité');
+  const avatar = getString(data, 'avatar');
+  const availability = getString(data, 'availability', 'available');
+
+  const availabilityConfig = {
+    available: { label: 'Disponible', color: 'bg-green-500', textColor: 'text-green-600' },
+    busy: { label: 'Occupé', color: 'bg-yellow-500', textColor: 'text-yellow-600' },
+    'not-available': { label: 'Indisponible', color: 'bg-red-500', textColor: 'text-red-600' },
+  }[availability] || { label: 'Disponible', color: 'bg-green-500', textColor: 'text-green-600' };
+
+  return (
+    <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-lg p-6 text-white relative overflow-hidden">
+      {/* Decorative gradient */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(99,102,241,0.15),transparent_50%)]" />
+      
+      <div className="relative z-10">
+        <div className="flex items-start gap-4">
+          <Avatar className="h-16 w-16 border-2 border-white/20">
+            <AvatarImage src={avatar} />
+            <AvatarFallback className="bg-indigo-600 text-white text-lg">
+              {name.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Badge variant="secondary" className="bg-white/10 text-white border-0 gap-1">
+                <span className={`h-2 w-2 rounded-full ${availabilityConfig.color}`} />
+                {availabilityConfig.label}
+              </Badge>
+            </div>
+            <h3 className="text-xl font-bold truncate">{name}</h3>
+            <p className="text-indigo-300 text-sm">{title}</p>
+          </div>
+        </div>
+        <p className="mt-4 text-sm text-slate-300 line-clamp-2">{tagline}</p>
+        <div className="flex gap-2 mt-4">
+          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs">
+            Me contacter
+            <ArrowRight className="h-3 w-3 ml-1" />
+          </Button>
+          <Button size="sm" variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700 text-xs">
+            Voir projets
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// Services Preview
+// ============================================
+
+function ServicesPreview({ element }: ElementPreviewProps) {
+  const data = (element.content || element.data || {}) as Record<string, unknown>;
+  const services = getArray<{ title: string; description: string; icon?: string }>(data, 'services');
+  
+  const displayServices = services.length > 0 ? services.slice(0, 3) : [
+    { title: 'Applications Web', description: 'Développement sur mesure', icon: 'globe' },
+    { title: 'APIs & Backend', description: 'Architecture robuste', icon: 'server' },
+    { title: 'Consulting', description: 'Accompagnement technique', icon: 'consulting' },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Zap className="h-4 w-4 text-violet-500" />
+        <h4 className="font-medium text-sm">{element.title || 'Services'}</h4>
+        <Badge variant="secondary" className="text-xs">{services.length || 3}</Badge>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {displayServices.map((service, i) => (
+          <div key={i} className="p-3 rounded-lg bg-muted/50 border">
+            <div className="h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center mb-2">
+              <Briefcase className="h-4 w-4 text-violet-500" />
+            </div>
+            <p className="font-medium text-xs truncate">{service.title}</p>
+            <p className="text-[10px] text-muted-foreground truncate">{service.description}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// Projects Preview
+// ============================================
+
+function ProjectsPreview({ element }: ElementPreviewProps) {
+  const data = (element.content || element.data || {}) as Record<string, unknown>;
+  const projects = getArray<{ title: string; description: string; technologies?: string[]; featured?: boolean }>(data, 'projects');
+  
+  const displayProjects = projects.length > 0 ? projects.slice(0, 2) : [
+    { title: 'E-commerce Platform', technologies: ['React', 'Node.js'], featured: true },
+    { title: 'Dashboard Analytics', technologies: ['Next.js', 'TypeScript'], featured: false },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Code className="h-4 w-4 text-emerald-500" />
+        <h4 className="font-medium text-sm">{element.title || 'Projets'}</h4>
+        <Badge variant="secondary" className="text-xs">{projects.length || 2}</Badge>
+      </div>
+      <div className="space-y-2">
+        {displayProjects.map((project, i) => (
+          <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
+            <div className="h-12 w-16 rounded bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 flex items-center justify-center">
+              <Code className="h-5 w-5 text-emerald-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="font-medium text-sm truncate">{project.title}</p>
+                {project.featured && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
+              </div>
+              <div className="flex gap-1 mt-1">
+                {(project.technologies || []).slice(0, 3).map((tech, j) => (
+                  <Badge key={j} variant="outline" className="text-[10px] py-0 h-5">
+                    {tech}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// Skills/Stack Preview
+// ============================================
+
+function SkillsPreview({ element }: ElementPreviewProps) {
+  const data = (element.content || element.data || {}) as Record<string, unknown>;
+  const categories = getArray<{ name: string; skills: string[] }>(data, 'categories');
+  
+  const displayCategories = categories.length > 0 ? categories.slice(0, 2) : [
+    { name: 'Frontend', skills: ['React', 'Next.js', 'TypeScript'] },
+    { name: 'Backend', skills: ['Node.js', 'Rust', 'PostgreSQL'] },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <TrendingUp className="h-4 w-4 text-sky-500" />
+        <h4 className="font-medium text-sm">{element.title || 'Stack technique'}</h4>
+      </div>
+      <div className="space-y-2">
+        {displayCategories.map((category, i) => (
+          <div key={i} className="space-y-1.5">
+            <p className="text-xs font-medium text-muted-foreground">{category.name}</p>
+            <div className="flex flex-wrap gap-1">
+              {category.skills.slice(0, 4).map((skill, j) => (
+                <Badge key={j} className="text-xs bg-sky-500/10 text-sky-600 hover:bg-sky-500/20 border-0">
+                  {skill}
+                </Badge>
+              ))}
+              {category.skills.length > 4 && (
+                <Badge variant="outline" className="text-xs">+{category.skills.length - 4}</Badge>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// Process Preview
+// ============================================
+
+function ProcessPreview({ element }: ElementPreviewProps) {
+  const data = (element.content || element.data || {}) as Record<string, unknown>;
+  const steps = getArray<{ step: number; title: string; description: string }>(data, 'steps');
+  
+  const displaySteps = steps.length > 0 ? steps.slice(0, 4) : [
+    { step: 1, title: 'Découverte', description: 'Échange sur vos besoins' },
+    { step: 2, title: 'Proposition', description: 'Devis détaillé' },
+    { step: 3, title: 'Développement', description: 'Réalisation itérative' },
+    { step: 4, title: 'Livraison', description: 'Mise en production' },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Zap className="h-4 w-4 text-amber-500" />
+        <h4 className="font-medium text-sm">{element.title || 'Process'}</h4>
+      </div>
+      <div className="flex gap-1">
+        {displaySteps.map((step, i) => (
+          <div key={i} className="flex-1 text-center">
+            <div className="h-8 w-8 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto mb-1 text-xs font-bold">
+              {step.step}
+            </div>
+            <p className="text-[10px] font-medium truncate">{step.title}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// Proof/Testimonials Preview
+// ============================================
+
+function ProofPreview({ element }: ElementPreviewProps) {
+  const data = (element.content || element.data || {}) as Record<string, unknown>;
+  const items = getArray<{ type: string; value?: string; label?: string; content?: string; author?: string }>(data, 'items');
+  
+  const metrics = items.filter(i => i.type === 'metric').slice(0, 3);
+  const testimonials = items.filter(i => i.type === 'testimonial').slice(0, 1);
+
+  const displayMetrics = metrics.length > 0 ? metrics : [
+    { type: 'metric', value: '50+', label: 'Projets livrés' },
+    { type: 'metric', value: '30+', label: 'Clients satisfaits' },
+    { type: 'metric', value: '5+', label: 'Ans d\'expérience' },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Star className="h-4 w-4 text-amber-500" />
+        <h4 className="font-medium text-sm">{element.title || 'Preuves sociales'}</h4>
+      </div>
+      
+      {/* Metrics */}
+      <div className="grid grid-cols-3 gap-2">
+        {displayMetrics.map((metric, i) => (
+          <div key={i} className="text-center p-2 rounded-lg bg-muted/50">
+            <p className="text-lg font-bold text-primary">{metric.value}</p>
+            <p className="text-[10px] text-muted-foreground">{metric.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Testimonial */}
+      {testimonials.length > 0 && (
+        <div className="p-3 rounded-lg bg-muted/50 border">
+          <Quote className="h-4 w-4 text-muted-foreground mb-1" />
+          <p className="text-xs italic line-clamp-2">"{testimonials[0].content}"</p>
+          <p className="text-[10px] text-muted-foreground mt-1">— {testimonials[0].author}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// About Preview
+// ============================================
+
+function AboutPreview({ element }: ElementPreviewProps) {
+  const data = (element.content || element.data || {}) as Record<string, unknown>;
+  const bio = getString(data, 'bio', 'Passionné par le développement web depuis plusieurs années, je me spécialise dans la création d\'applications modernes...');
+  const location = getString(data, 'location');
+  const yearsOfExperience = getNumber(data, 'yearsOfExperience');
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <User className="h-4 w-4 text-indigo-500" />
+        <h4 className="font-medium text-sm">{element.title || 'À propos'}</h4>
+      </div>
+      <p className="text-sm text-muted-foreground line-clamp-3">{bio}</p>
+      <div className="flex gap-3">
+        {location && (
+          <Badge variant="outline" className="text-xs gap-1">
+            <MapPin className="h-3 w-3" />
+            {location}
+          </Badge>
+        )}
+        {yearsOfExperience > 0 && (
+          <Badge variant="outline" className="text-xs gap-1">
+            <Calendar className="h-3 w-3" />
+            {yearsOfExperience}+ ans
+          </Badge>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// Contact Preview
+// ============================================
+
+function ContactPreview({ element }: ElementPreviewProps) {
+  const data = (element.content || element.data || {}) as Record<string, unknown>;
+  const email = getString(data, 'email', 'contact@example.com');
+  const socials = (data.socials || {}) as Record<string, string>;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Mail className="h-4 w-4 text-sky-500" />
+        <h4 className="font-medium text-sm">{element.title || 'Contact'}</h4>
+      </div>
+      <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
+        <Mail className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm truncate flex-1">{email}</span>
+        <Button size="sm" variant="ghost" className="h-7 text-xs">
+          Contacter
+        </Button>
+      </div>
+      <div className="flex gap-2">
+        {socials.github && (
+          <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+            <Github className="h-4 w-4" />
+          </div>
+        )}
+        {socials.linkedin && (
+          <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+          </div>
+        )}
+        {socials.twitter && (
+          <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// Generic Preview
+// ============================================
+
+function GenericPreview({ element }: ElementPreviewProps) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Code className="h-4 w-4 text-muted-foreground" />
+        <h4 className="font-medium text-sm">{element.title || element.element_type}</h4>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Élément de type "{element.element_type}"
+      </p>
+    </div>
+  );
+}
+
+// ============================================
+// Main Preview Component
+// ============================================
+
+export function ElementPreview({ element, isSelected, onClick, isDragging }: ElementPreviewProps) {
+  const renderPreview = () => {
+    switch (element.element_type) {
+      case 'hero':
+        return <HeroPreview element={element} isSelected={isSelected} />;
+      case 'services':
+        return <ServicesPreview element={element} isSelected={isSelected} />;
+      case 'projects':
+        return <ProjectsPreview element={element} isSelected={isSelected} />;
+      case 'skills':
+        return <SkillsPreview element={element} isSelected={isSelected} />;
+      case 'process':
+        return <ProcessPreview element={element} isSelected={isSelected} />;
+      case 'proof':
+        return <ProofPreview element={element} isSelected={isSelected} />;
+      case 'about':
+        return <AboutPreview element={element} isSelected={isSelected} />;
+      case 'contact':
+        return <ContactPreview element={element} isSelected={isSelected} />;
+      default:
+        return <GenericPreview element={element} isSelected={isSelected} />;
+    }
+  };
+
+  return (
+    <Card 
+      className={`transition-all duration-200 cursor-pointer group ${
+        isSelected 
+          ? 'ring-2 ring-primary shadow-lg' 
+          : 'hover:shadow-md hover:border-muted-foreground/30'
+      } ${isDragging ? 'opacity-50 scale-[0.98]' : ''} ${!element.visible ? 'opacity-60' : ''}`}
+      onClick={onClick}
+    >
+      <CardContent className="p-4">
+        {/* Header with drag handle and visibility */}
+        <div className="flex items-center justify-between mb-3 pb-3 border-b">
+          <div className="flex items-center gap-2">
+            <GripVertical className="h-4 w-4 text-muted-foreground/50 cursor-grab active:cursor-grabbing" />
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              {element.element_type}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            {!element.visible && (
+              <Badge variant="outline" className="text-xs gap-1 text-muted-foreground">
+                <EyeOff className="h-3 w-3" />
+                Masqué
+              </Badge>
+            )}
+          </div>
+        </div>
+        
+        {/* Preview content */}
+        {renderPreview()}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Export individual previews for direct use
+export {
+  HeroPreview,
+  ServicesPreview,
+  ProjectsPreview,
+  SkillsPreview,
+  ProcessPreview,
+  ProofPreview,
+  AboutPreview,
+  ContactPreview,
+  GenericPreview,
+};
