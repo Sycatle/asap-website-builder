@@ -179,8 +179,9 @@ pub async fn create_website_from_preset(
                 }
             }
         }
-    } else if let Some(elements) = config.get("elements").and_then(|s| s.as_array()) {
-        // Fallback: Legacy support for old presets with elements at root level
+    } else if let Some(elements) = config.get("elements").and_then(|s| s.as_array())
+                .or_else(|| config.get("sections").and_then(|s| s.as_array())) {
+        // Fallback: Legacy support for old presets with elements/sections at root level
         // Create a default homepage with all elements
         let page_id = Uuid::new_v4();
         sqlx::query(

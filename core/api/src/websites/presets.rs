@@ -99,11 +99,28 @@ pub async fn create_website_from_preset(
             .await;
 
             (StatusCode::CREATED, Json(serde_json::json!({
-                "id": website_id.to_string(),
+                "website": {
+                    "id": website_id.to_string(),
+                    "slug": payload.slug,
+                    "title": payload.title,
+                    "status": "draft",
+                    "preset_id": payload.preset_id
+                },
                 "message": "Website created from preset successfully"
             }))).into_response()
         }
         Err(e) => {
+            let error_str = e.to_string();
+            
+            // Check for duplicate slug error
+            if error_str.contains("duplicate key") && error_str.contains("slug") {
+                tracing::warn!("Duplicate slug attempted: {}", payload.slug);
+                return (StatusCode::CONFLICT, Json(serde_json::json!({
+                    "error": "slug_taken",
+                    "message": "Cette adresse est déjà utilisée. Veuillez en choisir une autre."
+                }))).into_response();
+            }
+            
             tracing::error!("Database error creating website from preset: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
