@@ -59,8 +59,8 @@
     "vaul": "^1.1.2",
     "zod": "^3.25.76",
     "zustand": "^5.0.9",
-    "@asap/shared": "workspace:*",
-    "@asap/renderers": "workspace:*"
+    "@asap/shared": "file:../../packages/shared",
+    "@asap/renderers": "file:../../packages/renderers"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.6",
