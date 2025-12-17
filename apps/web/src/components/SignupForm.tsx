@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../lib/store/authStore';
-import { slugify } from '../lib/utils/formatters';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,36 +13,24 @@ export default function SignupForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [slug, setSlug] = useState('');
   const { signup, isLoading } = useAuthStore();
-
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newEmail = e.target.value;
-    setEmail(newEmail);
-    
-    // Auto-generate slug from email username if slug is empty
-    if (!slug) {
-      const username = newEmail.split('@')[0];
-      setSlug(slugify(username));
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const signupPromise = async () => {
-      await signup(email, password, slug);
-      return slug;
+      await signup(email, password);
+      return email;
     };
 
     toast.promise(signupPromise(), {
       loading: 'Création du compte...',
-      success: (slug) => {
+      success: () => {
         // Redirect on success
         setTimeout(() => {
           window.location.href = '/app/dashboard';
         }, 500);
-        return `Bienvenue ! Votre site ${slug}.asap.cool est prêt.`;
+        return 'Bienvenue ! Votre compte a été créé.';
       },
       error: (err) => err.message || 'Échec de la création du compte',
     });
@@ -65,7 +52,7 @@ export default function SignupForm({
             </a>
             <h1 className="text-xl font-bold">Créer votre compte</h1>
             <p className="text-center text-sm text-muted-foreground">
-              Lancez votre site en quelques minutes
+              Accédez à votre espace en quelques secondes
             </p>
           </div>
 
@@ -76,7 +63,7 @@ export default function SignupForm({
                 id="email"
                 type="email"
                 value={email}
-                onChange={handleEmailChange}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="vous@exemple.com"
                 required
               />
@@ -93,27 +80,6 @@ export default function SignupForm({
                 minLength={8}
               />
               <p className="text-xs text-muted-foreground">Minimum 8 caractères</p>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="slug">URL de votre site</Label>
-              <div className="flex">
-                <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
-                  asap.cool/
-                </span>
-                <Input
-                  id="slug"
-                  type="text"
-                  value={slug}
-                  onChange={(e) => setSlug(slugify(e.target.value))}
-                  required
-                  pattern="[a-z0-9-]+"
-                  className="rounded-l-none"
-                  placeholder="mon-site"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Lettres minuscules, chiffres et tirets uniquement
-              </p>
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (

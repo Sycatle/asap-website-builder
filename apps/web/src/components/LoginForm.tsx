@@ -52,7 +52,7 @@ export default function LoginForm({
             </a>
             <h1 className="text-xl font-bold">Bienvenue sur ASAP</h1>
             <p className="text-center text-sm text-muted-foreground">
-              Connectez-vous pour gérer vos sites
+              Connectez-vous pour accéder à votre espace
             </p>
           </div>
 

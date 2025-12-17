@@ -14,8 +14,10 @@ const DEFAULT_TAGLINE: &str = "";
 pub struct SignupRequest {
     pub email: String,
     pub password: String,
+    /// Optional website slug - if provided, creates a website during signup
+    /// For V1, website creation is handled by onboarding in the dashboard
     #[serde(alias = "portfolio_slug")]  // Backward compatibility
-    pub website_slug: String,
+    pub website_slug: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -116,12 +118,25 @@ mod password_tests {
         let req = SignupRequest {
             email: "user@example.com".to_string(),
             password: "password123".to_string(),
-            website_slug: "my-website".to_string(),
+            website_slug: Some("my-website".to_string()),
         };
 
         assert_eq!(req.email, "user@example.com");
         assert_eq!(req.password, "password123");
-        assert_eq!(req.website_slug, "my-website");
+        assert_eq!(req.website_slug, Some("my-website".to_string()));
+    }
+
+    #[test]
+    fn test_signup_request_without_slug() {
+        let req = SignupRequest {
+            email: "user@example.com".to_string(),
+            password: "password123".to_string(),
+            website_slug: None,
+        };
+
+        assert_eq!(req.email, "user@example.com");
+        assert_eq!(req.password, "password123");
+        assert!(req.website_slug.is_none());
     }
 
     #[test]
@@ -226,36 +241,40 @@ pub async fn signup(
         }))).into_response();
     }
 
-    // Validate slug format (strict security rules)
-    let slug = payload.website_slug.trim().to_lowercase();
-    if slug.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "Website slug is required"
-        }))).into_response();
-    }
-    if slug.len() < 3 || slug.len() > 50 {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "Website slug must be between 3 and 50 characters"
-        }))).into_response();
-    }
-    if !slug.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-') {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "Website slug can only contain lowercase letters, numbers, and hyphens"
-        }))).into_response();
-    }
-    if slug.starts_with('-') || slug.ends_with('-') || slug.contains("--") {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "Website slug cannot start/end with hyphen or contain consecutive hyphens"
-        }))).into_response();
-    }
-    // Reserved slugs that could conflict with routes
-    let reserved_slugs = ["api", "admin", "auth", "login", "signup", "public", "private", "health", "static", "assets", "www", "app"];
-    if reserved_slugs.contains(&slug.as_str()) {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "This website slug is reserved"
-        }))).into_response();
-    }
-    let slug = slug; // Use sanitized slug
+    // Validate and sanitize slug if provided (website creation is optional for V1)
+    let validated_slug = if let Some(ref slug_input) = payload.website_slug {
+        let slug = slug_input.trim().to_lowercase();
+        if !slug.is_empty() {
+            // Validate slug format (strict security rules)
+            if slug.len() < 3 || slug.len() > 50 {
+                return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                    "error": "Website slug must be between 3 and 50 characters"
+                }))).into_response();
+            }
+            if !slug.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-') {
+                return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                    "error": "Website slug can only contain lowercase letters, numbers, and hyphens"
+                }))).into_response();
+            }
+            if slug.starts_with('-') || slug.ends_with('-') || slug.contains("--") {
+                return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                    "error": "Website slug cannot start/end with hyphen or contain consecutive hyphens"
+                }))).into_response();
+            }
+            // Reserved slugs that could conflict with routes
+            let reserved_slugs = ["api", "admin", "auth", "login", "signup", "public", "private", "health", "static", "assets", "www", "app"];
+            if reserved_slugs.contains(&slug.as_str()) {
+                return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                    "error": "This website slug is reserved"
+                }))).into_response();
+            }
+            Some(slug)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
 
     // Hash password
     let password_hash = match hash_password(&payload.password) {
@@ -314,39 +333,43 @@ pub async fn signup(
         }))).into_response();
     }
 
-    // Create default website
-    let website_id = Uuid::new_v4();
-    let default_title = payload.email.split('@').next().unwrap_or("Account");
-    if let Err(e) = sqlx::query(
-        "INSERT INTO websites (id, account_id, slug, title, tagline, status, creation_mode) VALUES ($1, $2, $3, $4, $5, 'draft', $6)"
-    )
-    .bind(website_id)
-    .bind(account_id)
-    .bind(&slug)
-    .bind(default_title)
-    .bind(DEFAULT_TAGLINE)
-    .bind(DEFAULT_CREATION_MODE)
-    .execute(&mut *tx)
-    .await {
-        tracing::error!("Failed to create website: {}", e);
-        let _ = tx.rollback().await;
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Internal server error"
-        }))).into_response();
-    }
+    // Create website only if slug was provided (optional for V1 onboarding flow)
+    if let Some(ref slug) = validated_slug {
+        let website_id = Uuid::new_v4();
+        let default_title = payload.email.split('@').next().unwrap_or("Account");
+        if let Err(e) = sqlx::query(
+            "INSERT INTO websites (id, account_id, slug, title, tagline, status, creation_mode) VALUES ($1, $2, $3, $4, $5, 'draft', $6)"
+        )
+        .bind(website_id)
+        .bind(account_id)
+        .bind(slug)
+        .bind(default_title)
+        .bind(DEFAULT_TAGLINE)
+        .bind(DEFAULT_CREATION_MODE)
+        .execute(&mut *tx)
+        .await {
+            tracing::error!("Failed to create website: {}", e);
+            let _ = tx.rollback().await;
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
 
-    // Create website_data entry
-    if let Err(e) = sqlx::query(
-        "INSERT INTO website_data (website_id, data) VALUES ($1, '{}'::jsonb)"
-    )
-    .bind(website_id)
-    .execute(&mut *tx)
-    .await {
-        tracing::error!("Failed to create website_data: {}", e);
-        let _ = tx.rollback().await;
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Internal server error"
-        }))).into_response();
+        // Create website_data entry
+        if let Err(e) = sqlx::query(
+            "INSERT INTO website_data (website_id, data) VALUES ($1, '{}'::jsonb)"
+        )
+        .bind(website_id)
+        .execute(&mut *tx)
+        .await {
+            tracing::error!("Failed to create website_data: {}", e);
+            let _ = tx.rollback().await;
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+
+        tracing::info!("Website {} created for account {}", slug, account_id);
     }
 
     // Commit transaction
