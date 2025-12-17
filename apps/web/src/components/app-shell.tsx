@@ -109,8 +109,9 @@ function AppShellContent({
   setShowShortcutsHelp,
   isStudioPage = false
 }: AppShellContentProps) {
-  const { toggleSidebar, setOpen } = useSidebar()
+  const { toggleSidebar, setOpen, open } = useSidebar()
   const [pendingGoTo, setPendingGoTo] = useState(false)
+  const previousSidebarStateRef = React.useRef<boolean | null>(null)
   
   // Get data from context
   const { 
@@ -121,12 +122,18 @@ function AppShellContent({
     isLoadingWebsites,
   } = useWebsiteContext()
 
-  // Auto-collapse sidebar when entering studio page
+  // Auto-collapse sidebar when entering studio page, restore when leaving
   useEffect(() => {
     if (isStudioPage) {
+      // Save current state before collapsing
+      previousSidebarStateRef.current = open
       setOpen(false)
+    } else if (previousSidebarStateRef.current !== null) {
+      // Restore previous state when leaving studio
+      setOpen(previousSidebarStateRef.current)
+      previousSidebarStateRef.current = null
     }
-  }, [isStudioPage, setOpen])
+  }, [isStudioPage]) // Don't include open/setOpen to avoid loops
 
   // Real-time notifications via WebSocket
   useNotificationWebSocket({
