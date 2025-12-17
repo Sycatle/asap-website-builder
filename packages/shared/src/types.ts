@@ -9,16 +9,31 @@
 // Element Types
 // ============================================
 
+/**
+ * V1 MVP: Portfolio-focused element types only.
+ * FROZEN: Do not add new types until business validation.
+ * 
+ * @see V1_SECTION_ORDER in freelance-profile.ts for canonical order
+ */
 export type ElementType =
-  | 'hero'
-  | 'about'
-  | 'skills'
-  | 'projects'
+  | 'hero'       // Hero + CTA
+  | 'about'      // About me / Bio
+  | 'services'   // What I do (freelance services)
+  | 'projects'   // Portfolio projects
+  | 'process'    // How I work (steps)
+  | 'skills'     // Tech stack / skills
+  | 'proof'      // Testimonials / social proof
+  | 'contact';   // Contact form
+
+// ============================================
+// LEGACY/FROZEN Element Types (V2+)
+// ============================================
+// These types are frozen and hidden from the UI.
+// Do not use until business validation.
+export type LegacyElementType =
   | 'experience'
   | 'education'
-  | 'contact'
   | 'testimonials'
-  | 'services'
   | 'pricing'
   | 'faq'
   | 'gallery'

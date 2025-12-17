@@ -12,3 +12,6 @@ export * from './constants';
 
 // Utilities
 export * from './utils';
+
+// Freelance Profile (V1 Canonical Model)
+export * from './freelance-profile';

@@ -44,39 +44,56 @@ export interface LayoutDefinition {
   label: string;
 }
 
-/** All available element types with their metadata */
+/**
+ * V1 MVP: Portfolio-focused element types only.
+ * ORDERED: This is the canonical order for the freelance landing page.
+ * FROZEN: Do not modify until business validation.
+ */
 export const ELEMENT_TYPES: ElementTypeDefinition[] = [
-  { value: 'hero', label: 'Hero', description: "Page d'accueil principale" },
-  { value: 'about', label: 'À propos', description: 'Présentation personnelle/entreprise' },
-  { value: 'projects', label: 'Projets', description: 'Galerie de projets' },
-  { value: 'skills', label: 'Compétences', description: 'Compétences techniques' },
-  { value: 'experience', label: 'Expérience', description: 'Parcours professionnel' },
-  { value: 'education', label: 'Formation', description: 'Parcours éducatif' },
+  { value: 'hero', label: 'Hero', description: 'Présentation et appel à l\'action principal' },
+  { value: 'services', label: 'Services', description: 'Ce que je fais (3-4 services max)' },
+  { value: 'projects', label: 'Projets', description: 'Portfolio de réalisations' },
+  { value: 'process', label: 'Process', description: 'Comment je travaille (étapes)' },
+  { value: 'skills', label: 'Stack', description: 'Technologies maîtrisées' },
+  { value: 'proof', label: 'Preuves', description: 'Témoignages et métriques' },
+  { value: 'about', label: 'À propos', description: 'Bio et parcours' },
   { value: 'contact', label: 'Contact', description: 'Formulaire de contact' },
-  { value: 'blog', label: 'Blog', description: 'Articles de blog' },
-  { value: 'gallery', label: 'Galerie', description: "Galerie d'images" },
-  { value: 'testimonials', label: 'Témoignages', description: 'Témoignages clients' },
-  { value: 'services', label: 'Services', description: 'Services proposés' },
-  { value: 'pricing', label: 'Tarifs', description: 'Grille tarifaire' },
-  { value: 'faq', label: 'FAQ', description: 'Questions fréquentes' },
-  { value: 'custom', label: 'Personnalisé', description: 'Élément personnalisé' },
 ];
 
-/** Available layouts per element type */
+/**
+ * LEGACY element types - hidden from UI, kept for backward compatibility.
+ * @deprecated Do not use for new features.
+ */
+export const LEGACY_ELEMENT_TYPES: ElementTypeDefinition[] = [
+  { value: 'experience' as ElementType, label: 'Expérience', description: '[LEGACY] Parcours professionnel' },
+  { value: 'education' as ElementType, label: 'Formation', description: '[LEGACY] Parcours éducatif' },
+  { value: 'testimonials' as ElementType, label: 'Témoignages', description: '[LEGACY] Témoignages clients' },
+  { value: 'pricing' as ElementType, label: 'Tarifs', description: '[LEGACY] Grille tarifaire' },
+  { value: 'faq' as ElementType, label: 'FAQ', description: '[LEGACY] Questions fréquentes' },
+  { value: 'gallery' as ElementType, label: 'Galerie', description: '[LEGACY] Galerie d\'images' },
+  { value: 'blog' as ElementType, label: 'Blog', description: '[LEGACY] Articles de blog' },
+  { value: 'custom' as ElementType, label: 'Personnalisé', description: '[LEGACY] Élément personnalisé' },
+];
+
+/**
+ * V1 MVP: Fixed layouts per element type.
+ * FROZEN: Do not customize until business validation.
+ */
 export const ELEMENT_LAYOUTS: Record<ElementType, LayoutDefinition[]> = {
   hero: [{ value: 'full', label: 'Plein écran' }],
-  about: [
-    { value: 'full', label: 'Plein écran' },
-    { value: 'split', label: 'Divisé' },
-  ],
-  projects: [
-    { value: 'grid', label: 'Grille' },
-    { value: 'cards', label: 'Cartes' },
-  ],
-  skills: [
-    { value: 'grid', label: 'Grille' },
-    { value: 'list', label: 'Liste' },
-  ],
+  services: [{ value: 'grid', label: 'Grille' }],
+  projects: [{ value: 'grid', label: 'Grille' }],
+  process: [{ value: 'steps', label: 'Étapes' }],
+  skills: [{ value: 'grid', label: 'Grille' }],
+  proof: [{ value: 'cards', label: 'Cartes' }],
+  about: [{ value: 'split', label: 'Divisé' }],
+  contact: [{ value: 'full', label: 'Plein écran' }],
+};
+
+/**
+ * @deprecated LEGACY layouts - kept for backward compatibility only.
+ */
+export const LEGACY_ELEMENT_LAYOUTS: Record<string, LayoutDefinition[]> = {
   experience: [
     { value: 'timeline', label: 'Chronologie' },
     { value: 'list', label: 'Liste' },
@@ -85,28 +102,18 @@ export const ELEMENT_LAYOUTS: Record<ElementType, LayoutDefinition[]> = {
     { value: 'timeline', label: 'Chronologie' },
     { value: 'list', label: 'Liste' },
   ],
-  contact: [
-    { value: 'full', label: 'Plein écran' },
-    { value: 'split', label: 'Divisé' },
-  ],
+  testimonials: [{ value: 'cards', label: 'Cartes' }],
+  pricing: [{ value: 'cards', label: 'Cartes' }],
+  faq: [{ value: 'list', label: 'Liste' }],
+  gallery: [{ value: 'grid', label: 'Grille' }],
   blog: [
     { value: 'list', label: 'Liste' },
     { value: 'grid', label: 'Grille' },
   ],
-  gallery: [{ value: 'grid', label: 'Grille' }],
-  testimonials: [{ value: 'cards', label: 'Cartes' }],
-  services: [
-    { value: 'cards', label: 'Cartes' },
-    { value: 'grid', label: 'Grille' },
-  ],
-  pricing: [{ value: 'cards', label: 'Cartes' }],
-  faq: [{ value: 'list', label: 'Liste' }],
   custom: [
     { value: 'full', label: 'Plein écran' },
-    { value: 'split', label: 'Divisé' },
     { value: 'grid', label: 'Grille' },
     { value: 'cards', label: 'Cartes' },
-    { value: 'list', label: 'Liste' },
   ],
 };
 
@@ -139,5 +146,6 @@ export function getElementDescription(type: string): string {
  * Get available layouts for an element type
  */
 export function getLayoutsForType(type: string): LayoutDefinition[] {
-  return ELEMENT_LAYOUTS[type as ElementType] || ELEMENT_LAYOUTS.custom;
+  // V1: Return layouts for known types, or default to hero layout
+  return ELEMENT_LAYOUTS[type as ElementType] || [{ value: 'default', label: 'Par défaut' }];
 }
