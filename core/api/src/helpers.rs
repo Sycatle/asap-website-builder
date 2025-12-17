@@ -15,7 +15,7 @@ pub type JsonErrorResponse = (StatusCode, Json<serde_json::Value>);
 ///
 /// # Arguments
 /// * `id` - The string to parse as UUID
-/// * `field_name` - The name of the field for error messages (e.g., "website ID", "section ID")
+/// * `field_name` - The name of the field for error messages (e.g., "website ID", "element ID")
 ///
 /// # Returns
 /// * `Ok(Uuid)` - Successfully parsed UUID

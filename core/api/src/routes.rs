@@ -63,12 +63,12 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         .route("/websites/:id/extensions", post(crate::websites::activate_extension))
         .route("/websites/:id/extensions/:extension_id", patch(crate::websites::update_website_extension))
         .route("/websites/:id/extensions/:extension_id", delete(crate::websites::deactivate_extension))
-        // Website sections routes
-        .route("/websites/:id/sections", get(crate::websites::list_website_sections))
-        .route("/websites/:id/sections", post(crate::websites::create_section))
-        .route("/websites/:id/sections/reorder", post(crate::websites::reorder_sections))
-        .route("/websites/:id/sections/:section_id", patch(crate::websites::update_section))
-        .route("/websites/:id/sections/:section_id", delete(crate::websites::delete_section))
+        // Website elements routes
+        .route("/websites/:id/elements", get(crate::websites::list_website_elements))
+        .route("/websites/:id/elements", post(crate::websites::create_element))
+        .route("/websites/:id/elements/reorder", post(crate::websites::reorder_elements))
+        .route("/websites/:id/elements/:element_id", patch(crate::websites::update_element))
+        .route("/websites/:id/elements/:element_id", delete(crate::websites::delete_element))
         // Website pages routes
         .route("/websites/:id/pages", get(crate::websites::list_website_pages))
         .route("/websites/:id/pages", post(crate::websites::create_page))
@@ -124,7 +124,7 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         .route("/auth/login", post(crate::auth::login))
         // Public website routes
         .route("/public/websites/:slug", get(crate::websites::get_public_website))
-        .route("/public/websites/:slug/sections", get(crate::websites::get_public_website_sections))
+        .route("/public/websites/:slug/elements", get(crate::websites::get_public_website_elements))
         // File download (auth via query param for media embeds)
         .route("/files/:file_id", get(crate::files::download_file))
         // Webhook routes (public but signature verified)
@@ -169,7 +169,7 @@ mod tests {
             "/websites",
             "/websites/:id",
             "/websites/:id/extensions",
-            "/websites/:id/sections",
+            "/websites/:id/elements",
             "/presets",
             "/events",
             "/extensions",
@@ -220,7 +220,7 @@ mod tests {
             "/accounts/:id",
             "/websites/:id",
             "/websites/:id/extensions/:extension_id",
-            "/websites/:id/sections/:section_id",
+            "/websites/:id/elements/:element_id",
             "/events/:id",
             "/extensions/:id/config",
             "/public/websites/:slug",
@@ -252,9 +252,9 @@ mod tests {
             "/websites/:id/publish", // Publish action
             "/websites/:id/extensions", // List/Activate extensions
             "/websites/:id/extensions/:extension_id", // Update extension
-            "/websites/:id/sections", // List/Create sections
-            "/websites/:id/sections/:section_id", // Update/Delete section
-            "/websites/:id/sections/reorder", // Reorder sections
+            "/websites/:id/elements", // List/Create elements
+            "/websites/:id/elements/:element_id", // Update/Delete element
+            "/websites/:id/elements/reorder", // Reorder elements
         ];
 
         for route in website_routes {

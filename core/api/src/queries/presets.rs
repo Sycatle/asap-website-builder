@@ -109,7 +109,7 @@ pub async fn create_website_from_preset(
         }
     }
 
-    // Create pages and sections from preset config (new page-based structure)
+    // Create pages and elements from preset config (new page-based structure)
     if let Some(pages) = config.get("pages").and_then(|p| p.as_array()) {
         for (page_order, page) in pages.iter().enumerate() {
             let page_slug = page.get("slug").and_then(|s| s.as_str()).unwrap_or("");
@@ -135,53 +135,53 @@ pub async fn create_website_from_preset(
             .execute(&mut *tx)
             .await?;
 
-            // Create sections for this page
-            if let Some(sections) = page.get("sections").and_then(|s| s.as_array()) {
-                for (section_order, section) in sections.iter().enumerate() {
-                    let section_type = section.get("section_type").and_then(|s| s.as_str()).unwrap_or("custom");
-                    let section_slug = section.get("slug").and_then(|s| s.as_str()).unwrap_or("section");
-                    let section_title = section.get("title").and_then(|s| s.as_str()).unwrap_or("Section");
-                    let layout = section.get("layout").and_then(|l| l.as_str()).unwrap_or("full");
+            // Create elements for this page
+            if let Some(elements) = page.get("elements").and_then(|s| s.as_array()) {
+                for (element_order, element) in elements.iter().enumerate() {
+                    let element_type = element.get("element_type").and_then(|s| s.as_str()).unwrap_or("custom");
+                    let element_slug = element.get("slug").and_then(|s| s.as_str()).unwrap_or("element");
+                    let element_title = element.get("title").and_then(|s| s.as_str()).unwrap_or("Element");
+                    let layout = element.get("layout").and_then(|l| l.as_str()).unwrap_or("full");
                     let default_settings = serde_json::json!({});
-                    let settings = section.get("settings").unwrap_or(&default_settings);
+                    let settings = element.get("settings").unwrap_or(&default_settings);
 
-                    // Create section in website_sections
-                    let section_id = Uuid::new_v4();
+                    // Create element in website_elements
+                    let element_id = Uuid::new_v4();
                     sqlx::query(
                         r#"
-                        INSERT INTO website_sections (id, website_id, section_type, slug, title, "order", layout, settings)
+                        INSERT INTO website_elements (id, website_id, element_type, slug, title, "order", layout, settings)
                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                         "#
                     )
-                    .bind(section_id)
+                    .bind(element_id)
                     .bind(website_id)
-                    .bind(section_type)
-                    .bind(section_slug)
-                    .bind(section_title)
-                    .bind(section_order as i32)
+                    .bind(element_type)
+                    .bind(element_slug)
+                    .bind(element_title)
+                    .bind(element_order as i32)
                     .bind(layout)
                     .bind(settings)
                     .execute(&mut *tx)
                     .await?;
 
-                    // Link section to page via page_sections
+                    // Link element to page via page_elements
                     sqlx::query(
                         r#"
-                        INSERT INTO page_sections (page_id, section_id, "order", visible)
+                        INSERT INTO page_elements (page_id, element_id, "order", visible)
                         VALUES ($1, $2, $3, true)
                         "#
                     )
                     .bind(page_id)
-                    .bind(section_id)
-                    .bind(section_order as i32)
+                    .bind(element_id)
+                    .bind(element_order as i32)
                     .execute(&mut *tx)
                     .await?;
                 }
             }
         }
-    } else if let Some(sections) = config.get("sections").and_then(|s| s.as_array()) {
-        // Fallback: Legacy support for old presets with sections at root level
-        // Create a default homepage with all sections
+    } else if let Some(elements) = config.get("elements").and_then(|s| s.as_array()) {
+        // Fallback: Legacy support for old presets with elements at root level
+        // Create a default homepage with all elements
         let page_id = Uuid::new_v4();
         sqlx::query(
             r#"
@@ -194,27 +194,27 @@ pub async fn create_website_from_preset(
         .execute(&mut *tx)
         .await?;
 
-        for (order, section) in sections.iter().enumerate() {
-            let section_type = section.get("section_type").and_then(|s| s.as_str()).unwrap_or("custom");
-            let section_slug = section.get("slug").and_then(|s| s.as_str()).unwrap_or("section");
-            let section_title = section.get("title").and_then(|s| s.as_str()).unwrap_or("Section");
-            let layout = section.get("layout").and_then(|l| l.as_str()).unwrap_or("full");
+        for (order, element) in elements.iter().enumerate() {
+            let element_type = element.get("element_type").and_then(|s| s.as_str()).unwrap_or("custom");
+            let element_slug = element.get("slug").and_then(|s| s.as_str()).unwrap_or("element");
+            let element_title = element.get("title").and_then(|s| s.as_str()).unwrap_or("Element");
+            let layout = element.get("layout").and_then(|l| l.as_str()).unwrap_or("full");
             let default_settings = serde_json::json!({});
-            let settings = section.get("settings").unwrap_or(&default_settings);
+            let settings = element.get("settings").unwrap_or(&default_settings);
 
-            // Create section
-            let section_id = Uuid::new_v4();
+            // Create element
+            let element_id = Uuid::new_v4();
             sqlx::query(
                 r#"
-                INSERT INTO website_sections (id, website_id, section_type, slug, title, "order", layout, settings)
+                INSERT INTO website_elements (id, website_id, element_type, slug, title, "order", layout, settings)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 "#
             )
-            .bind(section_id)
+            .bind(element_id)
             .bind(website_id)
-            .bind(section_type)
-            .bind(section_slug)
-            .bind(section_title)
+            .bind(element_type)
+            .bind(element_slug)
+            .bind(element_title)
             .bind(order as i32)
             .bind(layout)
             .bind(settings)
@@ -224,12 +224,12 @@ pub async fn create_website_from_preset(
             // Link to homepage
             sqlx::query(
                 r#"
-                INSERT INTO page_sections (page_id, section_id, "order", visible)
+                INSERT INTO page_elements (page_id, element_id, "order", visible)
                 VALUES ($1, $2, $3, true)
                 "#
             )
             .bind(page_id)
-            .bind(section_id)
+            .bind(element_id)
             .bind(order as i32)
             .execute(&mut *tx)
             .await?;

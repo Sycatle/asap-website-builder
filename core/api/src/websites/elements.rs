@@ -1,4 +1,4 @@
-//! Website sections management
+//! Website elements management
 
 use axum::{
     extract::{Path, State, Extension},
@@ -13,11 +13,11 @@ use uuid::Uuid;
 use asap_core_shared::Claims;
 
 #[derive(Debug, Serialize)]
-pub struct WebsiteSectionResponse {
+pub struct WebsiteElementResponse {
     pub id: String,
     pub website_id: String,
     pub extension_id: Option<String>,
-    pub section_type: String,
+    pub element_type: String,
     pub slug: String,
     pub title: String,
     pub order: i32,
@@ -28,8 +28,8 @@ pub struct WebsiteSectionResponse {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct CreateSectionRequest {
-    pub section_type: String,
+pub struct CreateElementRequest {
+    pub element_type: String,
     pub slug: String,
     pub title: String,
     pub order: Option<i32>,
@@ -40,7 +40,7 @@ pub struct CreateSectionRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct UpdateSectionRequest {
+pub struct UpdateElementRequest {
     pub title: Option<String>,
     pub layout: Option<String>,
     pub settings: Option<serde_json::Value>,
@@ -49,11 +49,11 @@ pub struct UpdateSectionRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ReorderSectionsRequest {
-    pub section_ids: Vec<String>,
+pub struct ReorderElementsRequest {
+    pub element_ids: Vec<String>,
 }
 
-pub async fn list_website_sections(
+pub async fn list_website_elements(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
     Path(website_id): Path<String>,
@@ -77,14 +77,14 @@ pub async fn list_website_sections(
     };
 
     use crate::queries;
-    let result = queries::list_website_sections(&pool, website_uuid, account_id).await;
+    let result = queries::list_website_elements(&pool, website_uuid, account_id).await;
 
     match result {
-        Ok(sections) => {
-            (StatusCode::OK, Json(sections)).into_response()
+        Ok(elements) => {
+            (StatusCode::OK, Json(elements)).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error listing sections: {}", e);
+            tracing::error!("Database error listing elements: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()
@@ -92,11 +92,11 @@ pub async fn list_website_sections(
     }
 }
 
-pub async fn create_section(
+pub async fn create_element(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
     Path(website_id): Path<String>,
-    Json(payload): Json<CreateSectionRequest>,
+    Json(payload): Json<CreateElementRequest>,
 ) -> impl IntoResponse {
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
@@ -129,12 +129,12 @@ pub async fn create_section(
     };
 
     use crate::queries;
-    let result = queries::create_website_section(
+    let result = queries::create_website_element(
         &pool,
         website_uuid,
         account_id,
         extension_uuid,
-        &payload.section_type,
+        &payload.element_type,
         &payload.slug,
         &payload.title,
         payload.order.unwrap_or(0),
@@ -144,15 +144,15 @@ pub async fn create_section(
     ).await;
 
     match result {
-        Ok(section_id) => {
+        Ok(element_id) => {
             let event_payload = serde_json::json!({
                 "website_id": website_id,
-                "section_id": section_id.to_string(),
-                "section_type": payload.section_type
+                "element_id": element_id.to_string(),
+                "element_type": payload.element_type
             });
 
             let _ = sqlx::query(
-                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'SECTION_CREATED', $2)"
+                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'ELEMENT_CREATED', $2)"
             )
             .bind(account_id)
             .bind(&event_payload)
@@ -160,12 +160,12 @@ pub async fn create_section(
             .await;
 
             (StatusCode::CREATED, Json(serde_json::json!({
-                "id": section_id.to_string(),
-                "message": "Section created successfully"
+                "id": element_id.to_string(),
+                "message": "Element created successfully"
             }))).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error creating section: {}", e);
+            tracing::error!("Database error creating element: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()
@@ -173,11 +173,11 @@ pub async fn create_section(
     }
 }
 
-pub async fn update_section(
+pub async fn update_element(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
-    Path((website_id, section_id)): Path<(String, String)>,
-    Json(payload): Json<UpdateSectionRequest>,
+    Path((website_id, element_id)): Path<(String, String)>,
+    Json(payload): Json<UpdateElementRequest>,
 ) -> impl IntoResponse {
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
@@ -188,11 +188,11 @@ pub async fn update_section(
         }
     };
 
-    let section_uuid = match Uuid::parse_str(&section_id) {
+    let element_uuid = match Uuid::parse_str(&element_id) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid section ID format"
+                "error": "Invalid element ID format"
             }))).into_response();
         }
     };
@@ -207,9 +207,9 @@ pub async fn update_section(
     };
 
     use crate::queries;
-    let result = queries::update_website_section(
+    let result = queries::update_website_element(
         &pool,
-        section_uuid,
+        element_uuid,
         website_uuid,
         account_id,
         payload.title.as_deref(),
@@ -222,16 +222,16 @@ pub async fn update_section(
     match result {
         Ok(updated) if updated => {
             (StatusCode::OK, Json(serde_json::json!({
-                "message": "Section updated successfully"
+                "message": "Element updated successfully"
             }))).into_response()
         }
         Ok(_) => {
             (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Section not found"
+                "error": "Element not found"
             }))).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error updating section: {}", e);
+            tracing::error!("Database error updating element: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()
@@ -239,10 +239,10 @@ pub async fn update_section(
     }
 }
 
-pub async fn delete_section(
+pub async fn delete_element(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
-    Path((website_id, section_id)): Path<(String, String)>,
+    Path((website_id, element_id)): Path<(String, String)>,
 ) -> impl IntoResponse {
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
@@ -253,11 +253,11 @@ pub async fn delete_section(
         }
     };
 
-    let section_uuid = match Uuid::parse_str(&section_id) {
+    let element_uuid = match Uuid::parse_str(&element_id) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid section ID format"
+                "error": "Invalid element ID format"
             }))).into_response();
         }
     };
@@ -272,17 +272,17 @@ pub async fn delete_section(
     };
 
     use crate::queries;
-    let result = queries::delete_website_section(&pool, section_uuid, website_uuid, account_id).await;
+    let result = queries::delete_website_element(&pool, element_uuid, website_uuid, account_id).await;
 
     match result {
         Ok(deleted) if deleted => {
             let event_payload = serde_json::json!({
                 "website_id": website_id,
-                "section_id": section_id
+                "element_id": element_id
             });
 
             let _ = sqlx::query(
-                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'SECTION_DELETED', $2)"
+                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'ELEMENT_DELETED', $2)"
             )
             .bind(account_id)
             .bind(&event_payload)
@@ -290,16 +290,16 @@ pub async fn delete_section(
             .await;
 
             (StatusCode::OK, Json(serde_json::json!({
-                "message": "Section deleted successfully"
+                "message": "Element deleted successfully"
             }))).into_response()
         }
         Ok(_) => {
             (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Section not found"
+                "error": "Element not found"
             }))).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error deleting section: {}", e);
+            tracing::error!("Database error deleting element: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()
@@ -307,11 +307,11 @@ pub async fn delete_section(
     }
 }
 
-pub async fn reorder_sections(
+pub async fn reorder_elements(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
     Path(website_id): Path<String>,
-    Json(payload): Json<ReorderSectionsRequest>,
+    Json(payload): Json<ReorderElementsRequest>,
 ) -> impl IntoResponse {
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
@@ -331,32 +331,32 @@ pub async fn reorder_sections(
         }
     };
 
-    let section_uuids: Result<Vec<Uuid>, _> = payload.section_ids
+    let element_uuids: Result<Vec<Uuid>, _> = payload.element_ids
         .iter()
         .map(|id| Uuid::parse_str(id))
         .collect();
 
-    let section_uuids = match section_uuids {
+    let element_uuids = match element_uuids {
         Ok(ids) => ids,
         Err(_) => {
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid section ID format in list"
+                "error": "Invalid element ID format in list"
             }))).into_response();
         }
     };
 
     use crate::queries;
-    let result = queries::reorder_website_sections(&pool, website_uuid, account_id, &section_uuids).await;
+    let result = queries::reorder_website_elements(&pool, website_uuid, account_id, &element_uuids).await;
 
     match result {
         Ok(_) => {
             let event_payload = serde_json::json!({
                 "website_id": website_id,
-                "section_ids": payload.section_ids
+                "element_ids": payload.element_ids
             });
 
             let _ = sqlx::query(
-                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'SECTION_REORDERED', $2)"
+                "INSERT INTO events (account_id, event_type, payload) VALUES ($1, 'ELEMENT_REORDERED', $2)"
             )
             .bind(account_id)
             .bind(&event_payload)
@@ -364,11 +364,11 @@ pub async fn reorder_sections(
             .await;
 
             (StatusCode::OK, Json(serde_json::json!({
-                "message": "Sections reordered successfully"
+                "message": "Elements reordered successfully"
             }))).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error reordering sections: {}", e);
+            tracing::error!("Database error reordering elements: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()
@@ -376,8 +376,8 @@ pub async fn reorder_sections(
     }
 }
 
-/// Get public sections for a published website (no auth required)
-pub async fn get_public_website_sections(
+/// Get public elements for a published website (no auth required)
+pub async fn get_public_website_elements(
     State(pool): State<PgPool>,
     Path(slug): Path<String>,
 ) -> impl IntoResponse {
@@ -401,31 +401,31 @@ pub async fn get_public_website_sections(
         }
     };
     
-    // Get sections for this website (public - only visible ones)
-    let result = queries::list_public_website_sections(&pool, website.id).await;
+    // Get elements for this website (public - only visible ones)
+    let result = queries::list_public_website_elements(&pool, website.id).await;
 
     match result {
-        Ok(sections) => {
+        Ok(elements) => {
             // Map to response format
-            let response: Vec<serde_json::Value> = sections
+            let response: Vec<serde_json::Value> = elements
                 .into_iter()
-                .map(|s| serde_json::json!({
-                    "id": s.id.to_string(),
-                    "website_id": s.website_id.to_string(),
-                    "section_type": s.section_type,
-                    "title": s.title,
-                    "layout": s.layout,
-                    "content": s.data,
-                    "settings": s.settings,
-                    "visible": s.visible,
-                    "order_index": s.order
+                .map(|e| serde_json::json!({
+                    "id": e.id.to_string(),
+                    "website_id": e.website_id.to_string(),
+                    "element_type": e.element_type,
+                    "title": e.title,
+                    "layout": e.layout,
+                    "content": e.data,
+                    "settings": e.settings,
+                    "visible": e.visible,
+                    "order_index": e.order
                 }))
                 .collect();
             
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
-            tracing::error!("Database error listing public sections: {}", e);
+            tracing::error!("Database error listing public elements: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response()

@@ -1,17 +1,17 @@
-//! Website section queries
+                //! Website element queries
 
 use sqlx::PgPool;
 use uuid::Uuid;
 use serde_json::Value as JsonValue;
 
-use super::types::WebsiteSectionRow;
+use super::types::WebsiteElementRow;
 
-/// List sections for a website
-pub async fn list_website_sections(
+/// List elements for a website
+pub async fn list_website_elements(
     pool: &PgPool,
     website_id: Uuid,
     account_id: Uuid,
-) -> Result<Vec<WebsiteSectionRow>, Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<Vec<WebsiteElementRow>, Box<dyn std::error::Error + Send + Sync>> {
     // Verify website belongs to account
     let count: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
@@ -28,9 +28,9 @@ pub async fn list_website_sections(
     let rows = sqlx::query_as::<_, (Uuid, Uuid, Option<Uuid>, String, String, String, i32, String, JsonValue, JsonValue, bool)>(
         r#"
         SELECT 
-            id, website_id, extension_id, section_type, slug, title,
+            id, website_id, extension_id, element_type, slug, title,
             "order", layout, settings, data, visible
-        FROM website_sections
+        FROM website_elements
         WHERE website_id = $1
         ORDER BY "order"
         "#
@@ -39,12 +39,12 @@ pub async fn list_website_sections(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows.into_iter().map(|(id, website_id, extension_id, section_type, slug, title, order, layout, settings, data, visible)| {
-        WebsiteSectionRow {
+    Ok(rows.into_iter().map(|(id, website_id, extension_id, element_type, slug, title, order, layout, settings, data, visible)| {
+        WebsiteElementRow {
             id,
             website_id,
             extension_id,
-            section_type,
+            element_type,
             slug,
             title,
             order,
@@ -56,13 +56,13 @@ pub async fn list_website_sections(
     }).collect())
 }
 
-/// Create a section for a website
-pub async fn create_website_section(
+/// Create an element for a website
+pub async fn create_website_element(
     pool: &PgPool,
     website_id: Uuid,
     account_id: Uuid,
     extension_id: Option<Uuid>,
-    section_type: &str,
+    element_type: &str,
     slug: &str,
     title: &str,
     order: i32,
@@ -83,17 +83,17 @@ pub async fn create_website_section(
         return Err("Website not found".into());
     }
 
-    let section_id = Uuid::new_v4();
+    let element_id = Uuid::new_v4();
     sqlx::query(
         r#"
-        INSERT INTO website_sections (id, website_id, extension_id, section_type, slug, title, "order", layout, settings, data)
+        INSERT INTO website_elements (id, website_id, extension_id, element_type, slug, title, "order", layout, settings, data)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         "#
     )
-    .bind(section_id)
+    .bind(element_id)
     .bind(website_id)
     .bind(extension_id)
-    .bind(section_type)
+    .bind(element_type)
     .bind(slug)
     .bind(title)
     .bind(order)
@@ -103,13 +103,13 @@ pub async fn create_website_section(
     .execute(pool)
     .await?;
 
-    Ok(section_id)
+    Ok(element_id)
 }
 
-/// Update a website section
-pub async fn update_website_section(
+/// Update a website element
+pub async fn update_website_element(
     pool: &PgPool,
-    section_id: Uuid,
+    element_id: Uuid,
     website_id: Uuid,
     account_id: Uuid,
     title: Option<&str>,
@@ -135,10 +135,10 @@ pub async fn update_website_section(
 
     if let Some(t) = title {
         sqlx::query(
-            "UPDATE website_sections SET title = $1, updated_at = now() WHERE id = $2 AND website_id = $3"
+            "UPDATE website_elements SET title = $1, updated_at = now() WHERE id = $2 AND website_id = $3"
         )
         .bind(t)
-        .bind(section_id)
+        .bind(element_id)
         .bind(website_id)
         .execute(&mut *tx)
         .await?;
@@ -146,10 +146,10 @@ pub async fn update_website_section(
 
     if let Some(l) = layout {
         sqlx::query(
-            "UPDATE website_sections SET layout = $1, updated_at = now() WHERE id = $2 AND website_id = $3"
+            "UPDATE website_elements SET layout = $1, updated_at = now() WHERE id = $2 AND website_id = $3"
         )
         .bind(l)
-        .bind(section_id)
+        .bind(element_id)
         .bind(website_id)
         .execute(&mut *tx)
         .await?;
@@ -157,10 +157,10 @@ pub async fn update_website_section(
 
     if let Some(s) = settings {
         sqlx::query(
-            "UPDATE website_sections SET settings = $1, updated_at = now() WHERE id = $2 AND website_id = $3"
+            "UPDATE website_elements SET settings = $1, updated_at = now() WHERE id = $2 AND website_id = $3"
         )
         .bind(s)
-        .bind(section_id)
+        .bind(element_id)
         .bind(website_id)
         .execute(&mut *tx)
         .await?;
@@ -168,10 +168,10 @@ pub async fn update_website_section(
 
     if let Some(d) = data {
         sqlx::query(
-            "UPDATE website_sections SET data = $1, updated_at = now() WHERE id = $2 AND website_id = $3"
+            "UPDATE website_elements SET data = $1, updated_at = now() WHERE id = $2 AND website_id = $3"
         )
         .bind(d)
-        .bind(section_id)
+        .bind(element_id)
         .bind(website_id)
         .execute(&mut *tx)
         .await?;
@@ -179,10 +179,10 @@ pub async fn update_website_section(
 
     if let Some(v) = visible {
         sqlx::query(
-            "UPDATE website_sections SET visible = $1, updated_at = now() WHERE id = $2 AND website_id = $3"
+            "UPDATE website_elements SET visible = $1, updated_at = now() WHERE id = $2 AND website_id = $3"
         )
         .bind(v)
-        .bind(section_id)
+        .bind(element_id)
         .bind(website_id)
         .execute(&mut *tx)
         .await?;
@@ -192,10 +192,10 @@ pub async fn update_website_section(
     Ok(true)
 }
 
-/// Delete a website section
-pub async fn delete_website_section(
+/// Delete a website element
+pub async fn delete_website_element(
     pool: &PgPool,
-    section_id: Uuid,
+    element_id: Uuid,
     website_id: Uuid,
     account_id: Uuid,
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
@@ -213,9 +213,9 @@ pub async fn delete_website_section(
     }
 
     let result = sqlx::query(
-        "DELETE FROM website_sections WHERE id = $1 AND website_id = $2"
+        "DELETE FROM website_elements WHERE id = $1 AND website_id = $2"
     )
-    .bind(section_id)
+    .bind(element_id)
     .bind(website_id)
     .execute(pool)
     .await?;
@@ -223,12 +223,12 @@ pub async fn delete_website_section(
     Ok(result.rows_affected() > 0)
 }
 
-/// Reorder sections
-pub async fn reorder_website_sections(
+/// Reorder elements
+pub async fn reorder_website_elements(
     pool: &PgPool,
     website_id: Uuid,
     account_id: Uuid,
-    section_ids: &[Uuid],
+    element_ids: &[Uuid],
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Verify website belongs to account
     let count: (i64,) = sqlx::query_as(
@@ -245,12 +245,12 @@ pub async fn reorder_website_sections(
 
     let mut tx = pool.begin().await?;
 
-    for (order, section_id) in section_ids.iter().enumerate() {
+    for (order, element_id) in element_ids.iter().enumerate() {
         sqlx::query(
-            r#"UPDATE website_sections SET "order" = $1, updated_at = now() WHERE id = $2 AND website_id = $3"#
+            r#"UPDATE website_elements SET "order" = $1, updated_at = now() WHERE id = $2 AND website_id = $3"#
         )
         .bind(order as i32)
-        .bind(section_id)
+        .bind(element_id)
         .bind(website_id)
         .execute(&mut *tx)
         .await?;
@@ -260,17 +260,17 @@ pub async fn reorder_website_sections(
     Ok(())
 }
 
-/// List public sections for a website (no account verification, for published sites)
-pub async fn list_public_website_sections(
+/// List public elements for a website (no account verification, for published sites)
+pub async fn list_public_website_elements(
     pool: &PgPool,
     website_id: Uuid,
-) -> Result<Vec<WebsiteSectionRow>, Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<Vec<WebsiteElementRow>, Box<dyn std::error::Error + Send + Sync>> {
     let rows = sqlx::query_as::<_, (Uuid, Uuid, Option<Uuid>, String, String, String, i32, String, JsonValue, JsonValue, bool)>(
         r#"
         SELECT 
-            id, website_id, extension_id, section_type, slug, title,
+            id, website_id, extension_id, element_type, slug, title,
             "order", layout, settings, data, visible
-        FROM website_sections
+        FROM website_elements
         WHERE website_id = $1 AND visible = true
         ORDER BY "order"
         "#
@@ -279,12 +279,12 @@ pub async fn list_public_website_sections(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows.into_iter().map(|(id, website_id, extension_id, section_type, slug, title, order, layout, settings, data, visible)| {
-        WebsiteSectionRow {
+    Ok(rows.into_iter().map(|(id, website_id, extension_id, element_type, slug, title, order, layout, settings, data, visible)| {
+        WebsiteElementRow {
             id,
             website_id,
             extension_id,
-            section_type,
+            element_type,
             slug,
             title,
             order,

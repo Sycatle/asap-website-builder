@@ -38,13 +38,13 @@ pub struct WebsiteExtensionRow {
     pub activated_at: DateTime<Utc>,
 }
 
-/// Website section response
+/// Website element response
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WebsiteSectionRow {
+pub struct WebsiteElementRow {
     pub id: Uuid,
     pub website_id: Uuid,
     pub extension_id: Option<Uuid>,
-    pub section_type: String,
+    pub element_type: String,
     pub slug: String,
     pub title: String,
     pub order: i32,
@@ -130,12 +130,12 @@ mod tests {
     }
 
     #[test]
-    fn test_website_section_row_serialization() {
-        let section = WebsiteSectionRow {
+    fn test_website_element_row_serialization() {
+        let element = WebsiteElementRow {
             id: Uuid::new_v4(),
             website_id: Uuid::new_v4(),
             extension_id: Some(Uuid::new_v4()),
-            section_type: "projects".to_string(),
+            element_type: "projects".to_string(),
             slug: "my-projects".to_string(),
             title: "My Projects".to_string(),
             order: 1,
@@ -145,7 +145,7 @@ mod tests {
             visible: true,
         };
 
-        let json = serde_json::to_string(&section).unwrap();
+        let json = serde_json::to_string(&element).unwrap();
         assert!(json.contains("my-projects"));
         assert!(json.contains("grid"));
     }
@@ -160,7 +160,7 @@ mod tests {
             category: "professional".to_string(),
             config: serde_json::json!({
                 "extensions": ["github-sync"],
-                "sections": []
+                "elements": []
             }),
             thumbnail_url: Some("https://example.com/thumb.jpg".to_string()),
         };
