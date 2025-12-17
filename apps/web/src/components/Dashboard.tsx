@@ -52,10 +52,11 @@ import {
 import { FormActions } from "@/components/ui/form-actions";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { SectionsTab } from "@/components/sections/SectionsTab";
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 
 export default function Dashboard() {
   // Use website context for synchronized data
-  const { currentWebsite: website, quota, extensions, isLoading, refetch: refetchAll } = useWebsiteContext();
+  const { currentWebsite: website, quota, extensions, isLoading, websites, refetch: refetchAll } = useWebsiteContext();
   const { updateWebsiteCache } = useCacheActions();
   
   const [isSaving, setIsSaving] = useState(false);
@@ -301,6 +302,18 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+    );
+  }
+
+  // Show onboarding flow for users without any websites
+  if (!isLoading && websites.length === 0) {
+    return (
+      <OnboardingFlow 
+        onComplete={(newWebsiteId) => {
+          // Refetch websites to get the new one
+          refetchAll();
+        }} 
+      />
     );
   }
 

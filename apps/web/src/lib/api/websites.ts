@@ -7,7 +7,7 @@ export interface Website {
   title: string;
   tagline: string;
   status: 'draft' | 'published';
-  creation_mode: 'from_preset' | 'from_scratch';
+  creation_mode: 'from_preset' | 'from_scratch' | 'onboarding';
   preset_id?: string;
   metadata: Record<string, any>;
   data: Record<string, any>;
@@ -19,6 +19,8 @@ export interface CreateWebsiteRequest {
   slug: string;
   title: string;
   tagline?: string;
+  creation_mode?: 'from_preset' | 'from_scratch' | 'onboarding';
+  preset_id?: string;
 }
 
 export interface UpdateWebsiteRequest {
@@ -38,9 +40,24 @@ export const websitesAPI = {
     return apiClient.get<Website>(`/websites/${id}`);
   },
   
+  // Create a new website
+  async create(data: CreateWebsiteRequest): Promise<Website> {
+    return apiClient.post<Website>('/websites', data);
+  },
+  
   // Update a website (title, tagline, metadata)
   async update(id: string, data: UpdateWebsiteRequest): Promise<Website> {
     return apiClient.put<Website>(`/websites/${id}`, data);
+  },
+  
+  // Get website data (profile, projects, etc.)
+  async getData(id: string): Promise<Record<string, any>> {
+    return apiClient.get<Record<string, any>>(`/websites/${id}/data`);
+  },
+  
+  // Patch website data
+  async patchData(id: string, data: Record<string, any>): Promise<Record<string, any>> {
+    return apiClient.patch<Record<string, any>>(`/websites/${id}/data`, { data });
   },
   
   // Publish a website (change status from draft to published)

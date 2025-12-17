@@ -2,16 +2,16 @@
  * Public API client for fetching published website data
  * These endpoints don't require authentication
  * 
- * Uses types from @asap/shared for consistency
+ * V1: Uses FreelanceDevProfile structure instead of dynamic sections
  */
 
-import type { Website, Section } from '@asap/shared';
+import type { Website, FreelanceDevProfile } from '@asap/shared';
 
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
 
 // Re-export types for backward compatibility
 export type PublicWebsite = Website;
-export type PublicSection = Section;
+export type PublicProfile = FreelanceDevProfile;
 
 export const publicAPI = {
   /**
@@ -32,17 +32,16 @@ export const publicAPI = {
   },
 
   /**
-   * Get sections for a published website
+   * Get profile data for a published website (V1: FreelanceDevProfile)
    */
-  async getWebsiteSections(slug: string): Promise<PublicSection[]> {
-    const response = await fetch(`${API_URL}/public/websites/${slug}/sections`);
+  async getWebsiteProfile(slug: string): Promise<PublicProfile | null> {
+    const response = await fetch(`${API_URL}/public/websites/${slug}/profile`);
     
     if (!response.ok) {
-      // If sections endpoint doesn't exist, return empty array
       if (response.status === 404) {
-        return [];
+        return null;
       }
-      throw new Error(`Failed to fetch sections: ${response.statusText}`);
+      throw new Error(`Failed to fetch profile: ${response.statusText}`);
     }
     
     return response.json();
