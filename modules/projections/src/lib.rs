@@ -106,7 +106,7 @@ mod tests {
     fn test_generate_projection_data_serialization() {
         let data = serde_json::json!({
             "title": "Website",
-            "sections": ["about", "projects"],
+            "elements": ["about", "projects"],
             "projects": [
                 {"id": 1, "name": "Project 1"},
                 {"id": 2, "name": "Project 2"}
@@ -183,7 +183,7 @@ mod tests {
             "site": {
                 "title": "John's Website",
                 "theme": "dark",
-                "sections": [
+                "elements": [
                     {
                         "id": "about",
                         "title": "About",
@@ -211,8 +211,8 @@ mod tests {
         let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
         
         assert_eq!(parsed["site"]["title"], "John's Website");
-        assert_eq!(parsed["site"]["sections"][0]["id"], "about");
-        assert!(parsed["site"]["sections"][1]["items"][0]["tags"].is_array());
+        assert_eq!(parsed["site"]["elements"][0]["id"], "about");
+        assert!(parsed["site"]["elements"][1]["items"][0]["tags"].is_array());
     }
 }
 

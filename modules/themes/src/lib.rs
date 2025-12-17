@@ -123,7 +123,7 @@ mod tests {
                 "theme": "dark",
                 "layout": "grid"
             },
-            "sections": {
+            "elements": {
                 "about": "About me",
                 "contact": "Contact info"
             },
