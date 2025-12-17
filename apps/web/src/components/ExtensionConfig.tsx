@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import SchemaRenderer from './SchemaRenderer';
-import { useWebsites, useExtensionCatalog, useWebsiteExtensions, useExtensionData, useCacheActions } from '@/hooks/useCache';
+import { useWebsites, useExtensionCatalog, useWebsiteExtensions, useExtensionData } from '@/hooks/useCache';
 import { FormActions } from '@/components/ui/form-actions';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
@@ -166,8 +166,6 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
   const websiteId = websites[0]?.id || null;
   const { extensions: websiteExtensions, isLoading: extensionsLoading, refetch: refetchExtensions } = useWebsiteExtensions(websiteId);
   const { data: extensionDataResponse, isLoading: extensionDataLoading, refetch: refetchExtensionData } = useExtensionData(websiteId, slug);
-  const { invalidateWebsiteData } = useCacheActions();
-
   // Derive extension from catalog
   const extension = useMemo(() => {
     if (!catalogExtensions.length) return null;
@@ -308,19 +306,16 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
       }
       // Update initial settings after save
       setInitialSettings(settings);
-      // Invalidate cache and refetch
-      invalidateWebsiteData(websiteId);
+      // Refetch extension data only (don't invalidate all website data)
       await Promise.all([refetchExtensions(true), refetchExtensionData(true)]);
     };
 
-    toast.promise(savePromise(), {
-      loading: 'Enregistrement en cours...',
-      success: 'Configuration enregistrée',
-      error: 'Erreur lors de l\'enregistrement',
-    });
-
     try {
-      await savePromise();
+      await toast.promise(savePromise(), {
+        loading: 'Enregistrement en cours...',
+        success: 'Configuration enregistrée',
+        error: 'Erreur lors de l\'enregistrement',
+      });
     } catch (err) {
       console.error('Failed to save settings:', err);
     } finally {
@@ -328,10 +323,9 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
     }
   };
 
-  // Refresh data from cache
+  // Refresh data from cache (only extension-related data)
   const refreshData = async () => {
     if (!websiteId) return;
-    invalidateWebsiteData(websiteId);
     await Promise.all([refetchExtensions(true), refetchExtensionData(true)]);
   };
 
@@ -356,14 +350,12 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
       }
     };
 
-    toast.promise(actionPromise(), {
-      loading: `Exécution de "${action?.label || actionKey}"...`,
-      success: `Action "${action?.label || actionKey}" exécutée`,
-      error: `Erreur lors de l'exécution de l'action`,
-    });
-
     try {
-      await actionPromise();
+      await toast.promise(actionPromise(), {
+        loading: `Exécution de "${action?.label || actionKey}"...`,
+        success: `Action "${action?.label || actionKey}" exécutée`,
+        error: `Erreur lors de l'exécution de l'action`,
+      });
     } catch (err) {
       console.error('Failed to execute action:', err);
     } finally {
@@ -386,14 +378,12 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
         await refreshData();
       };
 
-      toast.promise(activatePromise(), {
-        loading: 'Activation en cours...',
-        success: 'Extension activée',
-        error: 'Erreur lors de l\'activation',
-      });
-
       try {
-        await activatePromise();
+        await toast.promise(activatePromise(), {
+          loading: 'Activation en cours...',
+          success: 'Extension activée',
+          error: 'Erreur lors de l\'activation',
+        });
       } catch (err) {
         console.error('Failed to activate extension:', err);
       }

@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { extensionsAPI } from '../lib/api';
 import type { Extension, WebsiteExtension } from '../lib/api/extensions';
-import { useWebsites, useExtensionCatalog, useWebsiteExtensions, useCacheActions } from '../hooks/useCache';
+import { useWebsites, useExtensionCatalog, useWebsiteExtensions } from '../hooks/useCache';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,8 +60,6 @@ export default function ExtensionsManager() {
     refetch: refetchExtensions 
   } = useWebsiteExtensions(currentWebsiteId);
   
-  const { invalidateWebsiteData } = useCacheActions();
-  
   const [activatingExtension, setActivatingExtension] = useState<string | null>(null);
   
   const isLoading = websitesLoading || catalogLoading || extensionsLoading;
@@ -111,14 +109,12 @@ export default function ExtensionsManager() {
       return extension.name;
     };
 
-    toast.promise(activatePromise(), {
-      loading: `Activation de ${extension.name}...`,
-      success: (name) => `Extension ${name} activée !`,
-      error: `Erreur lors de l'activation de l'extension ${extension.name}`,
-    });
-
     try {
-      await activatePromise();
+      await toast.promise(activatePromise(), {
+        loading: `Activation de ${extension.name}...`,
+        success: (name) => `Extension ${name} activée !`,
+        error: `Erreur lors de l'activation de l'extension ${extension.name}`,
+      });
     } catch (err) {
       console.error('Failed to activate extension:', err);
     } finally {
@@ -140,14 +136,12 @@ export default function ExtensionsManager() {
       await refetchExtensions(true);
     };
 
-    toast.promise(deactivatePromise(), {
-      loading: 'Désactivation en cours...',
-      success: 'Extension désactivée',
-      error: "Erreur lors de la désactivation de l'extension",
-    });
-
     try {
-      await deactivatePromise();
+      await toast.promise(deactivatePromise(), {
+        loading: 'Désactivation en cours...',
+        success: 'Extension désactivée',
+        error: "Erreur lors de la désactivation de l'extension",
+      });
     } catch (err) {
       console.error('Failed to deactivate extension:', err);
     } finally {

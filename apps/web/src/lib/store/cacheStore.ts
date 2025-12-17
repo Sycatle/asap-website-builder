@@ -607,7 +607,7 @@ export const useCacheStore = create<CacheState & CacheActions>()(
           const newWebsiteExtensions = { ...state.websiteExtensions };
           delete newWebsiteExtensions[websiteId];
           
-          // Remove website from cache
+          // Remove website from cache (but keep the websites list)
           const newWebsiteById = { ...state.websiteById };
           delete newWebsiteById[websiteId];
           
@@ -615,7 +615,7 @@ export const useCacheStore = create<CacheState & CacheActions>()(
             extensionData: newExtensionData,
             websiteExtensions: newWebsiteExtensions,
             websiteById: newWebsiteById,
-            websites: null, // Invalidate list too
+            // Don't invalidate websites list - it causes UI flicker
           };
         });
       },
