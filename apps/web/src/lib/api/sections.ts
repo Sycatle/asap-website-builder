@@ -1,13 +1,31 @@
 import { apiClient } from './client';
 
+// SectionType union - matches @asap/renderers
+export type SectionType =
+  | 'hero'
+  | 'about'
+  | 'skills'
+  | 'projects'
+  | 'experience'
+  | 'education'
+  | 'contact'
+  | 'testimonials'
+  | 'services'
+  | 'pricing'
+  | 'faq'
+  | 'gallery'
+  | 'blog'
+  | 'custom';
+
 export interface Section {
   id: string;
   website_id: string;
-  module_id?: string;  // Backend includes optional module_id
-  section_type: string; // 'hero', 'about', 'projects', 'skills', 'contact', etc.
+  extension_id?: string;  // Backend includes optional extension_id
+  section_type: SectionType;
   slug: string;
   title: string;
   order: number;
+  order_index: number; // Alias for order (for @asap/renderers compatibility)
   layout: string; // 'full', 'split', 'grid', 'cards', 'timeline', 'list'
   settings: Record<string, any>;
   data: Record<string, any>;
@@ -38,25 +56,34 @@ export interface ReorderSectionsRequest {
   section_ids: string[];
 }
 
+// Helper to normalize section data (adds order_index from order for renderers compatibility)
+function normalizeSection(section: Omit<Section, 'order_index'> & { order: number }): Section {
+  return { ...section, order_index: section.order };
+}
+
 export const sectionsAPI = {
   // List sections for a website
   async list(websiteId: string): Promise<Section[]> {
-    return apiClient.get<Section[]>(`/websites/${websiteId}/sections`);
+    const sections = await apiClient.get<Array<Omit<Section, 'order_index'> & { order: number }>>(`/websites/${websiteId}/sections`);
+    return sections.map(normalizeSection);
   },
   
   // Get a section by ID
   async get(websiteId: string, sectionId: string): Promise<Section> {
-    return apiClient.get<Section>(`/websites/${websiteId}/sections/${sectionId}`);
+    const section = await apiClient.get<Omit<Section, 'order_index'> & { order: number }>(`/websites/${websiteId}/sections/${sectionId}`);
+    return normalizeSection(section);
   },
   
   // Create a new section
   async create(websiteId: string, data: CreateSectionRequest): Promise<Section> {
-    return apiClient.post<Section>(`/websites/${websiteId}/sections`, data);
+    const section = await apiClient.post<Omit<Section, 'order_index'> & { order: number }>(`/websites/${websiteId}/sections`, data);
+    return normalizeSection(section);
   },
   
   // Update a section
   async update(websiteId: string, sectionId: string, data: UpdateSectionRequest): Promise<Section> {
-    return apiClient.patch<Section>(`/websites/${websiteId}/sections/${sectionId}`, data);
+    const section = await apiClient.patch<Omit<Section, 'order_index'> & { order: number }>(`/websites/${websiteId}/sections/${sectionId}`, data);
+    return normalizeSection(section);
   },
   
   // Delete a section
