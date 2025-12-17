@@ -7,7 +7,7 @@ This document provides comprehensive information about the unit tests in ASAP v2
 The project includes **79 unit tests** covering:
 - Core domain models (31 tests)
 - Core shared utilities (10 tests)
-- Feature modules (38 tests)
+- Feature extensions (38 tests)
 - API handlers
 - Data validation
 
@@ -24,8 +24,8 @@ make test
 # Domain tests
 make test-domain
 
-# Module tests
-make test-modules
+# Extension tests
+make test-extensions
 
 # API tests (requires DATABASE_URL)
 make test-api
@@ -36,10 +36,10 @@ make test-api
 ```bash
 # Run specific package tests
 cargo test --lib -p asap-core-domain
-cargo test --lib -p asap-module-github-generator
+cargo test --lib -p asap-extension-github-generator
 
 # Run specific test
-cargo test test_user_creation -- --exact
+cargo test test_account_creation -- --exact
 
 # Run with output
 cargo test --lib -- --nocapture
@@ -55,19 +55,19 @@ cargo test --lib -- --list
 
 ### Core Domain Tests (31 tests)
 
-#### Users Module (5 tests)
-- `test_user_creation` - User struct initialization
-- `test_user_clone` - User cloning capability
+#### Accounts Module (5 tests)
+- `test_account_creation` - Account struct initialization
+- `test_account_clone` - Account cloning capability
 - `test_tenant_creation` - Tenant workspace creation
-- `test_user_data_creation` - Extended user data initialization
-- `test_user_data_serialization` - JSON serialization/deserialization
+- `test_account_data_creation` - Extended account data initialization
+- `test_account_data_serialization` - JSON serialization/deserialization
 
-**File:** `core/domain/src/users.rs`
+**File:** `core/domain/src/accounts.rs`
 
 Tests cover:
-- ✅ User creation with UUID and timestamp
+- ✅ Account creation with UUID and timestamp
 - ✅ Tenant creation for workspace isolation
-- ✅ UserData JSONB storage
+- ✅ AccountData JSONB storage
 - ✅ Serialization round-trip
 
 #### Websites Module (7 tests)
@@ -102,7 +102,7 @@ Tests cover:
 **File:** `core/domain/src/events.rs`
 
 Tests cover:
-- ✅ Event type enumeration (UserCreated, WebsitePublished, etc.)
+- ✅ Event type enumeration (AccountCreated, WebsitePublished, etc.)
 - ✅ Event creation with payload
 - ✅ Event processing state management
 - ✅ Event serialization for storage
@@ -126,9 +126,9 @@ Tests cover:
 - ✅ Tagged union enumeration
 - ✅ Serialization with serde
 
-### Module Tests (38 tests)
+### Extension Tests (38 tests)
 
-#### Analytics Module (7 tests)
+#### Analytics Extension (7 tests)
 - `test_track_event_page_view` - Page view tracking
 - `test_track_event_click` - Click tracking
 - `test_track_event_form_submit` - Form submission tracking
@@ -144,7 +144,7 @@ Tests cover:
 - ✅ String handling and validation
 - ✅ Multiple event processing
 
-#### Themes Module (10 tests)
+#### Themes Extension (10 tests)
 - `test_apply_theme_empty_data` - Empty data handling
 - `test_apply_theme_with_website_data` - Website theming
 - `test_apply_theme_with_complex_structure` - Complex JSON
@@ -164,7 +164,7 @@ Tests cover:
 - ✅ Unicode and special characters
 - ✅ Pretty-printed output
 
-#### GitHub Generator Module (13 tests)
+#### GitHub Generator Extension (13 tests)
 
 **Client Tests (6 tests):**
 - `test_github_repo_creation` - Repository structure
@@ -195,7 +195,7 @@ Tests cover:
 - ✅ Sorting by popularity (stars)
 - ✅ Missing field handling
 
-#### Projections Module (8 tests)
+#### Projections Extension (8 tests)
 - `test_generate_projection_simple` - Basic projection
 - `test_generate_projection_slug_validation` - Slug validation
 - `test_generate_projection_data_serialization` - Data handling
@@ -224,11 +224,11 @@ Tests cover:
 - `test_verify_incorrect_password` - Wrong password rejection
 - `test_hash_same_password_different_hashes` - Bcrypt salt
 - `test_generate_token` - JWT generation
-- `test_generate_token_different_users` - Token uniqueness
+- `test_generate_token_different_accounts` - Token uniqueness
 - `test_claims_structure` - Claims validation
 - `test_signup_request_creation` - Request struct
 - `test_login_request_creation` - Request struct
-- `test_user_response` - Response struct
+- `test_account_response` - Response struct
 - `test_tenant_response` - Response struct
 - `test_me_response` - Response struct
 - `test_email_validation` - Email format
@@ -254,9 +254,9 @@ Tests cover:
 - `test_api_version_format` - Version format
 - `test_website_crud_routes` - Website routes
 - `test_event_routes` - Event routes
-- `test_module_configuration_routes` - Module routes
+- `test_extension_configuration_routes` - Extension routes
 - `test_auth_routes` - Auth routes
-- `test_user_integration_routes` - Integration routes
+- `test_account_integration_routes` - Integration routes
 - `test_public_website_routes` - Public routes
 
 **File:** `core/api/src/routes.rs`
@@ -276,13 +276,13 @@ Compile tests
     ↓
 Run test modules:
     ├── core/domain
-    │   ├── users::tests (5)
+    │   ├── accounts::tests (5)
     │   ├── websites::tests (7)
     │   ├── events::tests (8)
     │   └── integrations::tests (11)
     ├── core/shared
     │   └── all::tests (10)
-    ├── modules
+    ├── extensions
     │   ├── analytics::tests (7)
     │   ├── themes::tests (10)
     │   ├── github-generator::client::tests (6)

@@ -145,14 +145,16 @@ JWT_SECRET=dev_secret_key_change_in_production_12345
 
 ### Tables
 
-- `users` - User accounts
+- `accounts` - User accounts
 - `tenants` - Isolated workspaces
-- `user_data` - Extended user information (JSONB)
+- `account_data` - Extended account information (JSONB)
 - `websites` - User websites
 - `website_data` - Website content (JSONB)
+- `website_sections` - Website sections (order, type, settings)
+- `website_pages` - Website pages
 - `events` - System events
-- `modules` - Available modules
-- `module_configs` - Module configuration per tenant
+- `extensions` - Available extensions
+- `website_extensions` - Extensions enabled per website
 - `integrations` - External service connections (future)
 
 ### Security
@@ -231,8 +233,8 @@ Starts a PostgreSQL 15 container with:
 ### Indexes
 
 Indexes are created on:
-- `users.email` (unique)
-- `users.tenant_id`
+- `accounts.email` (unique)
+- `accounts.tenant_id`
 - `tenants.slug` (unique)
 - `websites.tenant_id`
 - `websites.slug` (unique per tenant)

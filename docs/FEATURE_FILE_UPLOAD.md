@@ -1,7 +1,7 @@
 # File Upload Feature - Complete Implementation
 
 ## Overview
-Complete implementation of secure file upload system with automatic compression, per-user storage quotas (1GB), and metadata cleanup.
+Complete implementation of secure file upload system with automatic compression, per-account storage quotas (1GB), and metadata cleanup.
 
 ## Features Implemented
 
@@ -21,12 +21,12 @@ Complete implementation of secure file upload system with automatic compression,
   - document.txt: 71 bytes → 85 bytes (overhead for small files)
   - config.json: 132 bytes → 116 bytes (12% savings)
 
-### 3. **Per-User Storage Quotas** ✅
-- Default quota: 1 GB per user
+### 3. **Per-Account Storage Quotas** ✅
+- Default quota: 1 GB per account
 - Real-time quota tracking
 - Quota enforcement on upload
 - Automatic quota updates on file operations
-- Quota reset on user deletion
+- Quota reset on account deletion
 - Remaining space calculation
 - Usage percentage display
 
@@ -39,9 +39,9 @@ Complete implementation of secure file upload system with automatic compression,
 
 ### 5. **Background Cleanup** ✅
 - 6-hour cleanup cycle
-- Orphaned files removal (files from deleted users)
+- Orphaned files removal (files from deleted accounts)
 - Audit log retention (90-day policy)
-- Quota cleanup for deleted users
+- Quota cleanup for deleted accounts
 - Quota recalculation and correction
 
 ## API Endpoints
@@ -69,7 +69,7 @@ Response:
 }
 ```
 
-### List User Files
+### List Account Files
 ```bash
 GET /files?limit=10&offset=0
 Authorization: Bearer <JWT>
@@ -120,7 +120,7 @@ Response: `204 No Content`
 | Column | Type | Notes |
 |--------|------|-------|
 | id | UUID | Primary key |
-| user_id | UUID | FK to users |
+| account_id | UUID | FK to accounts |
 | filename | TEXT | Original filename |
 | mime_type | TEXT | Content type |
 | original_size | BIGINT | Pre-compression size |
@@ -129,10 +129,10 @@ Response: `204 No Content`
 | storage_key | TEXT | Storage location (unique) |
 | created_at | TIMESTAMPTZ | Upload timestamp |
 
-### user_storage_quota table
+### account_storage_quota table
 | Column | Type | Notes |
 |--------|------|-------|
-| user_id | UUID | PK, FK to users |
+| account_id | UUID | PK, FK to accounts |
 | total_size_used | BIGINT | Bytes used |
 | quota_limit | BIGINT | Max bytes (1GB default) |
 | updated_at | TIMESTAMPTZ | Last update |
@@ -141,7 +141,7 @@ Response: `204 No Content`
 | Column | Type | Notes |
 |--------|------|-------|
 | id | UUID | Primary key |
-| user_id | UUID | FK to users |
+| account_id | UUID | FK to accounts |
 | file_id | UUID | FK to files |
 | operation | TEXT | 'upload', 'delete', 'download' |
 | ip_address | INET | Client IP |
@@ -152,7 +152,7 @@ Response: `204 No Content`
 
 ### Domain Layer (`core/domain/src/storage.rs`)
 - `File`: File metadata struct
-- `UserStorageQuota`: Quota tracking struct
+- `AccountStorageQuota`: Quota tracking struct
 - `FileUploadRequest`/`FileUploadResponse`: API DTOs
 - `StorageQuotaResponse`: Quota info DTO
 
@@ -163,8 +163,8 @@ Response: `204 No Content`
   - `calculate_hash()`: SHA-256 hashing
   - `upload_file()`: Complete upload pipeline
   - `delete_file()`: File removal
-  - `get_user_quota()`: Quota retrieval
-  - `list_user_files()`: Pagination
+  - `get_account_quota()`: Quota retrieval
+  - `list_account_files()`: Pagination
 
 ### Routes Layer (`core/api/src/files.rs`)
 - `upload_file()`: POST /files
@@ -197,12 +197,12 @@ Response: `204 No Content`
 
 ✅ **File Size Limits**
 - 100 MB per file
-- 1 GB per user (enforced)
+- 1 GB per account (enforced)
 - Quota checks before upload
 
 ✅ **Access Control**
 - JWT authentication required
-- User ownership verification
+- Account ownership verification
 - Foreign key constraints in DB
 
 ✅ **Deduplication**

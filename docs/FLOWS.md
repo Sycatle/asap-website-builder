@@ -1,19 +1,19 @@
-# Parcours Fonctionnels (Flux Modulaire)
+# Parcours Fonctionnels (Flux avec Extensions)
 
-Ce document décrit les flux utilisateur et système avec l'architecture **core + modules**.
+Ce document décrit les flux utilisateur et système avec l'architecture **core + extensions**.
 
 ---
 
 ## 1. Inscription (Core)
 
 ```
-User signup form
+Account signup form
     ↓
 POST /auth/signup
     ↓
-Core crée : users, tenants, websites
+Core crée : accounts, tenants, websites
     ↓
-Émet : USER_CREATED
+Émet : ACCOUNT_CREATED
     ↓
 Frontend reçoit token JWT
     ↓
@@ -22,29 +22,29 @@ Redirige vers /app/dashboard
 
 ---
 
-## 2. Configuration GitHub (Core + Module)
+## 2. Configuration GitHub (Core + Extension)
 
 ### Étape 1 : User fournit GitHub username
 
 ```
 User entre son GitHub username
     ↓
-PUT /users/:id/integrations/github { username: "johndoe" }
+PUT /accounts/:id/integrations/github { username: "johndoe" }
     ↓
-Core stocke dans user_data.integrations
+Core stocke dans account_data.integrations
     ↓
-Émet : USER_INTEGRATION_ADDED
+Émet : ACCOUNT_INTEGRATION_ADDED
 ```
 
-### Étape 2 : GitHubGenerator module réagit
+### Étape 2 : Extension GitHubGenerator réagit
 
 ```
-Worker détecte USER_INTEGRATION_ADDED
+Worker détecte ACCOUNT_INTEGRATION_ADDED
     ↓
-Module GitHubGenerator démarré
+Extension GitHubGenerator démarrée
     ↓
 1. GET /auth/me (Core API)
-2. Lit user_data.integrations.github.username
+2. Lit account_data.integrations.github.username
 3. Appelle GitHub API → récupère repos
 4. PATCH /websites/:id/data
 5. Stocke les projets dans website_data
@@ -54,21 +54,21 @@ Module GitHubGenerator démarré
 
 ---
 
-## 3. Activer un Module (Core)
+## 3. Activer une Extension (Core)
 
 ```
-User clique "Activer theme dark"
+User clique "Activer GitHub Sync"
     ↓
-PUT /modules/:id/config { enabled: true }
+POST /websites/:id/extensions { extension_id: "uuid" }
     ↓
-Core met à jour module_configs
+Core crée website_extensions
     ↓
-Émet : MODULE_CONFIG_CHANGED
+Émet : EXTENSION_ACTIVATED
 ```
 
 ---
 
-## 4. Générer le Rendu (Theme Module)
+## 4. Générer le Rendu (Theme Extension)
 
 ### Scénario 1 : User valide le website
 
@@ -83,7 +83,7 @@ Core met status = "published"
     ↓
 Worker reçoit l'événement
     ↓
-Theme module (default-theme) démarré :
+Theme extension (default-theme) démarrée :
     1. GET /websites/:id
     2. Lit website.data (contenu généré)
     3. Applique le thème
@@ -92,14 +92,14 @@ Theme module (default-theme) démarré :
 Émet : WEBSITE_RENDERED
 ```
 
-### Scénario 2 : Module autonome
+### Scénario 2 : Extension autonome
 
 ```
 Worker poll en continu
     ↓
-Module détecte : GITHUB_REPOS_SYNCED (non traité)
+Extension détecte : GITHUB_REPOS_SYNCED (non traité)
     ↓
-Theme module redéclenche rendu
+Theme extension redéclenche rendu
     ↓
 Génère data/sites/mon-website.json
     ↓
@@ -127,11 +127,11 @@ Rendu HTML
 ```
 User modifie GitHub username
     ↓
-PUT /users/:id/integrations/github { username: "newdoe" }
+PUT /accounts/:id/integrations/github { username: "newdoe" }
     ↓
-Core met à jour user_data
+Core met à jour account_data
     ↓
-Émet : USER_INTEGRATION_UPDATED
+Émet : ACCOUNT_INTEGRATION_UPDATED
     ↓
 Worker exécute GitHubGenerator
     ↓
@@ -141,7 +141,7 @@ PATCH /websites/:id/data (met à jour contenu)
     ↓
 Émet : GITHUB_REPOS_SYNCED
     ↓
-Worker exécute Theme module
+Worker exécute Theme extension
     ↓
 Régénère data/sites/mon-website.json
     ↓
@@ -156,12 +156,13 @@ Website à jour automatiquement
 ┌─────────────────────────────────────┐
 │         Core Events Table           │
 │                                     │
-│ • USER_CREATED                      │
-│ • USER_INTEGRATION_ADDED            │
-│ • USER_INTEGRATION_UPDATED          │
-│ • WEBSITE_CREATED                 │
-│ • WEBSITE_PUBLISHED               │
-│ • MODULE_CONFIG_CHANGED             │
+│ • ACCOUNT_CREATED                   │
+│ • ACCOUNT_INTEGRATION_ADDED         │
+│ • ACCOUNT_INTEGRATION_UPDATED       │
+│ • WEBSITE_CREATED                   │
+│ • WEBSITE_PUBLISHED                 │
+│ • EXTENSION_ACTIVATED               │
+│ • EXTENSION_DEACTIVATED             │
 │                                     │
 └─────────────────────────────────────┘
          ↑                  ↓
@@ -169,12 +170,12 @@ Website à jour automatiquement
                       (Event Processor)
                              ↓
                     ┌───────────────────┐
-                    │ Module Executor   │
+                    │ Extension Exec    │
                     │                   │
                     │ • GitHubGenerator │
-                    │ • AIGenerator     │
                     │ • ThemeRenderer   │
                     │ • Analytics       │
+                    │ • Projections     │
                     └───────────────────┘
 ```
 
@@ -183,7 +184,7 @@ Website à jour automatiquement
 ## Points clés
 
 - ✅ **Core** = source de vérité pour authentification et données utilisateur
-- ✅ **Modules** = implémentent les features en lisant/écrivant via Core API
-- ✅ **Événements** = découplent Core et Modules
-- ✅ **Idempotence** = modules peuvent être relancés sans risque
-- ✅ **Extensibilité** = ajouter un module ne nécessite pas de modifier le Core
+- ✅ **Extensions** = implémentent les features en lisant/écrivant via Core API
+- ✅ **Événements** = découplent Core et Extensions
+- ✅ **Idempotence** = extensions peuvent être relancées sans risque
+- ✅ **Extensibilité** = ajouter une extension ne nécessite pas de modifier le Core

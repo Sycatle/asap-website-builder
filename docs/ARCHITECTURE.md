@@ -38,20 +38,20 @@ Chaque module implémente une fonctionnalité spécifique :
 
 ### 3. Données utilisateur centralisées
 
-Les données utilisateur vivent dans le core, pas dans les modules :
+Les données utilisateur vivent dans le core, pas dans les extensions :
 
 ```
 ┌─────────────────────────────────────────┐
 │         Core (API ASAP)                 │
 │  ┌─────────────────────────────────────┐│
-│  │  Users                              ││
+│  │  Accounts                           ││
 │  │  ├─ profile (nom, email, etc.)      ││
 │  │  ├─ integrations (GitHub, etc.)     ││
 │  │  ├─ preferences                     ││
-│  │  └─ data_version (pour tracking)    ││
+│  │  └─ plan & billing info             ││
 │  └─────────────────────────────────────┘│
 │                                         │
-│  Modules accèdent via API au Core       │
+│  Extensions accèdent via API au Core    │
 └─────────────────────────────────────────┘
         ↓           ↓           ↓
    [Generator]  [Theme]   [Analytics]
@@ -73,11 +73,12 @@ L'API expose plusieurs catégories de routes :
 - **Événements** : publier des événements pour les modules
 - **Fichiers** : upload avec compression, gestion quotas, audit trail
 
-#### B. Routes Modules - Enregistrement et configuration
+#### B. Routes Extensions - Enregistrement et configuration
 
-- **Module registry** : liste des modules disponibles
-- **Module config** : configuration per-account des modules
-- **Module hooks** : webhooks pour les événements du core
+- **Extension catalog** : liste des extensions disponibles
+- **Extension config** : configuration per-website des extensions
+- **Extension actions** : exécution d'actions sur les extensions
+- **Extension data** : données spécifiques aux extensions
 
 #### C. Routes Temps Réel - Notifications et Sync
 
@@ -99,7 +100,7 @@ Les workers consomment les événements émis par le core et exécutent les tâc
 
 - **Event processing** : à la réception d'événements (ex. `USER_UPDATED`, `WEBSITE_PUBLISHED`), les workers distribuent ces événements aux modules abonnés
 
-- **Module tasks** : chaque module enregistré peut avoir des tâches background :
+- **Extension tasks** : chaque extension enregistrée peut avoir des tâches background :
   - `GitHubGenerator::sync_repos()` - récupère les repos GitHub
   - `AIGenerator::generate_content()` - génère du contenu avec IA
   - `Projections::render()` - génère les fichiers de projection
@@ -128,15 +129,16 @@ ASAP utilise **PostgreSQL** comme source de vérité pour le core :
 
 | Table | Responsabilité |
 |-------|-----------------|
-| `accounts` (anciennement users) | Profil utilisateur centralisé |
+| `accounts` | Profil utilisateur centralisé avec plan & billing |
 | `tenants` | Isolation multi-tenant |
-| `account_data` (anciennement user_data) | Données étendues (GitHub, intégrations, préférences) |
+| `account_data` | Données étendues (GitHub, intégrations, préférences) |
 | `websites` | Structure du site (slug, statut, création mode, preset) |
 | `website_data` | Contenu du website (JSONB extensible) |
 | `website_sections` | Sections du site (Hero, About, Projects, etc.) |
-| `website_modules` | Modules activés par website (many-to-many) |
+| `website_pages` | Pages multi-pages du website |
+| `website_extensions` | Extensions activées par website (many-to-many) |
 | `presets` | Templates prédéfinis pour création rapide |
-| `modules` | Catalogue des modules disponibles |
+| `extensions` | Catalogue des extensions disponibles |
 | `events` | Événements métier pour les modules |
 | `notifications` | Notifications utilisateur in-app |
 | `notification_queue` | Queue de consolidation des notifications |
@@ -148,7 +150,7 @@ ASAP utilise **PostgreSQL** comme source de vérité pour le core :
 
 - Chaque `account` appartient à un seul `tenant`
 - Chaque `tenant` peut avoir plusieurs `websites`
-- Chaque `website` a des `sections` et des `modules` activés
+- Chaque `website` a des `sections`, `pages` et des `extensions` activées
 - `RLS (Row Level Security)` : assure que les données ne fuient pas entre tenants
 - Toutes les lectures/écritures passent par `account_id`
 
@@ -167,7 +169,7 @@ ASAP utilise **Redis** pour plusieurs fonctionnalités critiques :
 - **Distribution multi-instances** : permet le scale horizontal de l'API
 - **Channels dédiés** :
   - `asap:sync:website` - événements websites
-  - `asap:sync:module` - événements modules
+  - `asap:sync:extension` - événements extensions
   - `asap:sync:file` - événements fichiers
   - `asap:presence` - présence utilisateurs
   - `asap:notifications` - notifications push
@@ -210,35 +212,35 @@ Intégration **Stripe** pour la monétisation :
 ```
 1. SIGNUP (Core)
    ├─> POST /auth/signup
-   ├─> INSERT users, tenants
-   └─> EMIT(USER_CREATED)
+   ├─> INSERT accounts, tenants
+   └─> EMIT(ACCOUNT_CREATED)
 
 2. CREATE FROM PRESET (Core)
    ├─> POST /websites/from-preset {preset_id, slug}
    ├─> INSERT website (creation_mode = from_preset)
    ├─> INSERT website_sections (depuis preset.config.sections)
-   ├─> INSERT website_modules (depuis preset.config.modules)
+   ├─> INSERT website_extensions (depuis preset.config.extensions)
    └─> EMIT(WEBSITE_CREATED)
 
 3. CONFIGURE GITHUB (Core)
-   ├─> PUT /users/:id/integrations {github_username}
-   ├─> UPDATE user_data.integrations
-   └─> EMIT(USER_INTEGRATION_ADDED)
+   ├─> PUT /accounts/:id/integrations/github {github_username}
+   ├─> UPDATE account_data.integrations
+   └─> EMIT(ACCOUNT_INTEGRATION_ADDED)
 
-4. SYNC (Module GitHub Sync)
-   ├─> Worker reçoit USER_INTEGRATION_ADDED
-   ├─> Module appelle Core: GET /users/:id/data
-   ├─> Core retourne user_data (GitHub username, etc.)
-   ├─> Module appelle GitHub API
-   ├─> Module stocke résultats dans WEBSITE_DATA (JSONB)
+4. SYNC (Extension GitHub Sync)
+   ├─> Worker reçoit ACCOUNT_INTEGRATION_ADDED
+   ├─> Extension appelle Core: GET /accounts/:id/data
+   ├─> Core retourne account_data (GitHub username, etc.)
+   ├─> Extension appelle GitHub API
+   ├─> Extension stocke résultats dans WEBSITE_DATA (JSONB)
    └─> EMIT(GITHUB_REPOS_SYNCED)
 
-5. RENDER (Module Theme Engine)
+5. RENDER (Extension Theme Engine)
    ├─> Worker reçoit WEBSITE_PUBLISHED
-   ├─> Module appelle Core: GET /websites/:id + sections
-   ├─> Module récupère la structure + contenu + sections
-   ├─> Module applique le thème
-   ├─> Module génère data/sites/<slug>.json
+   ├─> Extension appelle Core: GET /websites/:id + sections + pages
+   ├─> Extension récupère la structure + contenu + sections + pages
+   ├─> Extension applique le thème
+   ├─> Extension génère data/sites/<slug>.json
    └─> EMIT(WEBSITE_RENDERED)
 
 6. SERVE (Frontend Astro)

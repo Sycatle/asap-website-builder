@@ -17,7 +17,7 @@ Ce document décrit les routes HTTP exposées par le **Core API** (pas les modul
 
 ### `POST /auth/signup`
 
-Crée un utilisateur, un tenant et un website par défaut.
+Crée un compte, un tenant et un website par défaut.
 
 **Corps JSON :**
 
@@ -34,7 +34,7 @@ Crée un utilisateur, un tenant et un website par défaut.
 ```json
 {
   "token": "eyJhbGc...",
-  "user": {
+  "account": {
     "id": "uuid",
     "email": "dev@example.com"
   },
@@ -68,11 +68,11 @@ Authentifie et retourne un JWT.
 
 ---
 
-## Routes Users (Authentifiées)
+## Routes Accounts (Authentifiées)
 
 ### `GET /auth/me`
 
-Retourne l'utilisateur courant et ses données.
+Retourne le compte courant et ses données.
 
 **Réponse (200) :**
 
@@ -81,6 +81,7 @@ Retourne l'utilisateur courant et ses données.
   "id": "uuid",
   "email": "dev@example.com",
   "tenant_id": "uuid",
+  "plan": "free",
   "data": {
     "integrations": {
       "github": {
@@ -88,16 +89,15 @@ Retourne l'utilisateur courant et ses données.
       }
     },
     "preferences": {
-      "theme": "default",
-      "enabled_modules": ["github-generator", "default-theme"]
+      "theme": "default"
     }
   }
 }
 ```
 
-### `GET /users/:id`
+### `GET /accounts/:id`
 
-Retourne les données d'un utilisateur.
+Retourne les données d'un compte.
 
 **Réponse (200) :**
 
@@ -105,13 +105,14 @@ Retourne les données d'un utilisateur.
 {
   "id": "uuid",
   "email": "dev@example.com",
+  "plan": "free",
   "created_at": "2025-12-08T10:00:00Z"
 }
 ```
 
-### `PUT /users/:id`
+### `PUT /accounts/:id`
 
-Met à jour les données utilisateur (profil seulement).
+Met à jour les données du compte (profil seulement).
 
 **Corps JSON :**
 
@@ -131,9 +132,9 @@ Met à jour les données utilisateur (profil seulement).
 
 Les intégrations centralisent les données externes (GitHub, etc.).
 
-### `GET /users/:id/integrations`
+### `GET /accounts/:id/integrations`
 
-Retourne toutes les intégrations de l'utilisateur.
+Retourne toutes les intégrations du compte.
 
 **Réponse (200) :**
 
@@ -147,7 +148,7 @@ Retourne toutes les intégrations de l'utilisateur.
 }
 ```
 
-### `PUT /users/:id/integrations/github`
+### `PUT /accounts/:id/integrations/github`
 
 Configure l'intégration GitHub.
 
@@ -162,8 +163,8 @@ Configure l'intégration GitHub.
 
 **Effets secondaires :**
 
-- Met à jour `user_data.integrations.github`
-- Émet événement `USER_INTEGRATION_ADDED` pour les modules
+- Met à jour `account_data.integrations.github`
+- Émet événement `ACCOUNT_INTEGRATION_ADDED` pour les extensions
 
 ---
 
@@ -347,11 +348,11 @@ Réordonne les sections.
 
 ---
 
-## Routes Website Modules (Authentifiées)
+## Routes Website Extensions (Authentifiées)
 
-### `GET /websites/:id/modules`
+### `GET /websites/:id/extensions`
 
-Liste les modules activés pour un website.
+Liste les extensions activées pour un website.
 
 **Réponse (200) :**
 
@@ -359,30 +360,34 @@ Liste les modules activés pour un website.
 [
   {
     "id": "uuid",
-    "module_id": "uuid",
-    "module_name": "github-sync",
+    "extension_id": "uuid",
+    "extension_name": "github-sync",
     "settings": { "auto_sync": true },
     "enabled": true
   }
 ]
 ```
 
-### `POST /websites/:id/modules`
+### `POST /websites/:id/extensions`
 
-Active un module pour un website.
+Active une extension pour un website.
 
 **Corps JSON :**
 
 ```json
 {
-  "module_id": "uuid",
+  "extension_id": "uuid",
   "settings": { "auto_sync": true }
 }
 ```
 
-### `PATCH /websites/:id/modules/:module_id`
+### `PATCH /websites/:id/extensions/:extension_id`
 
-Met à jour les settings d'un module.
+Met à jour les settings d'une extension.
+
+### `DELETE /websites/:id/extensions/:extension_id`
+
+Désactive une extension pour un website.
 
 ---
 
@@ -423,11 +428,11 @@ Crée un website à partir d'un preset.
 
 ---
 
-## Routes Module Catalog (Authentifiées)
+## Routes Extension Catalog (Authentifiées)
 
-### `GET /modules/catalog`
+### `GET /extensions/catalog`
 
-Liste les modules disponibles dans le catalogue.
+Liste les extensions disponibles dans le catalogue.
 
 **Réponse (200) :**
 
@@ -439,9 +444,92 @@ Liste les modules disponibles dans le catalogue.
     "slug": "github-sync",
     "description": "Sync projects from GitHub",
     "category": "integration",
-    "default_settings": {}
+    "default_settings": {},
+    "config_schema": { ... },
+    "data_display": { ... }
   }
 ]
+```
+
+### `GET /extensions/:slug`
+
+Retourne le détail d'une extension par son slug.
+
+**Réponse (200) :**
+
+```json
+{
+  "id": "uuid",
+  "name": "GitHub Sync",
+  "slug": "github-sync",
+  "version": "1.0.0",
+  "description": "Sync projects from GitHub",
+  "category": "integration",
+  "default_settings": {},
+  "config_schema": {
+    "sections": [
+      {
+        "id": "settings",
+        "title": "Configuration",
+        "fields": [
+          {
+            "id": "auto_sync",
+            "type": "boolean",
+            "label": "Sync automatique",
+            "default": true
+          }
+        ]
+      }
+    ]
+  },
+  "data_display": {
+    "type": "table",
+    "title": "Repositories",
+    "fields": [
+      { "key": "name", "label": "Nom" },
+      { "key": "stars", "label": "⭐", "type": "number" }
+    ]
+  }
+}
+```
+
+### `GET /websites/:id/extensions/:extension_slug/data`
+
+Retourne les données spécifiques à une extension pour un website.
+
+**Réponse (200) :**
+
+```json
+{
+  "data": {
+    "repositories": [
+      { "name": "asap", "stars": 42, "url": "https://github.com/..." }
+    ],
+    "last_sync": "2025-12-15T10:30:00Z"
+  }
+}
+```
+
+### `POST /websites/:id/extensions/:extension_slug/actions/:action_key`
+
+Exécute une action définie par l'extension.
+
+**Corps JSON :**
+
+```json
+{
+  "params": { ... }
+}
+```
+
+**Réponse (200) :**
+
+```json
+{
+  "success": true,
+  "message": "Action exécutée",
+  "data": { ... }
+}
 ```
 
 ---
@@ -496,63 +584,6 @@ Marque un événement comme traité.
 
 ---
 
-## Routes Modules (Authentifiées)
-
-### `GET /modules`
-
-Liste les modules disponibles et activés pour ce tenant.
-
-**Réponse (200) :**
-
-```json
-{
-  "modules": [
-    {
-      "id": "uuid",
-      "name": "github-generator",
-      "version": "1.0.0",
-      "description": "Import GitHub repositories",
-      "enabled": true
-    }
-  ]
-}
-```
-
-### `GET /modules/:id/config`
-
-Retourne la configuration du module pour ce tenant.
-
-**Réponse (200) :**
-
-```json
-{
-  "module_id": "uuid",
-  "config": {
-    "enabled": true,
-    "settings": {
-      "sync_frequency": "daily"
-    }
-  }
-}
-```
-
-### `PUT /modules/:id/config`
-
-Met à jour la configuration du module.
-
-**Corps JSON :**
-
-```json
-{
-  "enabled": true,
-  "settings": {
-    "sync_frequency": "weekly"
-  }
-}
-```
-
----
-
 ## Routes Publiques (Sans authentification)
 
 ### `GET /public/websites/:slug`
@@ -586,7 +617,7 @@ Retourne un website publié (fallback si projection absente).
 Liste les notifications de l'utilisateur avec filtres optionnels.
 
 **Query params (optionnels) :**
-- `category` : filtrer par catégorie (system, account, website, module, billing, etc.)
+- `category` : filtrer par catégorie (system, account, website, extension, billing, etc.)
 - `priority` : filtrer par priorité (low, normal, high, urgent)
 - `is_read` : filtrer par statut lu/non lu (true/false)
 - `limit` : nombre de résultats (défaut: 50)
@@ -867,12 +898,12 @@ Après la connexion, envoyer un message d'authentification :
   }
 }
 
-// Module activé
+// Extension activée
 {
-  "type": "module_activated",
+  "type": "extension_activated",
   "data": {
     "website_id": "uuid",
-    "module_slug": "github-sync",
+    "extension_slug": "github-sync",
     "user_name": "John Doe"
   }
 }

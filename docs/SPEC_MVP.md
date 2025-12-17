@@ -9,7 +9,7 @@
 
 Permettre à un développeur ou étudiant de générer et publier un site web professionnel en **moins de 5 minutes** en utilisant des templates prédéfinis (presets) et l'import GitHub, avec un nombre minimal de champs obligatoires.
 
-> **Important :** Le MVP utilise une architecture **Website → Sections → Modules** pour une flexibilité maximale.
+> **Important :** Le MVP utilise une architecture **Website → Sections → Extensions** pour une flexibilité maximale.
 
 ---
 
@@ -25,11 +25,11 @@ Le core expose et implémente :
 - ✅ **Architecture Website** : 
   - Websites avec création from_scratch ou from_preset
   - Sections modulaires (Hero, About, Projects, Skills, Contact, Blog, etc.)
-  - Modules activables par website (GitHub Sync, Blog Engine, Analytics, etc.)
+  - Extensions activables par website (GitHub Sync, Blog Engine, Analytics, etc.)
   - Presets (templates prédéfinis)
 - ✅ **Événements** : création, polling, retry mechanism avec exponential backoff
 - ✅ **Multi-tenant** : isolation stricte par tenant_id + RLS PostgreSQL
-- ✅ **Module catalog** : catalogue de modules avec activation per-website
+- ✅ **Extension catalog** : catalogue d'extensions avec activation per-website
 
 **Bonus implémentés (non prévus initialement):**
 - ✅ File storage avec quotas utilisateurs
@@ -41,16 +41,16 @@ Le core expose et implémente :
 ### ✅ Worker - COMPLET (100%)
 
 - ✅ Event processor avec polling configurable (5s par défaut)
-- ✅ Module executor framework avec trait-based design
+- ✅ Extension executor framework avec trait-based design
 - ✅ Traitement parallèle des événements (JoinSet, 4x speedup)
 - ✅ Retry mechanism avancé (5 tentatives, exponential backoff)
 - ✅ Statistiques en temps réel (succès/échecs)
 - ✅ Graceful shutdown
 
-### ✅ Modules MVP - COMPLET (100%)
+### ✅ Extensions MVP - COMPLET (100%)
 
-#### Module GitHub Sync
-- ✅ Récupère le `github_username` du `user_data` via Core API
+#### Extension GitHub Sync
+- ✅ Récupère le `github_username` du `account_data` via Core API
 - ✅ Appelle GitHub API (repos publics)
 - ✅ Transforme les repos en contenu structuré
 - ✅ Stocke dans `website_data` (JSONB)
@@ -58,20 +58,20 @@ Le core expose et implémente :
 - ✅ Tri par nombre d'étoiles
 - ✅ 13 tests unitaires
 
-#### Module Theme Engine
+#### Extension Theme Engine
 - ✅ Lit `website_data` depuis Core
 - ✅ Applique le thème par défaut (couleurs, fonts, layouts)
 - ✅ Support thèmes personnalisés
 - ✅ Métadonnées de thème
 - ✅ 10 tests unitaires
 
-#### Module Projections
+#### Extension Projections
 - ✅ Génère `data/sites/<slug>.json` (projections statiques)
 - ✅ Projections versionnées avec metadata
 - ✅ CRUD operations
 - ✅ 8 tests unitaires
 
-#### Module Analytics Tracker
+#### Extension Analytics Tracker
 - ✅ Système de tracking d'événements
 - ✅ Structure d'événements détaillée
 - ✅ Tracking par website
@@ -116,7 +116,7 @@ Le core gère la **structure** du website :
 |-------|------|-------------|---------|
 | `id` | `UUID` | Identifiant unique de la section | ✅ Implémenté |
 | `website_id` | `UUID` | Website parent | ✅ Implémenté |
-| `module_id` | `UUID?` | Module associé (optionnel) | ✅ Implémenté |
+| `extension_id` | `UUID?` | Extension associée (optionnel) | ✅ Implémenté |
 | `section_type` | `enum` | hero, about, projects, skills, etc. | ✅ Implémenté |
 | `slug` | `string` | Slug de la section | ✅ Implémenté |
 | `title` | `string` | Titre de la section | ✅ Implémenté |
@@ -153,12 +153,12 @@ Le core centralise les données utilisateur :
 
 | Champ | Stockage | Description | Statut |
 |-------|----------|-------------|---------|
-| `email` | `users.email` | Email unique | ✅ Implémenté |
-| `password` | `users.password_hash` | Hash bcrypt sécurisé | ✅ Implémenté |
-| `integrations` | `user_data.data.integrations` | GitHub username, tokens, etc. | ✅ Implémenté |
-| `preferences` | `user_data.data.preferences` | Modules activés, thème préféré, etc. | ✅ Implémenté |
+| `email` | `accounts.email` | Email unique | ✅ Implémenté |
+| `password` | `accounts.password_hash` | Hash bcrypt securé | ✅ Implémenté |
+| `integrations` | `account_data.data.integrations` | GitHub username, tokens, etc. | ✅ Implémenté |
+| `preferences` | `account_data.data.preferences` | Extensions activées, thème préféré, etc. | ✅ Implémenté |
 
-**Les modules lisent ces données dynamiquement** via les endpoints du Core API.
+**Les extensions lisent ces données dynamiquement** via les endpoints du Core API.
 
 ---
 
@@ -169,20 +169,20 @@ Le core centralise les données utilisateur :
 - ✅ `POST /api/auth/login` - Login avec JWT
 - ✅ `GET /api/auth/me` - Utilisateur actuel (authentifié)
 
-### Utilisateurs (Authentifié)
-- ✅ `GET /api/users/:id` - Récupérer utilisateur
-- ✅ `PUT /api/users/:id` - Mettre à jour user_data
+### Comptes (Authentifié)
+- ✅ `GET /api/accounts/:id` - Récupérer compte
+- ✅ `PUT /api/accounts/:id` - Mettre à jour account_data
 
 ### Intégrations (Authentifié)
-- ✅ `GET /api/users/:id/integrations` - Lister intégrations
-- ✅ `PUT /api/users/:id/integrations/github` - Configurer GitHub
+- ✅ `GET /api/accounts/:id/integrations` - Lister intégrations
+- ✅ `PUT /api/accounts/:id/integrations/github` - Configurer GitHub
 
 ### Websites (Authentifié)
 - ✅ `GET /api/websites` - Lister websites tenant
 - ✅ `GET /api/websites/:id` - Récupérer website
 - ✅ `PUT /api/websites/:id` - Mettre à jour structure
 - ✅ `PATCH /api/websites/:id/data` - Mettre à jour contenu (modules)
-- ✅ `POST /api/websites/:id/publish` - Publier website
+- ✅ `PATCH /api/websites/:id/data` - Mettre à jour contenu (extensions)
 
 ### Public
 - ✅ `GET /api/public/websites/:slug` - Website publié (fallback API)
@@ -192,10 +192,10 @@ Le core centralise les données utilisateur :
 - ✅ `POST /api/events` - Créer événement
 - ✅ `PATCH /api/events/:id` - Marquer comme traité
 
-### Modules (Authentifié)
-- ✅ `GET /api/modules` - Lister modules disponibles
-- ✅ `GET /api/modules/:id/config` - Config module
-- ✅ `PUT /api/modules/:id/config` - Mettre à jour config
+### Extensions (Authentifié)
+- ✅ `GET /api/extensions/catalog` - Lister extensions disponibles
+- ✅ `GET /api/extensions/:slug/config` - Config extension
+- ✅ `PUT /api/extensions/:slug/config` - Mettre à jour config
 
 ### Files (Authentifié)
 - ✅ `POST /api/files` - Upload fichier
@@ -218,11 +218,11 @@ Le core centralise les données utilisateur :
 
 ### Flux 2: Configuration GitHub ✅
 ```
-1. PUT /api/users/:id/integrations/github
-   → Core stocke dans user_data.integrations.github
-   → Core émet événement USER_INTEGRATION_ADDED
+1. PUT /api/accounts/:id/integrations/github
+   → Core stocke dans account_data.integrations.github
+   → Core émet événement ACCOUNT_INTEGRATION_ADDED
 2. Worker poll événement
-   → GitHubGenerator module exécuté
+   → GitHubGenerator extension exécutée
    → Fetch repos GitHub API
    → Génère contenu website
    → PATCH /api/websites/:id/data
@@ -235,7 +235,7 @@ Le core centralise les données utilisateur :
    → Core change status: draft → published
    → Core émet événement WEBSITE_PUBLISHED
 2. Worker poll événement
-   → Theme module exécuté
+   → Theme extension exécutée
    → Applique thème sur website_data
    → Génère data/sites/<slug>.json (projection)
 ```
@@ -269,7 +269,7 @@ Le core centralise les données utilisateur :
 - ✅ Multi-tenant strict
 
 ### ❌ Hors Scope MVP (Prévu mais pas fait)
-- ❌ Personnalisation CSS avancée (module Theme futur)
+- ❌ Personnalisation CSS avancée (extension Theme futur)
 - ❌ Multi-langues
 - ❌ Plusieurs websites par tenant
 - ❌ Commerce/Stripe
@@ -287,10 +287,10 @@ Le core centralise les données utilisateur :
 - **Total:** 79 tests (100% passing)
 - Core Domain: 31 tests
 - Core Shared: 10 tests
-- Analytics Module: 7 tests
+- Analytics Extension: 7 tests
 - GitHub Generator: 13 tests
-- Projections Module: 8 tests
-- Themes Module: 10 tests
+- Projections Extension: 8 tests
+- Themes Extension: 10 tests
 
 ### Tests E2E ❌
 - ❌ Aucun test E2E (frontend requis)
@@ -379,7 +379,7 @@ Le core centralise les données utilisateur :
 ### Backend ✅ DONE
 - [x] API complète et testée
 - [x] Worker fonctionnel
-- [x] Modules implémentés
+- [x] Extensions implémentées
 - [x] 79 tests unitaires passent
 - [x] Documentation technique
 

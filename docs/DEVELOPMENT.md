@@ -43,7 +43,7 @@ make test
 
 # Test by component
 make test-domain      # Core domain models (31 tests)
-make test-modules     # All modules (36 tests)
+make test-extensions  # All extensions (36 tests)
 ```
 
 ### 4. Development Workflow
@@ -67,9 +67,9 @@ The API will be available at `http://localhost:3000`.
 ```
 asap-v2/
 ├── core/                   # Core domain and API
-│   ├── domain/            # Domain models (User, Website, Event, etc.)
+│   ├── domain/            # Domain models (Account, Website, Event, etc.)
 │   └── api/               # HTTP routes and handlers
-├── modules/               # Feature modules
+├── modules/               # Feature extensions
 │   ├── github-generator/  # Import GitHub repos
 │   ├── themes/            # Theme rendering
 │   ├── analytics/         # Usage tracking
@@ -77,7 +77,7 @@ asap-v2/
 ├── apps/                  # Executable applications
 │   ├── api/              # Core API server
 │   ├── worker/           # Event processor
-│   └── web/              # Frontend (TODO)
+│   └── web/              # Frontend (Astro + React)
 ├── infra/                # Infrastructure
 │   ├── migrations/       # Database migrations
 │   ├── docker-compose.yml
@@ -112,15 +112,15 @@ make test
 # Test core domain (31 tests)
 make test-domain
 
-# Test modules (36 tests)
-make test-modules
+# Test extensions (36 tests)
+make test-extensions
 
 # Run specific test suite
 cargo test --lib -p asap-core-domain
-cargo test --lib -p asap-module-analytics
-cargo test --lib -p asap-module-themes
-cargo test --lib -p asap-module-github-generator
-cargo test --lib -p asap-module-projections
+cargo test --lib -p asap-extension-analytics
+cargo test --lib -p asap-extension-themes
+cargo test --lib -p asap-extension-github-generator
+cargo test --lib -p asap-extension-projections
 ```
 
 ### Test Coverage
@@ -128,7 +128,7 @@ cargo test --lib -p asap-module-projections
 **79 unit tests covering:**
 
 - **Core Domain**: 31 tests
-  - Users (5 tests): creation, cloning, serialization
+  - Accounts (5 tests): creation, cloning, serialization
   - Websites (7 tests): status, metadata, data
   - Events (8 tests): creation, processing, serialization
   - Integrations (11 tests): GitHub integration, token management
@@ -138,7 +138,7 @@ cargo test --lib -p asap-module-projections
   - JWT token generation and validation
   - Error handling
 
-- **Modules**: 38 tests
+- **Extensions**: 38 tests
   - Analytics (7 tests): event tracking
   - Themes (10 tests): theme application, JSON handling
   - GitHub Generator (13 tests): repo filtering, content generation
@@ -189,7 +189,7 @@ docker exec -it asap-postgres psql -U asap -d asap
 docker exec asap-postgres psql -U asap -d asap -c "\dt"
 
 # View table structure
-docker exec asap-postgres psql -U asap -d asap -c "\d users"
+docker exec asap-postgres psql -U asap -d asap -c "\d accounts"
 ```
 
 ### Database Configuration
@@ -209,14 +209,16 @@ DATABASE_URL=postgresql://asap:asap@localhost:5432/asap
 ### Database Schema
 
 **Tables:**
-- `users` - User accounts with email and password hash
+- `accounts` - User accounts with email and password hash
 - `tenants` - Isolated workspaces (multi-tenancy)
-- `user_data` - Extended user info (JSONB format)
+- `account_data` - Extended account info (JSONB format)
 - `websites` - User website records
 - `website_data` - Website content (JSONB format)
+- `website_sections` - Website sections
+- `website_pages` - Website pages
 - `events` - System events for event-driven architecture
-- `modules` - Available modules
-- `module_configs` - Per-tenant module configuration
+- `extensions` - Available extensions
+- `website_extensions` - Extensions enabled per website
 
 **Security Features:**
 - Row-Level Security (RLS) for tenant isolation
@@ -263,7 +265,7 @@ ASAP_API_HOST=127.0.0.1
 # JWT
 JWT_SECRET=dev_secret_key_change_in_production_12345
 
-# Modules
+# Extensions
 GITHUB_API_ENABLED=true
 ANALYTICS_ENABLED=true
 THEMES_ENABLED=true
@@ -410,13 +412,13 @@ cargo clippy
 - [x] Core API implementation
 - [x] Authentication (JWT, bcrypt)
 - [x] Database integration (SQLx)
-- [x] User management endpoints
+- [x] Account management endpoints
 - [x] Website management endpoints
 - [x] Worker event processor
-- [x] GitHub Generator module
-- [x] Theme rendering module
-- [x] Projections module
-- [x] Analytics module
+- [x] GitHub Generator extension
+- [x] Theme rendering extension
+- [x] Projections extension
+- [x] Analytics extension
 - [x] Redis caching (optional)
 - [x] File storage with quotas
 
@@ -426,7 +428,7 @@ cargo clippy
 - [ ] CI/CD pipeline
 
 ### 📋 Planned (Future)
-- [ ] AI Generator module
+- [ ] AI Generator extension
 - [ ] Custom domains
 - [ ] Advanced analytics
 - [ ] Stripe integration
