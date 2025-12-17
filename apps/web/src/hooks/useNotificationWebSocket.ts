@@ -67,11 +67,8 @@ export function useNotificationWebSocket(options: UseNotificationWebSocketOption
     return null;
   }, []);
 
-  // Get WebSocket URL from env
-  const wsUrl = import.meta.env.PUBLIC_WS_URL || 
-    (typeof window !== 'undefined' 
-      ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`
-      : 'ws://localhost:3000/ws');
+  // Get WebSocket URL from env (fallback to API server, not current page host)
+  const wsUrl = import.meta.env.PUBLIC_WS_URL || 'ws://localhost:3000/ws';
 
   // Use the WebSocket hook
   const ws = useWebSocket({
