@@ -3,8 +3,8 @@
 /**
  * Section Renderers for Preview System
  * 
- * Re-exports the shared renderers from @asap/renderers package
- * This ensures 100% visual parity between preview and published sites.
+ * V1: Using fixed FreelanceDevProfile structure
+ * Section renderers from @asap/renderers package are used for the public site rendering.
  */
 
 // Re-export all renderers from the shared package
@@ -27,5 +27,6 @@ export {
   type SectionRendererProps,
 } from '@asap/renderers';
 
-// Re-export types
-export type { Section, Website } from '@asap/renderers';
+// Re-export types - Note: Section type removed in V1, using FreelanceDevProfile instead
+export type { Website } from '@asap/renderers';
+

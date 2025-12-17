@@ -3,38 +3,29 @@ import {
   Star,
   User,
   Briefcase,
-  GraduationCap,
   Mail,
-  BookOpen,
-  Image,
-  MessageSquare,
   Settings,
-  DollarSign,
-  HelpCircle,
   Code,
   FolderOpen,
+  Workflow,
+  Award,
 } from "lucide-react";
 import type { ElementType } from '@asap/shared';
 import { getElementLabel as getSharedElementLabel, getElementDescription as getSharedElementDescription } from '@asap/shared';
 
 /**
- * Element type icons mapping
+ * Element type icons mapping (V1 simplified)
+ * Only includes active V1 element types
  */
 export const ELEMENT_ICONS: Record<ElementType, React.ElementType> = {
   hero: Star,
   about: User,
+  services: Briefcase,
   projects: FolderOpen,
+  process: Workflow,
   skills: Code,
-  experience: Briefcase,
-  education: GraduationCap,
+  proof: Award,
   contact: Mail,
-  blog: BookOpen,
-  gallery: Image,
-  testimonials: MessageSquare,
-  services: Settings,
-  pricing: DollarSign,
-  faq: HelpCircle,
-  custom: Layout,
 };
 
 /**
