@@ -1,8 +1,8 @@
 "use client"
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
-import type { Website, WebsiteModule, QuotaUsage } from '@/lib/api';
-import { useWebsites, useWebsiteModules, useQuota, useCacheActions } from '@/hooks/useCache';
+import type { Website, WebsiteExtension, QuotaUsage } from '@/lib/api';
+import { useWebsites, useWebsiteExtensions, useQuota, useCacheActions } from '@/hooks/useCache';
 
 // ============================================
 // Website Context Types
@@ -16,9 +16,9 @@ interface WebsiteContextValue {
   // All websites
   websites: Website[];
   
-  // Modules for current website
-  modules: WebsiteModule[];
-  enabledModules: WebsiteModule[];
+  // Extensions for current website
+  extensions: WebsiteExtension[];
+  enabledExtensions: WebsiteExtension[];
   
   // Quota
   quota: QuotaUsage | null;
@@ -26,7 +26,7 @@ interface WebsiteContextValue {
   // Loading states
   isLoading: boolean;
   isLoadingWebsites: boolean;
-  isLoadingModules: boolean;
+  isLoadingExtensions: boolean;
   
   // Error
   error: string | null;
@@ -36,7 +36,7 @@ interface WebsiteContextValue {
   setCurrentWebsiteById: (websiteId: string) => void;
   refetch: () => Promise<void>;
   refetchWebsites: () => Promise<void>;
-  refetchModules: () => Promise<void>;
+  refetchExtensions: () => Promise<void>;
   invalidateAll: () => void;
 }
 
@@ -71,11 +71,11 @@ export function WebsiteProvider({ children }: WebsiteProviderProps) {
   } = useWebsites();
 
   const { 
-    modules, 
-    isLoading: isLoadingModules, 
-    error: modulesError,
-    refetch: refetchModules,
-  } = useWebsiteModules(currentWebsiteId);
+    extensions, 
+    isLoading: isLoadingExtensions, 
+    error: extensionsError,
+    refetch: refetchExtensions,
+  } = useWebsiteExtensions(currentWebsiteId);
 
   const {
     quota,
@@ -113,8 +113,8 @@ export function WebsiteProvider({ children }: WebsiteProviderProps) {
     ? websites.find(w => w.id === currentWebsiteId)!
     : websites[0] || null;
 
-  // Enabled modules filter
-  const enabledModules = modules.filter(m => m.enabled);
+  // Enabled extensions filter
+  const enabledExtensions = extensions.filter(m => m.enabled);
 
   // Set current website handler
   const setCurrentWebsite = useCallback((website: Website) => {
@@ -130,10 +130,10 @@ export function WebsiteProvider({ children }: WebsiteProviderProps) {
   const refetch = useCallback(async () => {
     await Promise.all([
       refetchWebsites(true),
-      refetchModules(true),
+      refetchExtensions(true),
       refetchQuota(true),
     ]);
-  }, [refetchWebsites, refetchModules, refetchQuota]);
+  }, [refetchWebsites, refetchExtensions, refetchQuota]);
 
   // Invalidate all cache
   const invalidateAll = useCallback(() => {
@@ -148,18 +148,18 @@ export function WebsiteProvider({ children }: WebsiteProviderProps) {
     currentWebsite,
     currentWebsiteId,
     websites,
-    modules,
-    enabledModules,
+    extensions,
+    enabledExtensions,
     quota,
-    isLoading: isLoadingWebsites || isLoadingModules || isLoadingQuota,
+    isLoading: isLoadingWebsites || isLoadingExtensions || isLoadingQuota,
     isLoadingWebsites,
-    isLoadingModules,
-    error: websitesError || modulesError,
+    isLoadingExtensions,
+    error: websitesError || extensionsError,
     setCurrentWebsite,
     setCurrentWebsiteById,
     refetch,
     refetchWebsites: async () => { await refetchWebsites(true); },
-    refetchModules: async () => { await refetchModules(true); },
+    refetchExtensions: async () => { await refetchExtensions(true); },
     invalidateAll,
   };
 
