@@ -109,8 +109,91 @@ pub async fn create_website_from_preset(
         }
     }
 
-    // Create sections from preset config
-    if let Some(sections) = config.get("sections").and_then(|s| s.as_array()) {
+    // Create pages and sections from preset config (new page-based structure)
+    if let Some(pages) = config.get("pages").and_then(|p| p.as_array()) {
+        for (page_order, page) in pages.iter().enumerate() {
+            let page_slug = page.get("slug").and_then(|s| s.as_str()).unwrap_or("");
+            let page_title = page.get("title").and_then(|s| s.as_str()).unwrap_or("Page");
+            let page_description = page.get("description").and_then(|s| s.as_str()).unwrap_or("");
+            let is_homepage = page.get("is_homepage").and_then(|h| h.as_bool()).unwrap_or(false);
+
+            // Create the page
+            let page_id = Uuid::new_v4();
+            sqlx::query(
+                r#"
+                INSERT INTO website_pages (id, website_id, slug, title, description, is_homepage, "order", visible)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+                "#
+            )
+            .bind(page_id)
+            .bind(website_id)
+            .bind(page_slug)
+            .bind(page_title)
+            .bind(page_description)
+            .bind(is_homepage)
+            .bind(page_order as i32)
+            .execute(&mut *tx)
+            .await?;
+
+            // Create sections for this page
+            if let Some(sections) = page.get("sections").and_then(|s| s.as_array()) {
+                for (section_order, section) in sections.iter().enumerate() {
+                    let section_type = section.get("section_type").and_then(|s| s.as_str()).unwrap_or("custom");
+                    let section_slug = section.get("slug").and_then(|s| s.as_str()).unwrap_or("section");
+                    let section_title = section.get("title").and_then(|s| s.as_str()).unwrap_or("Section");
+                    let layout = section.get("layout").and_then(|l| l.as_str()).unwrap_or("full");
+                    let default_settings = serde_json::json!({});
+                    let settings = section.get("settings").unwrap_or(&default_settings);
+
+                    // Create section in website_sections
+                    let section_id = Uuid::new_v4();
+                    sqlx::query(
+                        r#"
+                        INSERT INTO website_sections (id, website_id, section_type, slug, title, "order", layout, settings)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                        "#
+                    )
+                    .bind(section_id)
+                    .bind(website_id)
+                    .bind(section_type)
+                    .bind(section_slug)
+                    .bind(section_title)
+                    .bind(section_order as i32)
+                    .bind(layout)
+                    .bind(settings)
+                    .execute(&mut *tx)
+                    .await?;
+
+                    // Link section to page via page_sections
+                    sqlx::query(
+                        r#"
+                        INSERT INTO page_sections (page_id, section_id, "order", visible)
+                        VALUES ($1, $2, $3, true)
+                        "#
+                    )
+                    .bind(page_id)
+                    .bind(section_id)
+                    .bind(section_order as i32)
+                    .execute(&mut *tx)
+                    .await?;
+                }
+            }
+        }
+    } else if let Some(sections) = config.get("sections").and_then(|s| s.as_array()) {
+        // Fallback: Legacy support for old presets with sections at root level
+        // Create a default homepage with all sections
+        let page_id = Uuid::new_v4();
+        sqlx::query(
+            r#"
+            INSERT INTO website_pages (id, website_id, slug, title, description, is_homepage, "order", visible)
+            VALUES ($1, $2, '', 'Accueil', 'Page d''accueil', true, 0, true)
+            "#
+        )
+        .bind(page_id)
+        .bind(website_id)
+        .execute(&mut *tx)
+        .await?;
+
         for (order, section) in sections.iter().enumerate() {
             let section_type = section.get("section_type").and_then(|s| s.as_str()).unwrap_or("custom");
             let section_slug = section.get("slug").and_then(|s| s.as_str()).unwrap_or("section");
@@ -119,12 +202,15 @@ pub async fn create_website_from_preset(
             let default_settings = serde_json::json!({});
             let settings = section.get("settings").unwrap_or(&default_settings);
 
+            // Create section
+            let section_id = Uuid::new_v4();
             sqlx::query(
                 r#"
-                INSERT INTO website_sections (website_id, section_type, slug, title, "order", layout, settings)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                INSERT INTO website_sections (id, website_id, section_type, slug, title, "order", layout, settings)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 "#
             )
+            .bind(section_id)
             .bind(website_id)
             .bind(section_type)
             .bind(section_slug)
@@ -132,6 +218,19 @@ pub async fn create_website_from_preset(
             .bind(order as i32)
             .bind(layout)
             .bind(settings)
+            .execute(&mut *tx)
+            .await?;
+
+            // Link to homepage
+            sqlx::query(
+                r#"
+                INSERT INTO page_sections (page_id, section_id, "order", visible)
+                VALUES ($1, $2, $3, true)
+                "#
+            )
+            .bind(page_id)
+            .bind(section_id)
+            .bind(order as i32)
             .execute(&mut *tx)
             .await?;
         }
