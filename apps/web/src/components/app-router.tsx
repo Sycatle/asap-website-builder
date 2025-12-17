@@ -206,9 +206,10 @@ export function AppRouter() {
   }, [])
 
   const breadcrumbs = getBreadcrumbs(route)
+  const isStudioPage = route.page === "studio"
 
   return (
-    <AppShell breadcrumbs={breadcrumbs}>
+    <AppShell breadcrumbs={breadcrumbs} isStudioPage={isStudioPage}>
       <Suspense fallback={<PageLoader />}>
         <PageContent route={route} />
       </Suspense>

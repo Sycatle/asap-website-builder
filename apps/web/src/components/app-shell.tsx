@@ -35,6 +35,7 @@ interface AppShellProps {
   children: React.ReactNode
   title?: string
   breadcrumbs?: { label: string; href?: string }[]
+  isStudioPage?: boolean
 }
 
 // Keyboard shortcuts help dialog content
@@ -55,7 +56,7 @@ const shortcuts = [
   ]},
 ]
 
-export function AppShell({ children, title, breadcrumbs = [] }: AppShellProps) {
+export function AppShell({ children, title, breadcrumbs = [], isStudioPage = false }: AppShellProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(true)
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
 
@@ -75,12 +76,13 @@ export function AppShell({ children, title, breadcrumbs = [] }: AppShellProps) {
 
   return (
     <WebsiteProvider>
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={!isStudioPage}>
         <AppShellContent 
           title={title} 
           breadcrumbs={breadcrumbs}
           showShortcutsHelp={showShortcutsHelp}
           setShowShortcutsHelp={setShowShortcutsHelp}
+          isStudioPage={isStudioPage}
         >
           {children}
         </AppShellContent>
@@ -96,6 +98,7 @@ interface AppShellContentProps {
   breadcrumbs: { label: string; href?: string }[]
   showShortcutsHelp: boolean
   setShowShortcutsHelp: (show: boolean) => void
+  isStudioPage?: boolean
 }
 
 function AppShellContent({ 
@@ -103,9 +106,10 @@ function AppShellContent({
   title, 
   breadcrumbs,
   showShortcutsHelp,
-  setShowShortcutsHelp 
+  setShowShortcutsHelp,
+  isStudioPage = false
 }: AppShellContentProps) {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, setOpen } = useSidebar()
   const [pendingGoTo, setPendingGoTo] = useState(false)
   
   // Get data from context
@@ -116,6 +120,13 @@ function AppShellContent({
     setCurrentWebsite,
     isLoadingWebsites,
   } = useWebsiteContext()
+
+  // Auto-collapse sidebar when entering studio page
+  useEffect(() => {
+    if (isStudioPage) {
+      setOpen(false)
+    }
+  }, [isStudioPage, setOpen])
 
   // Real-time notifications via WebSocket
   useNotificationWebSocket({
