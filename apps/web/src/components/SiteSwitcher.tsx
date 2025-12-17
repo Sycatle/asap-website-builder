@@ -5,6 +5,7 @@ import { ChevronsUpDown, Plus, CheckCircle2, Clock, Loader2, Globe } from "lucid
 import type { Website } from "@/lib/api"
 import { CreateWebsiteModal } from "./CreateWebsiteModal"
 import { useCacheActions } from "@/hooks/useCache"
+import { useWebsiteContext } from "@/contexts/WebsiteContext"
 import { getWebsiteDisplayUrl } from "@/lib/utils/formatters"
 
 import {
@@ -44,6 +45,7 @@ export function SiteSwitcher({
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const { invalidate } = useCacheActions()
+  const { setCurrentWebsiteById } = useWebsiteContext()
 
   const handleWebsiteSelect = useCallback((website: Website) => {
     if (onWebsiteChange && website.id !== currentWebsite?.id) {
@@ -52,11 +54,13 @@ export function SiteSwitcher({
     setIsDropdownOpen(false)
   }, [onWebsiteChange, currentWebsite?.id])
 
-  const handleCreateSuccess = useCallback((_websiteId: string) => {
+  const handleCreateSuccess = useCallback((websiteId: string) => {
     // Refresh websites list after creation
     invalidate('websites')
     setIsDropdownOpen(false)
-  }, [invalidate])
+    // Set the newly created website as current
+    setCurrentWebsiteById(websiteId)
+  }, [invalidate, setCurrentWebsiteById])
 
   // Get first letter of title for avatar
   const getInitial = (title: string) => {
