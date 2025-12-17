@@ -6,10 +6,10 @@
  */
 
 // ============================================
-// Section Types
+// Element Types
 // ============================================
 
-export type SectionType =
+export type ElementType =
   | 'hero'
   | 'about'
   | 'skills'
@@ -25,11 +25,11 @@ export type SectionType =
   | 'blog'
   | 'custom';
 
-export interface Section {
+export interface Element {
   id: string;
   website_id: string;
   extension_id?: string;
-  section_type: SectionType;
+  element_type: ElementType;
   slug?: string;
   title: string;
   order?: number;
@@ -113,13 +113,13 @@ export interface Page {
   is_homepage: boolean;
   visible: boolean;
   order_index: number;
-  sections?: Section[];
+  elements?: Element[];
   created_at?: string;
   updated_at?: string;
 }
 
 // ============================================
-// Section Content Types
+// Element Content Types
 // ============================================
 
 export interface HeroContent {

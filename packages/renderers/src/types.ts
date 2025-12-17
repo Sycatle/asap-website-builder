@@ -1,12 +1,12 @@
 /**
- * Shared types for section data
+ * Shared types for element data
  * Re-exports from @asap/shared for backward compatibility
  */
 
 // Re-export all types from @asap/shared
 export type {
-  Section,
-  SectionType,
+  Element,
+  ElementType,
   Website,
   WebsiteMetadata,
   WebsiteStatus,

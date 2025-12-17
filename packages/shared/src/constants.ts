@@ -5,7 +5,7 @@
  * Import from here instead of duplicating constant definitions.
  */
 
-import type { SectionType } from './types';
+import type { ElementType } from './types';
 
 // ============================================
 // Domain Configuration
@@ -28,12 +28,12 @@ export const SLUG_MAX_LENGTH = 63;
 export const SLUG_REGEX = /^[a-z0-9-]+$/;
 
 // ============================================
-// Section Types Configuration
+// Element Types Configuration
 // ============================================
 
-/** Section type definition with label and description */
-export interface SectionTypeDefinition {
-  value: SectionType;
+/** Element type definition with label and description */
+export interface ElementTypeDefinition {
+  value: ElementType;
   label: string;
   description: string;
 }
@@ -44,9 +44,9 @@ export interface LayoutDefinition {
   label: string;
 }
 
-/** All available section types with their metadata */
-export const SECTION_TYPES: SectionTypeDefinition[] = [
-  { value: 'hero', label: 'Hero', description: "Section d'accueil principale" },
+/** All available element types with their metadata */
+export const ELEMENT_TYPES: ElementTypeDefinition[] = [
+  { value: 'hero', label: 'Hero', description: "Page d'accueil principale" },
   { value: 'about', label: 'À propos', description: 'Présentation personnelle/entreprise' },
   { value: 'projects', label: 'Projets', description: 'Galerie de projets' },
   { value: 'skills', label: 'Compétences', description: 'Compétences techniques' },
@@ -59,11 +59,11 @@ export const SECTION_TYPES: SectionTypeDefinition[] = [
   { value: 'services', label: 'Services', description: 'Services proposés' },
   { value: 'pricing', label: 'Tarifs', description: 'Grille tarifaire' },
   { value: 'faq', label: 'FAQ', description: 'Questions fréquentes' },
-  { value: 'custom', label: 'Personnalisé', description: 'Section personnalisée' },
+  { value: 'custom', label: 'Personnalisé', description: 'Élément personnalisé' },
 ];
 
-/** Available layouts per section type */
-export const SECTION_LAYOUTS: Record<SectionType, LayoutDefinition[]> = {
+/** Available layouts per element type */
+export const ELEMENT_LAYOUTS: Record<ElementType, LayoutDefinition[]> = {
   hero: [{ value: 'full', label: 'Plein écran' }],
   about: [
     { value: 'full', label: 'Plein écran' },
@@ -115,29 +115,29 @@ export const SECTION_LAYOUTS: Record<SectionType, LayoutDefinition[]> = {
 // ============================================
 
 /**
- * Get section type definition by value
+ * Get element type definition by value
  */
-export function getSectionType(type: string): SectionTypeDefinition | undefined {
-  return SECTION_TYPES.find(t => t.value === type);
+export function getElementType(type: string): ElementTypeDefinition | undefined {
+  return ELEMENT_TYPES.find(t => t.value === type);
 }
 
 /**
- * Get section label by type
+ * Get element label by type
  */
-export function getSectionLabel(type: string): string {
-  return getSectionType(type)?.label || type;
+export function getElementLabel(type: string): string {
+  return getElementType(type)?.label || type;
 }
 
 /**
- * Get section description by type
+ * Get element description by type
  */
-export function getSectionDescription(type: string): string {
-  return getSectionType(type)?.description || '';
+export function getElementDescription(type: string): string {
+  return getElementType(type)?.description || '';
 }
 
 /**
- * Get available layouts for a section type
+ * Get available layouts for an element type
  */
 export function getLayoutsForType(type: string): LayoutDefinition[] {
-  return SECTION_LAYOUTS[type as SectionType] || SECTION_LAYOUTS.custom;
+  return ELEMENT_LAYOUTS[type as ElementType] || ELEMENT_LAYOUTS.custom;
 }

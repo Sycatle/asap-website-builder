@@ -6,7 +6,7 @@
  */
 
 import { SLUG_MIN_LENGTH, SLUG_REGEX, ASAP_DOMAIN } from './constants';
-import type { Section, Theme } from './types';
+import type { Element, Theme } from './types';
 
 // ============================================
 // Constants
@@ -81,20 +81,20 @@ export function getWebsiteDisplayUrl(slug: string): string {
 }
 
 // ============================================
-// Section Data Utilities
+// Element Data Utilities
 // ============================================
 
 /**
- * Get data from section with fallback to default value
+ * Get data from element with fallback to default value
  * Supports both 'data' and 'content' fields for compatibility
  */
-export function getData<T>(section: Section, key: string, defaultValue: T): T {
-  const data = section.data ?? section.content ?? {};
+export function getData<T>(element: Element, key: string, defaultValue: T): T {
+  const data = element.data ?? element.content ?? {};
   return (data[key] as T) ?? defaultValue;
 }
 
 /**
- * Get content data from section (alias for getData)
+ * Get content data from element (alias for getData)
  */
 export const getContent = getData;
 
