@@ -1,250 +1,83 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/status-MVP%20Complete-success" alt="Status">
-  <img src="https://img.shields.io/badge/license-Open--Core-blue" alt="License">
-  <img src="https://img.shields.io/badge/rust-1.70+-orange" alt="Rust">
-  <img src="https://img.shields.io/badge/tests-100%2B%20passing-green" alt="Tests">
-</p>
+<div align="center">
 
-<h1 align="center">🚀 ASAP</h1>
+# 🚀 ASAP
 
-<p align="center">
-  <strong>Plateforme SaaS centralisée pour créateurs et entrepreneurs</strong>
-</p>
+**Créez et publiez votre site professionnel en moins de 5 minutes**
 
-<p align="center">
-  Gère tes utilisateurs, tes clients, tes sites, tes modules, tes tokens IA et tes quotas — tout en un seul endroit.
-</p>
+[![Status](https://img.shields.io/badge/status-MVP%20v1.0-success?style=for-the-badge)](https://asap.cool)
+[![Rust](https://img.shields.io/badge/rust-1.70+-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
+[![TypeScript](https://img.shields.io/badge/typescript-5.0+-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/license-Open--Core-purple?style=for-the-badge)](LICENSE)
+
+[Site Web](https://asap.cool) • [Documentation](docs/) • [Roadmap](docs/ROADMAP.md)
+
+</div>
 
 ---
 
-## 📋 Table des matières
+## ✨ Qu'est-ce qu'ASAP ?
 
-- [Vision](#-vision)
-- [Fonctionnalités](#-fonctionnalités)
-- [Architecture](#-architecture)
-- [Stack technique](#-stack-technique)
-- [Structure du projet](#-structure-du-projet)
-- [Démarrage rapide](#-démarrage-rapide)
-- [API Reference](#-api-reference)
-- [Parcours utilisateur](#-parcours-utilisateur)
-- [Modèle de données](#-modèle-de-données)
-- [Roadmap](#-roadmap)
-- [Contributing](#-contributing)
-- [License](#-license)
+ASAP est une plateforme SaaS de création de sites web modulaires. Elle permet aux développeurs, freelances et créateurs de générer un site professionnel en quelques clics grâce à des **presets prêts à l'emploi** et l'**import automatique de projets GitHub**.
 
----
+### 🎯 Cas d'usage
 
-## 🎯 Vision
-
-**ASAP** est une **plateforme SaaS centralisée** qui permet aux créateurs, entrepreneurs et agences de gérer l'ensemble de leurs outils, clients et ressources depuis un seul dashboard.
-
-### L'approche ASAP
-
-Au lieu d'utiliser 10 outils différents (un pour les sites, un pour l'IA, un pour les stats, etc.), les utilisateurs ont **un seul dashboard** où ils contrôlent :
-
-| Élément | Gestion |
-|--------|---------|
-| **Sites Web** | Créer, publier, configurer des sites modulaires avec sections personnalisables |
-| **Utilisateurs & Clients** | Inviter, gérer, assigner des ressources |
-| **Modules** | Activer/désactiver les features (GitHub Sync, Blog, Analytics, etc.) |
-| **Sections** | Hero, About, Projects, Skills, Contact, Blog, Gallery, etc. |
-| **Presets** | Templates prêts à l'emploi pour démarrer rapidement |
-| **Tokens IA** | Budget limité avec suivi par utilisateur/client |
-| **Stockage Cloud** | Quota d'espace partagé ou per-client |
-| **Statistiques** | Dashboards unifiées (visites, utilisations, coûts) |
-| **Intégrations** | GitHub, API keys, webhooks |
-| **Facturation** | Plans, abonnements, usage-based pricing |
-
-### La structure
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  Dashboard ASAP (Frontend)                              │
-│  ┌───────────────────────────────────────────────────────┐
-│  │  • Mes Sites                                          │
-│  │  • Mes Utilisateurs/Clients                           │
-│  │  • Mes Modules                                        │
-│  │  • Mes Tokens IA (budget)                             │
-│  │  • Mon Stockage Cloud                                 │
-│  │  • Mes Stats & Facturation                            │
-│  └───────────────────────────────────────────────────────┘
-└─────────────────────────────────────────────────────────┘
-            ↓ (API centralisée)
-┌─────────────────────────────────────────────────────────┐
-│  API Core ASAP (Rust/Axum)                              │
-│                                                         │
-│  • Authentification & tenants                           │
-│  • Gestion utilisateurs/clients                         │
-│  • Ressources (sites, modules, tokens, etc.)            │
-│  • Quotas & limitations                                 │
-│  • Facturation & usage tracking                         │
-│  • Événements & webhooks                                │
-└─────────────────────────────────────────────────────────┘
-            ↓ (Consomment l'API)
-┌─────────────────────────────────────────────────────────┐
-│  Produits (Modules)                                     │
-│                                                         │
-│  • Sites (GitHub import, rendering, publication)        │
-│  • IA (text generation, image generation)                │
-│  • Analytics (page views, user tracking)                 │
-│  • Cloud Storage (file hosting)                          │
-│  • (+ futurs produits)                                   │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Qui utilise ASAP ?
-
-1. **Indépendants** : créent des sites pour eux, gèrent 1-5 clients
-2. **Agences** : créent des sites/apps pour leurs clients, gèrent une équipe
-3. **Creators** : utilisent l'IA + les sites pour monétiser leur audience
-4. **Entreprises** : créent du contenu interne, sites clients, apps internes
-
----
-
-## ✨ Caractéristiques principales
-
-### Dashboard Tenant
-
-Un endroit unique pour :
-- 👥 **Gérer utilisateurs/clients** : créer, inviter, assigner ressources et quotas
-- 🌐 **Sites Web modulaires** : créer avec sections personnalisables (Hero, About, Projects, etc.)
-- 📦 **Presets** : démarrer rapidement avec des templates prédéfinis
-- 🔧 **Modules activés** : GitHub Sync, Blog Engine, Contact Form, Analytics, Theme Engine
-- 💾 **Stockage Cloud** : upload, gestion des assets, quota par utilisateur/client
-- 🤖 **Budget IA** : tokens limités, suivi par utilisation, partage entre utilisateurs
-- 📈 **Statistiques** : dashboards unifiées (visites, coûts, utilisation, revenu)
-- ⚙️ **Intégrations** : GitHub, OpenAI, APIs externes, webhooks
-- 💳 **Facturation** : gestion des abonnements, usage-based pricing, invoices
-
-### API Core (infrastructure centralisée)
-
-- ✅ **Multi-tenant** : isolation complète par account_id, RLS en base
-- ✅ **Authentification** : JWT, OAuth (GitHub), 2FA optionnel
-- ✅ **Architecture modulaire** : Websites → Sections → Modules
-- ✅ **Gestion des quotas** : IA tokens, stockage, sites par account
-- ✅ **Event-driven** : Core → Modules via événements persistés
-- ✅ **WebSocket temps réel** : synchronisation en direct, notifications push
-- ✅ **Redis Pub/Sub** : distribution multi-instances des événements
-- ✅ **Notifications** : in-app, push (PWA), paramètres personnalisables
-- ✅ **Facturations** : Stripe integration, tracking usage, webhooks
-- ✅ **Hiérarchie comptes** : tenants + sub-accounts/clients avec permissions
-- ✅ **PWA complète** : installable, offline, score 93/100
-
-### Modules (produits intégrés)
-
-| Module | Description | Usage |
-|--------|-------------|-------|
-| **GitHub Sync** | Import automatique des projets depuis GitHub | Integration |
-| **Blog Engine** | Blog complet avec posts et catégories | Content |
-| **Contact Form** | Formulaire de contact avec protection spam | Engagement |
-| **Analytics Tracker** | Tracking des visites et comportements | Analytics |
-| **Theme Engine** | Thèmes personnalisables et styles | Appearance |
-| **Cloud Storage** | File hosting, CDN delivery, quota management | Per-client |
-| **Notifications** | Notifications in-app, push PWA, consolidation | Engagement |
-
-### Types de Sections
-
-| Section | Description | Layouts disponibles |
-|---------|-------------|---------------------|
-| **Hero** | Section d'accueil principale | Full |
-| **About** | Présentation personnelle/entreprise | Split, Full |
-| **Projects** | Galerie de projets | Grid, Cards |
-| **Skills** | Compétences techniques | Grid, List |
-| **Experience** | Parcours professionnel | Timeline, List |
-| **Education** | Formation | Timeline, List |
-| **Contact** | Formulaire de contact | Full, Split |
-| **Blog** | Articles de blog | List, Grid |
-| **Gallery** | Galerie d'images | Grid |
-| **Testimonials** | Témoignages clients | Cards |
-| **Services** | Services proposés | Cards, Grid |
-| **Pricing** | Grille tarifaire | Cards |
-| **FAQ** | Questions fréquentes | List |
-| **Custom** | Section personnalisée | Tous |
+| Profil | Usage |
+|--------|-------|
+| **Développeurs** | Portfolio avec projets GitHub importés automatiquement |
+| **Freelances** | Site vitrine avec services, tarifs et formulaire de contact |
+| **Créateurs** | Landing page avec liens et présentation |
+| **Agences** | Gestion multi-sites pour plusieurs clients |
 
 ---
 
 ## 🏗 Architecture
 
-ASAP adopte une architecture **Core + Modules** où :
-
-- **Core API** = gestion centralisée des utilisateurs, données, sites web
-- **Modules** = implémentent toutes les fonctionnalités (GitHub import, rendering, analytics, etc.)
-- **Workers** = exécutent les tâches des modules en réponse aux événements
-
 ```
-Frontend (Astro)
-    ↓ authentifié
 ┌─────────────────────────────────────────────────────────────┐
-│           Core API (Rust/Axum)                              │
-│  ┌──────────────────────────────────────────────────────────┐
-│  │  Gestion Centralisée                                     │
-│  │  • Auth & Users (email, password)                        │
-│  │  • User Data (GitHub username, tokens, prefs)           │
-│  │  • Websites (structure: slug, title, sections)          │
-│  │  • Website Sections (Hero, About, Projects, etc.)       │
-│  │  • Website Modules (activated per website)              │
-│  │  • Presets (templates prédéfinis)                       │
-│  │  • Events (USER_CREATED, INTEGRATION_ADDED, etc.)       │
-│  │  • Module Catalog & Config                               │
-│  └──────────────────────────────────────────────────────────┘
+│                    Frontend (Astro + React)                  │
+│   Dashboard (/app)              Sites publics (*.asap.cool) │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ API REST + WebSocket
+┌──────────────────────────▼──────────────────────────────────┐
+│                    Core API (Rust + Axum)                    │
+│  • Auth (JWT)           • Websites & Sections               │
+│  • Multi-tenant         • Extensions & Presets              │
+│  • Events               • Notifications (Push/In-app)       │
+│  • Files & Storage      • Billing (Stripe)                  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ Events
+┌──────────────────────────▼──────────────────────────────────┐
+│                    Worker (Rust + Tokio)                     │
+│  Extensions: GitHub Sync • Themes • Analytics • Projections │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│  PostgreSQL (données)      Redis (cache, pub/sub)           │
 └─────────────────────────────────────────────────────────────┘
-    ↑                                   ↑
-    │ GET /websites/:id/sections       │ POST /events
-    │ PATCH /websites/:id/data         │ (modules écoutent)
-    │ PATCH integrations               │
-    │                                   │
-    │ Modules                           Worker
-    ├──────────────────────────────────┤
-    │                                   ├─→ github-sync
-    │ • github-sync                     ├─→ blog-engine
-    │ • blog-engine                     ├─→ theme-engine
-    │ • theme-engine                    └─→ analytics-tracker
-    │ • analytics-tracker          (exécute les modules)
-    │ • contact-form
-    │
-    └─→ Résultats → website_data (JSONB du core)
-         ↓
-      data/sites/<slug>.json (projection)
-         ↓
-      Frontend lit la projection
 ```
 
-### Principes architecturaux
+### Principes clés
 
-| Aspect | Description |
-|--------|-------------|
-| **Core = Structure** | Données utilisateur, websites, sections, isolation multi-tenant, événements |
-| **Modules = Features** | Chaque module implémente une fonctionnalité (GitHub Sync, Blog, Analytics, etc.) |
-| **Sections = Contenu** | Blocs de contenu modulaires avec types et layouts configurables |
-| **Presets = Templates** | Configurations prédéfinies pour créer rapidement des sites |
-| **Données centralisées** | Les données utilisateur vivent dans le core, modules les consomment dynamiquement |
-| **Event-driven** | Les modules réagissent aux événements du core |
-| **CQRS lite** | Projections locales pour les lectures publiques, Core API pour les écritures |
+| Concept | Description |
+|---------|-------------|
+| **Core + Extensions** | Le core gère les données, les extensions ajoutent les fonctionnalités |
+| **Website → Sections** | Structure modulaire avec 14 types de sections (Hero, Projects, Skills...) |
+| **Presets** | Templates prêts à l'emploi pour démarrer instantanément |
+| **Projections** | Fichiers JSON statiques pour des performances optimales |
+| **Event-driven** | Architecture réactive avec workers asynchrones |
 
 ---
 
 ## 🛠 Stack technique
 
-| Composant | Technologie | Justification |
-|-----------|-------------|---------------|
-| **API** | Rust + Axum | Performance native, sécurité mémoire, async robuste |
-| **Database** | PostgreSQL | ACID, JSONB, RLS pour isolation multi-tenant |
-| **Cache** | Redis | Caching des sites publics, Pub/Sub temps réel |
-| **WebSocket** | Axum + tokio-tungstenite | Communication bidirectionnelle temps réel |
-| **Worker** | Rust + Tokio | Jobs asynchrones performants |
-| **Frontend** | Astro | SSG/SSR optimisé, excellent pour les sites de contenu |
-| **PWA** | Service Worker + Manifest | Installation, offline, notifications push |
-| **Auth** | JWT / Cookies | Simple et stateless |
-| **Paiements** | Stripe API | Facturation et abonnements |
-
-### Décisions architecturales clés
-
-| Décision | Contexte | Alternative rejetée |
-|----------|----------|---------------------|
-| **Rust backend** | Performances et sécurité mémoire critiques | Node.js (CPU), Go (typage), PHP (async) |
-| **Architecture Website/Sections** | Flexibilité et modularité du contenu | Structure monolithique rigide |
-| **Projections locales** | Milliers de sites à servir rapidement | Lecture directe PostgreSQL |
-| **Monorepo open-core** | Contributions externes + modules premium | Multi-repos (complexité) |
+| Couche | Technologies |
+|--------|--------------|
+| **Backend** | Rust, Axum, SQLx, Tokio |
+| **Frontend** | Astro, React, TypeScript, TailwindCSS |
+| **Base de données** | PostgreSQL 15+, Redis 7+ |
+| **Infrastructure** | Docker, Docker Compose |
+| **Paiements** | Stripe |
+| **PWA** | Service Worker, Web Push |
 
 ---
 
@@ -252,52 +85,39 @@ Frontend (Astro)
 
 ```
 asap/
-├── core/                          # Core API (open-source)
-│   ├── domain/                    # Types et structures (Website, Section, Module)
-│   ├── api/                       # Routes HTTP
-│   └── shared/                    # Utilitaires partagés (config, auth, errors)
+├── core/                    # API Core (Rust)
+│   ├── domain/             # Modèles (Account, Website, Event...)
+│   ├── api/                # Routes HTTP & handlers
+│   ├── shared/             # Utilitaires (auth, config, errors)
+│   └── payments/           # Intégration Stripe
 │
-├── modules/                       # Modules (fonctionnalités)
-│   ├── github-generator/          # Import GitHub
-│   ├── themes/                    # Thèmes de rendu
-│   ├── analytics/                 # Analytics
-│   └── projections/               # Génération projections
+├── modules/                 # Extensions (Rust)
+│   ├── github-generator/   # Import projets GitHub
+│   ├── themes/             # Moteur de thèmes
+│   ├── analytics/          # Tracking & stats
+│   ├── notifications/      # Push & in-app
+│   └── projections/        # Génération fichiers statiques
 │
-├── packages/                      # Packages TypeScript partagés
-│   ├── shared/                    # @asap/shared - Types, constantes, utils
-│   └── renderers/                 # @asap/renderers - 14 renderers sections
+├── packages/                # Packages partagés (TypeScript)
+│   ├── shared/             # @asap/shared - Types & utils
+│   └── renderers/          # @asap/renderers - 14 renderers sections
 │
-├── apps/                          # Applications
-│   ├── api/                       # Core API executable (Rust)
-│   ├── worker/                    # Module task executor (Rust)
-│   ├── web/                       # Dashboard Astro (React + TypeScript)
-│   └── sites/                     # Sites publics Astro
+├── apps/                    # Applications
+│   ├── api/                # Serveur API (Rust)
+│   ├── worker/             # Worker async (Rust)
+│   ├── web/                # Dashboard (Astro + React)
+│   └── sites/              # Sites publics (Astro)
 │
-├── infra/                         # Infrastructure
+├── infra/                   # Infrastructure
 │   ├── docker-compose.yml
-│   ├── migrations/                # 8+ migrations SQL
-│   └── env.example
+│   ├── migrations/         # Migrations SQL
+│   └── env.example/        # Templates d'environnement
 │
-├── data/                          # Runtime (non versionné)
-│   ├── sites/                     # Projections générées
-│   └── logs/
+├── data/                    # Runtime (non versionné)
+│   └── sites/              # Projections JSON générées
 │
-└── docs/                          # Documentation
+└── docs/                    # Documentation complète
 ```
-
-### Rôle de chaque dossier
-
-| Dossier | Responsabilité |
-|---------|-----------------|
-| `core/` | Gestion utilisateurs, websites, sections, modules, événements (open-source) |
-| `packages/shared/` | Types, constantes, utilitaires partagés (DRY) |
-| `packages/renderers/` | 14 renderers React pour sections |
-| `modules/` | Implémentent les features (GitHub, Themes, Analytics, Projections) |
-| `apps/api/` | Core API executable (Rust) |
-| `apps/worker/` | Event processor et module executor (Rust) |
-| `apps/web/` | Frontend dashboard (Astro + React) |
-| `apps/sites/` | Sites publics (Astro + React) |
-| `infra/` | Docker, migrations, configuration |
 
 ---
 
@@ -308,599 +128,235 @@ asap/
 - **Rust** 1.70+
 - **Node.js** 18+
 - **Docker** & Docker Compose
-- **PostgreSQL** 15+ (ou via Docker)
-- **Redis** 7+ (ou via Docker) - optionnel mais recommandé pour WebSocket et cache
+- **Make** (optionnel)
 
 ### Installation
 
 ```bash
 # 1. Cloner le repository
-git clone https://github.com/votre-org/asap.git
-cd asap
+git clone https://github.com/votre-org/asap.git && cd asap
 
 # 2. Copier les fichiers d'environnement
 cp infra/env.example/api.env infra/api.env
 cp infra/env.example/worker.env infra/worker.env
 cp infra/env.example/web.env infra/web.env
 
-# 3. Configurer Redis (optionnel, pour WebSocket et cache)
-# Ajouter dans infra/api.env et infra/worker.env :
-# REDIS_URL=redis://localhost:6379
+# 3. Lancer tous les services (PostgreSQL, Redis, API, Worker)
+docker compose -f infra/docker-compose.yml up -d
 
-# 4. Lancer l'environnement complet (les migrations sont automatiques)
-docker compose -f infra/docker-compose.yml up
-
-# 5. (Optionnel) Créer des données de démo
-./scripts/seed-demo.sh
+# 4. Lancer le frontend
+cd apps/web && npm install && npm run dev
 ```
 
-### Développement local
+### Développement local (sans Docker)
 
 ```bash
-# Terminal 1 - API
-cd apps/api && cargo run
+# Terminal 1 - PostgreSQL & Redis
+docker compose -f infra/docker-compose.dev.yml up -d
 
-# Terminal 2 - Worker
-cd apps/worker && cargo run
+# Terminal 2 - API
+export DATABASE_URL="postgresql://asap:asap@localhost:5432/asap"
+cargo run -p asap-api
 
-# Terminal 3 - Frontend
-cd apps/web && npm install && npm run dev
+# Terminal 3 - Worker
+export DATABASE_URL="postgresql://asap:asap@localhost:5432/asap"
+cargo run -p asap-worker
+
+# Terminal 4 - Frontend
+cd apps/web && npm run dev
 ```
 
 ### URLs locales
 
 | Service | URL |
 |---------|-----|
-| Landing | http://localhost:4321 |
 | Dashboard | http://localhost:4321/app |
 | API | http://localhost:3000 |
 | WebSocket | ws://localhost:3000/ws |
-| Site public | http://{slug}.localhost:4321 (en local) / `{slug}.asap.cool` (prod) |
+| Sites publics | http://{slug}.localhost:4321 |
 
 ---
 
-## 🗄️ Database Migrations
-
-ASAP utilise un système de migrations automatiques intégré à Docker Compose.
-
-### Comment ça fonctionne
-
-1. **Migrations automatiques** : Lors du démarrage des services via `docker compose up`, un service `migrations` s'exécute automatiquement et applique toutes les migrations en attente.
-
-2. **Format des fichiers** : Les migrations sont stockées dans `infra/migrations/` avec le format `YYYYMMDDHHMMSS_description.sql`.
-
-3. **Tracking** : Les migrations appliquées sont enregistrées dans la table `_sqlx_migrations` pour éviter les réapplications.
-
-### Commandes utiles
-
-```bash
-# Lancer les migrations manuellement
-make migrate
-
-# Réinitialiser la base de données (ATTENTION: supprime toutes les données)
-make db-reset
-
-# Setup complet avec migrations
-make setup-db
-```
-
-### Ajouter une nouvelle migration
-
-1. Créer un fichier dans `infra/migrations/` avec le format : `YYYYMMDDHHMMSS_description.sql`
-   
-   Exemple : `20240115120000_add_user_preferences.sql`
-
-2. Écrire le SQL de la migration
-
-3. Relancer les services ou exécuter `make migrate`
-
-### Bonnes pratiques
-
-- ✅ Toujours créer des migrations idempotentes quand possible (`CREATE IF NOT EXISTS`)
-- ✅ Utiliser des transactions pour les migrations complexes
-- ✅ Tester les migrations sur une base de données de test avant la production
-- ❌ Ne jamais modifier une migration déjà appliquée en production
-
----
-
-## 📡 API Reference
+## 📡 API
 
 ### Authentification
 
-#### `POST /auth/signup`
-Crée un utilisateur, un tenant et un website par défaut.
+```bash
+# Inscription
+curl -X POST http://localhost:3000/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{"email": "dev@example.com", "password": "secure123", "slug": "mon-site"}'
 
-```json
-// Request
-{
-  "email": "dev@example.com",
-  "password": "securepassword",
-  "slug": "mon-site"
-}
-
-// Response 201
-{
-  "token": "eyJhbG...",
-  "user": { "id": "uuid", "email": "dev@example.com" },
-  "website": { "slug": "mon-site" }
-}
+# Connexion
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "dev@example.com", "password": "secure123"}'
 ```
 
-#### `POST /auth/login`
-Authentifie et retourne un JWT.
+### Websites & Sections
 
-```json
-// Request
-{ "email": "dev@example.com", "password": "securepassword" }
+```bash
+# Créer depuis un preset
+curl -X POST http://localhost:3000/websites/from-preset \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"preset_id": "uuid", "slug": "mon-portfolio", "title": "Mon Portfolio"}'
 
-// Response 200
-{ "token": "eyJhbG..." }
+# Lister les sections
+curl http://localhost:3000/websites/{id}/sections \
+  -H "Authorization: Bearer $TOKEN"
+
+# Publier
+curl -X POST http://localhost:3000/websites/{id}/publish \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
-### Websites (authentifié)
-
-#### `GET /websites`
-Liste tous les websites du tenant.
-
-```json
-// Response 200
-[
-  {
-    "id": "uuid",
-    "slug": "mon-site",
-    "title": "John Doe",
-    "tagline": "Développeur Full-Stack",
-    "status": "draft",
-    "creation_mode": "from_preset",
-    "preset_id": "uuid"
-  }
-]
-```
-
-#### `GET /websites/:id`
-Retourne un website avec ses données.
-
-```json
-// Response 200
-{
-  "id": "uuid",
-  "slug": "mon-site",
-  "status": "draft",
-  "title": "John Doe",
-  "tagline": "Développeur Full-Stack",
-  "creation_mode": "from_preset",
-  "metadata": {},
-  "data": {}
-}
-```
-
-#### `PUT /websites/:id`
-Met à jour les informations du website.
-
-```json
-// Request
-{
-  "title": "John Doe",
-  "tagline": "Senior Developer"
-}
-```
-
-### Sections (authentifié)
-
-#### `GET /websites/:id/sections`
-Liste les sections d'un website.
-
-```json
-// Response 200
-[
-  {
-    "id": "uuid",
-    "section_type": "hero",
-    "slug": "hero",
-    "title": "Welcome",
-    "order": 0,
-    "layout": "full",
-    "visible": true
-  },
-  {
-    "id": "uuid",
-    "section_type": "projects",
-    "slug": "projects",
-    "title": "My Projects",
-    "order": 1,
-    "layout": "grid",
-    "visible": true
-  }
-]
-```
-
-#### `POST /websites/:id/sections`
-Crée une nouvelle section.
-
-```json
-// Request
-{
-  "section_type": "about",
-  "slug": "about",
-  "title": "About Me",
-  "order": 2,
-  "layout": "split"
-}
-```
-
-#### `POST /websites/:id/sections/reorder`
-Réordonne les sections.
-
-```json
-// Request
-{
-  "section_ids": ["uuid1", "uuid2", "uuid3"]
-}
-```
-
-### Modules (authentifié)
-
-#### `GET /modules/catalog`
-Liste les modules disponibles dans le catalogue.
-
-#### `GET /websites/:id/modules`
-Liste les modules activés pour un website.
-
-#### `POST /websites/:id/modules`
-Active un module pour un website.
-
-```json
-// Request
-{
-  "module_id": "uuid",
-  "settings": { "auto_sync": true }
-}
-```
-
-### Presets
-
-#### `GET /presets`
-Liste les templates disponibles.
-
-```json
-// Response 200
-[
-  {
-    "id": "uuid",
-    "name": "Developer Website",
-    "slug": "developer-website",
-    "description": "Perfect for developers",
-    "category": "professional"
-  }
-]
-```
-
-#### `POST /websites/from-preset`
-Crée un website à partir d'un preset.
-
-```json
-// Request
-{
-  "preset_id": "uuid",
-  "slug": "mon-site",
-  "title": "Mon Site"
-}
-```
-
-#### `POST /websites/:id/publish`
-Publie le website et le rend accessible publiquement.
-
-```json
-// Response 200
-{ "message": "Website published", "status": "published" }
-```
-
-### Notifications (authentifié)
-
-#### `GET /notifications`
-Liste des notifications avec filtres (category, priority, read/unread).
-
-#### `GET /notifications/unread-count`
-Retourne le nombre de notifications non lues.
-
-#### `POST /notifications/mark-read`
-Marquer une ou plusieurs notifications comme lues.
-
-#### `POST /notifications/push/subscribe`
-S'abonner aux notifications push (PWA).
-
-#### `GET /notifications/push/vapid-key`
-Récupérer la clé publique VAPID pour Web Push.
-
-### Paiements (authentifié)
-
-#### `POST /billing/checkout-session`
-Créer une session de paiement Stripe.
-
-```json
-// Request
-{
-  "price_id": "price_xxx",
-  "success_url": "https://app.asap.cool/success",
-  "cancel_url": "https://app.asap.cool/cancel"
-}
-```
-
-### WebSocket
-
-#### `GET /ws`
-Connexion WebSocket pour synchronisation temps réel.
-
-**Authentification :** Envoyer `{"type": "auth", "token": "jwt_token"}` après connexion.
-
-**Messages reçus :**
-- `website_updated` - Website modifié
-- `module_activated` - Module activé
-- `file_uploaded` - Fichier uploadé
-- `notification` - Nouvelle notification
-- Et autres événements de synchronisation...
-
-### Public
-
-#### `GET /public/websites/:slug`
-Récupère un website publié (fallback si projection absente).
+> 📖 Documentation API complète : [docs/API_SPEC.md](docs/API_SPEC.md)
 
 ---
 
-## 🔄 Parcours utilisateur
+## 🧩 Sections disponibles
 
-### 1. Inscription (Core)
-
-```
-User signup
-    ↓
-POST /auth/signup
-    ↓
-Core crée user, tenant, website (avec preset par défaut)
-    ↓
-Redirige vers dashboard
-```
-
-### 2. Choix du Preset (Core)
-
-```
-User sélectionne un preset (Developer Website, Blog, etc.)
-    ↓
-POST /websites/from-preset
-    ↓
-Core crée website avec:
-  • Modules pré-activés
-  • Sections pré-configurées
-  • Settings par défaut
-    ↓
-Dashboard affiche le site avec ses sections
-```
-
-### 3. Configuration GitHub (Core + Module)
-
-```
-User fournit GitHub username
-    ↓
-PUT /users/:id/integrations/github
-    ↓
-Core émet USER_INTEGRATION_ADDED
-    ↓
-GitHub Sync module exécuté :
-  • Lit user_data.integrations depuis Core
-  • Appelle GitHub API
-  • PATCH /websites/:id/data (stocke contenu)
-```
-
-### 4. Personnalisation des Sections (Core)
-
-```
-User modifie les sections
-    ↓
-PATCH /websites/:id/sections/:section_id
-    ↓
-Core met à jour section_data
-    ↓
-Preview en temps réel
-```
-
-### 5. Publication + Rendering (Core + Theme Module)
-
-```
-User clique "Publier"
-    ↓
-POST /websites/:id/publish
-    ↓
-Core émet WEBSITE_PUBLISHED
-    ↓
-Theme module exécuté :
-  • GET /websites/:id (contenu + sections)
-  • Applique thème
-  • Génère data/sites/<slug>.json
-    ↓
-Projection prête → site public accessible
-```
+| Type | Description | Layouts |
+|------|-------------|---------|
+| `hero` | Section d'accueil principale | full |
+| `about` | Présentation | split, full |
+| `projects` | Galerie de projets | grid, cards |
+| `skills` | Compétences techniques | grid, list |
+| `experience` | Parcours professionnel | timeline, list |
+| `education` | Formation | timeline, list |
+| `services` | Services proposés | cards, grid |
+| `pricing` | Grille tarifaire | cards |
+| `testimonials` | Témoignages | cards |
+| `contact` | Formulaire de contact | full, split |
+| `blog` | Articles | list, grid |
+| `gallery` | Galerie d'images | grid |
+| `faq` | Questions fréquentes | list |
+| `custom` | Section personnalisée | tous |
 
 ---
 
-## 💾 Modèle de données
+## 🧪 Tests
 
-### Tables Core (Source de vérité)
+```bash
+# Tous les tests unitaires
+make test
 
-| Table | Description |
-|-------|-------------|
-| `users` | Profil utilisateur (email, password_hash) |
-| `tenants` | Isolation multi-tenant |
-| `user_data` | Données étendues (GitHub username, tokens, preferences) |
-| `websites` | Structure du site (slug, title, tagline, status, creation_mode) |
-| `website_data` | Contenu généré par les modules (JSONB) |
-| `website_sections` | Sections du site (Hero, About, Projects, etc.) |
-| `website_modules` | Modules activés par website |
-| `presets` | Templates prédéfinis |
-| `modules` | Catalogue des modules disponibles |
-| `events` | Événements système (USER_CREATED, WEBSITE_PUBLISHED, etc.) |
+# Par composant
+make test-domain      # Core domain (31 tests)
+make test-extensions  # Extensions (38 tests)
 
-### Flux de données
-
+# Avec couverture
+cargo test --workspace -- --test-threads=1
 ```
-User Data (Core)
-├─ email
-├─ password_hash
-└─ integrations
-   └─ github: { username, token }
 
-    ↓ Modules lisent via API
+**Couverture actuelle :** 100+ tests unitaires couvrant le core et les extensions.
 
-Website (Core)
-├─ Structure (slug, title, status)
-├─ Sections (Hero, About, Projects, Contact...)
-└─ Activated Modules (GitHub Sync, Analytics...)
+---
 
-    ↓ Modules écrivent contenu
+## 📊 Métriques
 
-Website Data (Core JSONB)
-├─ projects (from GitHub)
-├─ posts (from Blog)
-└─ (autres données modulaires)
-
-    ↓ Theme Module lit et applique
-
-Projection (data/sites/<slug>.json)
-    ↓ Frontend lit
-
-Site Public
-```
+| Métrique | Valeur |
+|----------|--------|
+| Tests | 100+ |
+| Lignes Rust | ~15,000 |
+| Migrations SQL | 17 |
+| Renderers React | 14 |
+| Score PWA | 93/100 |
 
 ---
 
 ## 🗺 Roadmap
 
-### ✅ Phase 1-4 - Backend Core + Architecture Website (Terminé) 
+### ✅ MVP v1.0 (Terminé)
 
-> **Statut :** Backend complet avec architecture Website/Sections modulaire
+- [x] Core API complet (auth, multi-tenant, websites, sections)
+- [x] Worker avec extensions (GitHub Sync, Themes, Analytics)
+- [x] Dashboard web (Astro + React)
+- [x] 3 presets (portfolio-dev, portfolio-minimal, freelance)
+- [x] PWA avec notifications push
+- [x] Intégration Stripe
 
-- [x] **Core API** (auth, multi-tenant, users, websites, sections, modules, events)
-- [x] **Worker** (event processor + module executor)
-- [x] **Modules initiaux** (GitHub Sync, Theme Engine, Projections, Analytics, Blog, Contact)
-- [x] **Optimisations** (Redis caching, compression, parallel processing)
-- [x] **Temps réel** (WebSocket, Redis Pub/Sub, notifications)
-- [x] **Paiements** (Stripe integration)
-- [x] **PWA** (Score 93/100)
+### 🔜 v1.1 (En cours)
 
-**📊 Métriques:** 100+ tests | ~15,000 lignes Rust | 8+ migrations SQL
+- [ ] Onboarding amélioré
+- [ ] Éditeur de sections enrichi
+- [ ] Import GitHub optimisé
+- [ ] Analytics dashboard
 
-### ✅ Phase 5 - Frontend & UX (Terminé)
+### 📋 Futur
 
-> **Statut :** MVP utilisable avec interface web complète
+- [ ] AI Generator (contenu généré par IA)
+- [ ] Custom domains (DNS + SSL)
+- [ ] Marketplace (thèmes, plugins)
+- [ ] App mobile (React Native)
 
-- [x] **Dashboard principal**
-  - [x] Liste websites avec création/suppression
-  - [x] SiteSwitcher avec dropdown
-  - [x] Gestion sections (CRUD, drag & drop)
-  - [x] Gestion pages (CRUD, homepage)
-  - [x] Preview system complet
-- [x] **Architecture partagée**
-  - [x] @asap/shared - Types, constantes, utils
-  - [x] @asap/renderers - 14 renderers sections
-  - [x] apps/sites - Sites publics séparés
-- [x] **Presets templates**
-  - [x] portfolio-dev
-  - [x] portfolio-minimal
-  - [x] portfolio-freelance
-- [x] **SEO avancé** (Open Graph, Twitter, JSON-LD)
-
-**🎯 MVP démontrable et utilisable**
-
-### 📋 Phase 6+ - À venir
-
-- [ ] **Modules avancés** (AI Generator, Analytics)
-- [ ] **Custom domains** (DNS + SSL)
-- [ ] **Marketplace** (thèmes, plugins)
-- [ ] **Enterprise** (RBAC, SSO)
-- [ ] **Mobile** (React Native)
+> 📖 Roadmap détaillée : [docs/ROADMAP.md](docs/ROADMAP.md)
 
 ---
 
-## 💰 Business Model
+## 💰 Modèle économique
 
-**ASAP** utilise un **modèle freemium + usage-based** pour monétiser :
-
-### Plans SaaS
-
-| Plan | Prix | Utilisateurs | Sites | Tokens IA | Stockage |
-|------|------|--------------|-------|-----------|----------|
-| **Free** | 0€ | 1 | 1 | 0 | 1GB |
-| **Pro** | 29€/mois | 3 | 5 | 100K/mois | 50GB |
-| **Team** | 99€/mois | Illimité | Illimité | 500K/mois | 500GB |
-
-### Revenue Streams
-
-1. **Abonnements récurrents** (SaaS)
-2. **Usage-based** (tokens IA extra, stockage, domains)
-3. **Marketplace** (70/30 split sur thèmes/plugins)
-4. **Enterprise & Self-hosted** (licensing annuel)
-
-**Voir [BUSINESS.md](docs/BUSINESS.md) pour plus de détails.**
+| Plan | Prix | Sites | Stockage |
+|------|------|-------|----------|
+| **Free** | 0€ | 1 | 1 GB |
+| **Pro** | 29€/mois | 5 | 50 GB |
+| **Team** | 99€/mois | Illimité | 500 GB |
 
 ---
 
-## 🤝 Contributing
+## 🤝 Contribution
 
-ASAP suit un modèle **open-core**. Le cœur (`core/`) est open-source, les modules premium (`modules/`) sont privés.
+ASAP suit un modèle **open-core** :
 
-### Comment contribuer
+- `core/` → MIT License (open-source)
+- `modules/` → Licence propriétaire
+
+### Contribuer
 
 1. Fork le repository
-2. Créer une branche (`git checkout -b feature/amazing-feature`)
-3. Commit (`git commit -m 'Add amazing feature'`)
-4. Push (`git push origin feature/amazing-feature`)
+2. Créer une branche : `git checkout -b feature/ma-feature`
+3. Commit : `git commit -m 'Add: ma feature'`
+4. Push : `git push origin feature/ma-feature`
 5. Ouvrir une Pull Request
 
-### Guidelines
+### Standards
 
-- Code Rust : suivre les conventions `rustfmt` et `clippy`
-- Code TypeScript : ESLint + Prettier
-- Tests requis pour toute nouvelle fonctionnalité
-- Documentation à jour
-
----
-
-## 📄 License
-
-Ce projet suit un modèle **Open-Core** :
-
-- **`core/`** : MIT License - Libre d'utilisation, modification et distribution
-- **`modules/`** : Propriétaire - Licence commerciale requise
-- **SaaS** : Conditions d'utilisation sur asap.cool
+- **Rust** : `rustfmt` + `clippy`
+- **TypeScript** : ESLint + Prettier
+- **Commits** : [Conventional Commits](https://www.conventionalcommits.org/)
 
 ---
 
-## 📚 Documentation supplémentaire
+## 📚 Documentation
 
 | Document | Description |
 |----------|-------------|
-| [ROADMAP.md](docs/ROADMAP.md) | Plan de développement détaillé avec phases et métriques |
-| [ACTION_PLAN_SHORT_TERM.md](docs/ACTION_PLAN_SHORT_TERM.md) | Plan d'action court terme (4 semaines) - technique et fonctionnel |
-| [SPEC_MVP.md](docs/SPEC_MVP.md) | Spécifications fonctionnelles du MVP |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture technique détaillée |
-| [API_SPEC.md](docs/API_SPEC.md) | Contrat d'API complet |
-| [FLOWS.md](docs/FLOWS.md) | Parcours utilisateur détaillés |
-| [DECISIONS.md](docs/DECISIONS.md) | Journal des décisions (ADR) |
+| [API_SPEC.md](docs/API_SPEC.md) | Spécification API complète |
+| [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Guide de développement |
 | [STRUCTURE.md](docs/STRUCTURE.md) | Structure du monorepo |
-| [BUSINESS.md](docs/BUSINESS.md) | Vision & modèle d'affaires |
-| [WEBSOCKET_PHASE4.md](docs/WEBSOCKET_PHASE4.md) | WebSocket Phase 4 - Backend integration & sync |
-| [NOTIFICATIONS.md](docs/NOTIFICATIONS.md) | Système de notifications in-app et push |
-| [PWA_README.md](docs/PWA_README.md) | Documentation Progressive Web App complète |
-| [FILE_STORAGE.md](docs/FILE_STORAGE.md) | Gestion des fichiers et quotas |
-| [CHANGELOG.md](docs/CHANGELOG.md) | Historique détaillé des changements |
+| [FLOWS.md](docs/FLOWS.md) | Parcours utilisateur |
+| [NOTIFICATIONS.md](docs/NOTIFICATIONS.md) | Système de notifications |
+| [PWA_README.md](docs/PWA_README.md) | Documentation PWA |
+| [DATABASE_SETUP.md](docs/DATABASE_SETUP.md) | Configuration base de données |
+| [TESTING.md](docs/TESTING.md) | Guide des tests |
+| [CHANGELOG.md](docs/CHANGELOG.md) | Historique des changements |
 
 ---
 
-<p align="center">
-  <strong>Built with ❤️ for developers, by developers</strong>
-</p>
+## 📄 Licence
 
-<p align="center">
-  <a href="https://asap.cool">Website</a> •
-  <a href="https://github.com/votre-org/asap/issues">Issues</a> •
-  <a href="https://twitter.com/asapcool">Twitter</a>
-</p>
+- **Core** (`core/`) : [MIT License](LICENSE)
+- **Modules** (`modules/`) : Licence propriétaire
+- **SaaS** : [Conditions d'utilisation](https://asap.cool/terms)
+
+---
+
+<div align="center">
+
+**Built with ❤️ by the ASAP Team**
+
+[Website](https://asap.cool) • [Documentation](docs/) • [Issues](https://github.com/votre-org/asap/issues)
+
+</div>
