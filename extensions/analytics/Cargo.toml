@@ -1,5 +1,5 @@
 [package]
-name = "asap-module-themes"
+name = "asap-extension-analytics"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

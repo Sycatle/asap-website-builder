@@ -1,4 +1,4 @@
-// GitHub Generator Module
+// Github Sync Extension
 // Fetches GitHub repositories and generates website content
 
 pub mod client;

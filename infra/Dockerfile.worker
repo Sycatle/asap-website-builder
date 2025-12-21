@@ -13,17 +13,16 @@ COPY Cargo.toml Cargo.lock ./
 COPY core/shared/Cargo.toml ./core/shared/
 COPY core/domain/Cargo.toml ./core/domain/
 COPY core/api/Cargo.toml ./core/api/
+COPY core/notifications/Cargo.toml ./core/notifications/
 COPY apps/api/Cargo.toml ./apps/api/
 COPY apps/worker/Cargo.toml ./apps/worker/
-COPY modules/analytics/Cargo.toml ./modules/analytics/
-COPY modules/github-generator/Cargo.toml ./modules/github-generator/
-COPY modules/projections/Cargo.toml ./modules/projections/
-COPY modules/themes/Cargo.toml ./modules/themes/
+COPY extensions/analytics/Cargo.toml ./extensions/analytics/
+COPY extensions/github-sync/Cargo.toml ./extensions/github-sync/
 
 # Copy all source code (workspace needs all members)
 COPY core ./core
 COPY apps ./apps
-COPY modules ./modules
+COPY extensions ./extensions
 COPY .sqlx ./.sqlx
 
 # Build the worker with SQLx offline mode

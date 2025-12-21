@@ -1,4 +1,4 @@
-// Analytics Module
+// Analytics Extension
 // Tracks page views and user interactions
 
 use chrono::Utc;

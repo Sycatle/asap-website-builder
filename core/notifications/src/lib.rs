@@ -1,6 +1,6 @@
-//! ASAP Notifications Module
+//! ASAP Core Notifications Extension
 //! 
-//! This module handles user notifications with support for:
+//! This extension handles user notifications with support for:
 //! - In-app notifications
 //! - Push notifications (PWA)
 //! - Read/unread state management

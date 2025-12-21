@@ -9,7 +9,7 @@ license.workspace = true
 asap-core-domain = { path = "../../core/domain" }
 asap-core-payments = { path = "../../core/payments" }
 asap-core-shared = { path = "../../core/shared" }
-asap-github-generator = { path = "../../modules/github-generator", package = "asap-module-github-generator" }
+asap-github-sync = { path = "../../extensions/github-sync", package = "asap-extension-github-sync" }
 
 # Async runtime
 tokio = { workspace = true, features = ["full"] }

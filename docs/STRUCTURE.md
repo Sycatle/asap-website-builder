@@ -18,7 +18,7 @@ Ce document décrit la structure initiale du monorepo ASAP basée sur une archit
 ```
 asap/
 ├── core/           # Core - structure & données utilisateur (open-source)
-├── modules/        # Extensions backend Rust
+├── extensions/     # Extensions backend Rust
 ├── packages/       # Packages partagés TypeScript
 ├── apps/           # Applications exécutables
 ├── infra/          # Infrastructure
@@ -94,6 +94,13 @@ core/
 │       ├── websocket.rs     # WebSocket broadcaster
 │       ├── extension_catalog.rs  # Extension schema types
 │       └── errors.rs
+│
+├── notifications/
+│   ├── Cargo.toml
+│   └── src/
+│       ├── lib.rs
+│       ├── service.rs      # Notification service
+│       └── types.rs        # Notification types
 │
 └── payments/
     ├── Cargo.toml
@@ -183,7 +190,7 @@ GET    /public/websites/:slug/sections # Sections publiques
 
 ---
 
-## 3. `modules/` – Extensions Backend (Mixte)
+## 3. `extensions/` – Extensions Backend (Mixte)
 
 Chaque extension implémente une fonctionnalité spécifique. Les extensions :
 
@@ -193,38 +200,21 @@ Chaque extension implémente une fonctionnalité spécifique. Les extensions :
 - **Stockent** leurs résultats dans `website_data` (JSONB du core)
 
 ```
-modules/
-├── github-generator/       # Récupère repos GitHub
+extensions/
+├── github-sync/            # Github Sync - Récupère repos GitHub
 │   ├── Cargo.toml
 │   └── src/
 │       ├── lib.rs
 │       ├── client.rs       # Appels GitHub API
-│       ├── processor.rs    # Transforme repos → website data
-│       └── events.rs       # Écoute ACCOUNT_INTEGRATION_ADDED
+│       └── processor.rs    # Transforme repos → website data
 │
-├── themes/                 # Thèmes de rendu
-│   ├── Cargo.toml
-│   └── src/
-│       ├── lib.rs
-│       └── themes.rs
-│
-├── analytics/              # Tracking et stats
-│   ├── Cargo.toml
-│   └── src/
-│       └── lib.rs
-│
-├── projections/            # Génère data/sites/<slug>.json
-│   ├── Cargo.toml
-│   └── src/
-│       └── lib.rs
-│
-└── notifications/          # Gestion notifications
+└── analytics/              # Tracking et stats
     ├── Cargo.toml
     └── src/
-        ├── lib.rs
-        ├── service.rs
-        └── types.rs
+        └── lib.rs
 ```
+
+Note: Les notifications sont maintenant dans `core/notifications/` car c'est une extension core.
 
 ---
 
@@ -575,10 +565,8 @@ Frontend (Astro + React)
     │                           │
     │ Extensions                Worker
     ├──────────────────────────→│
-    │ • github-generator        ├─→ github-generator job
-    │ • themes                  ├─→ theme renderer
-    │ • analytics               ├─→ analytics processor
-    │ • projections             └─→ projection generator
+    │ • github-sync             ├─→ Github Sync job
+    │ • analytics               └─→ analytics processor
     │
     └─→ Résultats stockés dans website_data (JSONB)
 ```

@@ -4,66 +4,66 @@ use asap_core_domain::ConfigSchema;
 use sqlx::PgPool;
 
 // ============================================================================
-// Module Info Trait - Metadata about a module
+// Extension Info Trait - Metadata about an extension
 // ============================================================================
 
-/// Trait providing metadata about a module executor.
+/// Trait providing metadata about an extension executor.
 /// 
 /// This trait should be implemented alongside `ExtensionExecutor` to provide
-/// information for logging, debugging, and module discovery.
+/// information for logging, debugging, and extension discovery.
 /// 
 /// The `config_schema()` method returns the UI schema for configuration,
 /// which is defined in code (not in the database) to ensure:
 /// - Type safety at compile time
-/// - Co-location with module logic
-/// - Automatic versioning with the module
+/// - Co-location with extension logic
+/// - Automatic versioning with the extension
 #[allow(dead_code)]
 pub trait ExtensionInfo {
-    /// The unique slug identifier for this module (e.g., "github-sync")
+    /// The unique slug identifier for this extension (e.g., "github-sync")
     fn slug(&self) -> &'static str;
     
-    /// Human-readable name of the module
+    /// Human-readable name of the extension
     fn name(&self) -> &'static str;
     
-    /// Semantic version of the module (e.g., "1.0.0")
+    /// Semantic version of the extension (e.g., "1.0.0")
     fn version(&self) -> &'static str;
     
-    /// Brief description of what the module does
+    /// Brief description of what the extension does
     fn description(&self) -> &'static str;
     
-    /// Module category for grouping in UI
+    /// Extension category for grouping in UI
     fn category(&self) -> &'static str {
         "other"
     }
     
-    /// List of event types this module handles
+    /// List of event types this extension handles
     fn handled_events(&self) -> Vec<EventType>;
     
-    /// Configuration schema for the module UI
+    /// Configuration schema for the extension UI
     /// 
-    /// This defines the fields, actions, and data displays for the module
-    /// configuration page. Returns None if the module has no configuration.
+    /// This defines the fields, actions, and data displays for the extension
+    /// configuration page. Returns None if the extension has no configuration.
     fn config_schema(&self) -> Option<ConfigSchema> {
         None
     }
     
-    /// Default settings for when the module is first activated
+    /// Default settings for when the extension is first activated
     fn default_settings(&self) -> serde_json::Value {
         serde_json::json!({})
     }
 }
 
 // ============================================================================
-// Module Executor Trait - Core execution logic
+// Extension Executor Trait - Core execution logic
 // ============================================================================
 
-/// Trait for module executors that process events.
+/// Trait for extension executors that process events.
 /// 
 /// Implementors should also implement `ExtensionInfo` for metadata.
 #[async_trait::async_trait]
 #[allow(dead_code)]
 pub trait ExtensionExecutor: ExtensionInfo + Send + Sync {
-    /// Execute the module logic for the given event.
+    /// Execute the extension logic for the given event.
     /// 
     /// This method is called when an event matching `can_handle` is received.
     /// It should be idempotent when possible to handle retries gracefully.
@@ -108,14 +108,14 @@ impl ExtensionExecutorRegistry {
         self.executors.push(executor);
     }
 
-    /// Execute all modules that can handle the given event
+    /// Execute all extensions that can handle the given event
     pub async fn execute_for_event(&self, event: &Event) -> Result<()> {
         let mut handled = false;
         
         for executor in &self.executors {
             if executor.can_handle(&event.event_type) {
                 tracing::info!(
-                    "Executing module for event {} (type: {:?})",
+                    "Executing extension for event {} (type: {:?})",
                     event.id,
                     event.event_type
                 );
@@ -136,7 +136,7 @@ impl ExtensionExecutorRegistry {
     }
 }
 
-/// GitHub Integration Module Executor
+/// Github Sync Extension Executor
 pub struct GitHubIntegrationExecutor {
     pool: PgPool,
     #[allow(dead_code)]
@@ -158,7 +158,7 @@ impl ExtensionInfo for GitHubIntegrationExecutor {
     }
 
     fn name(&self) -> &'static str {
-        "GitHub Integration"
+        "Github Sync"
     }
 
     fn version(&self) -> &'static str {
@@ -308,8 +308,8 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
 
         tracing::info!("Fetching GitHub repos for account: {} (account_id: {})", github_username, account_id);
 
-        // Fetch repos from GitHub (using the github-generator module)
-        let github_client = asap_github_generator::GitHubClient::new()?;
+        // Fetch repos from GitHub (using the github-sync extension)
+        let github_client = asap_github_sync::GitHubClient::new()?;
         
         // Fetch user profile, organizations and repos in parallel
         let (user_result, orgs_result, repos) = tokio::join!(
@@ -325,7 +325,7 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
         tracing::info!("Fetched {} repositories from GitHub", repos.len());
 
         // Generate website content from repos, user profile and orgs
-        let website_content = asap_github_generator::generate_website_content(repos, user, orgs).await?;
+        let website_content = asap_github_sync::generate_website_content(repos, user, orgs).await?;
 
         tracing::debug!("Generated website content");
 

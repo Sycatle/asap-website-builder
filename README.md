@@ -48,7 +48,7 @@ ASAP est une plateforme SaaS de création de sites web modulaires. Elle permet a
                            │ Events
 ┌──────────────────────────▼──────────────────────────────────┐
 │                    Worker (Rust + Tokio)                     │
-│  Extensions: GitHub Sync • Themes • Analytics • Projections │
+│  Extensions: Github Sync • Analytics                         │
 └──────────────────────────┬──────────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
@@ -89,14 +89,12 @@ asap/
 │   ├── domain/             # Modèles (Account, Website, Event...)
 │   ├── api/                # Routes HTTP & handlers
 │   ├── shared/             # Utilitaires (auth, config, errors)
-│   └── payments/           # Intégration Stripe
+│   ├── payments/           # Intégration Stripe
+│   └── notifications/      # Notifications (core extension)
 │
-├── modules/                 # Extensions (Rust)
-│   ├── github-generator/   # Import projets GitHub
-│   ├── themes/             # Moteur de thèmes
-│   ├── analytics/          # Tracking & stats
-│   ├── notifications/      # Push & in-app
-│   └── projections/        # Génération fichiers statiques
+├── extensions/              # Extensions (Rust)
+│   ├── github-sync/        # Github Sync - Import projets GitHub
+│   └── analytics/          # Tracking & stats
 │
 ├── packages/                # Packages partagés (TypeScript)
 │   ├── shared/             # @asap/shared - Types & utils
@@ -348,7 +346,7 @@ ASAP suit un modèle **open-core** :
 ## 📄 Licence
 
 - **Core** (`core/`) : [MIT License](LICENSE)
-- **Modules** (`modules/`) : Licence propriétaire
+- **Extensions** (`extensions/`) : Licence propriétaire
 - **SaaS** : [Conditions d'utilisation](https://asap.cool/terms)
 
 ---
