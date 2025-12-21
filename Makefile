@@ -58,7 +58,7 @@ help:
 	@echo "$(GREEN)Test Commands:$(NC)"
 	@echo "  make test            - Run all tests in Docker"
 	@echo "  make test-domain     - Test core domain models"
-	@echo "  make test-modules    - Test all modules"
+	@echo "  make test-extensions - Test all extensions"
 	@echo "  make test-api        - Test API handlers"
 	@echo ""
 	@echo "$(GREEN)Code Quality:$(NC)"
@@ -218,9 +218,9 @@ rebuild:
 # =============================================================================
 # Test Commands (Docker-based)
 # =============================================================================
-.PHONY: test test-domain test-modules test-api
+.PHONY: test test-domain test-extensions test-api
 
-test: test-domain test-modules
+test: test-domain test-extensions
 	@echo "$(GREEN)✓ All unit tests passed$(NC)"
 
 test-domain:
@@ -229,11 +229,11 @@ test-domain:
 		cargo test --lib -p asap-core-domain
 	@echo "$(GREEN)✓ Domain tests passed$(NC)"
 
-test-modules:
-	@echo "$(CYAN)Testing Modules...$(NC)"
+test-extensions:
+	@echo "$(CYAN)Testing Extensions...$(NC)"
 	docker run --rm -v "$(PWD)":/app -w /app rustlang/rust:nightly-slim \
-		cargo test --lib -p asap-module-analytics -p asap-module-themes -p asap-module-github-generator -p asap-module-projections
-	@echo "$(GREEN)✓ Module tests passed$(NC)"
+		cargo test --lib -p asap-extension-analytics -p asap-extension-github-sync
+	@echo "$(GREEN)✓ Extension tests passed$(NC)"
 
 test-api:
 	@echo "$(CYAN)Testing API (uses Docker network)...$(NC)"

@@ -180,7 +180,7 @@ mod tests {
         let event = Event::new(
             Uuid::new_v4(),
             EventType::ModuleConfigChanged,
-            serde_json::json!({"module": "github-generator"}),
+            serde_json::json!({"extension": "github-sync"}),
         );
 
         let cloned = event.clone();

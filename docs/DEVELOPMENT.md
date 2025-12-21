@@ -68,12 +68,11 @@ The API will be available at `http://localhost:3000`.
 asap-v2/
 ├── core/                   # Core domain and API
 │   ├── domain/            # Domain models (Account, Website, Event, etc.)
-│   └── api/               # HTTP routes and handlers
-├── modules/               # Feature extensions
-│   ├── github-generator/  # Import GitHub repos
-│   ├── themes/            # Theme rendering
-│   ├── analytics/         # Usage tracking
-│   └── projections/       # Static file generation
+│   ├── api/               # HTTP routes and handlers
+│   └── notifications/     # Core notifications extension
+├── extensions/            # Feature extensions
+│   ├── github-sync/       # Github Sync - Import GitHub repos
+│   └── analytics/         # Usage tracking
 ├── apps/                  # Executable applications
 │   ├── api/              # Core API server
 │   ├── worker/           # Event processor
@@ -112,20 +111,18 @@ make test
 # Test core domain (31 tests)
 make test-domain
 
-# Test extensions (36 tests)
+# Test extensions
 make test-extensions
 
 # Run specific test suite
 cargo test --lib -p asap-core-domain
 cargo test --lib -p asap-extension-analytics
-cargo test --lib -p asap-extension-themes
-cargo test --lib -p asap-extension-github-generator
-cargo test --lib -p asap-extension-projections
+cargo test --lib -p asap-extension-github-sync
 ```
 
 ### Test Coverage
 
-**79 unit tests covering:**
+**Unit tests covering:**
 
 - **Core Domain**: 31 tests
   - Accounts (5 tests): creation, cloning, serialization
@@ -138,11 +135,9 @@ cargo test --lib -p asap-extension-projections
   - JWT token generation and validation
   - Error handling
 
-- **Extensions**: 38 tests
+- **Extensions**:
   - Analytics (7 tests): event tracking
-  - Themes (10 tests): theme application, JSON handling
-  - GitHub Generator (13 tests): repo filtering, content generation
-  - Projections (8 tests): slug validation, data structure
+  - Github Sync (13 tests): repo filtering, content generation
 
 - **API**: Password & Route tests (requires DATABASE_URL)
   - Password hashing & verification

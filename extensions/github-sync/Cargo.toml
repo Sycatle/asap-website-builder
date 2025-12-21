@@ -1,5 +1,5 @@
 [package]
-name = "asap-module-analytics"
+name = "asap-extension-github-sync"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -7,8 +7,19 @@ license.workspace = true
 
 [dependencies]
 asap-core-domain = { path = "../../core/domain" }
+
+# Async runtime
+tokio = { workspace = true }
+
+# HTTP client
+reqwest = { workspace = true }
+
+# Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
-anyhow = { workspace = true }
-tracing = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }
 chrono = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }

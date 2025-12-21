@@ -18,36 +18,32 @@ COPY core/shared/Cargo.toml ./core/shared/
 COPY core/domain/Cargo.toml ./core/domain/
 COPY core/api/Cargo.toml ./core/api/
 COPY core/payments/Cargo.toml ./core/payments/
+COPY core/notifications/Cargo.toml ./core/notifications/
 COPY apps/api/Cargo.toml ./apps/api/
 COPY apps/worker/Cargo.toml ./apps/worker/
-COPY modules/analytics/Cargo.toml ./modules/analytics/
-COPY modules/github-generator/Cargo.toml ./modules/github-generator/
-COPY modules/projections/Cargo.toml ./modules/projections/
-COPY modules/themes/Cargo.toml ./modules/themes/
-COPY modules/notifications/Cargo.toml ./modules/notifications/
+COPY extensions/analytics/Cargo.toml ./extensions/analytics/
+COPY extensions/github-sync/Cargo.toml ./extensions/github-sync/
 
 # Create stub files for dependency caching
 RUN mkdir -p core/shared/src && echo "// stub" > core/shared/src/lib.rs && \
     mkdir -p core/domain/src && echo "// stub" > core/domain/src/lib.rs && \
     mkdir -p core/api/src && echo "// stub" > core/api/src/lib.rs && \
     mkdir -p core/payments/src && echo "// stub" > core/payments/src/lib.rs && \
+    mkdir -p core/notifications/src && echo "// stub" > core/notifications/src/lib.rs && \
     mkdir -p apps/api/src && echo "fn main() {}" > apps/api/src/main.rs && \
     mkdir -p apps/worker/src && echo "fn main() {}" > apps/worker/src/main.rs && \
-    mkdir -p modules/analytics/src && echo "// stub" > modules/analytics/src/lib.rs && \
-    mkdir -p modules/github-generator/src && echo "// stub" > modules/github-generator/src/lib.rs && \
-    mkdir -p modules/projections/src && echo "// stub" > modules/projections/src/lib.rs && \
-    mkdir -p modules/themes/src && echo "// stub" > modules/themes/src/lib.rs && \
-    mkdir -p modules/notifications/src && echo "// stub" > modules/notifications/src/lib.rs
+    mkdir -p extensions/analytics/src && echo "// stub" > extensions/analytics/src/lib.rs && \
+    mkdir -p extensions/github-sync/src && echo "// stub" > extensions/github-sync/src/lib.rs
 
 # Pre-build dependencies
 RUN cargo build --bin asap-worker 2>/dev/null || true
-RUN rm -rf core apps modules
+RUN rm -rf core apps extensions
 
 # Copy all source code (will be overwritten by volume mounts)
 COPY core ./core
 COPY apps ./apps
-COPY modules ./modules
+COPY extensions ./extensions
 COPY .sqlx ./.sqlx
 
 # Use cargo-watch for hot reload
-CMD ["cargo", "watch", "-x", "run --bin asap-worker", "-w", "apps/worker", "-w", "core", "-w", "modules"]
+CMD ["cargo", "watch", "-x", "run --bin asap-worker", "-w", "apps/worker", "-w", "core", "-w", "extensions"]

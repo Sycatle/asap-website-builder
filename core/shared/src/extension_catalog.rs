@@ -1,12 +1,12 @@
 //! Extension Catalog - Centralized extension definitions
 //!
-//! This module provides the catalog of all available modules with their
+//! This module provides the catalog of all available extensions with their
 //! configuration schemas. The schemas are defined in code, not in the database,
 //! ensuring type safety and co-location with extension logic.
 //!
 //! Used by:
 //! - API: To return extension schemas to the frontend
-//! - Worker: To validate module configurations
+//! - Worker: To validate extension configurations
 
 use asap_core_domain::{
     ConfigSchema, ConfigField, ConfigAction, ConfigSection,
@@ -25,7 +25,7 @@ pub struct ExtensionDefinition {
     pub icon: Option<String>,
     pub default_settings: serde_json::Value,
     pub config_schema: Option<ConfigSchema>,
-    /// Whether this module appears in account configuration (false = system module)
+    /// Whether this extension appears in account configuration (false = system extension)
     pub user_configurable: bool,
     /// Order in sidebar when activated
     pub sidebar_order: i32,
@@ -35,7 +35,7 @@ pub struct ExtensionDefinition {
 
 /// Get all available extension definitions
 /// 
-/// This is the single source of truth for module metadata and schemas.
+/// This is the single source of truth for extension metadata and schemas.
 pub fn get_extension_catalog() -> Vec<ExtensionDefinition> {
     vec![
         github_sync_extension(),
@@ -46,12 +46,12 @@ pub fn get_extension_catalog() -> Vec<ExtensionDefinition> {
     ]
 }
 
-/// Get a module definition by slug
+/// Get an extension definition by slug
 pub fn get_extension_by_slug(slug: &str) -> Option<ExtensionDefinition> {
     get_extension_catalog().into_iter().find(|m| m.slug == slug)
 }
 
-/// Get only account-configurable modules (for catalog display)
+/// Get only account-configurable extensions (for catalog display)
 pub fn get_user_extensions() -> Vec<ExtensionDefinition> {
     get_extension_catalog()
         .into_iter()
@@ -60,19 +60,19 @@ pub fn get_user_extensions() -> Vec<ExtensionDefinition> {
 }
 
 // ============================================================================
-// Module Definitions
+// Extension Definitions
 // ============================================================================
 
 fn github_sync_extension() -> ExtensionDefinition {
     ExtensionDefinition {
         slug: "github-sync".to_string(),
-        name: "GitHub Integration".to_string(),
+        name: "Github Sync".to_string(),
         version: "1.0.0".to_string(),
         description: "Synchronise vos projets GitHub pour les afficher sur votre site".to_string(),
         category: "integration".to_string(),
         icon: Some("github".to_string()),
         sidebar_order: 10,
-        sidebar_label: Some("GitHub".to_string()),
+        sidebar_label: Some("Github Sync".to_string()),
         user_configurable: true,
         default_settings: serde_json::json!({
             "github_username": "",
@@ -373,11 +373,11 @@ mod tests {
         let catalog = get_extension_catalog();
         assert!(!catalog.is_empty());
         
-        // All modules should have required fields
-        for module in &catalog {
-            assert!(!module.slug.is_empty());
-            assert!(!module.name.is_empty());
-            assert!(!module.version.is_empty());
+        // All extensions should have required fields
+        for extension in &catalog {
+            assert!(!extension.slug.is_empty());
+            assert!(!extension.name.is_empty());
+            assert!(!extension.version.is_empty());
         }
     }
 
@@ -385,14 +385,14 @@ mod tests {
     fn test_get_extension_by_slug() {
         let github = get_extension_by_slug("github-sync");
         assert!(github.is_some());
-        assert_eq!(github.unwrap().name, "GitHub Integration");
+        assert_eq!(github.unwrap().name, "Github Sync");
 
         let nonexistent = get_extension_by_slug("nonexistent");
         assert!(nonexistent.is_none());
     }
 
     #[test]
-    fn test_github_module_schema() {
+    fn test_github_extension_schema() {
         let github = get_extension_by_slug("github-sync").unwrap();
         let schema = github.config_schema.unwrap();
         
@@ -404,8 +404,8 @@ mod tests {
     #[test]
     fn test_schema_serialization() {
         let catalog = get_extension_catalog();
-        for module in catalog {
-            let json = serde_json::to_string(&module).unwrap();
+        for extension in catalog {
+            let json = serde_json::to_string(&extension).unwrap();
             assert!(!json.is_empty());
             
             // Should deserialize back

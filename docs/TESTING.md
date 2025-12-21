@@ -36,7 +36,7 @@ make test-api
 ```bash
 # Run specific package tests
 cargo test --lib -p asap-core-domain
-cargo test --lib -p asap-extension-github-generator
+cargo test --lib -p asap-extension-github-sync
 
 # Run specific test
 cargo test test_account_creation -- --exact
@@ -126,7 +126,7 @@ Tests cover:
 - ✅ Tagged union enumeration
 - ✅ Serialization with serde
 
-### Extension Tests (38 tests)
+### Extension Tests
 
 #### Analytics Extension (7 tests)
 - `test_track_event_page_view` - Page view tracking
@@ -137,34 +137,14 @@ Tests cover:
 - `test_track_multiple_events` - Event batching
 - `test_track_event_with_special_chars` - Character handling
 
-**File:** `modules/analytics/src/lib.rs`
+**File:** `extensions/analytics/src/lib.rs`
 
 Tests cover:
 - ✅ Event type tracking
 - ✅ String handling and validation
 - ✅ Multiple event processing
 
-#### Themes Extension (10 tests)
-- `test_apply_theme_empty_data` - Empty data handling
-- `test_apply_theme_with_website_data` - Website theming
-- `test_apply_theme_with_complex_structure` - Complex JSON
-- `test_apply_theme_returns_valid_json_string` - Output validation
-- `test_apply_theme_with_null_values` - Null handling
-- `test_apply_theme_with_array` - Array data
-- `test_apply_theme_with_numbers` - Number handling
-- `test_apply_theme_with_unicode` - Unicode characters
-- `test_theme_metadata` - Theme metadata generation
-- `test_custom_theme_support` - Custom theme application
-
-**File:** `modules/themes/src/lib.rs`
-
-Tests cover:
-- ✅ JSON transformation
-- ✅ Various data types (strings, numbers, arrays, objects)
-- ✅ Unicode and special characters
-- ✅ Pretty-printed output
-
-#### GitHub Generator Extension (13 tests)
+#### Github Sync Extension (13 tests)
 
 **Client Tests (6 tests):**
 - `test_github_repo_creation` - Repository structure
@@ -185,8 +165,8 @@ Tests cover:
 - `test_generate_website_content_missing_fields` - Fallback values
 
 **Files:** 
-- `modules/github-generator/src/client.rs`
-- `modules/github-generator/src/processor.rs`
+- `extensions/github-sync/src/client.rs`
+- `extensions/github-sync/src/processor.rs`
 
 Tests cover:
 - ✅ GitHub repository data structures
@@ -194,25 +174,6 @@ Tests cover:
 - ✅ Website content generation
 - ✅ Sorting by popularity (stars)
 - ✅ Missing field handling
-
-#### Projections Extension (8 tests)
-- `test_generate_projection_simple` - Basic projection
-- `test_generate_projection_slug_validation` - Slug validation
-- `test_generate_projection_data_serialization` - Data handling
-- `test_path_construction` - File path generation
-- `test_projection_data_structure` - Output structure
-- `test_multiple_slugs_different_paths` - Multiple projections
-- `test_empty_projection_data` - Empty data
-- `test_projection_with_complex_data` - Complex nesting
-
-**File:** `modules/projections/src/lib.rs`
-
-Tests cover:
-- ✅ Projection file path generation
-- ✅ Slug validation
-- ✅ JSON data structure
-- ✅ Data serialization
-- ✅ Complex nested data
 
 ### API Tests (Available with DATABASE_URL)
 
@@ -284,15 +245,10 @@ Run test modules:
     │   └── all::tests (10)
     ├── extensions
     │   ├── analytics::tests (7)
-    │   ├── themes::tests (10)
-    │   ├── github-generator::client::tests (6)
-    │   ├── github-generator::processor::tests (7)
-    │   └── projections::tests (8)
+    │   └── github-sync::tests (13)
     └── api (optional)
         ├── auth::password_tests
         └── routes::tests
-    ↓
-Total: 79 tests executed
     ↓
 Test results summary
 ```
@@ -304,10 +260,7 @@ Test results summary
 | Core Domain | 31 | ✅ Passing |
 | Core Shared | 10 | ✅ Passing |
 | Analytics | 7 | ✅ Passing |
-| Themes | 10 | ✅ Passing |
-| GitHub Generator | 13 | ✅ Passing |
-| Projections | 8 | ✅ Passing |
-| **Total** | **79** | **✅ Passing** |
+| Github Sync | 13 | ✅ Passing |
 
 *Auth & Routes tests require DATABASE_URL to be set
 
