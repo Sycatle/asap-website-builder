@@ -1,6 +1,7 @@
 import { defineConfig } from 'astro/config';
 import node from '@astrojs/node';
 import react from '@astrojs/react';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 // https://astro.build/config
 export default defineConfig({
@@ -38,6 +39,51 @@ export default defineConfig({
           ? '/packages/renderers/src' 
           : '../../packages/renderers/src',
       },
+    },
+    build: {
+      // Optimize chunk splitting
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            // Vendor chunks
+            'vendor-react': ['react', 'react-dom'],
+            'vendor-radix': [
+              '@radix-ui/react-dialog',
+              '@radix-ui/react-dropdown-menu',
+              '@radix-ui/react-tooltip',
+              '@radix-ui/react-popover',
+              '@radix-ui/react-select',
+              '@radix-ui/react-tabs',
+            ],
+            'vendor-dnd': [
+              '@dnd-kit/core',
+              '@dnd-kit/sortable',
+              '@dnd-kit/utilities',
+            ],
+            'vendor-query': ['@tanstack/react-query'],
+            'vendor-charts': ['recharts'],
+            // Feature chunks
+            'feature-studio': [
+              './src/components/studio/StudioPage.tsx',
+            ],
+          },
+        },
+        plugins: [
+          // Bundle analysis (only when ANALYZE=true)
+          process.env.ANALYZE && visualizer({
+            filename: 'dist/stats.html',
+            open: true,
+            gzipSize: true,
+            brotliSize: true,
+          }),
+        ].filter(Boolean),
+      },
+      // Enable minification
+      minify: 'esbuild',
+      // Target modern browsers
+      target: 'es2020',
+      // Increase chunk size warning limit
+      chunkSizeWarningLimit: 1000,
     },
   },
 });
