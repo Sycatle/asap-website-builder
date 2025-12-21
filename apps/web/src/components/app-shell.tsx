@@ -234,7 +234,7 @@ function AppShellContent({
             <BreadcrumbList>
               <BreadcrumbItem className="hidden sm:block">
                 <BreadcrumbLink href="/app/dashboard">
-                  ASAP
+                  {isLoadingWebsites ? "Chargement..." : (currentWebsite?.title || websites[0]?.title || "Dashboard")}
                 </BreadcrumbLink>
               </BreadcrumbItem>
               {breadcrumbs.map((crumb, index) => (
