@@ -1,12 +1,12 @@
 "use client"
 
 import { useEffect, useState, useMemo } from 'react';
-import { websitesAPI, authAPI, type UpdateWebsiteRequest, type Website } from '../lib/api';
+import { websitesAPI, authAPI, type UpdateWebsiteRequest, type Website } from '@/lib/api';
 import { queryKeys } from '@/lib/query';
 import { useQueryClient } from '@tanstack/react-query';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { Link } from '@/components/app-router';
-import { formatBytes } from '../lib/utils/formatters';
+import { formatBytes } from '@/lib/utils/formatters';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
