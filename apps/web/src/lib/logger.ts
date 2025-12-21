@@ -155,6 +155,7 @@ export const loggers = {
   onboarding: createLogger('Onboarding'),
   presence: createLogger('Presence'),
   ui: createLogger('UI'),
+  errors: createLogger('Errors'),
 };
 
 export default logger;

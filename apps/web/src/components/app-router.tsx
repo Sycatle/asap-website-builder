@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useEffect, useState } from "react"
 import { AppShell } from "./layouts/app-shell"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { QueryProvider } from "@/components/providers"
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary"
 import { Loader2 } from "lucide-react"
 
 // Lazy load page components
@@ -292,9 +293,11 @@ export default function AppRouter() {
     return (
       <QueryProvider>
         <TooltipProvider>
-          <Suspense fallback={<PageLoader />}>
-            <WebsiteSelector />
-          </Suspense>
+          <ErrorBoundary level="page">
+            <Suspense fallback={<PageLoader />}>
+              <WebsiteSelector />
+            </Suspense>
+          </ErrorBoundary>
         </TooltipProvider>
       </QueryProvider>
     )
@@ -303,17 +306,21 @@ export default function AppRouter() {
   return (
     <QueryProvider>
       <TooltipProvider>
-        <AppShell 
-          title={title} 
-          breadcrumbs={breadcrumbs}
-          isStudioPage={isStudioPage}
-          websiteId={websiteId}
-          showSidebar={true}
-        >
-          <Suspense fallback={<PageLoader />}>
-            {renderPage()}
-          </Suspense>
-        </AppShell>
+        <ErrorBoundary level="page">
+          <AppShell 
+            title={title} 
+            breadcrumbs={breadcrumbs}
+            isStudioPage={isStudioPage}
+            websiteId={websiteId}
+            showSidebar={true}
+          >
+            <ErrorBoundary level="section" title={title}>
+              <Suspense fallback={<PageLoader />}>
+                {renderPage()}
+              </Suspense>
+            </ErrorBoundary>
+          </AppShell>
+        </ErrorBoundary>
       </TooltipProvider>
     </QueryProvider>
   )
