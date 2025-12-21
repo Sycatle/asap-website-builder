@@ -27,7 +27,7 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar"
-import { SiteSwitcher } from "@/components/SiteSwitcher"
+import { SiteSwitcher } from "@/components/features/websites/SiteSwitcher"
 import { useWebsiteContext } from "@/contexts/WebsiteContext"
 import { Link } from "@/components/app-router"
 import type { WebsiteExtension, Website } from "@/lib/api"

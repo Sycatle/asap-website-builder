@@ -1,19 +1,19 @@
 import React, { lazy, Suspense, useEffect, useState } from "react"
-import { AppShell } from "./app-shell"
+import { AppShell } from "./layouts/app-shell"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { QueryProvider } from "@/components/providers"
 import { Loader2 } from "lucide-react"
 
 // Lazy load page components
-const Dashboard = lazy(() => import("@/components/Dashboard"))
-const ExtensionsManager = lazy(() => import("@/components/ExtensionsManager"))
-const ExtensionPage = lazy(() => import("@/components/ExtensionConfig"))
-const CloudPage = lazy(() => import("@/components/CloudManager"))
-const SettingsPage = lazy(() => import("@/components/SettingsPage"))
+const Dashboard = lazy(() => import("@/components/features/websites/Dashboard"))
+const ExtensionsManager = lazy(() => import("@/components/features/extensions/ExtensionsManager"))
+const ExtensionPage = lazy(() => import("@/components/features/extensions/ExtensionConfig"))
+const CloudPage = lazy(() => import("@/components/features/cloud/CloudManager"))
+const SettingsPage = lazy(() => import("@/components/features/settings/SettingsPage"))
 const StudioPage = lazy(() => import("@/components/studio/StudioPage"))
 const PagesPage = lazy(() => import("@/components/PagesList"))
-const AdministratorsPage = lazy(() => import("@/components/AdministratorsPage"))
-const ThemePage = lazy(() => import("@/components/ThemePage"))
+const AdministratorsPage = lazy(() => import("@/components/features/settings/AdministratorsPage"))
+const ThemePage = lazy(() => import("@/components/features/settings/ThemePage"))
 const WebsiteSelector = lazy(() => import("@/components/pages/WebsiteSelector"))
 
 // UUID regex pattern

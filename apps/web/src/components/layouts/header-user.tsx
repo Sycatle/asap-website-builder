@@ -24,7 +24,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SettingsModal } from "@/components/settings-modal"
-import { NotificationsDropdown } from "@/components/notifications-dropdown"
+import { NotificationsDropdown } from "@/components/shared/notifications-dropdown"
 import { 
   useAuthStore, 
   useUserData, 

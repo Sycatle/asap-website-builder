@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useEffect, useState } from "react"
-import { AsapSidebar } from "@/components/asap-sidebar"
+import { AsapSidebar } from "@/components/layouts/asap-sidebar"
 import { SidebarProvider, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Toaster } from "@/components/ui/sonner"
@@ -13,7 +13,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { WebsiteProvider, useWebsiteContext } from "@/contexts/WebsiteContext"
-import { HeaderUser } from "@/components/header-user"
+import { HeaderUser } from "@/components/layouts/header-user"
 import { useKeyboardShortcuts, getModifierKey } from "@/hooks/useKeyboardShortcuts"
 import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket"
 import { navigate } from "@/components/app-router"

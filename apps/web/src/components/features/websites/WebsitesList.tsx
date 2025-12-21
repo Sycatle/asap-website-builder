@@ -5,7 +5,7 @@ import { useWebsitesQuery } from '@/lib/query';
 import type { Website } from '@/lib/api';
 import { WebsiteCard } from './WebsiteCard';
 import { OnboardingModal } from './onboarding/OnboardingModal';
-import { EmptyState } from './EmptyState';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";

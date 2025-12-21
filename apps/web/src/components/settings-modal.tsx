@@ -56,7 +56,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { filesAPI, websitesAPI, extensionsAPI, authAPI, accountsAPI, type QuotaUsage, type FileMetadata, type Website, type WebsiteExtension } from "@/lib/api"
 import { formatBytes } from "@/lib/utils/formatters"
-import { FilePickerDialog } from "@/components/file-picker-dialog"
+import { FilePickerDialog } from "@/components/features/cloud/file-picker-dialog"
 import { useWebsiteContext } from "@/contexts/WebsiteContext"
 import { navigate } from "@/components/app-router"
 
