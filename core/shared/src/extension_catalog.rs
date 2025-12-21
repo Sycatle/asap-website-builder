@@ -42,7 +42,6 @@ pub fn get_extension_catalog() -> Vec<ExtensionDefinition> {
         blog_engine_extension(),
         contact_form_extension(),
         analytics_tracker_extension(),
-        theme_engine_extension(),
     ]
 }
 
@@ -299,67 +298,6 @@ fn analytics_tracker_extension() -> ExtensionDefinition {
                     "Confidentialité",
                     vec!["anonymize_ip", "retention_days"]
                 ).with_description("Options de protection des données"),
-            ])),
-    }
-}
-
-fn theme_engine_extension() -> ExtensionDefinition {
-    ExtensionDefinition {
-        slug: "theme-engine".to_string(),
-        name: "Thème".to_string(),
-        version: "1.0.0".to_string(),
-        description: "Personnalisez l'apparence de votre site".to_string(),
-        category: "appearance".to_string(),
-        icon: Some("theme".to_string()),
-        sidebar_order: 50,
-        sidebar_label: Some("Thème".to_string()),
-        user_configurable: true,
-        default_settings: serde_json::json!({
-            "primary_color": "#3b82f6",
-            "secondary_color": "#8b5cf6",
-            "background_color": "#ffffff",
-            "text_color": "#1f2937",
-            "font_heading": "Inter",
-            "font_body": "Inter",
-            "layout_style": "modern",
-            "enable_dark_mode": true
-        }),
-        config_schema: Some(ConfigSchema::new()
-            .with_fields(vec![
-                ConfigField::text("primary_color", "Couleur principale")
-                    .with_description("Couleur principale de votre site")
-                    .with_default("#3b82f6"),
-                ConfigField::text("secondary_color", "Couleur secondaire")
-                    .with_description("Couleur d'accent")
-                    .with_default("#8b5cf6"),
-                ConfigField::text("background_color", "Couleur de fond")
-                    .with_default("#ffffff"),
-                ConfigField::text("text_color", "Couleur du texte")
-                    .with_default("#1f2937"),
-                ConfigField::text("font_heading", "Police des titres")
-                    .with_default("Inter"),
-                ConfigField::text("font_body", "Police du texte")
-                    .with_default("Inter"),
-                ConfigField::boolean("enable_dark_mode", "Mode sombre")
-                    .with_description("Permettre aux visiteurs de basculer en mode sombre")
-                    .with_default(true),
-            ])
-            .with_sections(vec![
-                ConfigSection::new(
-                    "colors",
-                    "Couleurs",
-                    vec!["primary_color", "secondary_color", "background_color", "text_color"]
-                ).with_description("Personnalisez les couleurs de votre site"),
-                ConfigSection::new(
-                    "typography",
-                    "Typographie",
-                    vec!["font_heading", "font_body"]
-                ).with_description("Choisissez vos polices"),
-                ConfigSection::new(
-                    "features",
-                    "Fonctionnalités",
-                    vec!["enable_dark_mode"]
-                ).with_description("Options supplémentaires"),
             ])),
     }
 }
