@@ -10,7 +10,6 @@ export {
   useCreateWebsiteMutation,
   useDeleteWebsiteMutation,
   usePublishWebsiteMutation,
-  useUnpublishWebsiteMutation,
   useUpdateWebsiteDataMutation,
 } from './websites';
 
@@ -23,7 +22,6 @@ export {
   useDeactivateExtensionMutation,
   useUpdateExtensionSettingsMutation,
   useTriggerExtensionActionMutation,
-  useUpdateExtensionDataMutation,
 } from './extensions';
 
 // Files Queries & Mutations
