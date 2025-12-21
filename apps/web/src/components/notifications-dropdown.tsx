@@ -113,17 +113,16 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
     clearNewNotificationsIndicator,
     toggleSound,
     toggleVibration,
-    startPolling,
   } = useNotificationsStore()
 
-  // Start polling on mount (only if authenticated)
+  // Initial fetch on mount (WebSocket handles real-time updates)
   useEffect(() => {
     const token = localStorage.getItem('auth_token')
     if (!token) return
     
-    const stopPolling = startPolling()
-    return stopPolling
-  }, [startPolling])
+    // Initial fetch only - WebSocket handles updates
+    fetchNotifications()
+  }, [fetchNotifications])
 
   // Refetch when dropdown opens
   useEffect(() => {

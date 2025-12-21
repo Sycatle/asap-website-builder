@@ -39,12 +39,13 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { 
+  notificationsAPI,
   type Notification, 
   type NotificationCategory,
   type NotificationPriority,
 } from "@/lib/api/notifications"
+import { useNotificationsStore } from "@/lib/store/notificationsStore"
 import { 
-  useNotifications, 
   useNotificationSettings, 
   usePushNotifications 
 } from "@/hooks/useNotifications"
@@ -91,24 +92,106 @@ export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'settings'>('all')
   const [categoryFilter, setCategoryFilter] = useState<NotificationCategory | 'all'>('all')
   
-  const {
-    notifications,
-    total,
+  // Local state for pagination
+  const [displayedNotifications, setDisplayedNotifications] = useState<Notification[]>([])
+  const [total, setTotal] = useState(0)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [offset, setOffset] = useState(0)
+  const limit = 20
+  
+  // Get store state and actions
+  const { 
+    notifications: storeNotifications,
     unreadCount,
     isLoading,
-    refetch,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
-    loadMore,
-    hasMore,
-  } = useNotifications({
-    filters: {
-      category: categoryFilter === 'all' ? undefined : categoryFilter,
-      read: activeTab === 'unread' ? false : undefined,
-    },
-    pollInterval: 30000,
-  })
+    fetchNotifications,
+    markAsRead: storeMarkAsRead,
+    markMultipleAsRead,
+    markAllAsRead: storeMarkAllAsRead,
+    deleteNotification: storeDeleteNotification,
+  } = useNotificationsStore()
+
+  // Fetch notifications with filters on mount and when filters change
+  const fetchWithFilters = React.useCallback(async (resetOffset = false) => {
+    const currentOffset = resetOffset ? 0 : offset
+    try {
+      if (resetOffset) {
+        setDisplayedNotifications([])
+      }
+      setIsLoadingMore(true)
+      
+      const response = await notificationsAPI.list({
+        limit,
+        offset: currentOffset,
+        category: categoryFilter === 'all' ? undefined : categoryFilter,
+        read: activeTab === 'unread' ? false : undefined,
+      })
+      
+      if (resetOffset) {
+        setDisplayedNotifications(response.notifications)
+        setOffset(limit)
+      } else {
+        setDisplayedNotifications(prev => [...prev, ...response.notifications])
+        setOffset(prev => prev + limit)
+      }
+      setTotal(response.total)
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }, [categoryFilter, activeTab, offset])
+
+  // Initial fetch and refetch when filters change
+  React.useEffect(() => {
+    fetchWithFilters(true)
+  }, [categoryFilter, activeTab])
+
+  // Refetch function
+  const refetch = async () => {
+    await fetchWithFilters(true)
+    // Also refresh store for the header badge
+    await fetchNotifications({}, true)
+  }
+
+  // Load more
+  const loadMore = async () => {
+    if (!isLoadingMore && displayedNotifications.length < total) {
+      await fetchWithFilters(false)
+    }
+  }
+
+  const hasMore = displayedNotifications.length < total
+
+  // Wrapper for markAsRead to update both local state and store
+  const markAsRead = async (notificationIds: string[]) => {
+    await markMultipleAsRead(notificationIds)
+    setDisplayedNotifications(prev => 
+      prev.map(n => 
+        notificationIds.includes(n.id) 
+          ? { ...n, read: true, read_at: new Date().toISOString() } 
+          : n
+      )
+    )
+  }
+
+  // Wrapper for markAllAsRead
+  const markAllAsRead = async () => {
+    await storeMarkAllAsRead()
+    setDisplayedNotifications(prev => 
+      prev.map(n => ({ ...n, read: true, read_at: new Date().toISOString() }))
+    )
+  }
+
+  // Wrapper for deleteNotification
+  const deleteNotification = async (notificationId: string) => {
+    await storeDeleteNotification(notificationId)
+    setDisplayedNotifications(prev => prev.filter(n => n.id !== notificationId))
+    setTotal(prev => prev - 1)
+  }
+
+  // Use displayed notifications for rendering
+  const notifications = displayedNotifications
 
   const { 
     settings, 
