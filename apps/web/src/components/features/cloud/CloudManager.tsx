@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { filesAPI, type FileMetadata } from '../lib/api';
-import { formatBytes } from '../lib/utils/formatters';
+import { filesAPI, type FileMetadata } from '@/lib/api';
+import { formatBytes } from '@/lib/utils/formatters';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import type { Extension, WebsiteExtension } from '../lib/api/extensions';
+import type { Extension, WebsiteExtension } from '@/lib/api/extensions';
 import { useWebsitesQuery, useExtensionCatalogQuery, useWebsiteExtensionsQuery, useActivateExtensionMutation, useDeactivateExtensionMutation } from '@/lib/query';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { Link } from '@/components/app-router';

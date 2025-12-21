@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { WebsiteExtension } from '../lib/api';
+import type { WebsiteExtension } from '@/lib/api';
 import { useWebsitesQuery, useWebsiteExtensionsQuery } from '@/lib/query';
 
 // Icon mapping for common extension icons

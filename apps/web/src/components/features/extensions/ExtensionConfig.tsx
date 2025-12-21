@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { extensionsAPI } from '../lib/api';
-import type { Extension, WebsiteExtension, ConfigSchema, ConfigAction } from '../lib/api/extensions';
+import { extensionsAPI } from '@/lib/api';
+import type { Extension, WebsiteExtension, ConfigSchema, ConfigAction } from '@/lib/api/extensions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
