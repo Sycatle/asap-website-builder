@@ -57,6 +57,8 @@ import { cn } from "@/lib/utils"
 import { filesAPI, websitesAPI, extensionsAPI, authAPI, accountsAPI, type QuotaUsage, type FileMetadata, type Website, type WebsiteExtension } from "@/lib/api"
 import { formatBytes } from "@/lib/utils/formatters"
 import { FilePickerDialog } from "@/components/file-picker-dialog"
+import { useWebsiteContext } from "@/contexts/WebsiteContext"
+import { navigate } from "@/components/app-router"
 
 interface UserData {
   id: string
@@ -99,6 +101,9 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
   const [files, setFiles] = useState<FileMetadata[]>([])
   const [websites, setWebsites] = useState<Website[]>([])
   const [extensions, setExtensions] = useState<WebsiteExtension[]>([])
+  
+  // Get websiteId from first website (modal is used with first website)
+  const websiteId = websites[0]?.id || null
 
   // Load data when modal opens
   useEffect(() => {
@@ -252,7 +257,7 @@ export function SettingsModal({ open, onOpenChange, user, onUserUpdate, defaultT
               )}
               {activeTab === 'security' && <SecuritySettings />}
               {activeTab === 'billing' && <BillingSettings />}
-              {activeTab === 'cloud' && <CloudSettings quota={quota} files={files} isLoading={isLoading} />}
+              {activeTab === 'cloud' && <CloudSettings quota={quota} files={files} isLoading={isLoading} websiteId={websiteId} onClose={() => onOpenChange(false)} />}
               {activeTab === 'plan' && <PlanSettings quota={quota} websites={websites} extensions={extensions} isLoading={isLoading} />}
               {activeTab === 'notifications' && <NotificationsSettings />}
               {activeTab === 'appearance' && <AppearanceSettings />}
@@ -815,9 +820,11 @@ interface CloudSettingsProps {
   quota: QuotaUsage | null
   files: FileMetadata[]
   isLoading: boolean
+  websiteId: string | null
+  onClose: () => void
 }
 
-function CloudSettings({ quota, files, isLoading }: CloudSettingsProps) {
+function CloudSettings({ quota, files, isLoading, websiteId, onClose }: CloudSettingsProps) {
   // Calculate storage breakdown by mime type
   const getStorageBreakdown = () => {
     const categories: Record<string, { size: number; color: string }> = {
@@ -971,8 +978,17 @@ function CloudSettings({ quota, files, isLoading }: CloudSettingsProps) {
         </Card>
       )}
 
-      <Button variant="outline" className="w-full h-9 sm:h-10 text-sm" asChild>
-        <a href="/app/cloud">Gérer mes fichiers</a>
+      <Button 
+        variant="outline" 
+        className="w-full h-9 sm:h-10 text-sm"
+        onClick={() => {
+          onClose()
+          if (websiteId) {
+            navigate(`/app/${websiteId}/cloud`)
+          }
+        }}
+      >
+        Gérer mes fichiers
       </Button>
     </div>
   )

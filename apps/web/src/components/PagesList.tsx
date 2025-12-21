@@ -636,3 +636,5 @@ export function PagesList({
     </>
   );
 }
+
+export default PagesList;
