@@ -1,96 +1,175 @@
-import { useEffect, useState, Suspense, lazy } from "react"
-import { AppShell } from "@/components/app-shell"
+import React, { lazy, Suspense, useEffect, useState } from "react"
+import { AppShell } from "./app-shell"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { Loader2 } from "lucide-react"
 
 // Lazy load page components
 const Dashboard = lazy(() => import("@/components/Dashboard"))
 const ExtensionsManager = lazy(() => import("@/components/ExtensionsManager"))
-const ExtensionConfig = lazy(() => import("@/components/ExtensionConfig"))
-const CloudManager = lazy(() => import("@/components/CloudManager"))
+const ExtensionPage = lazy(() => import("@/components/ExtensionConfig"))
+const CloudPage = lazy(() => import("@/components/CloudManager"))
+const SettingsPage = lazy(() => import("@/components/SettingsPage"))
 const StudioPage = lazy(() => import("@/components/studio/StudioPage"))
+const PagesPage = lazy(() => import("@/components/PagesList"))
 const AdministratorsPage = lazy(() => import("@/components/AdministratorsPage"))
 const ThemePage = lazy(() => import("@/components/ThemePage"))
+const WebsiteSelector = lazy(() => import("@/components/pages/WebsiteSelector"))
 
-type Route = 
-  | { page: "dashboard" }
-  | { page: "extensions" }
-  | { page: "extension-config"; extensionSlug: string }
-  | { page: "cloud" }
-  | { page: "studio" }
-  | { page: "administrators" }
-  | { page: "theme" }
+// UUID regex pattern
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Route types
+type Route =
+  | { page: "select" }
+  | { page: "dashboard"; websiteId: string }
+  | { page: "extensions"; websiteId: string }
+  | { page: "extension"; websiteId: string; slug: string }
+  | { page: "cloud"; websiteId: string }
+  | { page: "settings"; websiteId: string }
+  | { page: "studio"; websiteId: string }
+  | { page: "pages"; websiteId: string }
+  | { page: "administrators"; websiteId: string }
+  | { page: "theme"; websiteId: string }
   | { page: "not-found" }
 
+// Parse route from pathname
 function parseRoute(pathname: string): Route {
-  // Remove trailing slash
-  const path = pathname.endsWith("/") && pathname !== "/" 
-    ? pathname.slice(0, -1) 
-    : pathname
-
-  if (path === "/app" || path === "/app/dashboard") {
-    return { page: "dashboard" }
+  // Remove /app prefix
+  const path = pathname.replace(/^\/app\/?/, "")
+  
+  // Empty path = website selector
+  if (!path) {
+    return { page: "select" }
   }
   
-  // Extensions routes
-  if (path === "/app/extensions") {
-    return { page: "extensions" }
+  const segments = path.split("/").filter(Boolean)
+  
+  // First segment should be websiteId (UUID)
+  const websiteId = segments[0]
+  
+  if (!websiteId || !UUID_PATTERN.test(websiteId)) {
+    // Invalid UUID - maybe old URL format, redirect to select
+    return { page: "select" }
   }
   
-  // Match /app/extensions/:slug
-  const extensionMatch = path.match(/^\/app\/extensions\/([^/]+)$/)
-  if (extensionMatch) {
-    return { page: "extension-config", extensionSlug: extensionMatch[1] }
+  // Second segment is the page
+  const pageName = segments[1]
+  
+  if (!pageName) {
+    // /app/{uuid} = dashboard
+    return { page: "dashboard", websiteId }
   }
   
-  // Website page merged into dashboard
-  if (path === "/app/website" || path === "/app/websites") {
-    return { page: "dashboard" }
+  switch (pageName) {
+    case "extensions":
+      // Check if there's an extension slug
+      const slug = segments[2]
+      if (slug) {
+        return { page: "extension", websiteId, slug }
+      }
+      return { page: "extensions", websiteId }
+    
+    case "cloud":
+      return { page: "cloud", websiteId }
+    
+    case "settings":
+      return { page: "settings", websiteId }
+    
+    case "studio":
+      return { page: "studio", websiteId }
+    
+    case "pages":
+      return { page: "pages", websiteId }
+    
+    case "administrators":
+      return { page: "administrators", websiteId }
+    
+    case "theme":
+      return { page: "theme", websiteId }
+    
+    // Legacy routes without UUID - redirect to select
+    case "dashboard":
+      return { page: "select" }
+    
+    default:
+      return { page: "not-found" }
   }
-  
-  if (path === "/app/cloud") {
-    return { page: "cloud" }
-  }
-  
-  // Settings is now a modal, redirect to dashboard
-  if (path === "/app/settings") {
-    return { page: "dashboard" }
-  }
-  
-  // Administrators page
-  if (path === "/app/administrators") {
-    return { page: "administrators" }
-  }
-  
-  // Theme page
-  if (path === "/app/theme") {
-    return { page: "theme" }
-  }
-  
-  // Studio page (real-time editor)
-  if (path === "/app/studio") {
-    return { page: "studio" }
-  }
-  
-  // Legacy preview route - redirect to studio
-  if (path === "/app/preview") {
-    return { page: "studio" }
-  }
-  
-  return { page: "not-found" }
 }
 
+// Navigation helper
+export function navigate(path: string) {
+  window.history.pushState({}, "", path)
+  window.dispatchEvent(new PopStateEvent("popstate"))
+}
+
+// Link component for SPA navigation
+interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
+  href: string
+  children: React.ReactNode
+}
+
+export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(
+  ({ href, onClick, children, ...props }, ref) => {
+    const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+      // Allow ctrl/cmd click for new tab
+      if (e.metaKey || e.ctrlKey || e.shiftKey) {
+        return
+      }
+      
+      // Only handle internal /app routes
+      if (href.startsWith('/app')) {
+        e.preventDefault()
+        navigate(href)
+      }
+      
+      onClick?.(e)
+    }
+
+    return (
+      <a ref={ref} href={href} onClick={handleClick} {...props}>
+        {children}
+      </a>
+    )
+  }
+)
+Link.displayName = "Link"
+
+// Build app URL helper
+export function buildAppUrl(websiteId: string, page?: string): string {
+  if (!page) {
+    return `/app/${websiteId}`
+  }
+  return `/app/${websiteId}/${page}`
+}
+
+// Loading fallback
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center h-[50vh]">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  )
+}
+
+// Page title helper
 function getPageTitle(route: Route): string {
   switch (route.page) {
+    case "select":
+      return "Sélectionner un site"
     case "dashboard":
-      return "Tableau de bord"
+      return "Accueil"
     case "extensions":
       return "Extensions"
-    case "extension-config":
-      return "Configuration de l'extension"
+    case "extension":
+      return "Extension"
     case "cloud":
-      return "Fichiers"
+      return "Médias"
+    case "settings":
+      return "Paramètres"
     case "studio":
       return "Studio"
+    case "pages":
+      return "Pages"
     case "administrators":
       return "Administrateurs"
     case "theme":
@@ -100,151 +179,137 @@ function getPageTitle(route: Route): string {
   }
 }
 
-function getBreadcrumbs(route: Route): { label: string; href?: string }[] {
+// Page breadcrumbs helper
+function getPageBreadcrumbs(route: Route, websiteId: string | null): { label: string; href?: string }[] {
+  if (!websiteId) return []
+  
   switch (route.page) {
-    case "dashboard":
-      return [{ label: "Tableau de bord" }]
-    case "extensions":
-      return [{ label: "Extensions" }]
-    case "extension-config":
-      return [
-        { label: "Extensions", href: "/app/extensions" },
-        { label: route.extensionSlug }
-      ]
-    case "cloud":
-      return [{ label: "Fichiers" }]
-    case "studio":
-      return [
-        { label: "Tableau de bord", href: "/app/dashboard" },
-        { label: "Studio" }
-      ]
-    case "administrators":
-      return [{ label: "Administrateurs" }]
-    case "theme":
-      return [{ label: "Thème" }]
+    case "extension":
+      if (route.page === "extension") {
+        return [
+          { label: "Extensions", href: `/app/${websiteId}/extensions` },
+          { label: route.slug }
+        ]
+      }
+      return []
     default:
-      return [{ label: "Page non trouvée" }]
+      return []
   }
 }
 
-function PageLoader() {
-  return (
-    <div className="flex h-[50vh] items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-    </div>
-  )
-}
+export default function AppRouter() {
+  const [currentPath, setCurrentPath] = useState(window.location.pathname)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
 
-function NotFound() {
-  return (
-    <div className="flex h-[50vh] flex-col items-center justify-center gap-4">
-      <h1 className="text-2xl font-semibold">Page non trouvée</h1>
-      <p className="text-muted-foreground">
-        La page que vous recherchez n'existe pas.
-      </p>
-      <a 
-        href="/app/dashboard" 
-        className="text-primary hover:underline"
-        onClick={(e) => {
-          e.preventDefault()
-          window.history.pushState({}, "", "/app/dashboard")
-          window.dispatchEvent(new PopStateEvent("popstate"))
-        }}
-      >
-        Retour au dashboard
-      </a>
-    </div>
-  )
-}
-
-function PageContent({ route }: { route: Route }) {
-  switch (route.page) {
-    case "dashboard":
-      return <Dashboard />
-    case "extensions":
-      return <ExtensionsManager />
-    case "extension-config":
-      return <ExtensionConfig slug={route.extensionSlug} />
-    case "cloud":
-      return <CloudManager />
-    case "studio":
-      return <StudioPage onBack={() => navigate("/app/dashboard")} />
-    case "administrators":
-      return <AdministratorsPage />
-    case "theme":
-      return <ThemePage />
-    case "not-found":
-      return <NotFound />
-  }
-}
-
-export function AppRouter() {
-  const [route, setRoute] = useState<Route>(() => 
-    parseRoute(window.location.pathname)
-  )
+  // Check authentication on mount
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token')
+    if (!token) {
+      // Redirect to login with return URL
+      const currentUrl = window.location.pathname + window.location.search
+      const redirectParam = encodeURIComponent(currentUrl)
+      window.location.href = `/login?redirect=${redirectParam}`
+      return
+    }
+    setIsAuthenticated(true)
+  }, [])
 
   useEffect(() => {
-    // Update document title
-    document.title = `${getPageTitle(route)} - ASAP`
-  }, [route])
-
-  useEffect(() => {
-    // Handle browser back/forward
     const handlePopState = () => {
-      setRoute(parseRoute(window.location.pathname))
+      setCurrentPath(window.location.pathname)
     }
 
     window.addEventListener("popstate", handlePopState)
     return () => window.removeEventListener("popstate", handlePopState)
   }, [])
 
-  useEffect(() => {
-    // Intercept link clicks for SPA navigation
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      const anchor = target.closest("a")
-      
-      if (!anchor) return
-      
-      const href = anchor.getAttribute("href")
-      if (!href) return
-      
-      // Only handle internal /app links
-      if (!href.startsWith("/app")) return
-      
-      // Don't handle if modifier keys are pressed
-      if (e.metaKey || e.ctrlKey || e.shiftKey) return
-      
-      // Don't handle if target="_blank"
-      if (anchor.target === "_blank") return
-      
-      e.preventDefault()
-      
-      // Update URL and route
-      if (window.location.pathname !== href) {
-        window.history.pushState({}, "", href)
-        setRoute(parseRoute(href))
-      }
-    }
+  // Show loading while checking auth
+  if (isAuthenticated === null) {
+    return (
+      <div className="flex min-h-svh items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
-    document.addEventListener("click", handleClick)
-    return () => document.removeEventListener("click", handleClick)
-  }, [])
-
-  const breadcrumbs = getBreadcrumbs(route)
+  const route = parseRoute(currentPath)
+  const websiteId = "websiteId" in route ? route.websiteId : null
+  const isSelectPage = route.page === "select"
   const isStudioPage = route.page === "studio"
+  const title = getPageTitle(route)
+  const breadcrumbs = getPageBreadcrumbs(route, websiteId)
+
+  // Render page content
+  function renderPage() {
+    switch (route.page) {
+      case "select":
+        return <WebsiteSelector />
+      
+      case "dashboard":
+        return <Dashboard />
+      
+      case "extensions":
+        return <ExtensionsManager />
+      
+      case "extension":
+        return <ExtensionPage slug={route.slug} />
+      
+      case "cloud":
+        return <CloudPage />
+      
+      case "settings":
+        return <SettingsPage />
+      
+      case "studio":
+        return <StudioPage />
+      
+      case "pages":
+        return <PagesPage websiteId={route.websiteId} />
+      
+      case "administrators":
+        return <AdministratorsPage />
+      
+      case "theme":
+        return <ThemePage />
+      
+      case "not-found":
+      default:
+        return (
+          <div className="flex flex-col items-center justify-center h-[50vh] gap-4">
+            <h1 className="text-2xl font-bold">Page non trouvée</h1>
+            <p className="text-muted-foreground">La page que vous cherchez n'existe pas.</p>
+            <Link href="/app" className="text-primary hover:underline">
+              Retourner à l'accueil
+            </Link>
+          </div>
+        )
+    }
+  }
+
+  // For select page, render without AppShell (same layout as login/register)
+  if (isSelectPage) {
+    return (
+      <TooltipProvider>
+        <Suspense fallback={<PageLoader />}>
+          <WebsiteSelector />
+        </Suspense>
+      </TooltipProvider>
+    )
+  }
 
   return (
-    <AppShell breadcrumbs={breadcrumbs} isStudioPage={isStudioPage}>
-      <Suspense fallback={<PageLoader />}>
-        <PageContent route={route} />
-      </Suspense>
-    </AppShell>
+    <TooltipProvider>
+      <AppShell 
+        title={title} 
+        breadcrumbs={breadcrumbs}
+        isStudioPage={isStudioPage}
+        websiteId={websiteId}
+        showSidebar={true}
+      >
+        <Suspense fallback={<PageLoader />}>
+          {renderPage()}
+        </Suspense>
+      </AppShell>
+    </TooltipProvider>
   )
-}
-
-// Navigation helper for programmatic navigation
-export function navigate(path: string) {
-  window.history.pushState({}, "", path)
-  window.dispatchEvent(new PopStateEvent("popstate"))
 }

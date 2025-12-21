@@ -9,7 +9,7 @@ import { useWebsites, useWebsiteExtensions, useQuota, useCacheActions } from '@/
 // ============================================
 
 interface WebsiteContextValue {
-  // Current website
+  // Current website (from URL)
   currentWebsite: Website | null;
   currentWebsiteId: string | null;
   
@@ -32,8 +32,6 @@ interface WebsiteContextValue {
   error: string | null;
   
   // Actions
-  setCurrentWebsite: (website: Website) => void;
-  setCurrentWebsiteById: (websiteId: string) => void;
   refetch: () => Promise<void>;
   refetchWebsites: () => Promise<void>;
   refetchExtensions: () => Promise<void>;
@@ -48,20 +46,10 @@ const WebsiteContext = createContext<WebsiteContextValue | null>(null);
 
 interface WebsiteProviderProps {
   children: ReactNode;
+  websiteId: string | null;
 }
 
-const STORAGE_KEY = 'asap_current_website_id';
-
-export function WebsiteProvider({ children }: WebsiteProviderProps) {
-  // Track current website ID (persisted to localStorage)
-  const [currentWebsiteId, setCurrentWebsiteId] = useState<string | null>(() => {
-    // Initialize from localStorage if available
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(STORAGE_KEY);
-    }
-    return null;
-  });
-
+export function WebsiteProvider({ children, websiteId }: WebsiteProviderProps) {
   // Use cache hooks
   const { 
     websites, 
@@ -75,7 +63,7 @@ export function WebsiteProvider({ children }: WebsiteProviderProps) {
     isLoading: isLoadingExtensions, 
     error: extensionsError,
     refetch: refetchExtensions,
-  } = useWebsiteExtensions(currentWebsiteId);
+  } = useWebsiteExtensions(websiteId);
 
   const {
     quota,
@@ -85,46 +73,13 @@ export function WebsiteProvider({ children }: WebsiteProviderProps) {
 
   const { invalidate, invalidateWebsiteData } = useCacheActions();
 
-  // Helper to persist website ID to localStorage
-  const persistWebsiteId = useCallback((websiteId: string) => {
-    setCurrentWebsiteId(websiteId);
-    localStorage.setItem(STORAGE_KEY, websiteId);
-  }, []);
-
-  // Auto-select first website when websites load and none selected
-  // Also handles case where stored ID doesn't exist in websites list
-  useEffect(() => {
-    if (websites.length === 0) return;
-    
-    // No current selection - select first
-    if (!currentWebsiteId) {
-      persistWebsiteId(websites[0].id);
-      return;
-    }
-    
-    // Current selection doesn't exist anymore - select first
-    if (!websites.find(w => w.id === currentWebsiteId)) {
-      persistWebsiteId(websites[0].id);
-    }
-  }, [websites, currentWebsiteId, persistWebsiteId]);
-
-  // Determine current website - only use currentWebsiteId if it exists in websites
-  const currentWebsite = currentWebsiteId && websites.find(w => w.id === currentWebsiteId)
-    ? websites.find(w => w.id === currentWebsiteId)!
-    : websites[0] || null;
+  // Find current website from URL id
+  const currentWebsite = websiteId 
+    ? websites.find(w => w.id === websiteId) || null
+    : null;
 
   // Enabled extensions filter
   const enabledExtensions = extensions.filter(m => m.enabled);
-
-  // Set current website handler
-  const setCurrentWebsite = useCallback((website: Website) => {
-    persistWebsiteId(website.id);
-  }, [persistWebsiteId]);
-
-  // Set current website by ID handler
-  const setCurrentWebsiteById = useCallback((websiteId: string) => {
-    persistWebsiteId(websiteId);
-  }, [persistWebsiteId]);
 
   // Refetch all data
   const refetch = useCallback(async () => {
@@ -139,14 +94,14 @@ export function WebsiteProvider({ children }: WebsiteProviderProps) {
   const invalidateAll = useCallback(() => {
     invalidate('websites');
     invalidate('quota');
-    if (currentWebsiteId) {
-      invalidateWebsiteData(currentWebsiteId);
+    if (websiteId) {
+      invalidateWebsiteData(websiteId);
     }
-  }, [invalidate, invalidateWebsiteData, currentWebsiteId]);
+  }, [invalidate, invalidateWebsiteData, websiteId]);
 
   const value: WebsiteContextValue = {
     currentWebsite,
-    currentWebsiteId,
+    currentWebsiteId: websiteId,
     websites,
     extensions,
     enabledExtensions,
@@ -155,8 +110,6 @@ export function WebsiteProvider({ children }: WebsiteProviderProps) {
     isLoadingWebsites,
     isLoadingExtensions,
     error: websitesError || extensionsError,
-    setCurrentWebsite,
-    setCurrentWebsiteById,
     refetch,
     refetchWebsites: async () => { await refetchWebsites(true); },
     refetchExtensions: async () => { await refetchExtensions(true); },
