@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { extensionsAPI } from '../lib/api';
 import type { Extension, WebsiteExtension } from '../lib/api/extensions';
 import { useWebsites, useExtensionCatalog, useWebsiteExtensions } from '../hooks/useCache';
+import { useWebsiteContext } from '@/contexts/WebsiteContext';
+import { Link } from '@/components/app-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +22,7 @@ import {
   BarChart3, 
   Palette, 
   Puzzle,
-  Link,
+  Link as LinkIcon,
   Star,
   Loader2,
   Settings,
@@ -31,7 +33,7 @@ import {
 
 // Icon mapping for categories
 const categoryIcons: Record<string, React.ElementType> = {
-  'integration': Link,
+  'integration': LinkIcon,
   'content': BookOpen,
   'engagement': Mail,
   'analytics': BarChart3,
@@ -48,11 +50,12 @@ const categoryLabels: Record<string, string> = {
 };
 
 export default function ExtensionsManager() {
+  // Get websiteId from context
+  const { currentWebsiteId } = useWebsiteContext();
+  
   // Use cached data
   const { websites, isLoading: websitesLoading } = useWebsites();
   const { extensions: catalogExtensions, isLoading: catalogLoading } = useExtensionCatalog();
-  
-  const currentWebsiteId = websites.length > 0 ? websites[0].id : null;
   
   const { 
     extensions: activeExtensions, 
@@ -287,10 +290,10 @@ export default function ExtensionsManager() {
                     </div>
                     <div className="flex gap-2">
                       <Button asChild variant="secondary" size="sm" className="flex-1 h-8 sm:h-9 text-xs sm:text-sm group/btn">
-                        <a href={`/app/extensions/${catalogExtension.slug}`}>
+                        <Link href={`/app/${currentWebsiteId}/extensions/${catalogExtension.slug}`}>
                           <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 transition-transform group-hover/btn:rotate-90" />
                           Configurer
-                        </a>
+                        </Link>
                       </Button>
                       <Button
                         variant="outline"
@@ -311,10 +314,10 @@ export default function ExtensionsManager() {
               </ContextMenuTrigger>
               <ContextMenuContent className="w-56">
                 <ContextMenuItem asChild>
-                  <a href={`/app/extensions/${catalogExtension.slug}`}>
+                  <Link href={`/app/${currentWebsiteId}/extensions/${catalogExtension.slug}`}>
                     <Settings className="mr-2 h-4 w-4" />
                     Configurer
-                  </a>
+                  </Link>
                 </ContextMenuItem>
                 <ContextMenuSeparator />
                 <ContextMenuItem

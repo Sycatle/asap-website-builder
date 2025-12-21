@@ -18,6 +18,8 @@ import { AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import SchemaRenderer from './SchemaRenderer';
 import { useWebsites, useExtensionCatalog, useWebsiteExtensions, useExtensionData } from '@/hooks/useCache';
+import { useWebsiteContext } from '@/contexts/WebsiteContext';
+import { Link } from '@/components/app-router';
 import { FormActions } from '@/components/ui/form-actions';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
@@ -160,10 +162,11 @@ interface ChangelogEntry {
 }
 
 export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
+  // Context hook for websiteId
+  const { currentWebsiteId: websiteId } = useWebsiteContext();
   // Cache hooks
   const { websites, isLoading: websitesLoading } = useWebsites();
   const { extensions: catalogExtensions, isLoading: catalogLoading } = useExtensionCatalog();
-  const websiteId = websites[0]?.id || null;
   const { extensions: websiteExtensions, isLoading: extensionsLoading, refetch: refetchExtensions } = useWebsiteExtensions(websiteId);
   const { data: extensionDataResponse, isLoading: extensionDataLoading, refetch: refetchExtensionData } = useExtensionData(websiteId, slug);
   // Derive extension from catalog
@@ -523,13 +526,13 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
         </div>
         <h3 className="text-xl font-semibold text-gray-900 mb-2">Extension non trouvée</h3>
         <p className="text-gray-500 mb-6">L'extension "{slug}" n'existe pas ou n'est pas disponible.</p>
-        <a 
-          href="/app/extensions" 
+        <Link 
+          href={`/app/${websiteId}/extensions`} 
           className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-medium"
         >
           {Icons.back}
           Retour aux extensions
-        </a>
+        </Link>
       </div>
     );
   }
@@ -545,13 +548,13 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
   return (
     <div className="max-w-4xl mx-auto">
       {/* Back link */}
-      <a 
-        href="/app/extensions" 
+      <Link 
+        href={`/app/${websiteId}/extensions`} 
         className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-gray-500 hover:text-gray-700 mb-4 sm:mb-6 transition-colors"
       >
         {Icons.back}
         Extensions
-      </a>
+      </Link>
 
       {/* Header Card */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 sm:mb-6">
