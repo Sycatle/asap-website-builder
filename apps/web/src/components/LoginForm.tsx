@@ -13,7 +13,24 @@ export default function LoginForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [searchParams, setSearchParams] = useState('');
   const { login, isLoading } = useAuthStore();
+
+  // Get search params on client side only
+  React.useEffect(() => {
+    setSearchParams(window.location.search);
+  }, []);
+
+  // Get redirect URL from query params
+  const getRedirectUrl = () => {
+    const params = new URLSearchParams(searchParams);
+    const redirect = params.get('redirect');
+    // Validate that redirect is a safe internal URL
+    if (redirect && redirect.startsWith('/app')) {
+      return redirect;
+    }
+    return '/app';
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,8 +44,9 @@ export default function LoginForm({
       loading: 'Connexion en cours...',
       success: () => {
         // Redirect on success
+        const redirectUrl = getRedirectUrl();
         setTimeout(() => {
-          window.location.href = '/app/dashboard';
+          window.location.href = redirectUrl;
         }, 500);
         return 'Connexion réussie !';
       },
@@ -94,7 +112,7 @@ export default function LoginForm({
       </form>
       <div className="text-center text-sm text-muted-foreground">
         Pas encore de compte?{' '}
-        <a href="/signup" className="underline underline-offset-4 hover:text-primary font-medium">
+        <a href={`/signup${searchParams}`} className="underline underline-offset-4 hover:text-primary font-medium">
           Créer un compte
         </a>
       </div>
