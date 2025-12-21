@@ -11,6 +11,7 @@ import {
   Pencil,
   Settings,
   FileText,
+  Users,
 } from "lucide-react"
 
 import {
@@ -139,6 +140,26 @@ export function AsapSidebar({
                     <a href="/app/settings">
                       <Settings />
                       <span>Paramètres</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {currentWebsite && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Administrateurs">
+                    <a href="/app/administrators">
+                      <Users />
+                      <span>Administrateurs</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {currentWebsite && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Thème">
+                    <a href="/app/theme">
+                      <Palette />
+                      <span>Thème</span>
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
