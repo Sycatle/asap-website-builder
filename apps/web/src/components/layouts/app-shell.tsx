@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/tooltip"
 import { Keyboard } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { SkipLink } from "@/components/ui/accessibility"
 
 interface AppShellProps {
   children: React.ReactNode
@@ -235,7 +236,8 @@ function AppShellContent({
         />
       )}
       <SidebarInset>
-        <header className="sticky top-0 z-40 flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 sm:px-4">
+        <SkipLink targetId="main-content" />
+        <header className="sticky top-0 z-40 flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 sm:px-4" role="banner">
           {showSidebar && (
             <>
               <SidebarTrigger className="-ml-1" />
@@ -294,10 +296,15 @@ function AppShellContent({
           
           <HeaderUser />
         </header>
-        <main className={cn(
-          "flex-1 overflow-auto",
-          isStudioPage ? "p-0" : "p-3 sm:p-4 md:p-6"
-        )}>
+        <main
+          id="main-content"
+          role="main"
+          tabIndex={-1}
+          className={cn(
+            "flex-1 overflow-auto focus:outline-none",
+            isStudioPage ? "p-0" : "p-3 sm:p-4 md:p-6"
+          )}
+        >
           {children}
         </main>
       </SidebarInset>
