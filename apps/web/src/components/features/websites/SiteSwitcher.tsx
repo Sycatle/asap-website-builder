@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react"
 import { ChevronsUpDown, Plus, CheckCircle2, Clock, Loader2, Globe } from "lucide-react"
 import type { Website } from "@/lib/api"
-import { OnboardingModal } from "./onboarding/OnboardingModal"
+import { OnboardingModal } from "@/components/onboarding/OnboardingModal"
 import { queryKeys } from "@/lib/query"
 import { useQueryClient } from "@tanstack/react-query"
 import { navigate } from "@/components/app-router"
