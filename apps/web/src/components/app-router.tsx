@@ -8,6 +8,8 @@ const ExtensionsManager = lazy(() => import("@/components/ExtensionsManager"))
 const ExtensionConfig = lazy(() => import("@/components/ExtensionConfig"))
 const CloudManager = lazy(() => import("@/components/CloudManager"))
 const StudioPage = lazy(() => import("@/components/studio/StudioPage"))
+const AdministratorsPage = lazy(() => import("@/components/AdministratorsPage"))
+const ThemePage = lazy(() => import("@/components/ThemePage"))
 
 type Route = 
   | { page: "dashboard" }
@@ -15,6 +17,8 @@ type Route =
   | { page: "extension-config"; extensionSlug: string }
   | { page: "cloud" }
   | { page: "studio" }
+  | { page: "administrators" }
+  | { page: "theme" }
   | { page: "not-found" }
 
 function parseRoute(pathname: string): Route {
@@ -52,6 +56,16 @@ function parseRoute(pathname: string): Route {
     return { page: "dashboard" }
   }
   
+  // Administrators page
+  if (path === "/app/administrators") {
+    return { page: "administrators" }
+  }
+  
+  // Theme page
+  if (path === "/app/theme") {
+    return { page: "theme" }
+  }
+  
   // Studio page (real-time editor)
   if (path === "/app/studio") {
     return { page: "studio" }
@@ -77,6 +91,10 @@ function getPageTitle(route: Route): string {
       return "Fichiers"
     case "studio":
       return "Studio"
+    case "administrators":
+      return "Administrateurs"
+    case "theme":
+      return "Thème"
     default:
       return "Page non trouvée"
   }
@@ -100,6 +118,10 @@ function getBreadcrumbs(route: Route): { label: string; href?: string }[] {
         { label: "Tableau de bord", href: "/app/dashboard" },
         { label: "Studio" }
       ]
+    case "administrators":
+      return [{ label: "Administrateurs" }]
+    case "theme":
+      return [{ label: "Thème" }]
     default:
       return [{ label: "Page non trouvée" }]
   }
@@ -147,6 +169,10 @@ function PageContent({ route }: { route: Route }) {
       return <CloudManager />
     case "studio":
       return <StudioPage onBack={() => navigate("/app/dashboard")} />
+    case "administrators":
+      return <AdministratorsPage />
+    case "theme":
+      return <ThemePage />
     case "not-found":
       return <NotFound />
   }
