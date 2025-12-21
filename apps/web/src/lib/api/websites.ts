@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import type { JsonObject, WebsiteData } from '../types';
 
 export interface Website {
   id: string;
@@ -9,8 +10,8 @@ export interface Website {
   status: 'draft' | 'published';
   creation_mode: 'from_preset' | 'from_scratch' | 'onboarding';
   preset_id?: string;
-  metadata: Record<string, any>;
-  data: Record<string, any>;
+  metadata: JsonObject;
+  data: WebsiteData;
   created_at?: string;
   updated_at?: string;
 }
@@ -26,7 +27,7 @@ export interface CreateWebsiteRequest {
 export interface UpdateWebsiteRequest {
   title?: string;
   tagline?: string;
-  metadata?: Record<string, any>;
+  metadata?: JsonObject;
 }
 
 export const websitesAPI = {
@@ -51,13 +52,13 @@ export const websitesAPI = {
   },
   
   // Get website data (profile, projects, etc.)
-  async getData(id: string): Promise<Record<string, any>> {
-    return apiClient.get<Record<string, any>>(`/websites/${id}/data`);
+  async getData(id: string): Promise<WebsiteData> {
+    return apiClient.get<WebsiteData>(`/websites/${id}/data`);
   },
   
   // Patch website data
-  async patchData(id: string, data: Record<string, any>): Promise<Record<string, any>> {
-    return apiClient.patch<Record<string, any>>(`/websites/${id}/data`, { data });
+  async patchData(id: string, data: WebsiteData): Promise<WebsiteData> {
+    return apiClient.patch<WebsiteData>(`/websites/${id}/data`, { data });
   },
   
   // Publish a website (change status from draft to published)

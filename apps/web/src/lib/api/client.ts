@@ -60,17 +60,17 @@ export class APIClient {
     return response.data;
   }
 
-  async post<T>(endpoint: string, data?: any): Promise<T> {
+  async post<T>(endpoint: string, data?: unknown): Promise<T> {
     const response = await this.client.post<T>(endpoint, data);
     return response.data;
   }
 
-  async put<T>(endpoint: string, data?: any): Promise<T> {
+  async put<T>(endpoint: string, data?: unknown): Promise<T> {
     const response = await this.client.put<T>(endpoint, data);
     return response.data;
   }
 
-  async patch<T>(endpoint: string, data?: any): Promise<T> {
+  async patch<T>(endpoint: string, data?: unknown): Promise<T> {
     const response = await this.client.patch<T>(endpoint, data);
     return response.data;
   }

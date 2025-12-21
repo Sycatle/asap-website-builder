@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import { websitesAPI, type Website, type UpdateWebsiteRequest } from '../api';
 import { queryKeys, staleTimes } from './queryClient';
+import type { WebsiteData } from '../types';
 
 // ============================================
 // WEBSITES QUERIES
@@ -153,7 +154,7 @@ export function useUpdateWebsiteDataMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+    mutationFn: ({ id, data }: { id: string; data: WebsiteData }) =>
       websitesAPI.patchData(id, data),
     onSuccess: (updatedData, { id }) => {
       queryClient.setQueryData(queryKeys.websiteData(id), updatedData);
