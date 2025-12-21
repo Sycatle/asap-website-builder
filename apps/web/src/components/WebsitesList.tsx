@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react';
-import { useWebsites } from '@/hooks/useCache';
+import { useWebsitesQuery } from '@/lib/query';
 import type { Website } from '@/lib/api';
 import { WebsiteCard } from './WebsiteCard';
 import { OnboardingModal } from './onboarding/OnboardingModal';
@@ -22,16 +22,16 @@ interface WebsitesListProps {
 }
 
 export function WebsitesList({ onSelectWebsite }: WebsitesListProps) {
-  const { websites, isLoading, refetch } = useWebsites();
+  const { data: websites = [], isLoading, refetch } = useWebsitesQuery();
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const handleRefresh = async () => {
-    await refetch(true);
+    await refetch();
   };
 
   const handleWebsiteCreated = (_websiteId: string) => {
     // Refresh the list after creation
-    refetch(true);
+    refetch();
   };
 
   if (isLoading) {

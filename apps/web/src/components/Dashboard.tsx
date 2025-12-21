@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useState, useMemo } from 'react';
-import { websitesAPI, authAPI, type UpdateWebsiteRequest } from '../lib/api';
-import { useCacheActions } from '../hooks/useCache';
+import { websitesAPI, authAPI, type UpdateWebsiteRequest, type Website } from '../lib/api';
+import { queryKeys } from '@/lib/query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { Link } from '@/components/app-router';
 import { formatBytes } from '../lib/utils/formatters';
@@ -58,7 +59,7 @@ import { PresetOnboardingRouter } from "@/components/onboarding/presets";
 export default function Dashboard() {
   // Use website context for synchronized data
   const { currentWebsite: website, currentWebsiteId, quota, extensions, isLoading, websites, refetch: refetchAll } = useWebsiteContext();
-  const { updateWebsiteCache } = useCacheActions();
+  const queryClient = useQueryClient();
   
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
@@ -136,8 +137,11 @@ export default function Dashboard() {
     const savePromise = async () => {
       const data: UpdateWebsiteRequest = { title, tagline };
       const updatedWebsite = await websitesAPI.update(website.id, data);
-      // Update cache immediately
-      updateWebsiteCache(updatedWebsite);
+      // Update cache immediately via React Query
+      queryClient.setQueryData<Website[]>(queryKeys.websites.all, (old) => {
+        if (!old) return [updatedWebsite];
+        return old.map(w => w.id === updatedWebsite.id ? updatedWebsite : w);
+      });
       // Update initial values after save
       setInitialValues({ title, tagline });
     };

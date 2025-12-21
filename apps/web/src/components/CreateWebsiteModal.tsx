@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { usePresets, useCreateWebsiteFromPreset } from '@/hooks/usePresets';
-import { useCacheActions } from '@/hooks/useCache';
+import { queryKeys } from '@/lib/query';
+import { useQueryClient } from '@tanstack/react-query';
 import { slugify, validateSlug, getWebsiteDisplayUrl } from '@/lib/utils/formatters';
 import {
   Dialog,
@@ -68,7 +69,7 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
   
   const { presets, isLoading: presetsLoading } = usePresets();
   const { createWebsite, isCreating } = useCreateWebsiteFromPreset();
-  const { invalidate } = useCacheActions();
+  const queryClient = useQueryClient();
 
   // Get selected preset
   const selectedPreset = useMemo(() => 
@@ -144,7 +145,7 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
       });
       
       // Invalidate websites cache to refresh the list
-      invalidate('websites');
+      queryClient.invalidateQueries({ queryKey: queryKeys.websites.all });
       
       const displayUrl = getWebsiteDisplayUrl(slug.trim());
       

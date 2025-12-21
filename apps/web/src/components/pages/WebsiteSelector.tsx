@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
-import { useWebsites, useCacheActions } from "@/hooks/useCache"
+import { useWebsitesQuery, queryKeys } from "@/lib/query"
+import { useQueryClient } from "@tanstack/react-query"
 import { navigate } from "@/components/app-router"
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal"
 import { CheckCircle2, Clock, Globe, Loader2, Plus, ChevronRight } from "lucide-react"
@@ -9,8 +10,8 @@ import { getWebsiteDisplayUrl } from "@/lib/utils/formatters"
 import { cn } from "@/lib/utils"
 
 export default function WebsiteSelector() {
-  const { websites, isLoading } = useWebsites()
-  const { invalidate } = useCacheActions()
+  const { data: websites = [], isLoading } = useWebsitesQuery()
+  const queryClient = useQueryClient()
   const [showCreateModal, setShowCreateModal] = useState(false)
 
   // Auto-redirect if only one website
@@ -21,7 +22,7 @@ export default function WebsiteSelector() {
   }, [isLoading, websites])
 
   const handleCreateSuccess = (websiteId: string) => {
-    invalidate('websites')
+    queryClient.invalidateQueries({ queryKey: queryKeys.websites })
     setShowCreateModal(false)
     navigate(`/app/${websiteId}`)
   }

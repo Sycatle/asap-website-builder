@@ -1,8 +1,14 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useCallback, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Website, WebsiteExtension, QuotaUsage } from '@/lib/api';
-import { useWebsites, useWebsiteExtensions, useQuota, useCacheActions } from '@/hooks/useCache';
+import { 
+  useWebsitesQuery, 
+  useWebsiteExtensionsQuery, 
+  useQuotaQuery,
+  queryKeys,
+} from '@/lib/query';
 
 // ============================================
 // Website Context Types
@@ -50,28 +56,28 @@ interface WebsiteProviderProps {
 }
 
 export function WebsiteProvider({ children, websiteId }: WebsiteProviderProps) {
-  // Use cache hooks
+  const queryClient = useQueryClient();
+  
+  // Use React Query hooks
   const { 
-    websites, 
+    data: websites = [], 
     isLoading: isLoadingWebsites, 
     error: websitesError,
-    refetch: refetchWebsites,
-  } = useWebsites();
+    refetch: refetchWebsitesQuery,
+  } = useWebsitesQuery();
 
   const { 
-    extensions, 
+    data: extensions = [], 
     isLoading: isLoadingExtensions, 
     error: extensionsError,
-    refetch: refetchExtensions,
-  } = useWebsiteExtensions(websiteId);
+    refetch: refetchExtensionsQuery,
+  } = useWebsiteExtensionsQuery(websiteId);
 
   const {
-    quota,
+    data: quota = null,
     isLoading: isLoadingQuota,
-    refetch: refetchQuota,
-  } = useQuota();
-
-  const { invalidate, invalidateWebsiteData } = useCacheActions();
+    refetch: refetchQuotaQuery,
+  } = useQuotaQuery();
 
   // Find current website from URL id
   const currentWebsite = websiteId 
@@ -84,20 +90,30 @@ export function WebsiteProvider({ children, websiteId }: WebsiteProviderProps) {
   // Refetch all data
   const refetch = useCallback(async () => {
     await Promise.all([
-      refetchWebsites(true),
-      refetchExtensions(true),
-      refetchQuota(true),
+      refetchWebsitesQuery(),
+      refetchExtensionsQuery(),
+      refetchQuotaQuery(),
     ]);
-  }, [refetchWebsites, refetchExtensions, refetchQuota]);
+  }, [refetchWebsitesQuery, refetchExtensionsQuery, refetchQuotaQuery]);
+
+  // Refetch websites
+  const refetchWebsites = useCallback(async () => {
+    await refetchWebsitesQuery();
+  }, [refetchWebsitesQuery]);
+
+  // Refetch extensions
+  const refetchExtensions = useCallback(async () => {
+    await refetchExtensionsQuery();
+  }, [refetchExtensionsQuery]);
 
   // Invalidate all cache
   const invalidateAll = useCallback(() => {
-    invalidate('websites');
-    invalidate('quota');
+    queryClient.invalidateQueries({ queryKey: queryKeys.websites });
+    queryClient.invalidateQueries({ queryKey: queryKeys.quota });
     if (websiteId) {
-      invalidateWebsiteData(websiteId);
+      queryClient.invalidateQueries({ queryKey: queryKeys.websiteExtensions(websiteId) });
     }
-  }, [invalidate, invalidateWebsiteData, websiteId]);
+  }, [queryClient, websiteId]);
 
   const value: WebsiteContextValue = {
     currentWebsite,
@@ -109,10 +125,10 @@ export function WebsiteProvider({ children, websiteId }: WebsiteProviderProps) {
     isLoading: isLoadingWebsites || isLoadingExtensions || isLoadingQuota,
     isLoadingWebsites,
     isLoadingExtensions,
-    error: websitesError || extensionsError,
+    error: websitesError?.message || extensionsError?.message || null,
     refetch,
-    refetchWebsites: async () => { await refetchWebsites(true); },
-    refetchExtensions: async () => { await refetchExtensions(true); },
+    refetchWebsites,
+    refetchExtensions,
     invalidateAll,
   };
 

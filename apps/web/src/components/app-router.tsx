@@ -1,6 +1,7 @@
 import React, { lazy, Suspense, useEffect, useState } from "react"
 import { AppShell } from "./app-shell"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { QueryProvider } from "@/components/providers"
 import { Loader2 } from "lucide-react"
 
 // Lazy load page components
@@ -289,27 +290,31 @@ export default function AppRouter() {
   // For select page, render without AppShell (same layout as login/register)
   if (isSelectPage) {
     return (
-      <TooltipProvider>
-        <Suspense fallback={<PageLoader />}>
-          <WebsiteSelector />
-        </Suspense>
-      </TooltipProvider>
+      <QueryProvider>
+        <TooltipProvider>
+          <Suspense fallback={<PageLoader />}>
+            <WebsiteSelector />
+          </Suspense>
+        </TooltipProvider>
+      </QueryProvider>
     )
   }
 
   return (
-    <TooltipProvider>
-      <AppShell 
-        title={title} 
-        breadcrumbs={breadcrumbs}
-        isStudioPage={isStudioPage}
-        websiteId={websiteId}
-        showSidebar={true}
-      >
-        <Suspense fallback={<PageLoader />}>
-          {renderPage()}
-        </Suspense>
-      </AppShell>
-    </TooltipProvider>
+    <QueryProvider>
+      <TooltipProvider>
+        <AppShell 
+          title={title} 
+          breadcrumbs={breadcrumbs}
+          isStudioPage={isStudioPage}
+          websiteId={websiteId}
+          showSidebar={true}
+        >
+          <Suspense fallback={<PageLoader />}>
+            {renderPage()}
+          </Suspense>
+        </AppShell>
+      </TooltipProvider>
+    </QueryProvider>
   )
 }

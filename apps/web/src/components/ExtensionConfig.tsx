@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import SchemaRenderer from './SchemaRenderer';
-import { useWebsites, useExtensionCatalog, useWebsiteExtensions, useExtensionData } from '@/hooks/useCache';
+import { useWebsitesQuery, useExtensionCatalogQuery, useWebsiteExtensionsQuery, useExtensionDataQuery, useUpdateExtensionSettingsMutation, useDeactivateExtensionMutation } from '@/lib/query';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { Link } from '@/components/app-router';
 import { FormActions } from '@/components/ui/form-actions';
@@ -164,11 +164,16 @@ interface ChangelogEntry {
 export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
   // Context hook for websiteId
   const { currentWebsiteId: websiteId } = useWebsiteContext();
-  // Cache hooks
-  const { websites, isLoading: websitesLoading } = useWebsites();
-  const { extensions: catalogExtensions, isLoading: catalogLoading } = useExtensionCatalog();
-  const { extensions: websiteExtensions, isLoading: extensionsLoading, refetch: refetchExtensions } = useWebsiteExtensions(websiteId);
-  const { data: extensionDataResponse, isLoading: extensionDataLoading, refetch: refetchExtensionData } = useExtensionData(websiteId, slug);
+  // React Query hooks
+  const { data: websites = [], isLoading: websitesLoading } = useWebsitesQuery();
+  const { data: catalogExtensions = [], isLoading: catalogLoading } = useExtensionCatalogQuery();
+  const { data: websiteExtensions = [], isLoading: extensionsLoading, refetch: refetchExtensions } = useWebsiteExtensionsQuery(websiteId);
+  const { data: extensionDataResponse, isLoading: extensionDataLoading, refetch: refetchExtensionData } = useExtensionDataQuery(websiteId, slug);
+  
+  // Mutations
+  const updateSettingsMutation = useUpdateExtensionSettingsMutation();
+  const deactivateExtensionMutation = useDeactivateExtensionMutation();
+  
   // Derive extension from catalog
   const extension = useMemo(() => {
     if (!catalogExtensions.length) return null;
@@ -299,18 +304,14 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
     setIsSaving(true);
 
     const savePromise = async () => {
-      if (websiteExtension) {
-        await extensionsAPI.updateSettings(websiteId, websiteExtension.extension_id, { settings });
-      } else {
-        await extensionsAPI.activate(websiteId, {
-          extension_id: extension.id,
-          settings,
-        });
-      }
+      await updateSettingsMutation.mutateAsync({
+        websiteId,
+        extensionId: websiteExtension?.extension_id || extension.id,
+        settings,
+        isNewActivation: !websiteExtension,
+      });
       // Update initial settings after save
       setInitialSettings(settings);
-      // Refetch extension data only (don't invalidate all website data)
-      await Promise.all([refetchExtensions(true), refetchExtensionData(true)]);
     };
 
     try {
@@ -329,7 +330,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
   // Refresh data from cache (only extension-related data)
   const refreshData = async () => {
     if (!websiteId) return;
-    await Promise.all([refetchExtensions(true), refetchExtensionData(true)]);
+    await Promise.all([refetchExtensions(), refetchExtensionData()]);
   };
 
   const handleAction = async (actionKey: string) => {
@@ -402,8 +403,10 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
     setIsDeactivating(true);
     
     try {
-      await extensionsAPI.deactivate(websiteId, websiteExtension.id);
-      await refreshData();
+      await deactivateExtensionMutation.mutateAsync({
+        websiteId,
+        extensionId: websiteExtension.id,
+      });
       toast.success('Extension désactivée');
     } catch (err) {
       console.error('Failed to deactivate extension:', err);

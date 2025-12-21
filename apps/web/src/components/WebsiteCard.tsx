@@ -3,7 +3,8 @@
 import { useState, useCallback } from 'react';
 import type { Website } from '@/lib/api';
 import { websitesAPI } from '@/lib/api';
-import { useCacheActions } from '@/hooks/useCache';
+import { queryKeys } from '@/lib/query';
+import { useQueryClient } from '@tanstack/react-query';
 import { getWebsiteDisplayUrl, getWebsiteUrl } from '@/lib/utils/formatters';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,14 +58,18 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
   const [isPublishing, setIsPublishing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
-  const { removeWebsiteFromCache, updateWebsiteCache } = useCacheActions();
+  const queryClient = useQueryClient();
 
   const handleDelete = useCallback(async () => {
     setIsDeleting(true);
     
     try {
       await websitesAPI.delete(website.id);
-      removeWebsiteFromCache(website.id);
+      // Remove from cache via React Query
+      queryClient.setQueryData<Website[]>(queryKeys.websites.all, (old) => {
+        if (!old) return [];
+        return old.filter(w => w.id !== website.id);
+      });
       toast.success('Site supprimé avec succès', {
         description: `Le site "${website.title}" a été supprimé définitivement.`,
       });
@@ -77,7 +82,7 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
       setIsDeleting(false);
       setShowDeleteDialog(false);
     }
-  }, [website.id, website.title, removeWebsiteFromCache]);
+  }, [website.id, website.title, queryClient]);
 
   const handlePublish = useCallback(async () => {
     setIsPublishing(true);
@@ -87,7 +92,11 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
     
     try {
       await websitesAPI.publish(website.id);
-      updateWebsiteCache({ ...website, status: 'published' });
+      // Update cache via React Query
+      queryClient.setQueryData<Website[]>(queryKeys.websites.all, (old) => {
+        if (!old) return [];
+        return old.map(w => w.id === website.id ? { ...w, status: 'published' } : w);
+      });
       toast.success('Site publié avec succès !', {
         description: `Votre site est maintenant accessible à l'adresse ${displayUrl}`,
         action: {
@@ -103,7 +112,7 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
     } finally {
       setIsPublishing(false);
     }
-  }, [website, updateWebsiteCache]);
+  }, [website, queryClient]);
 
   const handleCopyUrl = useCallback(() => {
     const url = getWebsiteUrl(website.slug);

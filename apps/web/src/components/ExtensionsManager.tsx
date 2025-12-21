@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { extensionsAPI } from '../lib/api';
 import type { Extension, WebsiteExtension } from '../lib/api/extensions';
-import { useWebsites, useExtensionCatalog, useWebsiteExtensions } from '../hooks/useCache';
+import { useWebsitesQuery, useExtensionCatalogQuery, useWebsiteExtensionsQuery, useActivateExtensionMutation, useDeactivateExtensionMutation } from '@/lib/query';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { Link } from '@/components/app-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,15 +52,17 @@ export default function ExtensionsManager() {
   // Get websiteId from context
   const { currentWebsiteId } = useWebsiteContext();
   
-  // Use cached data
-  const { websites, isLoading: websitesLoading } = useWebsites();
-  const { extensions: catalogExtensions, isLoading: catalogLoading } = useExtensionCatalog();
+  // Use React Query hooks
+  const { data: websites = [], isLoading: websitesLoading } = useWebsitesQuery();
+  const { data: catalogExtensions = [], isLoading: catalogLoading } = useExtensionCatalogQuery();
   
   const { 
-    extensions: activeExtensions, 
-    isLoading: extensionsLoading, 
-    refetch: refetchExtensions 
-  } = useWebsiteExtensions(currentWebsiteId);
+    data: activeExtensions = [], 
+    isLoading: extensionsLoading,
+  } = useWebsiteExtensionsQuery(currentWebsiteId);
+  
+  const activateExtensionMutation = useActivateExtensionMutation();
+  const deactivateExtensionMutation = useDeactivateExtensionMutation();
   
   const [activatingExtension, setActivatingExtension] = useState<string | null>(null);
   
@@ -103,12 +104,11 @@ export default function ExtensionsManager() {
     setActivatingExtension(extension.id);
 
     const activatePromise = async () => {
-      await extensionsAPI.activate(currentWebsiteId, {
-        extension_id: extension.id,
+      await activateExtensionMutation.mutateAsync({
+        websiteId: currentWebsiteId,
+        extensionId: extension.id,
         settings: extension.default_settings || {},
       });
-      // Refresh extensions cache
-      await refetchExtensions(true);
       return extension.name;
     };
 
@@ -134,9 +134,10 @@ export default function ExtensionsManager() {
     setActivatingExtension(extensionId);
 
     const deactivatePromise = async () => {
-      await extensionsAPI.deactivate(currentWebsiteId, extensionId);
-      // Refresh extensions cache
-      await refetchExtensions(true);
+      await deactivateExtensionMutation.mutateAsync({
+        websiteId: currentWebsiteId,
+        extensionId,
+      });
     };
 
     try {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useWebsites } from '@/hooks/useCache';
+import { useWebsitesQuery } from '@/lib/query';
 import { 
   Palette, 
   RefreshCw,
@@ -79,7 +79,7 @@ const radiusOptions = [
 ];
 
 export default function ThemePage() {
-  const { websites, isLoading: websitesLoading } = useWebsites();
+  const { data: websites = [], isLoading: websitesLoading } = useWebsitesQuery();
   const currentWebsite = websites[0] || null;
   
   const [theme, setTheme] = useState<ThemeSettings>(defaultTheme);

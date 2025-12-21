@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { WebsiteExtension } from '../lib/api';
-import { useWebsites, useWebsiteExtensions } from '../hooks/useCache';
+import { useWebsitesQuery, useWebsiteExtensionsQuery } from '@/lib/query';
 
 // Icon mapping for common extension icons
 const extensionIcons: Record<string, React.ReactNode> = {
@@ -49,10 +49,10 @@ function getExtensionIcon(extensionSlug: string): React.ReactNode {
 }
 
 export default function DynamicSidebar() {
-  // Use cache hooks for real-time updates - when extensions change elsewhere, sidebar updates automatically
-  const { websites, isLoading: websitesLoading } = useWebsites();
+  // Use React Query hooks for real-time updates - when extensions change elsewhere, sidebar updates automatically
+  const { data: websites = [], isLoading: websitesLoading } = useWebsitesQuery();
   const currentWebsiteId = websites.length > 0 ? websites[0].id : null;
-  const { extensions: allExtensions, isLoading: extensionsLoading } = useWebsiteExtensions(currentWebsiteId);
+  const { data: allExtensions = [], isLoading: extensionsLoading } = useWebsiteExtensionsQuery(currentWebsiteId);
   
   // Filter to get only enabled extensions
   const extensions = useMemo(() => 

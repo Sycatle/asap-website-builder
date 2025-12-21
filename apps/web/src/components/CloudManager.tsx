@@ -47,15 +47,18 @@ import {
   ExternalLink,
   Link2
 } from "lucide-react";
-import { useFiles, useQuota } from '@/hooks/useCache';
+import { useFilesQuery, useQuotaQuery, useUploadFileMutation, useDeleteFileMutation, useDeleteFilesMutation } from '@/lib/query';
 import { useGridNavigation, KeyboardHint } from '@/hooks/useGridNavigation';
 
 type ViewMode = 'grid' | 'list';
 
 export default function CloudManager() {
-  // Cache hooks
-  const { files, isLoading: filesLoading, refetch: refetchFiles, addFile, removeFile } = useFiles();
-  const { quota, isLoading: quotaLoading, refetch: refetchQuota } = useQuota();
+  // React Query hooks
+  const { data: files = [], isLoading: filesLoading, refetch: refetchFiles } = useFilesQuery();
+  const { data: quota = null, isLoading: quotaLoading, refetch: refetchQuota } = useQuotaQuery();
+  const uploadFileMutation = useUploadFileMutation();
+  const deleteFileMutation = useDeleteFileMutation();
+  const deleteFilesMutation = useDeleteFilesMutation();
   
   // Local UI state
   const [isUploading, setIsUploading] = useState(false);
@@ -119,11 +122,7 @@ export default function CloudManager() {
     setIsUploading(true);
 
     const uploadPromise = async () => {
-      const uploadedFile = await filesAPI.upload(file);
-      // Optimistic update: add to cache immediately
-      addFile(uploadedFile);
-      // Refetch quota (it changed after upload)
-      await refetchQuota(true);
+      await uploadFileMutation.mutateAsync(file);
       return file.name;
     };
 
@@ -156,15 +155,12 @@ export default function CloudManager() {
     setIsDeleting(true);
 
     try {
-      await filesAPI.delete(file.id);
-      removeFile(file.id);
+      await deleteFileMutation.mutateAsync(file.id);
       setPreviewFile(null);
-      await refetchQuota(true);
       toast.success('Fichier supprimé');
     } catch (error) {
       console.error('Failed to delete file:', error);
       toast.error('Erreur lors de la suppression');
-      await refetchFiles(true);
     } finally {
       setIsDeleting(false);
       setDeleteConfirm(null);
@@ -172,22 +168,18 @@ export default function CloudManager() {
   };
 
   const handleBulkDelete = async () => {
-    const selectedFiles = files.filter(f => selectedIds.has(f.id));
-    if (selectedFiles.length === 0) return;
+    const selectedFileIds = files.filter(f => selectedIds.has(f.id)).map(f => f.id);
+    if (selectedFileIds.length === 0) return;
     
     setIsDeleting(true);
     
     try {
-      await Promise.all(
-        selectedFiles.map(file => filesAPI.delete(file.id).then(() => removeFile(file.id)))
-      );
-      toast.success(`${selectedFiles.length} fichier${selectedFiles.length > 1 ? 's' : ''} supprimé${selectedFiles.length > 1 ? 's' : ''}`);
+      await deleteFilesMutation.mutateAsync(selectedFileIds);
+      toast.success(`${selectedFileIds.length} fichier${selectedFileIds.length > 1 ? 's' : ''} supprimé${selectedFileIds.length > 1 ? 's' : ''}`);
       clearSelection();
-      await refetchQuota(true);
     } catch (error) {
       console.error('Failed to delete files:', error);
       toast.error('Erreur lors de la suppression');
-      await refetchFiles(true);
     } finally {
       setIsDeleting(false);
       setBulkDeleteConfirm(false);

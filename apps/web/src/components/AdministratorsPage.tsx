@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useWebsites } from '@/hooks/useCache';
+import { useWebsitesQuery } from '@/lib/query';
 import { 
   Users, 
   UserPlus, 
@@ -94,7 +94,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
 };
 
 export default function AdministratorsPage() {
-  const { websites, isLoading: websitesLoading } = useWebsites();
+  const { data: websites = [], isLoading: websitesLoading } = useWebsitesQuery();
   const currentWebsite = websites[0] || null;
   
   const [administrators, setAdministrators] = useState<Administrator[]>([]);

@@ -4,7 +4,8 @@ import { useState, useCallback } from "react"
 import { ChevronsUpDown, Plus, CheckCircle2, Clock, Loader2, Globe } from "lucide-react"
 import type { Website } from "@/lib/api"
 import { OnboardingModal } from "./onboarding/OnboardingModal"
-import { useCacheActions } from "@/hooks/useCache"
+import { queryKeys } from "@/lib/query"
+import { useQueryClient } from "@tanstack/react-query"
 import { navigate } from "@/components/app-router"
 import { getWebsiteDisplayUrl } from "@/lib/utils/formatters"
 
@@ -42,7 +43,7 @@ export function SiteSwitcher({
   const { isMobile } = useSidebar()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const { invalidate } = useCacheActions()
+  const queryClient = useQueryClient()
 
   const handleWebsiteSelect = useCallback((website: Website) => {
     if (website.id !== currentWebsite?.id) {
@@ -54,11 +55,11 @@ export function SiteSwitcher({
 
   const handleCreateSuccess = useCallback((websiteId: string) => {
     // Refresh websites list after creation
-    invalidate('websites')
+    queryClient.invalidateQueries({ queryKey: queryKeys.websites })
     setIsDropdownOpen(false)
     // Navigate to the newly created website
     navigate(`/app/${websiteId}`)
-  }, [invalidate])
+  }, [queryClient])
 
   // Get first letter of title for avatar
   const getInitial = (title: string) => {
