@@ -15,8 +15,8 @@ pub enum NotificationCategory {
     Account,
     /// Website/portfolio updates
     Website,
-    /// Module-related notifications
-    Module,
+    /// Extension-related notifications
+    Extension,
     /// Billing and payment notifications
     Billing,
     /// Analytics and stats
@@ -68,10 +68,10 @@ pub enum NotificationType {
     WebsiteDataUpdated,
     NewVisitor,
     
-    // Module notifications
-    ModuleActivated,
-    ModuleDeactivated,
-    ModuleConfigUpdated,
+    // Extension notifications
+    ExtensionActivated,
+    ExtensionDeactivated,
+    ExtensionConfigUpdated,
     
     // Billing notifications
     PaymentSuccessful,
