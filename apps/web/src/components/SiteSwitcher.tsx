@@ -5,7 +5,7 @@ import { ChevronsUpDown, Plus, CheckCircle2, Clock, Loader2, Globe } from "lucid
 import type { Website } from "@/lib/api"
 import { OnboardingModal } from "./onboarding/OnboardingModal"
 import { useCacheActions } from "@/hooks/useCache"
-import { useWebsiteContext } from "@/contexts/WebsiteContext"
+import { navigate } from "@/components/app-router"
 import { getWebsiteDisplayUrl } from "@/lib/utils/formatters"
 
 import {
@@ -31,36 +31,34 @@ import {
 interface SiteSwitcherProps {
   websites: Website[]
   currentWebsite: Website | null
-  onWebsiteChange?: (website: Website) => void
   isLoading?: boolean
 }
 
 export function SiteSwitcher({ 
   websites, 
   currentWebsite, 
-  onWebsiteChange,
   isLoading = false 
 }: SiteSwitcherProps) {
   const { isMobile } = useSidebar()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const { invalidate } = useCacheActions()
-  const { setCurrentWebsiteById } = useWebsiteContext()
 
   const handleWebsiteSelect = useCallback((website: Website) => {
-    if (onWebsiteChange && website.id !== currentWebsite?.id) {
-      onWebsiteChange(website)
+    if (website.id !== currentWebsite?.id) {
+      // Navigate to the new website's dashboard
+      navigate(`/app/${website.id}`)
     }
     setIsDropdownOpen(false)
-  }, [onWebsiteChange, currentWebsite?.id])
+  }, [currentWebsite?.id])
 
   const handleCreateSuccess = useCallback((websiteId: string) => {
     // Refresh websites list after creation
     invalidate('websites')
     setIsDropdownOpen(false)
-    // Set the newly created website as current
-    setCurrentWebsiteById(websiteId)
-  }, [invalidate, setCurrentWebsiteById])
+    // Navigate to the newly created website
+    navigate(`/app/${websiteId}`)
+  }, [invalidate])
 
   // Get first letter of title for avatar
   const getInitial = (title: string) => {

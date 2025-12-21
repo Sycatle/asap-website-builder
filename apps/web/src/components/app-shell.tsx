@@ -16,6 +16,7 @@ import { WebsiteProvider, useWebsiteContext } from "@/contexts/WebsiteContext"
 import { HeaderUser } from "@/components/header-user"
 import { useKeyboardShortcuts, getModifierKey } from "@/hooks/useKeyboardShortcuts"
 import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket"
+import { navigate } from "@/components/app-router"
 import { toast } from "sonner"
 import {
   Dialog,
@@ -37,6 +38,8 @@ interface AppShellProps {
   title?: string
   breadcrumbs?: { label: string; href?: string }[]
   isStudioPage?: boolean
+  websiteId: string | null
+  showSidebar?: boolean
 }
 
 // Keyboard shortcuts help dialog content
@@ -57,33 +60,28 @@ const shortcuts = [
   ]},
 ]
 
-export function AppShell({ children, title, breadcrumbs = [], isStudioPage = false }: AppShellProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(true)
+export function AppShell({ 
+  children, 
+  title, 
+  breadcrumbs = [], 
+  isStudioPage = false,
+  websiteId,
+  showSidebar = true,
+}: AppShellProps) {
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
 
-  useEffect(() => {
-    // Check authentication
-    const token = localStorage.getItem('auth_token')
-    if (!token) {
-      window.location.href = '/login'
-      setIsAuthenticated(false)
-      return
-    }
-  }, [])
-
-  if (!isAuthenticated) {
-    return null
-  }
+  // Auth is checked in AppRouter, no need to check here
 
   return (
-    <WebsiteProvider>
-      <SidebarProvider defaultOpen={!isStudioPage}>
+    <WebsiteProvider websiteId={websiteId}>
+      <SidebarProvider defaultOpen={!isStudioPage && showSidebar}>
         <AppShellContent 
           title={title} 
           breadcrumbs={breadcrumbs}
           showShortcutsHelp={showShortcutsHelp}
           setShowShortcutsHelp={setShowShortcutsHelp}
           isStudioPage={isStudioPage}
+          showSidebar={showSidebar}
         >
           {children}
         </AppShellContent>
@@ -100,6 +98,7 @@ interface AppShellContentProps {
   showShortcutsHelp: boolean
   setShowShortcutsHelp: (show: boolean) => void
   isStudioPage?: boolean
+  showSidebar?: boolean
 }
 
 function AppShellContent({ 
@@ -108,7 +107,8 @@ function AppShellContent({
   breadcrumbs,
   showShortcutsHelp,
   setShowShortcutsHelp,
-  isStudioPage = false
+  isStudioPage = false,
+  showSidebar = true,
 }: AppShellContentProps) {
   const { toggleSidebar, setOpen, open } = useSidebar()
   const [pendingGoTo, setPendingGoTo] = useState(false)
@@ -119,7 +119,7 @@ function AppShellContent({
     enabledExtensions,
     websites,
     currentWebsite,
-    setCurrentWebsite,
+    currentWebsiteId,
     isLoadingWebsites,
   } = useWebsiteContext()
 
@@ -158,8 +158,10 @@ function AppShellContent({
     {
       key: '[',
       action: () => {
-        toggleSidebar()
-        toast.info('Sidebar toggled', { duration: 1500 })
+        if (showSidebar) {
+          toggleSidebar()
+          toast.info('Sidebar toggled', { duration: 1500 })
+        }
       }
     },
     // Show keyboard shortcuts help
@@ -172,18 +174,20 @@ function AppShellContent({
     {
       key: 'g',
       action: () => {
-        setPendingGoTo(true)
-        toast.info('Go to... (d: Dashboard, e: Extensions, c: Cloud)', { duration: 2000 })
-        // Auto-reset after 2 seconds
-        setTimeout(() => setPendingGoTo(false), 2000)
+        if (currentWebsiteId) {
+          setPendingGoTo(true)
+          toast.info('Go to... (d: Dashboard, e: Extensions, c: Cloud)', { duration: 2000 })
+          // Auto-reset after 2 seconds
+          setTimeout(() => setPendingGoTo(false), 2000)
+        }
       }
     },
     // Navigation shortcuts (when g was pressed)
     {
       key: 'd',
       action: () => {
-        if (pendingGoTo) {
-          window.location.href = '/app/dashboard'
+        if (pendingGoTo && currentWebsiteId) {
+          navigate(`/app/${currentWebsiteId}`)
           setPendingGoTo(false)
         }
       }
@@ -191,8 +195,8 @@ function AppShellContent({
     {
       key: 'e',
       action: () => {
-        if (pendingGoTo) {
-          window.location.href = '/app/extensions'
+        if (pendingGoTo && currentWebsiteId) {
+          navigate(`/app/${currentWebsiteId}/extensions`)
           setPendingGoTo(false)
         }
       }
@@ -200,8 +204,8 @@ function AppShellContent({
     {
       key: 'c',
       action: () => {
-        if (pendingGoTo) {
-          window.location.href = '/app/cloud'
+        if (pendingGoTo && currentWebsiteId) {
+          navigate(`/app/${currentWebsiteId}/cloud`)
           setPendingGoTo(false)
         }
       }
@@ -217,24 +221,32 @@ function AppShellContent({
     },
   ])
 
+  // Build base URL for current website
+  const baseUrl = currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'
+
   return (
     <>
-      <AsapSidebar 
-        extensions={enabledExtensions}
-        websites={websites}
-        currentWebsite={currentWebsite}
-        onWebsiteChange={setCurrentWebsite}
-        isLoadingWebsites={isLoadingWebsites}
-      />
+      {showSidebar && (
+        <AsapSidebar 
+          extensions={enabledExtensions}
+          websites={websites}
+          currentWebsite={currentWebsite}
+          isLoadingWebsites={isLoadingWebsites}
+        />
+      )}
       <SidebarInset>
         <header className="sticky top-0 z-40 flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 sm:px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-1 sm:mr-2 h-4" />
+          {showSidebar && (
+            <>
+              <SidebarTrigger className="-ml-1" />
+              <Separator orientation="vertical" className="mr-1 sm:mr-2 h-4" />
+            </>
+          )}
           <Breadcrumb className="flex-1 min-w-0">
             <BreadcrumbList>
               <BreadcrumbItem className="hidden sm:block">
-                <BreadcrumbLink href="/app/dashboard">
-                  {isLoadingWebsites ? "Chargement..." : (currentWebsite?.title || websites[0]?.title || "Dashboard")}
+                <BreadcrumbLink href={baseUrl}>
+                  {isLoadingWebsites ? "Chargement..." : (currentWebsite?.title || "ASAP")}
                 </BreadcrumbLink>
               </BreadcrumbItem>
               {breadcrumbs.map((crumb, index) => (
@@ -296,29 +308,23 @@ function AppShellContent({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <span>⌨️</span> Raccourcis clavier
+              <Keyboard className="h-5 w-5" />
+              Raccourcis clavier
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            {shortcuts.map((category) => (
-              <div key={category.category}>
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                  {category.category}
-                </h4>
+            {shortcuts.map((section) => (
+              <div key={section.category}>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">{section.category}</h4>
                 <div className="space-y-2">
-                  {category.items.map((shortcut, idx) => (
-                    <div 
-                      key={idx}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <span>{shortcut.description}</span>
-                      <div className="flex items-center gap-1">
-                        {shortcut.keys.map((key, keyIdx) => (
-                          <React.Fragment key={keyIdx}>
-                            {keyIdx > 0 && <span className="text-muted-foreground">+</span>}
-                            <kbd className="px-2 py-1 text-xs font-semibold bg-muted border rounded">
-                              {key}
-                            </kbd>
+                  {section.items.map((item) => (
+                    <div key={item.description} className="flex items-center justify-between">
+                      <span className="text-sm">{item.description}</span>
+                      <div className="flex gap-1">
+                        {item.keys.map((key, i) => (
+                          <React.Fragment key={i}>
+                            <kbd className="px-2 py-1 text-xs bg-muted rounded font-mono">{key}</kbd>
+                            {i < item.keys.length - 1 && <span className="text-muted-foreground">+</span>}
                           </React.Fragment>
                         ))}
                       </div>
@@ -329,7 +335,7 @@ function AppShellContent({
             ))}
           </div>
           <div className="text-xs text-muted-foreground text-center pt-2 border-t">
-            Appuyez sur <kbd className="px-1.5 py-0.5 text-xs bg-muted border rounded">Esc</kbd> pour fermer
+            Appuyez sur <kbd className="px-1 py-0.5 bg-muted rounded">Esc</kbd> pour fermer
           </div>
         </DialogContent>
       </Dialog>

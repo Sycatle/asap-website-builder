@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { websitesAPI, authAPI, type UpdateWebsiteRequest } from '../lib/api';
 import { useCacheActions } from '../hooks/useCache';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
+import { Link } from '@/components/app-router';
 import { formatBytes } from '../lib/utils/formatters';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -56,7 +57,7 @@ import { PresetOnboardingRouter } from "@/components/onboarding/presets";
 
 export default function Dashboard() {
   // Use website context for synchronized data
-  const { currentWebsite: website, quota, extensions, isLoading, websites, refetch: refetchAll } = useWebsiteContext();
+  const { currentWebsite: website, currentWebsiteId, quota, extensions, isLoading, websites, refetch: refetchAll } = useWebsiteContext();
   const { updateWebsiteCache } = useCacheActions();
   
   const [isSaving, setIsSaving] = useState(false);
@@ -360,10 +361,10 @@ export default function Dashboard() {
           {website && (
             <>
               <Button variant="default" asChild className="w-full sm:w-auto group">
-                <a href="/app/studio">
+                <Link href={`/app/${currentWebsiteId}/studio`}>
                   <Edit className="h-4 w-4 mr-2" />
                   Ouvrir le Studio
-                </a>
+                </Link>
               </Button>
               <Button variant="outline" asChild className="w-full sm:w-auto group">
                 <a href={`/${website.slug}`} target="_blank" rel="noopener noreferrer">
@@ -605,8 +606,8 @@ export default function Dashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-2 sm:gap-3 px-4 sm:px-6">
-                <a
-                  href="/app/studio"
+                <Link
+                  href={`/app/${currentWebsiteId}/studio`}
                   className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-md text-left w-full active:scale-[0.99]"
                 >
                   <div className="flex items-center gap-3 sm:gap-4">
@@ -621,10 +622,10 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200" />
-                </a>
+                </Link>
 
-                <a
-                  href="/app/extensions"
+                <Link
+                  href={`/app/${currentWebsiteId}/extensions`}
                   className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-md active:scale-[0.99]"
                 >
                   <div className="flex items-center gap-3 sm:gap-4">
@@ -639,10 +640,10 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-violet-600 group-hover:translate-x-1 transition-all duration-200" />
-                </a>
+                </Link>
 
-                <a
-                  href="/app/cloud"
+                <Link
+                  href={`/app/${currentWebsiteId}/cloud`}
                   className="group flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-md active:scale-[0.99]"
                 >
                   <div className="flex items-center gap-3 sm:gap-4">
@@ -657,7 +658,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-emerald-600 group-hover:translate-x-1 transition-all duration-200" />
-                </a>
+                </Link>
 
                 {website && (
                   <a

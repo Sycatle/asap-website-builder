@@ -3,7 +3,7 @@ import {
   Home,
   ImageIcon,
   Puzzle,
-  Link,
+  Link as LinkIcon,
   BookOpen,
   Mail,
   BarChart3,
@@ -28,12 +28,13 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar"
 import { SiteSwitcher } from "@/components/SiteSwitcher"
-import { PagesList } from "@/components/PagesList"
-import type { WebsiteExtension, Website, Page } from "@/lib/api"
+import { useWebsiteContext } from "@/contexts/WebsiteContext"
+import { Link } from "@/components/app-router"
+import type { WebsiteExtension, Website } from "@/lib/api"
 
 // Icon mapping for extension categories (same as ExtensionsManager)
 const categoryIcons: Record<string, React.ElementType> = {
-  'integration': Link,
+  'integration': LinkIcon,
   'content': BookOpen,
   'engagement': Mail,
   'analytics': BarChart3,
@@ -44,21 +45,18 @@ interface AsapSidebarProps {
   extensions?: WebsiteExtension[]
   websites?: Website[]
   currentWebsite?: Website | null
-  onWebsiteChange?: (website: Website) => void
   isLoadingWebsites?: boolean
-  currentPageId?: string
-  onPageSelect?: (page: Page) => void
 }
 
 export function AsapSidebar({ 
   extensions = [], 
   websites = [],
   currentWebsite = null,
-  onWebsiteChange,
   isLoadingWebsites = false,
-  currentPageId,
-  onPageSelect
 }: AsapSidebarProps) {
+  // Get current website ID from context
+  const { currentWebsiteId } = useWebsiteContext()
+  
   // Filter enabled extensions
   const enabledExtensions = extensions.filter(e => e.enabled)
 
@@ -67,13 +65,18 @@ export function AsapSidebar({
     return categoryIcons[category] || Puzzle
   }
 
+  // Build URL helper
+  const buildUrl = (path: string) => {
+    if (!currentWebsiteId) return '/app'
+    return `/app/${currentWebsiteId}${path}`
+  }
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <SiteSwitcher
           websites={websites}
           currentWebsite={currentWebsite}
-          onWebsiteChange={onWebsiteChange}
           isLoading={isLoadingWebsites}
         />
       </SidebarHeader>
@@ -84,10 +87,10 @@ export function AsapSidebar({
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Accueil">
-                  <a href="/app/dashboard">
+                  <Link href={buildUrl('')}>
                     <Home />
                     <span>Accueil</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -102,26 +105,26 @@ export function AsapSidebar({
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Studio">
-                    <a href="/app/studio">
+                    <Link href={buildUrl('/studio')}>
                       <Pencil />
                       <span>Studio</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Pages">
-                    <a href="/app/pages">
+                    <Link href={buildUrl('/pages')}>
                       <FileText />
                       <span>Pages</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Médias">
-                    <a href="/app/cloud">
+                    <Link href={buildUrl('/cloud')}>
                       <ImageIcon />
                       <span>Médias</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -137,39 +140,39 @@ export function AsapSidebar({
               {currentWebsite && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Paramètres">
-                    <a href="/app/settings">
+                    <Link href={buildUrl('/settings')}>
                       <Settings />
                       <span>Paramètres</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
               {currentWebsite && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Administrateurs">
-                    <a href="/app/administrators">
+                    <Link href={buildUrl('/administrators')}>
                       <Users />
                       <span>Administrateurs</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
               {currentWebsite && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Thème">
-                    <a href="/app/theme">
+                    <Link href={buildUrl('/theme')}>
                       <Palette />
                       <span>Thème</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Extensions">
-                  <a href="/app/extensions">
+                  <Link href={buildUrl('/extensions')}>
                     <Puzzle />
                     <span>Extensions</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -188,10 +191,10 @@ export function AsapSidebar({
                     return (
                       <SidebarMenuItem key={extension.id}>
                         <SidebarMenuButton asChild tooltip={extension.extension_name}>
-                          <a href={`/app/extensions/${extension.extension_slug}`}>
+                          <Link href={buildUrl(`/extensions/${extension.extension_slug}`)}>
                             <IconComponent />
                             <span>{extension.extension_name}</span>
-                          </a>
+                          </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )
@@ -200,16 +203,6 @@ export function AsapSidebar({
               </SidebarGroupContent>
             </SidebarGroup>
           </>
-        )}
-
-        {/* Pages List - Collapsible when website selected */}
-        {currentWebsite && (
-          <PagesList
-            websiteId={currentWebsite.id}
-            websiteSlug={currentWebsite.slug}
-            currentPageId={currentPageId}
-            onPageSelect={onPageSelect}
-          />
         )}
       </SidebarContent>
       <SidebarRail />
