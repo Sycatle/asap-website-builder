@@ -49,6 +49,9 @@ import {
 } from "lucide-react";
 import { useFilesQuery, useQuotaQuery, useUploadFileMutation, useDeleteFileMutation, useDeleteFilesMutation } from '@/lib/query';
 import { useGridNavigation, KeyboardHint } from '@/hooks/useGridNavigation';
+import { loggers } from '@/lib/logger';
+
+const filesLogger = loggers.files;
 
 type ViewMode = 'grid' | 'list';
 
@@ -135,7 +138,7 @@ export default function CloudManager() {
     try {
       await uploadPromise();
     } catch (error) {
-      console.error('Failed to upload file:', error);
+      filesLogger.error('Failed to upload file:', error);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -159,7 +162,7 @@ export default function CloudManager() {
       setPreviewFile(null);
       toast.success('Fichier supprimé');
     } catch (error) {
-      console.error('Failed to delete file:', error);
+      filesLogger.error('Failed to delete file:', error);
       toast.error('Erreur lors de la suppression');
     } finally {
       setIsDeleting(false);
@@ -178,7 +181,7 @@ export default function CloudManager() {
       toast.success(`${selectedFileIds.length} fichier${selectedFileIds.length > 1 ? 's' : ''} supprimé${selectedFileIds.length > 1 ? 's' : ''}`);
       clearSelection();
     } catch (error) {
-      console.error('Failed to delete files:', error);
+      filesLogger.error('Failed to delete files:', error);
       toast.error('Erreur lors de la suppression');
     } finally {
       setIsDeleting(false);

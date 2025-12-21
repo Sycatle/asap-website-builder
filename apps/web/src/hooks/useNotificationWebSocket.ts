@@ -9,12 +9,15 @@ import { useEffect, useCallback, useRef } from 'react';
 import { useNotificationsStore } from '../lib/store/notificationsStore';
 import { useAuthStore } from '../lib/store/authStore';
 import { useWebSocket } from './useWebSocket';
+import { loggers } from '../lib/logger';
 import { 
   isNotificationEvent, 
   parseNotificationEvent,
   type NotificationEvent,
   type NotificationEventHandlers 
 } from '../lib/websocket/notificationEvents';
+
+const wsLogger = loggers.ws;
 
 interface UseNotificationWebSocketOptions {
   /** Custom event handlers (optional - store is updated automatically) */
@@ -79,7 +82,7 @@ export function useNotificationWebSocket(options: UseNotificationWebSocketOption
   // Log helper
   const log = useCallback((...args: unknown[]) => {
     if (debug) {
-      console.log('[NotificationWS]', ...args);
+      wsLogger.debug('Notification:', ...args);
     }
   }, [debug]);
 

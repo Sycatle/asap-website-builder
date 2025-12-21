@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { loggers } from '@/lib/logger';
+
+const extensionsLogger = loggers.extensions;
 import {
   ContextMenu,
   ContextMenuContent,
@@ -119,7 +122,7 @@ export default function ExtensionsManager() {
         error: `Erreur lors de l'activation de l'extension ${extension.name}`,
       });
     } catch (err) {
-      console.error('Failed to activate extension:', err);
+      extensionsLogger.error('Failed to activate extension:', err);
     } finally {
       setActivatingExtension(null);
     }
@@ -147,7 +150,7 @@ export default function ExtensionsManager() {
         error: "Erreur lors de la désactivation de l'extension",
       });
     } catch (err) {
-      console.error('Failed to deactivate extension:', err);
+      extensionsLogger.error('Failed to deactivate extension:', err);
     } finally {
       setActivatingExtension(null);
     }
