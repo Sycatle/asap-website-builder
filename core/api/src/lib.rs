@@ -18,6 +18,7 @@ pub mod notifications;
 pub mod onboarding;
 pub mod metrics;
 pub mod github;
+pub mod administrators;
 
 pub use routes::{create_router, create_router_with_ws};
 pub use asap_core_shared::{Claims, SharedConfig, SharedWsBroadcaster, WsBroadcaster, WsBroadcastMessage, validate_token};

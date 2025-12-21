@@ -5,6 +5,7 @@ pub mod integrations;
 pub mod errors;
 pub mod storage;
 pub mod extension_schema;
+pub mod administrators;
 
 pub use users::{Account, AccountData};
 pub use websites::{
@@ -21,4 +22,9 @@ pub use extension_schema::{
     DataDisplay, DataDisplayField, FieldType, FieldValidation,
     ActionStyle, HttpMethod, DataDisplayType, DisplayFieldType,
     SelectOption, StatItem,
+};
+pub use administrators::{
+    WebsiteAdministrator, AdministratorRole, AdministratorStatus,
+    AdministratorPermissions, InviteAdministratorRequest, UpdateAdministratorRequest,
+    AdministratorAuditLog,
 };

@@ -87,6 +87,12 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         // Website extension data and actions
         .route("/websites/:id/extensions/:extension_slug/data", get(crate::websites::get_website_extension_data))
         .route("/websites/:id/extensions/:extension_slug/actions/:action_key", post(crate::websites::execute_extension_action))
+        // Website administrators routes
+        .route("/websites/:id/administrators", get(crate::administrators::list_administrators))
+        .route("/websites/:id/administrators/invite", post(crate::administrators::invite_administrator))
+        .route("/websites/:id/administrators/:admin_id", patch(crate::administrators::update_administrator))
+        .route("/websites/:id/administrators/:admin_id", delete(crate::administrators::remove_administrator))
+        .route("/websites/:id/administrators/:admin_id/resend", post(crate::administrators::resend_invitation))
         // Events routes
         .route("/events", get(crate::events::get_events))
         .route("/events", post(crate::events::create_event))
