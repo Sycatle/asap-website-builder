@@ -52,6 +52,8 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
     let authenticated_routes = Router::new()
         .route("/auth/me", get(crate::auth::me))
         .route("/auth/change-password", post(crate::auth::change_password))
+        .route("/auth/logout", post(crate::auth::logout))
+        .route("/auth/logout-all", post(crate::auth::logout_all))
         // Account routes
         .route("/accounts/:id", get(crate::accounts::get_account))
         .route("/accounts/:id", put(crate::accounts::update_account))
@@ -149,6 +151,7 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         .route("/", get(root))
         .route("/auth/signup", post(crate::auth::signup))
         .route("/auth/login", post(crate::auth::login))
+        .route("/auth/refresh", post(crate::auth::refresh_token))
         .route("/auth/forgot-password", post(crate::auth::forgot_password))
         .route("/auth/reset-password", post(crate::auth::reset_password))
         // CSRF token endpoint (public, needed before login)

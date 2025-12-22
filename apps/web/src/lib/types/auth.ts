@@ -14,6 +14,9 @@ export interface SignupRequest {
 
 export interface SignupResponse {
   token: string;
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
   account: {
     id: string;
     email: string;
@@ -27,6 +30,19 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   token: string;
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+}
+
+export interface RefreshTokenRequest {
+  refresh_token: string;
+}
+
+export interface TokenPairResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
 }
 
 export interface MeResponse {

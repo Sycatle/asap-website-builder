@@ -6,9 +6,10 @@ pub mod websocket;
 pub mod pubsub;
 pub mod csrf;
 pub mod password_reset;
+pub mod refresh_token;
 
 // Re-export commonly used types
-pub use auth::{generate_token, validate_token, Claims};
+pub use auth::{generate_token, generate_token_with_jti, validate_token, Claims};
 pub use config::SharedConfig;
 pub use errors::SharedError;
 pub use csrf::{generate_csrf_token, validate_csrf_token, CsrfToken, CSRF_HEADER, CSRF_COOKIE};
@@ -18,6 +19,16 @@ pub use password_reset::{
     hash_token,
     PasswordResetToken, 
     PASSWORD_RESET_TOKEN_LIFETIME_SECS
+};
+pub use refresh_token::{
+    generate_refresh_token,
+    validate_refresh_token,
+    hash_refresh_token,
+    generate_jti,
+    RefreshToken,
+    ValidatedRefreshToken,
+    REFRESH_TOKEN_LIFETIME_SECS,
+    ACCESS_TOKEN_LIFETIME_SECS,
 };
 pub use extension_catalog::{
     ExtensionDefinition, 

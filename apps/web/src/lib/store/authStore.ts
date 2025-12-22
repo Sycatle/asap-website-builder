@@ -25,7 +25,8 @@ interface AuthState {
   // Actions
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: (fromAllDevices?: boolean) => Promise<void>;
+  refreshToken: () => Promise<boolean>;
   fetchUser: () => Promise<void>;
   fetchFullUserData: (force?: boolean) => Promise<void>;
   updateUserData: (data: Partial<UserData>) => void;
@@ -53,7 +54,8 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const response = await authAPI.login({ email, password });
-          authAPI.setToken(response.token);
+          // Use new setTokens method to handle both access and refresh tokens
+          authAPI.setTokens(response);
           
           const user = await authAPI.me();
           set({ user, isAuthenticated: true, isLoading: false });
@@ -76,7 +78,8 @@ export const useAuthStore = create<AuthState>()(
             email, 
             password
           });
-          authAPI.setToken(response.token);
+          // Use new setTokens method to handle both access and refresh tokens
+          authAPI.setTokens(response);
           
           const user = await authAPI.me();
           set({ user, isAuthenticated: true, isLoading: false });
@@ -92,7 +95,19 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => {
+      logout: async (fromAllDevices = false) => {
+        try {
+          // Revoke tokens on server
+          if (fromAllDevices) {
+            await authAPI.logoutAll();
+          } else {
+            await authAPI.logoutSession();
+          }
+        } catch (error) {
+          console.warn('Server logout failed:', error);
+        }
+        
+        // Always clear local state
         authAPI.logout();
         // Clear CSRF token on logout
         apiClient.clearCsrfToken();
@@ -104,6 +119,32 @@ export const useAuthStore = create<AuthState>()(
           lastFetchTime: null,
         });
         window.location.href = '/login';
+      },
+
+      /**
+       * Attempt to refresh the access token using the stored refresh token
+       * Returns true if successful, false otherwise
+       */
+      refreshToken: async () => {
+        try {
+          const response = await authAPI.refreshToken();
+          authAPI.setToken(response.access_token);
+          authAPI.setRefreshToken(response.refresh_token);
+          return true;
+        } catch (error) {
+          console.error('Token refresh failed:', error);
+          // Clear tokens and redirect to login
+          authAPI.logout();
+          apiClient.clearCsrfToken();
+          set({ 
+            user: null, 
+            userData: null, 
+            website: null, 
+            isAuthenticated: false,
+            lastFetchTime: null,
+          });
+          return false;
+        }
       },
 
       fetchUser: async () => {

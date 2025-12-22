@@ -96,6 +96,42 @@ export class APIClient {
       (response) => response,
       async (error: AxiosError) => {
         if (error.response) {
+          // Handle 401 Unauthorized - attempt token refresh
+          if (error.response.status === 401 && !error.config?.headers?.['X-Token-Refresh-Retry']) {
+            const refreshToken = typeof window !== 'undefined' 
+              ? localStorage.getItem('refresh_token') 
+              : null;
+            
+            if (refreshToken) {
+              try {
+                // Attempt to refresh the token
+                const refreshResponse = await axios.post<{ access_token: string; refresh_token: string }>(
+                  `${this.baseURL}/auth/refresh`,
+                  { refresh_token: refreshToken }
+                );
+                
+                // Store new tokens
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('auth_token', refreshResponse.data.access_token);
+                  localStorage.setItem('refresh_token', refreshResponse.data.refresh_token);
+                }
+                
+                // Retry the original request with new token
+                if (error.config) {
+                  error.config.headers.Authorization = `Bearer ${refreshResponse.data.access_token}`;
+                  error.config.headers['X-Token-Refresh-Retry'] = 'true';
+                  return this.client.request(error.config);
+                }
+              } catch (refreshError) {
+                // Refresh failed - clear tokens and let the error propagate
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem('auth_token');
+                  localStorage.removeItem('refresh_token');
+                }
+              }
+            }
+          }
+          
           // Handle CSRF errors (403 with CSRF code)
           if (error.response.status === 403) {
             const data = error.response.data as any;

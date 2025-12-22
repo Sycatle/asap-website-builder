@@ -3,9 +3,11 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 use asap_core_shared::{
-    SharedConfig, generate_token, Claims,
+    SharedConfig, generate_token, generate_token_with_jti, Claims,
     generate_password_reset_token, validate_password_reset_token, hash_token,
     PASSWORD_RESET_TOKEN_LIFETIME_SECS,
+    generate_refresh_token, validate_refresh_token, hash_refresh_token, generate_jti,
+    REFRESH_TOKEN_LIFETIME_SECS,
 };
 use chrono::{Utc, Duration};
 
@@ -70,6 +72,28 @@ pub struct ForgotPasswordRequest {
 pub struct ResetPasswordRequest {
     pub token: String,
     pub new_password: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RefreshTokenRequest {
+    pub refresh_token: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TokenPairResponse {
+    pub access_token: String,
+    pub refresh_token: String,
+    /// Access token expires in seconds
+    pub expires_in: i64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LoginResponseV2 {
+    pub access_token: String,
+    pub refresh_token: String,
+    pub expires_in: i64,
+    /// Legacy field for backward compatibility
+    pub token: String,
 }
 
 /// Hash a password using bcrypt
@@ -406,11 +430,56 @@ pub async fn signup(
         }
     });
 
-    // Generate JWT token
-    let token = match generate_token(&account_id.to_string(), &config) {
+    // Generate refresh token (new family)
+    let refresh = match generate_refresh_token(&config.jwt_secret, None) {
         Ok(token) => token,
         Err(e) => {
-            tracing::error!("Failed to generate token: {}", e);
+            tracing::error!("Failed to generate refresh token: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    // Store refresh token
+    let expires_at = chrono::DateTime::from_timestamp(refresh.expires_at, 0)
+        .unwrap_or_else(|| Utc::now() + Duration::days(7));
+
+    if let Err(e) = sqlx::query!(
+        r#"
+        INSERT INTO refresh_tokens (account_id, token_hash, family_id, expires_at)
+        VALUES ($1, $2, $3, $4)
+        "#,
+        account_id,
+        refresh.token_hash,
+        refresh.family_id,
+        expires_at
+    )
+    .execute(&pool)
+    .await {
+        tracing::error!("Failed to store refresh token: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+            "error": "Internal server error"
+        }))).into_response();
+    }
+
+    // Generate JWT access token with JTI
+    let jti = generate_jti();
+    let access_token = match generate_token_with_jti(&account_id.to_string(), &jti, &config) {
+        Ok(token) => token,
+        Err(e) => {
+            tracing::error!("Failed to generate access token: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    // Also generate legacy token for backward compatibility
+    let legacy_token = match generate_token(&account_id.to_string(), &config) {
+        Ok(token) => token,
+        Err(e) => {
+            tracing::error!("Failed to generate legacy token: {}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response();
@@ -419,13 +488,17 @@ pub async fn signup(
 
     tracing::info!("Account created successfully: {}", payload.email);
 
-    (StatusCode::CREATED, Json(SignupResponse {
-        token,
-        account: AccountResponse {
-            id: account_id.to_string(),
-            email: payload.email,
-        },
-    })).into_response()
+    // Return SignupResponse with legacy token field + new fields
+    (StatusCode::CREATED, Json(serde_json::json!({
+        "token": legacy_token,
+        "access_token": access_token,
+        "refresh_token": refresh.token,
+        "expires_in": asap_core_shared::ACCESS_TOKEN_LIFETIME_SECS,
+        "account": {
+            "id": account_id.to_string(),
+            "email": payload.email
+        }
+    }))).into_response()
 }
 
 pub async fn login(
@@ -470,11 +543,56 @@ pub async fn login(
         }
     }
 
-    // Generate JWT token
-    let token = match generate_token(&account.id.to_string(), &config) {
+    // Generate refresh token (new family)
+    let refresh = match generate_refresh_token(&config.jwt_secret, None) {
         Ok(token) => token,
         Err(e) => {
-            tracing::error!("Failed to generate token: {}", e);
+            tracing::error!("Failed to generate refresh token: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    // Store refresh token
+    let expires_at = chrono::DateTime::from_timestamp(refresh.expires_at, 0)
+        .unwrap_or_else(|| Utc::now() + Duration::days(7));
+
+    if let Err(e) = sqlx::query!(
+        r#"
+        INSERT INTO refresh_tokens (account_id, token_hash, family_id, expires_at)
+        VALUES ($1, $2, $3, $4)
+        "#,
+        account.id,
+        refresh.token_hash,
+        refresh.family_id,
+        expires_at
+    )
+    .execute(&pool)
+    .await {
+        tracing::error!("Failed to store refresh token: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+            "error": "Internal server error"
+        }))).into_response();
+    }
+
+    // Generate JWT access token with JTI
+    let jti = generate_jti();
+    let access_token = match generate_token_with_jti(&account.id.to_string(), &jti, &config) {
+        Ok(token) => token,
+        Err(e) => {
+            tracing::error!("Failed to generate access token: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    // Also generate legacy token for backward compatibility
+    let legacy_token = match generate_token(&account.id.to_string(), &config) {
+        Ok(token) => token,
+        Err(e) => {
+            tracing::error!("Failed to generate legacy token: {}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response();
@@ -488,7 +606,12 @@ pub async fn login(
 
     tracing::info!("Account logged in successfully: {}", payload.email);
 
-    (StatusCode::OK, Json(LoginResponse { token })).into_response()
+    (StatusCode::OK, Json(LoginResponseV2 { 
+        access_token: access_token.clone(),
+        refresh_token: refresh.token,
+        expires_in: asap_core_shared::ACCESS_TOKEN_LIFETIME_SECS,
+        token: legacy_token, // Legacy field
+    })).into_response()
 }
 
 pub async fn me(
@@ -884,4 +1007,302 @@ pub async fn reset_password(
     (StatusCode::OK, Json(serde_json::json!({
         "message": "Password has been reset successfully. You can now log in with your new password."
     }))).into_response()
+}
+
+/// Refresh access token using a refresh token
+/// 
+/// This implements token rotation: a new refresh token is issued with each refresh.
+/// If a refresh token is reused, all tokens in the family are revoked (stolen token detection).
+pub async fn refresh_token(
+    State(pool): State<PgPool>,
+    Extension(config): Extension<SharedConfig>,
+    Json(payload): Json<RefreshTokenRequest>,
+) -> impl IntoResponse {
+    // Validate refresh token signature and expiration
+    let validated = match validate_refresh_token(&payload.refresh_token, &config.jwt_secret) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::warn!("Invalid refresh token: {}", e);
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid or expired refresh token"
+            }))).into_response();
+        }
+    };
+
+    // Look up refresh token in database
+    let token_record = match sqlx::query!(
+        r#"
+        SELECT id, account_id, family_id, revoked_at
+        FROM refresh_tokens
+        WHERE token_hash = $1
+        "#,
+        validated.token_hash
+    )
+    .fetch_optional(&pool)
+    .await {
+        Ok(Some(record)) => record,
+        Ok(None) => {
+            // Token not found - might be reuse of old rotated token
+            // Check if family exists and revoke all tokens in that family
+            tracing::warn!("Refresh token not found, possible token reuse - revoking family {}", validated.family_id);
+            let _ = sqlx::query!(
+                "UPDATE refresh_tokens SET revoked_at = NOW(), revoked_reason = 'token_reuse_detected' WHERE family_id = $1",
+                validated.family_id
+            )
+            .execute(&pool)
+            .await;
+
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid refresh token. Please log in again."
+            }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Database error looking up refresh token: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    // Check if token was revoked
+    if token_record.revoked_at.is_some() {
+        tracing::warn!("Attempted use of revoked refresh token");
+        return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+            "error": "Refresh token has been revoked. Please log in again."
+        }))).into_response();
+    }
+
+    let account_id = token_record.account_id;
+
+    // Start transaction for token rotation
+    let mut tx = match pool.begin().await {
+        Ok(tx) => tx,
+        Err(e) => {
+            tracing::error!("Failed to start transaction: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    // Revoke old refresh token (rotation)
+    if let Err(e) = sqlx::query!(
+        "UPDATE refresh_tokens SET revoked_at = NOW(), revoked_reason = 'rotated' WHERE id = $1",
+        token_record.id
+    )
+    .execute(&mut *tx)
+    .await {
+        tracing::error!("Failed to revoke old refresh token: {}", e);
+        let _ = tx.rollback().await;
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+            "error": "Internal server error"
+        }))).into_response();
+    }
+
+    // Generate new refresh token (same family for rotation chain)
+    let new_refresh = match generate_refresh_token(&config.jwt_secret, Some(&token_record.family_id)) {
+        Ok(token) => token,
+        Err(e) => {
+            tracing::error!("Failed to generate refresh token: {}", e);
+            let _ = tx.rollback().await;
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    // Store new refresh token
+    let expires_at = chrono::DateTime::from_timestamp(new_refresh.expires_at, 0)
+        .unwrap_or_else(|| Utc::now() + Duration::days(7));
+
+    if let Err(e) = sqlx::query!(
+        r#"
+        INSERT INTO refresh_tokens (account_id, token_hash, family_id, parent_id, expires_at)
+        VALUES ($1, $2, $3, $4, $5)
+        "#,
+        account_id,
+        new_refresh.token_hash,
+        new_refresh.family_id,
+        token_record.id,
+        expires_at
+    )
+    .execute(&mut *tx)
+    .await {
+        tracing::error!("Failed to store new refresh token: {}", e);
+        let _ = tx.rollback().await;
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+            "error": "Internal server error"
+        }))).into_response();
+    }
+
+    // Commit transaction
+    if let Err(e) = tx.commit().await {
+        tracing::error!("Failed to commit transaction: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+            "error": "Internal server error"
+        }))).into_response();
+    }
+
+    // Generate new access token with JTI
+    let jti = generate_jti();
+    let access_token = match generate_token_with_jti(&account_id.to_string(), &jti, &config) {
+        Ok(token) => token,
+        Err(e) => {
+            tracing::error!("Failed to generate access token: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    tracing::info!("Token refreshed for account: {}", account_id);
+
+    (StatusCode::OK, Json(TokenPairResponse {
+        access_token,
+        refresh_token: new_refresh.token,
+        expires_in: asap_core_shared::ACCESS_TOKEN_LIFETIME_SECS,
+    })).into_response()
+}
+
+/// Logout endpoint - revokes all refresh tokens for the account
+pub async fn logout_all(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let account_id = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    // Revoke all refresh tokens for this account
+    match sqlx::query!(
+        "UPDATE refresh_tokens SET revoked_at = NOW(), revoked_reason = 'logout_all' WHERE account_id = $1 AND revoked_at IS NULL",
+        account_id
+    )
+    .execute(&pool)
+    .await {
+        Ok(result) => {
+            tracing::info!("Logged out account {} - revoked {} refresh tokens", account_id, result.rows_affected());
+        }
+        Err(e) => {
+            tracing::error!("Failed to revoke refresh tokens: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    }
+
+    // Optionally blacklist current access token if it has JTI
+    if let Some(jti) = &claims.jti {
+        let expires_at = chrono::DateTime::from_timestamp(claims.exp, 0)
+            .unwrap_or_else(|| Utc::now() + Duration::hours(1));
+
+        let _ = sqlx::query!(
+            r#"
+            INSERT INTO revoked_access_tokens (jti, account_id, expires_at)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (jti) DO NOTHING
+            "#,
+            jti,
+            account_id,
+            expires_at
+        )
+        .execute(&pool)
+        .await;
+    }
+
+    (StatusCode::OK, Json(serde_json::json!({
+        "message": "Successfully logged out from all devices"
+    }))).into_response()
+}
+
+/// Logout from single session - revoke specific refresh token
+pub async fn logout(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<RefreshTokenRequest>,
+) -> impl IntoResponse {
+    let account_id = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid token"
+            }))).into_response();
+        }
+    };
+
+    // Hash the provided refresh token
+    let token_hash = hash_refresh_token(&payload.refresh_token);
+
+    // Revoke the specific refresh token (only if it belongs to this account)
+    match sqlx::query!(
+        r#"
+        UPDATE refresh_tokens 
+        SET revoked_at = NOW(), revoked_reason = 'logout' 
+        WHERE token_hash = $1 AND account_id = $2 AND revoked_at IS NULL
+        "#,
+        token_hash,
+        account_id
+    )
+    .execute(&pool)
+    .await {
+        Ok(result) => {
+            if result.rows_affected() == 0 {
+                tracing::warn!("Logout attempted with invalid or already revoked token");
+            } else {
+                tracing::info!("Account {} logged out from single session", account_id);
+            }
+        }
+        Err(e) => {
+            tracing::error!("Failed to revoke refresh token: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    }
+
+    // Blacklist current access token if it has JTI
+    if let Some(jti) = &claims.jti {
+        let expires_at = chrono::DateTime::from_timestamp(claims.exp, 0)
+            .unwrap_or_else(|| Utc::now() + Duration::hours(1));
+
+        let _ = sqlx::query!(
+            r#"
+            INSERT INTO revoked_access_tokens (jti, account_id, expires_at)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (jti) DO NOTHING
+            "#,
+            jti,
+            account_id,
+            expires_at
+        )
+        .execute(&pool)
+        .await;
+    }
+
+    (StatusCode::OK, Json(serde_json::json!({
+        "message": "Successfully logged out"
+    }))).into_response()
+}
+
+/// Check if an access token is blacklisted
+/// This is used by the auth middleware for immediate token revocation
+pub async fn is_token_blacklisted(pool: &PgPool, jti: &str) -> bool {
+    match sqlx::query!(
+        "SELECT id FROM revoked_access_tokens WHERE jti = $1 AND expires_at > NOW()",
+        jti
+    )
+    .fetch_optional(pool)
+    .await {
+        Ok(Some(_)) => true,
+        Ok(None) => false,
+        Err(e) => {
+            tracing::error!("Error checking token blacklist: {}", e);
+            false // Fail open to not break auth if DB has issues
+        }
+    }
 }

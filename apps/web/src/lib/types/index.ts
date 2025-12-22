@@ -73,6 +73,8 @@ export {
   type ChangePasswordRequest,
   type ForgotPasswordRequest,
   type ResetPasswordRequest,
+  type RefreshTokenRequest,
+  type TokenPairResponse,
   type UpdateGitHubIntegrationRequest,
   type UserData,
 } from './auth';
