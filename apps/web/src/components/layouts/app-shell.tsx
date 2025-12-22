@@ -17,7 +17,7 @@ import { HeaderUser } from "@/components/layouts/header-user"
 import { useKeyboardShortcuts, getModifierKey } from "@/hooks/useKeyboardShortcuts"
 import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket"
 import { useSyncWebSocket } from "@/hooks/useSyncWebSocket"
-import { navigate } from "@/components/app-router"
+import { navigate, Link } from "@/components/app-router"
 import { toast } from "sonner"
 import {
   Dialog,
@@ -254,8 +254,10 @@ function AppShellContent({
           <Breadcrumb className="flex-1 min-w-0">
             <BreadcrumbList>
               <BreadcrumbItem className="hidden sm:block">
-                <BreadcrumbLink href={baseUrl}>
-                  {isLoadingWebsites ? "Chargement..." : (currentWebsite?.title || "ASAP")}
+                <BreadcrumbLink asChild>
+                  <Link href={websiteId ? `/app/${websiteId}` : "/app"}>
+                    {isLoadingWebsites ? "Chargement..." : (currentWebsite?.title || "ASAP")}
+                  </Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               {breadcrumbs.map((crumb, index) => (
@@ -263,8 +265,10 @@ function AppShellContent({
                   <BreadcrumbSeparator className="hidden sm:block" />
                   <BreadcrumbItem className="max-w-[120px] sm:max-w-none">
                     {crumb.href ? (
-                      <BreadcrumbLink href={crumb.href} className="truncate">
-                        {crumb.label}
+                      <BreadcrumbLink asChild>
+                        <Link href={crumb.href} className="truncate">
+                          {crumb.label}
+                        </Link>
                       </BreadcrumbLink>
                     ) : (
                       <BreadcrumbPage className="truncate">{crumb.label}</BreadcrumbPage>
