@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useEffect, useState, useCallback, useRef } from "react"
+import { useEffect, useState, useRef } from "react"
 import { cn } from "@/lib/utils"
 import {
   Avatar,
@@ -13,7 +13,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useWebSocket } from "@/hooks/useWebSocket"
+import { useGlobalWebSocket } from "@/components/providers/WebSocketProvider"
 import { useAuthStore } from "@/lib/store/authStore"
 
 // ============================================
@@ -63,7 +63,6 @@ const getInitials = (name?: string, email?: string): string => {
 
 const getAvatarUrl = (url?: string): string | undefined => {
   if (!url) return undefined
-  // If it's a file URL, add auth token
   const fileIdMatch = url.match(/\/files\/([a-f0-9-]+)/)
   if (fileIdMatch) {
     const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
@@ -88,20 +87,114 @@ const statusColors = {
 }
 
 // ============================================
+// Custom Hook for Presence Logic (Single Responsibility)
+// ============================================
+
+interface UseWebsitePresenceOptions {
+  websiteId: string
+  user: { id: string; email: string; name?: string; avatar?: string } | null
+  enabled: boolean
+}
+
+function useWebsitePresence({ websiteId, user, enabled }: UseWebsitePresenceOptions) {
+  const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([])
+  const ws = useGlobalWebSocket()
+  
+  // Track the session we've joined
+  const sessionRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    // Build a session key from all dependencies that should trigger a rejoin
+    const isReady = enabled && ws.isConnected && ws.isWsAuthenticated && websiteId && user?.id
+    const sessionKey = isReady ? `${websiteId}:${user.id}:${ws.isWsAuthenticated}` : null
+
+    // Not ready - reset session and clear users
+    if (!isReady || !sessionKey) {
+      if (sessionRef.current) {
+        sessionRef.current = null
+        setOnlineUsers([])
+      }
+      return
+    }
+
+    // Already joined this session
+    if (sessionRef.current === sessionKey) {
+      return
+    }
+
+    // Event handlers (stable references via closure)
+    const handleUsersUpdate = (data: any) => {
+      if (data?.website_id !== websiteId) return
+      if (data?.users && Array.isArray(data.users)) {
+        setOnlineUsers(data.users)
+      }
+    }
+
+    const handleUserJoined = (data: any) => {
+      if (data?.website_id !== websiteId || !data?.user) return
+      setOnlineUsers(prev => {
+        if (prev.some(u => u.id === data.user.id)) return prev
+        return [...prev, data.user]
+      })
+    }
+
+    const handleUserLeft = (data: any) => {
+      if (data?.website_id !== websiteId || !data?.user_id) return
+      setOnlineUsers(prev => prev.filter(u => u.id !== data.user_id))
+    }
+
+    // Subscribe to events BEFORE joining
+    ws.on('presence:website:users', handleUsersUpdate)
+    ws.on('presence:website:user-joined', handleUserJoined)
+    ws.on('presence:website:user-left', handleUserLeft)
+
+    // Join the website
+    ws.send('presence:join-website', {
+      website_id: websiteId,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar,
+      }
+    })
+
+    // Request current users list after a short delay
+    const requestTimer = setTimeout(() => {
+      ws.send('presence:get-website-users', { website_id: websiteId })
+    }, 100)
+
+    // Mark session as active
+    sessionRef.current = sessionKey
+
+    // Cleanup function
+    return () => {
+      clearTimeout(requestTimer)
+
+      // Unsubscribe from events
+      ws.off('presence:website:users', handleUsersUpdate)
+      ws.off('presence:website:user-joined', handleUserJoined)
+      ws.off('presence:website:user-left', handleUserLeft)
+
+      // Leave the website if connected
+      if (sessionRef.current && ws.isConnected) {
+        ws.send('presence:leave-website', { website_id: websiteId })
+      }
+
+      // Clear session
+      sessionRef.current = null
+    }
+  }, [enabled, ws.isConnected, ws.isWsAuthenticated, websiteId, user?.id, user?.email, user?.name, user?.avatar, ws])
+
+  return onlineUsers
+}
+
+// ============================================
 // Component
 // ============================================
 
 /**
  * Real-time presence avatars showing who is currently viewing/editing a website
- * 
- * @example
- * ```tsx
- * <PresenceAvatars 
- *   websiteId="123" 
- *   maxAvatars={3} 
- *   size="sm"
- * />
- * ```
  */
 export function PresenceAvatars({
   websiteId,
@@ -110,92 +203,19 @@ export function PresenceAvatars({
   className,
   showCurrentUser = false,
 }: PresenceAvatarsProps) {
-  const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([])
   const { user, isAuthenticated } = useAuthStore()
-  const hasJoinedRef = useRef(false)
   
-  // Get WebSocket URL from env
-  const wsUrl = import.meta.env.PUBLIC_WS_URL || 'ws://localhost:3000/ws'
-  
-  const ws = useWebSocket({
-    url: wsUrl,
-    autoConnect: isAuthenticated,
+  // Use custom hook for presence logic
+  const onlineUsers = useWebsitePresence({
+    websiteId,
+    user: user ? { 
+      id: user.id, 
+      email: user.email, 
+      name: (user as any).name, 
+      avatar: (user as any).avatar 
+    } : null,
+    enabled: isAuthenticated,
   })
-
-  // Join website room when connected
-  useEffect(() => {
-    if (!ws.isConnected || !isAuthenticated || !websiteId || hasJoinedRef.current) return
-
-    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
-    if (!token) return
-
-    // Authenticate first
-    ws.send('auth', { token })
-
-    // Join website presence room
-    setTimeout(() => {
-      ws.send('presence:join-website', {
-        website_id: websiteId,
-        user: {
-          id: user?.id,
-          email: user?.email,
-          name: (user as any)?.name,
-          avatar: (user as any)?.avatar,
-        }
-      })
-      hasJoinedRef.current = true
-    }, 100)
-
-    return () => {
-      if (hasJoinedRef.current) {
-        ws.send('presence:leave-website', { website_id: websiteId })
-        hasJoinedRef.current = false
-      }
-    }
-  }, [ws.isConnected, isAuthenticated, websiteId, user])
-
-  // Handle presence events
-  const handlePresenceUpdate = useCallback((data: any) => {
-    if (data?.website_id !== websiteId) return
-    
-    if (data?.users && Array.isArray(data.users)) {
-      setOnlineUsers(data.users)
-    }
-  }, [websiteId])
-
-  const handleUserJoined = useCallback((data: any) => {
-    if (data?.website_id !== websiteId || !data?.user) return
-    
-    setOnlineUsers(prev => {
-      // Don't add if already exists
-      if (prev.some(u => u.id === data.user.id)) return prev
-      return [...prev, data.user]
-    })
-  }, [websiteId])
-
-  const handleUserLeft = useCallback((data: any) => {
-    if (data?.website_id !== websiteId || !data?.user_id) return
-    
-    setOnlineUsers(prev => prev.filter(u => u.id !== data.user_id))
-  }, [websiteId])
-
-  // Subscribe to presence events
-  useEffect(() => {
-    if (!ws.isConnected) return
-
-    ws.on('presence:website:users', handlePresenceUpdate)
-    ws.on('presence:website:user-joined', handleUserJoined)
-    ws.on('presence:website:user-left', handleUserLeft)
-
-    // Request current users
-    ws.send('presence:get-website-users', { website_id: websiteId })
-
-    return () => {
-      ws.off('presence:website:users', handlePresenceUpdate)
-      ws.off('presence:website:user-joined', handleUserJoined)
-      ws.off('presence:website:user-left', handleUserLeft)
-    }
-  }, [ws.isConnected, ws.on, ws.off, ws.send, websiteId, handlePresenceUpdate, handleUserJoined, handleUserLeft])
 
   // Filter out current user if needed
   const displayUsers = showCurrentUser 
