@@ -85,6 +85,7 @@ export function AppShell({
           setShowShortcutsHelp={setShowShortcutsHelp}
           isStudioPage={isStudioPage}
           showSidebar={showSidebar}
+          websiteId={websiteId}
         >
           {children}
         </AppShellContent>
@@ -102,6 +103,7 @@ interface AppShellContentProps {
   setShowShortcutsHelp: (show: boolean) => void
   isStudioPage?: boolean
   showSidebar?: boolean
+  websiteId: string | null
 }
 
 function AppShellContent({ 
@@ -112,6 +114,7 @@ function AppShellContent({
   setShowShortcutsHelp,
   isStudioPage = false,
   showSidebar = true,
+  websiteId,
 }: AppShellContentProps) {
   const { toggleSidebar, setOpen, open } = useSidebar()
   const [pendingGoTo, setPendingGoTo] = useState(false)
