@@ -42,6 +42,8 @@ const PagesPage = lazyWithRetry(() => import("@/components/PagesList"))
 const AdministratorsPage = lazyWithRetry(() => import("@/components/features/settings/AdministratorsPage"))
 const ThemePage = lazyWithRetry(() => import("@/components/features/settings/ThemePage"))
 const WebsiteSelector = lazyWithRetry(() => import("@/components/pages/WebsiteSelector"))
+const AnalyticsPage = lazyWithRetry(() => import("@/components/features/analytics/AnalyticsPage"))
+const SeoPage = lazyWithRetry(() => import("@/components/features/seo/SeoPage"))
 
 // UUID regex pattern
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -58,6 +60,8 @@ type Route =
   | { page: "pages"; websiteId: string }
   | { page: "administrators"; websiteId: string }
   | { page: "theme"; websiteId: string }
+  | { page: "analytics"; websiteId: string }
+  | { page: "seo"; websiteId: string }
   | { page: "not-found" }
 
 // Parse route from pathname
@@ -114,6 +118,12 @@ function parseRoute(pathname: string): Route {
     
     case "theme":
       return { page: "theme", websiteId }
+    
+    case "analytics":
+      return { page: "analytics", websiteId }
+    
+    case "seo":
+      return { page: "seo", websiteId }
     
     // Legacy routes without UUID - redirect to select
     case "dashboard":
@@ -215,6 +225,10 @@ function getPageTitle(route: Route): string {
       return "Administrateurs"
     case "theme":
       return "Thème"
+    case "analytics":
+      return "Analytics"
+    case "seo":
+      return "SEO"
     default:
       return "Page non trouvée"
   }
@@ -312,6 +326,12 @@ export default function AppRouter() {
       
       case "theme":
         return <ThemePage />
+      
+      case "analytics":
+        return <AnalyticsPage />
+      
+      case "seo":
+        return <SeoPage />
       
       case "not-found":
       default:
