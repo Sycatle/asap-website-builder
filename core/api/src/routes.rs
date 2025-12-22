@@ -4,6 +4,7 @@ use axum::{
     middleware,
     Json,
     Extension,
+    extract::DefaultBodyLimit,
 };
 use sqlx::PgPool;
 use serde_json::json;
@@ -106,8 +107,8 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         .route("/events", get(crate::events::get_events))
         .route("/events", post(crate::events::create_event))
         .route("/events/:id", patch(crate::events::mark_processed))
-        // Files routes (authenticated)
-        .route("/files", post(crate::files::upload_file))
+        // Files routes (authenticated) - upload has larger body limit for file uploads (50MB)
+        .route("/files", post(crate::files::upload_file).layer(DefaultBodyLimit::max(50 * 1024 * 1024)))
         .route("/files", get(crate::files::list_files))
         .route("/files/:file_id", delete(crate::files::delete_file))
         .route("/files/quota/usage", get(crate::files::get_quota))
