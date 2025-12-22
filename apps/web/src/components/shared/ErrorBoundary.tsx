@@ -58,12 +58,24 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     this.setState({ errorInfo });
     
-    // Log error with context
-    loggers.errors.error('ErrorBoundary caught error:', {
-      error: error.message,
-      stack: error.stack,
-      componentStack: errorInfo.componentStack,
-    });
+    // Check if it's a dynamic import error (HMR issue)
+    const isDynamicImportError = error.message.includes('dynamically imported module') ||
+      error.message.includes('Failed to fetch dynamically imported module') ||
+      error.message.includes('error loading dynamically imported module');
+    
+    if (isDynamicImportError) {
+      loggers.errors.warn('Dynamic import failed, likely HMR issue:', {
+        error: error.message,
+      });
+      // Don't log full stack for HMR issues as they're usually transient
+    } else {
+      // Log error with context
+      loggers.errors.error('ErrorBoundary caught error:', {
+        error: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack,
+      });
+    }
 
     // Call custom error handler if provided
     this.props.onError?.(error, errorInfo);
@@ -164,6 +176,18 @@ interface SectionErrorProps {
 }
 
 function SectionError({ error, title, onRetry }: SectionErrorProps) {
+  // Check if it's a dynamic import error
+  const isDynamicImportError = error?.message?.includes('dynamically imported module');
+  
+  const handleRetry = () => {
+    if (isDynamicImportError) {
+      // For HMR issues, reload the page to get fresh modules
+      window.location.reload();
+    } else {
+      onRetry();
+    }
+  };
+
   return (
     <Card className="border-destructive/20">
       <CardContent className="py-8">
@@ -175,16 +199,18 @@ function SectionError({ error, title, onRetry }: SectionErrorProps) {
             {title ? `Erreur dans ${title}` : 'Erreur de chargement'}
           </h3>
           <p className="mb-4 text-sm text-muted-foreground">
-            Ce contenu n'a pas pu être affiché.
+            {isDynamicImportError 
+              ? "Le module n'a pas pu être chargé. Cliquez sur Recharger."
+              : "Ce contenu n'a pas pu être affiché."}
           </p>
-          {error && import.meta.env.DEV && (
+          {error && import.meta.env.DEV && !isDynamicImportError && (
             <p className="mb-4 font-mono text-xs text-muted-foreground max-w-md break-all">
               {error.message}
             </p>
           )}
-          <Button onClick={onRetry} variant="outline" size="sm">
+          <Button onClick={handleRetry} variant="outline" size="sm">
             <RefreshCw className="mr-2 h-4 w-4" />
-            Réessayer
+            {isDynamicImportError ? 'Recharger' : 'Réessayer'}
           </Button>
         </div>
       </CardContent>

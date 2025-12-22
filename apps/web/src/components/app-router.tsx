@@ -1,21 +1,47 @@
-import React, { lazy, Suspense, useEffect, useState } from "react"
+import React, { lazy, Suspense, useEffect, useState, type ComponentType } from "react"
 import { AppShell } from "./layouts/app-shell"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { QueryProvider, WebSocketProvider } from "@/components/providers"
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary"
-import { Loader2 } from "lucide-react"
+import { Loader2, RefreshCw } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
-// Lazy load page components
-const Dashboard = lazy(() => import("@/components/features/websites/Dashboard"))
-const ExtensionsManager = lazy(() => import("@/components/features/extensions/ExtensionsManager"))
-const ExtensionPage = lazy(() => import("@/components/features/extensions/ExtensionConfig"))
-const CloudPage = lazy(() => import("@/components/features/cloud/CloudManager"))
-const SettingsPage = lazy(() => import("@/components/features/settings/SettingsPage"))
-const StudioPage = lazy(() => import("@/components/studio/StudioPage"))
-const PagesPage = lazy(() => import("@/components/PagesList"))
-const AdministratorsPage = lazy(() => import("@/components/features/settings/AdministratorsPage"))
-const ThemePage = lazy(() => import("@/components/features/settings/ThemePage"))
-const WebsiteSelector = lazy(() => import("@/components/pages/WebsiteSelector"))
+// Helper to create lazy components with error handling for HMR issues
+function lazyWithRetry<T extends ComponentType<unknown>>(
+  importFn: () => Promise<{ default: T }>,
+  retries = 3,
+  interval = 1000
+): React.LazyExoticComponent<T> {
+  return lazy(async () => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await importFn();
+      } catch (error) {
+        // If it's a dynamic import error (HMR issue), wait and retry
+        if (error instanceof Error && error.message.includes('dynamically imported module')) {
+          if (i < retries - 1) {
+            await new Promise(resolve => setTimeout(resolve, interval));
+            continue;
+          }
+        }
+        throw error;
+      }
+    }
+    return await importFn();
+  });
+}
+
+// Lazy load page components with retry logic for HMR stability
+const Dashboard = lazyWithRetry(() => import("@/components/features/websites/Dashboard"))
+const ExtensionsManager = lazyWithRetry(() => import("@/components/features/extensions/ExtensionsManager"))
+const ExtensionPage = lazyWithRetry(() => import("@/components/features/extensions/ExtensionConfig"))
+const CloudPage = lazyWithRetry(() => import("@/components/features/cloud/CloudManager"))
+const SettingsPage = lazyWithRetry(() => import("@/components/features/settings/SettingsPage"))
+const StudioPage = lazyWithRetry(() => import("@/components/studio/StudioPage"))
+const PagesPage = lazyWithRetry(() => import("@/components/PagesList"))
+const AdministratorsPage = lazyWithRetry(() => import("@/components/features/settings/AdministratorsPage"))
+const ThemePage = lazyWithRetry(() => import("@/components/features/settings/ThemePage"))
+const WebsiteSelector = lazyWithRetry(() => import("@/components/pages/WebsiteSelector"))
 
 // UUID regex pattern
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -149,6 +175,19 @@ function PageLoader() {
   return (
     <div className="flex items-center justify-center h-[50vh]">
       <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  )
+}
+
+// Error fallback for lazy load failures
+function LazyLoadError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-[50vh] gap-4">
+      <p className="text-muted-foreground">Le module n'a pas pu être chargé.</p>
+      <Button onClick={onRetry} variant="outline">
+        <RefreshCw className="mr-2 h-4 w-4" />
+        Réessayer
+      </Button>
     </div>
   )
 }
