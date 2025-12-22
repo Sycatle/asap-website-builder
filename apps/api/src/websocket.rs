@@ -37,6 +37,16 @@ struct ClientInfo {
     client_id: uuid::Uuid,
 }
 
+/// User presence information for a website
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct WebsitePresenceUser {
+    pub id: String,
+    pub email: String,
+    pub name: Option<String>,
+    pub avatar: Option<String>,
+    pub joined_at: String,
+}
+
 /// Shared state for WebSocket connections
 #[derive(Clone)]
 pub struct WsState {
@@ -44,6 +54,10 @@ pub struct WsState {
     pub config: Arc<SharedConfig>,
     /// Map of authenticated clients: account_id -> Vec<ClientInfo>
     pub authenticated_clients: Arc<RwLock<HashMap<String, Vec<ClientInfo>>>>,
+    /// Map of website presence: website_id -> Vec<WebsitePresenceUser>
+    pub website_presence: Arc<RwLock<HashMap<String, Vec<WebsitePresenceUser>>>>,
+    /// Map of client to website: client_id -> website_id
+    pub client_websites: Arc<RwLock<HashMap<uuid::Uuid, String>>>,
 }
 
 impl WsState {
@@ -53,6 +67,8 @@ impl WsState {
             tx,
             config: Arc::new(config),
             authenticated_clients: Arc::new(RwLock::new(HashMap::new())),
+            website_presence: Arc::new(RwLock::new(HashMap::new())),
+            client_websites: Arc::new(RwLock::new(HashMap::new())),
         }
     }
     
@@ -77,6 +93,102 @@ impl WsState {
                 clients.remove(account_id);
             }
         }
+        
+        // Also remove from website presence
+        self.leave_website(client_id).await;
+    }
+    
+    /// Join a website presence room
+    pub async fn join_website(&self, client_id: uuid::Uuid, website_id: String, user: WebsitePresenceUser) {
+        // Track which website this client is in
+        let mut client_websites = self.client_websites.write().await;
+        
+        // Leave previous website if any
+        if let Some(old_website_id) = client_websites.get(&client_id).cloned() {
+            drop(client_websites);
+            self.leave_website_internal(client_id, &old_website_id, &user.id).await;
+            client_websites = self.client_websites.write().await;
+        }
+        
+        client_websites.insert(client_id, website_id.clone());
+        drop(client_websites);
+        
+        // Add to website presence
+        let mut presence = self.website_presence.write().await;
+        let users = presence.entry(website_id.clone()).or_insert_with(Vec::new);
+        
+        // Don't add if already present
+        if !users.iter().any(|u| u.id == user.id) {
+            users.push(user.clone());
+        }
+        
+        // Broadcast user joined
+        let users_clone = users.clone();
+        drop(presence);
+        
+        self.broadcast_website_presence(&website_id, "presence:website:user-joined", serde_json::json!({
+            "website_id": website_id,
+            "user": user
+        }));
+        
+        info!("User {} joined website {} presence ({} users)", user.id, website_id, users_clone.len());
+    }
+    
+    /// Leave a website presence room
+    pub async fn leave_website(&self, client_id: uuid::Uuid) {
+        let mut client_websites = self.client_websites.write().await;
+        if let Some(website_id) = client_websites.remove(&client_id) {
+            drop(client_websites);
+            
+            // Find user_id from authenticated clients
+            let clients = self.authenticated_clients.read().await;
+            let user_id = clients.values()
+                .flat_map(|v| v.iter())
+                .find(|c| c.client_id == client_id)
+                .map(|c| c.account_id.clone());
+            drop(clients);
+            
+            if let Some(user_id) = user_id {
+                self.leave_website_internal(client_id, &website_id, &user_id).await;
+            }
+        }
+    }
+    
+    async fn leave_website_internal(&self, _client_id: uuid::Uuid, website_id: &str, user_id: &str) {
+        let mut presence = self.website_presence.write().await;
+        if let Some(users) = presence.get_mut(website_id) {
+            users.retain(|u| u.id != user_id);
+            
+            let remaining = users.len();
+            if users.is_empty() {
+                presence.remove(website_id);
+            }
+            drop(presence);
+            
+            // Broadcast user left
+            self.broadcast_website_presence(website_id, "presence:website:user-left", serde_json::json!({
+                "website_id": website_id,
+                "user_id": user_id
+            }));
+            
+            info!("User {} left website {} presence ({} users remaining)", user_id, website_id, remaining);
+        }
+    }
+    
+    /// Get users present on a website
+    pub async fn get_website_users(&self, website_id: &str) -> Vec<WebsitePresenceUser> {
+        let presence = self.website_presence.read().await;
+        presence.get(website_id).cloned().unwrap_or_default()
+    }
+    
+    /// Broadcast presence message to all clients on a website
+    fn broadcast_website_presence(&self, website_id: &str, msg_type: &str, data: serde_json::Value) {
+        let msg = WsMessage {
+            msg_type: msg_type.to_string(),
+            data,
+        };
+        // Broadcast to all - clients will filter by website_id
+        self.broadcast(msg);
     }
     
     /// Check if an account has any connected clients
@@ -319,6 +431,57 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                         let _ = broadcast_tx.send(ws_msg);
                                     } else {
                                         warn!("Client {} attempted to send action without authentication", client_id);
+                                    }
+                                }
+                                // ========================================
+                                // Presence handlers
+                                // ========================================
+                                "presence:join-website" => {
+                                    if let Some(account_id) = authenticated_account.read().await.as_ref() {
+                                        if let (Some(website_id), Some(user_data)) = (
+                                            ws_msg.data.get("website_id").and_then(|v| v.as_str()),
+                                            ws_msg.data.get("user")
+                                        ) {
+                                            let user = WebsitePresenceUser {
+                                                id: account_id.clone(),
+                                                email: user_data.get("email").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                                name: user_data.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                                                avatar: user_data.get("avatar").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                                                joined_at: Utc::now().to_rfc3339(),
+                                            };
+                                            state.join_website(client_id, website_id.to_string(), user).await;
+                                            
+                                            // Send current users to the joining client
+                                            let users = state.get_website_users(website_id).await;
+                                            let users_msg = WsMessage {
+                                                msg_type: "presence:website:users".to_string(),
+                                                data: serde_json::json!({
+                                                    "website_id": website_id,
+                                                    "users": users
+                                                }),
+                                            };
+                                            let _ = direct_tx.send(users_msg).await;
+                                        }
+                                    }
+                                }
+                                "presence:leave-website" => {
+                                    if authenticated_account.read().await.is_some() {
+                                        state.leave_website(client_id).await;
+                                    }
+                                }
+                                "presence:get-website-users" => {
+                                    if authenticated_account.read().await.is_some() {
+                                        if let Some(website_id) = ws_msg.data.get("website_id").and_then(|v| v.as_str()) {
+                                            let users = state.get_website_users(website_id).await;
+                                            let users_msg = WsMessage {
+                                                msg_type: "presence:website:users".to_string(),
+                                                data: serde_json::json!({
+                                                    "website_id": website_id,
+                                                    "users": users
+                                                }),
+                                            };
+                                            let _ = direct_tx.send(users_msg).await;
+                                        }
                                     }
                                 }
                                 _ => {
