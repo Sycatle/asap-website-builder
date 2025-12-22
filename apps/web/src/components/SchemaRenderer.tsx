@@ -6,6 +6,7 @@ import type {
   DataDisplay,
   DataDisplayField 
 } from '../lib/api/extensions';
+import { formatDate } from '@/lib/utils/formatters';
 
 interface SchemaRendererProps {
   schema: ConfigSchema;
@@ -618,7 +619,7 @@ export default function SchemaRenderer({
     if (field.type === 'date' && value) {
       return (
         <span key={field.key} className="text-sm text-gray-500">
-          {new Date(value).toLocaleDateString('fr-FR')}
+          {formatDate(value)}
         </span>
       );
     }
@@ -660,7 +661,7 @@ export default function SchemaRenderer({
     }
 
     if (field.type === 'date' && value) {
-      return new Date(value).toLocaleDateString('fr-FR');
+      return formatDate(value);
     }
 
     return value;

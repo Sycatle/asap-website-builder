@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useWebsitesQuery } from '@/lib/query';
+import { formatDate } from '@/lib/utils/formatters';
 import { 
   Users, 
   UserPlus, 
@@ -410,10 +411,7 @@ export default function AdministratorsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {admin.last_access_at 
-                          ? new Date(admin.last_access_at).toLocaleDateString('fr-FR')
-                          : '—'
-                        }
+                        {formatDate(admin.last_access_at)}
                       </TableCell>
                       <TableCell>
                         {!isOwner && (
