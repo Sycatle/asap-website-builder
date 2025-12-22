@@ -52,5 +52,21 @@ describe('Formatters', () => {
       expect(formatBytes(1536, 1)).toBe('1.5 KB');
       expect(formatBytes(1536, 0)).toBe('2 KB');
     });
+
+    it('should handle undefined', () => {
+      expect(formatBytes(undefined)).toBe('0 Bytes');
+    });
+
+    it('should handle null', () => {
+      expect(formatBytes(null)).toBe('0 Bytes');
+    });
+
+    it('should handle NaN', () => {
+      expect(formatBytes(NaN)).toBe('0 Bytes');
+    });
+
+    it('should handle negative values', () => {
+      expect(formatBytes(-100)).toBe('0 Bytes');
+    });
   });
 });
