@@ -270,6 +270,83 @@ pub async fn invite_administrator(
                 Json(serde_json::json!({"error": "This email is already an administrator or has a pending invitation"})),
             ));
         }
+        
+        // If revoked, reactivate instead of creating a new entry
+        if existing.status == "revoked" {
+            // Check if user already exists in the system
+            let existing_user = sqlx::query!(
+                "SELECT id FROM accounts WHERE email = $1",
+                request.email
+            )
+            .fetch_optional(&pool)
+            .await
+            .map_err(|e| {
+                error!("Database error checking user: {}", e);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({"error": "Database error"})),
+                )
+            })?;
+            
+            // Get permissions (custom or default for role)
+            let permissions = request
+                .custom_permissions
+                .unwrap_or_else(|| get_role_permissions(&request.role));
+            
+            // If user already has an account, activate immediately. Otherwise, pending.
+            let new_status = if existing_user.is_some() { "active" } else { "pending" };
+            
+            // Update the existing administrator
+            let admin = sqlx::query!(
+                r#"
+                UPDATE website_administrators 
+                SET role = $1, 
+                    permissions = $2, 
+                    status = $3,
+                    account_id = $4,
+                    invitation_token = $5,
+                    accepted_at = CASE WHEN $3 = 'active' THEN now() ELSE NULL END,
+                    updated_at = now()
+                WHERE id = $6
+                RETURNING id, email, role, status, invited_at
+                "#,
+                request.role,
+                permissions,
+                new_status,
+                existing_user.map(|u| u.id),
+                Uuid::new_v4(),
+                existing.id
+            )
+            .fetch_one(&pool)
+            .await
+            .map_err(|e| {
+                error!("Database error reactivating admin: {}", e);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({"error": "Failed to reactivate administrator"})),
+                )
+            })?;
+            
+            info!("Administrator reactivated: {} to website {}", request.email, website_id);
+            
+            let message = if new_status == "active" {
+                "Administrator reactivated successfully (user already has an account)"
+            } else {
+                "Administrator reactivated, invitation sent"
+            };
+            
+            return Ok(Json(serde_json::json!({
+                "success": true,
+                "administrator": {
+                    "id": admin.id,
+                    "email": admin.email,
+                    "role": admin.role,
+                    "status": admin.status,
+                    "invited_at": admin.invited_at.to_rfc3339()
+                },
+                "message": message
+            })));
+        }
     }
 
     // Get permissions (custom or default for role)
