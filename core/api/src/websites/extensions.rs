@@ -134,7 +134,7 @@ pub async fn list_website_extensions(
 
     use crate::queries;
     
-    match queries::verify_website_ownership(&pool, website_uuid, account_id).await {
+    match queries::verify_website_access(&pool, website_uuid, account_id).await {
         Ok(true) => {}
         Ok(false) => {
             return (StatusCode::NOT_FOUND, Json(serde_json::json!({

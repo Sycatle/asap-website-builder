@@ -12,16 +12,8 @@ pub async fn list_website_elements(
     website_id: Uuid,
     account_id: Uuid,
 ) -> Result<Vec<WebsiteElementRow>, Box<dyn std::error::Error + Send + Sync>> {
-    // Verify website belongs to account
-    let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
-    )
-    .bind(website_id)
-    .bind(account_id)
-    .fetch_one(pool)
-    .await?;
-
-    if count.0 == 0 {
+    // Verify website access (owner or active administrator)
+    if !super::verify_website_access(pool, website_id, account_id).await? {
         return Err("Website not found".into());
     }
 
@@ -70,16 +62,8 @@ pub async fn create_website_element(
     settings: &JsonValue,
     data: &JsonValue,
 ) -> Result<Uuid, Box<dyn std::error::Error + Send + Sync>> {
-    // Verify website belongs to account
-    let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
-    )
-    .bind(website_id)
-    .bind(account_id)
-    .fetch_one(pool)
-    .await?;
-
-    if count.0 == 0 {
+    // Verify website access (owner or active administrator)
+    if !super::verify_website_access(pool, website_id, account_id).await? {
         return Err("Website not found".into());
     }
 
@@ -118,16 +102,8 @@ pub async fn update_website_element(
     data: Option<&JsonValue>,
     visible: Option<bool>,
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
-    // Verify website belongs to account
-    let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
-    )
-    .bind(website_id)
-    .bind(account_id)
-    .fetch_one(pool)
-    .await?;
-
-    if count.0 == 0 {
+    // Verify website access (owner or active administrator)
+    if !super::verify_website_access(pool, website_id, account_id).await? {
         return Ok(false);
     }
 
@@ -199,16 +175,8 @@ pub async fn delete_website_element(
     website_id: Uuid,
     account_id: Uuid,
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
-    // Verify website belongs to account
-    let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
-    )
-    .bind(website_id)
-    .bind(account_id)
-    .fetch_one(pool)
-    .await?;
-
-    if count.0 == 0 {
+    // Verify website access (owner or active administrator)
+    if !super::verify_website_access(pool, website_id, account_id).await? {
         return Ok(false);
     }
 
@@ -230,16 +198,8 @@ pub async fn reorder_website_elements(
     account_id: Uuid,
     element_ids: &[Uuid],
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // Verify website belongs to account
-    let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
-    )
-    .bind(website_id)
-    .bind(account_id)
-    .fetch_one(pool)
-    .await?;
-
-    if count.0 == 0 {
+    // Verify website access (owner or active administrator)
+    if !super::verify_website_access(pool, website_id, account_id).await? {
         return Err("Website not found".into());
     }
 

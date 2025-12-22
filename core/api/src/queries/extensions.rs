@@ -100,16 +100,8 @@ pub async fn activate_website_extension(
     account_id: Uuid,
     settings: JsonValue,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // Verify website belongs to account
-    let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
-    )
-    .bind(website_id)
-    .bind(account_id)
-    .fetch_one(pool)
-    .await?;
-
-    if count.0 == 0 {
+    // Verify website access (owner or active administrator)
+    if !super::verify_website_access(pool, website_id, account_id).await? {
         return Err("Website not found".into());
     }
 
@@ -140,16 +132,8 @@ pub async fn update_website_extension(
     settings: &JsonValue,
     enabled: Option<bool>,
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
-    // Verify website belongs to account
-    let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
-    )
-    .bind(website_id)
-    .bind(account_id)
-    .fetch_one(pool)
-    .await?;
-
-    if count.0 == 0 {
+    // Verify website access (owner or active administrator)
+    if !super::verify_website_access(pool, website_id, account_id).await? {
         return Ok(false);
     }
 
@@ -185,16 +169,8 @@ pub async fn deactivate_website_extension(
     extension_id_or_row_id: Uuid,
     account_id: Uuid,
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
-    // Verify website belongs to account
-    let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
-    )
-    .bind(website_id)
-    .bind(account_id)
-    .fetch_one(pool)
-    .await?;
-
-    if count.0 == 0 {
+    // Verify website access (owner or active administrator)
+    if !super::verify_website_access(pool, website_id, account_id).await? {
         return Ok(false);
     }
 

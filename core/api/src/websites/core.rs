@@ -388,7 +388,7 @@ pub async fn get_website_data(
 
     use crate::queries;
     
-    match queries::verify_website_ownership(&pool, website_id, account_id).await {
+    match queries::verify_website_access(&pool, website_id, account_id).await {
         Ok(true) => {}
         Ok(false) => {
             return (StatusCode::NOT_FOUND, Json(serde_json::json!({
@@ -445,7 +445,7 @@ pub async fn patch_website_data(
 
     use crate::queries;
     
-    match queries::verify_website_ownership(&pool, website_id, account_id).await {
+    match queries::verify_website_access(&pool, website_id, account_id).await {
         Ok(true) => {}
         Ok(false) => {
             return (StatusCode::NOT_FOUND, Json(serde_json::json!({
