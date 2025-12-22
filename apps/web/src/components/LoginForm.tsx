@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../lib/store/authStore';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Clock } from "lucide-react";
 import { loginSchema, type LoginFormData } from "@/lib/validations/auth";
 import { isValidRedirectUrl } from "@/lib/utils/security";
+import { RateLimitError } from "@/lib/api/client";
 
 export default function LoginForm({
   className,
@@ -17,12 +18,27 @@ export default function LoginForm({
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Partial<LoginFormData>>({});
   const [searchParams, setSearchParams] = useState('');
+  const [rateLimitCountdown, setRateLimitCountdown] = useState<number | null>(null);
   const { login, isLoading } = useAuthStore();
 
   // Get search params on client side only
-  React.useEffect(() => {
+  useEffect(() => {
     setSearchParams(window.location.search);
   }, []);
+
+  // Countdown timer for rate limit
+  useEffect(() => {
+    if (rateLimitCountdown === null || rateLimitCountdown <= 0) {
+      setRateLimitCountdown(null);
+      return;
+    }
+    
+    const timer = setTimeout(() => {
+      setRateLimitCountdown(prev => prev !== null ? prev - 1 : null);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [rateLimitCountdown]);
 
   // Get redirect URL from query params with security validation
   const getRedirectUrl = () => {
@@ -35,9 +51,21 @@ export default function LoginForm({
     return '/app';
   };
 
+  // Format seconds to mm:ss
+  const formatCountdown = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+    
+    // Don't submit if rate limited
+    if (rateLimitCountdown !== null && rateLimitCountdown > 0) {
+      return;
+    }
     
     // Validate with Zod
     const result = loginSchema.safeParse({ email, password });
@@ -66,9 +94,18 @@ export default function LoginForm({
         }, 500);
         return 'Connexion réussie !';
       },
-      error: (err) => err.message || 'Échec de la connexion',
+      error: (err) => {
+        // Handle rate limiting with countdown
+        if (err instanceof RateLimitError) {
+          setRateLimitCountdown(err.retryAfter);
+          return `Trop de tentatives. Réessayez dans ${formatCountdown(err.retryAfter)}.`;
+        }
+        return err.message || 'Échec de la connexion';
+      },
     });
   };
+
+  const isRateLimited = rateLimitCountdown !== null && rateLimitCountdown > 0;
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -116,6 +153,7 @@ export default function LoginForm({
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
+                disabled={isRateLimited}
                 aria-invalid={!!errors.password}
                 aria-describedby={errors.password ? "password-error" : undefined}
               />
@@ -123,11 +161,22 @@ export default function LoginForm({
                 <p id="password-error" className="text-sm text-destructive">{errors.password}</p>
               )}
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            {isRateLimited && (
+              <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
+                <Clock className="h-4 w-4 shrink-0" />
+                <span>Trop de tentatives. Réessayez dans {formatCountdown(rateLimitCountdown!)}</span>
+              </div>
+            )}
+            <Button type="submit" className="w-full" disabled={isLoading || isRateLimited}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Connexion...
+                </>
+              ) : isRateLimited ? (
+                <>
+                  <Clock className="mr-2 h-4 w-4" />
+                  Patientez {formatCountdown(rateLimitCountdown!)}
                 </>
               ) : (
                 'Se connecter'
