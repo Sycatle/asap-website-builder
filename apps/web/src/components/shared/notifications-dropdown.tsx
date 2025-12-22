@@ -28,6 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { formatRelativeTimeFr } from "@/lib/utils/formatters"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -206,22 +207,6 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
     } else {
       toast.error('Permission refusée pour les notifications')
     }
-  }
-
-  // Format relative time
-  const formatRelativeTime = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
-    const diffDays = Math.floor(diffMs / 86400000)
-
-    if (diffMins < 1) return 'À l\'instant'
-    if (diffMins < 60) return `Il y a ${diffMins} min`
-    if (diffHours < 24) return `Il y a ${diffHours}h`
-    if (diffDays < 7) return `Il y a ${diffDays}j`
-    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
   }
 
   // Get icon for notification
@@ -412,7 +397,7 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
                           {notification.title}
                         </p>
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          {formatRelativeTime(notification.created_at)}
+                          {formatRelativeTimeFr(notification.created_at)}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">

@@ -22,6 +22,7 @@ import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { Link } from '@/components/app-router';
 import { FormActions } from '@/components/ui/form-actions';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { formatRelativeTimeFr } from '@/lib/utils/formatters';
 
 interface ExtensionConfigProps {
   slug: string;
@@ -431,22 +432,6 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
     ) || [];
   };
 
-  // Format relative time
-  const formatRelativeTime = (isoString: string) => {
-    const date = new Date(isoString);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    
-    const minutes = Math.floor(diff / (1000 * 60));
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
-    if (minutes < 60) return `Il y a ${minutes} min`;
-    if (hours < 24) return `Il y a ${hours}h`;
-    if (days < 7) return `Il y a ${days}j`;
-    return date.toLocaleDateString('fr-FR');
-  };
-
   // Get action icon based on type
   const getActionIcon = (action: ChangelogEntry['action']) => {
     switch (action) {
@@ -765,7 +750,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-gray-900">{entry.description}</p>
                             <p className="text-xs text-gray-500 mt-0.5">
-                              {formatRelativeTime(entry.timestamp)}
+                              {formatRelativeTimeFr(entry.timestamp)}
                               {entry.user && ` • ${entry.user}`}
                             </p>
                           </div>

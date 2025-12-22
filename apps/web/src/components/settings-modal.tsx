@@ -63,7 +63,7 @@ import { cn } from "@/lib/utils"
 import { getPasswordStrength } from "@/lib/validations/auth"
 import { filesAPI, websitesAPI, extensionsAPI, authAPI, accountsAPI, type QuotaUsage, type FileMetadata, type Website, type WebsiteExtension } from "@/lib/api"
 import type { SessionInfo } from "@/lib/types"
-import { formatBytes } from "@/lib/utils/formatters"
+import { formatBytes, formatRelativeTimeFr } from "@/lib/utils/formatters"
 import { FilePickerDialog } from "@/components/features/cloud/file-picker-dialog"
 import { useWebsiteContext } from "@/contexts/WebsiteContext"
 import { navigate } from "@/components/app-router"
@@ -637,22 +637,6 @@ function SecuritySettings() {
     }
   }
 
-  // Format relative time
-  const formatRelativeTime = (dateStr: string) => {
-    const date = new Date(dateStr)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.floor(diffMs / (1000 * 60))
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-    
-    if (diffMins < 5) return 'Actif maintenant'
-    if (diffMins < 60) return `Il y a ${diffMins} min`
-    if (diffHours < 24) return `Il y a ${diffHours}h`
-    if (diffDays < 7) return `Il y a ${diffDays}j`
-    return date.toLocaleDateString('fr-FR')
-  }
-
   // Revoke a session
   const handleRevokeSession = async (sessionId: string) => {
     setIsRevokingSession(sessionId)
@@ -925,7 +909,7 @@ function SecuritySettings() {
                       <div>
                         <p className="text-sm font-medium">{os}</p>
                         <p className="text-[10px] sm:text-xs text-muted-foreground">
-                          {formatRelativeTime(session.created_at)}
+                          {formatRelativeTimeFr(session.created_at)}
                           {session.ip_address && ` • ${session.ip_address}`}
                         </p>
                       </div>
@@ -1060,18 +1044,19 @@ function CloudSettings({ quota, files, isLoading, websiteId, onClose }: CloudSet
     }
     
     files.forEach(file => {
+      const fileSize = file.original_size || 0
       if (file.mime_type.startsWith('image/')) {
-        categories['Images'].size += file.size_bytes
+        categories['Images'].size += fileSize
       } else if (file.mime_type.startsWith('video/')) {
-        categories['Vidéos'].size += file.size_bytes
+        categories['Vidéos'].size += fileSize
       } else if (
         file.mime_type.includes('pdf') ||
         file.mime_type.includes('document') ||
         file.mime_type.includes('text')
       ) {
-        categories['Documents'].size += file.size_bytes
+        categories['Documents'].size += fileSize
       } else {
-        categories['Autres'].size += file.size_bytes
+        categories['Autres'].size += fileSize
       }
     })
     
