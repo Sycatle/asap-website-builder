@@ -20,6 +20,16 @@ import type {
 // ============================================
 
 /**
+ * Normalize element data (ensure order_index is set from order)
+ */
+function normalizeElement(element: WebsiteElement): WebsiteElement {
+  return {
+    ...element,
+    order_index: element.order_index ?? element.order ?? 0,
+  };
+}
+
+/**
  * Upsert an item in a list (add if not exists, update if exists)
  */
 function upsertInList<T extends { id: string }>(
@@ -144,17 +154,55 @@ export function syncPagesReordered(queryClient: QueryClient, websiteId: string, 
 const elementSortFn = (a: WebsiteElement, b: WebsiteElement) => a.order - b.order;
 
 export function syncElementCreated(queryClient: QueryClient, websiteId: string, element: WebsiteElement) {
+  // Validate element has required id field
+  if (!element?.id) {
+    console.warn('[syncElementCreated] Element missing id, skipping sync:', element);
+    return;
+  }
+  const normalized = normalizeElement(element);
   queryClient.setQueryData<WebsiteElement[]>(queryKeys.elements.list(websiteId), (old) =>
-    upsertInList(old, element, elementSortFn)
+    upsertInList(old, normalized, elementSortFn)
   );
-  queryClient.setQueryData(queryKeys.elements.detail(websiteId, element.id), element);
+  queryClient.setQueryData(queryKeys.elements.detail(websiteId, element.id), normalized);
 }
 
-export function syncElementUpdated(queryClient: QueryClient, websiteId: string, element: WebsiteElement) {
-  queryClient.setQueryData<WebsiteElement[]>(queryKeys.elements.list(websiteId), (old) =>
-    upsertInList(old, element, elementSortFn)
+export function syncElementUpdated(
+  queryClient: QueryClient, 
+  websiteId: string, 
+  elementId: string,
+  updates: Partial<WebsiteElement>
+) {
+  // Validate element_id
+  if (!elementId) {
+    console.warn('[syncElementUpdated] Missing element_id, skipping sync');
+    return;
+  }
+  
+  // Filter out null/undefined values from updates (only merge actual changes)
+  const cleanUpdates: Partial<WebsiteElement> = {};
+  for (const [key, value] of Object.entries(updates)) {
+    if (value !== null && value !== undefined) {
+      (cleanUpdates as Record<string, unknown>)[key] = value;
+    }
+  }
+  
+  queryClient.setQueryData<WebsiteElement[]>(queryKeys.elements.list(websiteId), (old) => {
+    if (!old) return [];
+    return old.map(el => {
+      if (el.id === elementId) {
+        // Merge only non-null updates with existing element
+        const updated = { ...el, ...cleanUpdates };
+        return normalizeElement(updated);
+      }
+      return el;
+    }).sort(elementSortFn);
+  });
+  
+  // Also update the individual element cache
+  queryClient.setQueryData<WebsiteElement>(
+    queryKeys.elements.detail(websiteId, elementId),
+    (old) => old ? normalizeElement({ ...old, ...cleanUpdates }) : undefined
   );
-  queryClient.setQueryData(queryKeys.elements.detail(websiteId, element.id), element);
 }
 
 export function syncElementDeleted(queryClient: QueryClient, websiteId: string, elementId: string) {

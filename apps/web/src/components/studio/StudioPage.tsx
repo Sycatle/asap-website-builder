@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useMemo } from "react"
+import React, { useState, useCallback, useEffect, useMemo, Fragment } from "react"
 import { useWebsiteContext } from "@/contexts/WebsiteContext"
 import { 
   useElementsQuery,
@@ -243,8 +243,10 @@ export default function StudioPage({ onBack }: StudioPageProps) {
     mobile: 'max-w-[375px]',
   }
 
-  // Sort elements
-  const sortedElements = [...elements].sort((a, b) => a.order - b.order)
+  // Sort elements and filter out any invalid ones (missing id)
+  const sortedElements = [...elements]
+    .filter(e => e && e.id)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
   const visibleElements = sortedElements.filter(e => e.visible)
 
   // Loading state
@@ -280,7 +282,7 @@ export default function StudioPage({ onBack }: StudioPageProps) {
   }
 
   // Element list content (shared between desktop panel and mobile sheet)
-  const ElementListContent = () => (
+  const elementListContent = (
     <div className="flex flex-col h-full" role="region" aria-label="Liste des éléments">
       <div className="sticky top-0 z-10 p-3 sm:p-4 border-b bg-background flex items-center justify-between">
         <div>
@@ -339,53 +341,54 @@ export default function StudioPage({ onBack }: StudioPageProps) {
               const elementLabel = element.title || getElementLabel(element.element_type)
               
               return (
-                <button
-                  key={element.id}
-                  id={element.id}
-                  role="option"
-                  aria-selected={isSelected}
-                  aria-label={`${elementLabel}${!element.visible ? ' (masqué)' : ''}, ${getElementLabel(element.element_type)}`}
-                  draggable={!isMobile}
-                  onDragStart={(e) => handleDragStart(e, element.id)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, index)}
-                  onClick={() => handleElementClick(element)}
-                  className={cn(
-                    "w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left",
-                    "hover:bg-accent/50 active:scale-[0.98]",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-                    isSelected && "bg-accent ring-2 ring-primary shadow-sm",
-                    isDragOver && "border-t-2 border-primary",
-                    !element.visible && "opacity-50"
-                  )}
-                >
-                  {!isMobile && (
-                    <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab shrink-0" aria-hidden="true" />
-                  )}
-                  <div className={cn(
-                    "h-9 w-9 rounded-lg flex items-center justify-center shrink-0",
-                    isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
-                  )} aria-hidden="true">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {elementLabel}
-                    </p>
-                    <p className="text-xs text-muted-foreground capitalize">
-                      {getElementLabel(element.element_type)}
-                    </p>
-                  </div>
-                  {!element.visible && (
-                    <EyeOff className="h-4 w-4 text-muted-foreground shrink-0" aria-label="Élément masqué" />
-                  )}
-                </button>
+                <Fragment key={element.id}>
+                  <button
+                    id={element.id}
+                    role="option"
+                    aria-selected={isSelected}
+                    aria-label={`${elementLabel}${!element.visible ? ' (masqué)' : ''}, ${getElementLabel(element.element_type)}`}
+                    draggable={!isMobile}
+                    onDragStart={(e) => handleDragStart(e, element.id)}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, index)}
+                    onClick={() => handleElementClick(element)}
+                    className={cn(
+                      "w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left",
+                      "hover:bg-accent/50 active:scale-[0.98]",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                      isSelected && "bg-accent ring-2 ring-primary shadow-sm",
+                      isDragOver && "border-t-2 border-primary",
+                      !element.visible && "opacity-50"
+                    )}
+                  >
+                    {!isMobile && (
+                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab shrink-0" aria-hidden="true" />
+                    )}
+                    <div className={cn(
+                      "h-9 w-9 rounded-lg flex items-center justify-center shrink-0",
+                      isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
+                    )} aria-hidden="true">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {elementLabel}
+                      </p>
+                      <p className="text-xs text-muted-foreground capitalize">
+                        {getElementLabel(element.element_type)}
+                      </p>
+                    </div>
+                    {!element.visible && (
+                      <EyeOff className="h-4 w-4 text-muted-foreground shrink-0" aria-label="Élément masqué" />
+                    )}
+                  </button>
+                </Fragment>
               )
             })}
             {/* Desktop drag hint */}
             {!isMobile && sortedElements.length > 1 && (
-              <p className="text-[10px] text-muted-foreground text-center mt-3 px-2">
+              <p key="drag-hint" className="text-[10px] text-muted-foreground text-center mt-3 px-2">
                 <GripVertical className="h-3 w-3 inline mr-1" aria-hidden="true" />
                 Glissez pour réorganiser
               </p>
@@ -397,7 +400,7 @@ export default function StudioPage({ onBack }: StudioPageProps) {
   )
 
   // Property editor content (shared between desktop panel and mobile sheet)
-  const PropertyEditorContent = () => (
+  const propertyEditorContent = (
     <div className="flex flex-col h-full" role="region" aria-label="Éditeur de propriétés">
       <div className="sticky top-0 z-10 p-3 sm:p-4 border-b bg-background flex items-center justify-between">
         <h3 className="font-semibold text-sm flex items-center gap-2" id="properties-title">
@@ -458,7 +461,7 @@ export default function StudioPage({ onBack }: StudioPageProps) {
           
           {/* Page selector - compact on mobile */}
           <Select
-            value={selectedPageId ?? undefined}
+            value={selectedPageId ?? ''}
             onValueChange={setSelectedPageId}
             disabled={isLoadingPages || pages.length === 0}
           >
@@ -657,7 +660,7 @@ export default function StudioPage({ onBack }: StudioPageProps) {
           aria-label="Panneau des éléments"
           aria-hidden={!leftPanelOpen}
         >
-          {leftPanelOpen && <ElementListContent />}
+          {leftPanelOpen && elementListContent}
         </aside>
 
 
@@ -763,7 +766,7 @@ export default function StudioPage({ onBack }: StudioPageProps) {
           aria-label="Panneau des propriétés"
           aria-hidden={!rightPanelOpen}
         >
-          {rightPanelOpen && <PropertyEditorContent />}
+          {rightPanelOpen && propertyEditorContent}
         </aside>
       </div>
 
@@ -834,7 +837,7 @@ export default function StudioPage({ onBack }: StudioPageProps) {
         >
           <SheetTitle className="sr-only">Éléments</SheetTitle>
           <SheetDescription className="sr-only">Gérer les éléments de votre page</SheetDescription>
-          <ElementListContent />
+          {elementListContent}
         </SheetContent>
       </Sheet>
 
@@ -846,7 +849,7 @@ export default function StudioPage({ onBack }: StudioPageProps) {
         >
           <SheetTitle className="sr-only">Propriétés</SheetTitle>
           <SheetDescription className="sr-only">Modifier les propriétés de l'élément sélectionné</SheetDescription>
-          <PropertyEditorContent />
+          {propertyEditorContent}
         </SheetContent>
       </Sheet>
 

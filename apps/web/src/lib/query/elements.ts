@@ -95,23 +95,73 @@ export function useUpdateElementMutation() {
       elementId: string;
       data: UpdateElementRequest;
     }) => elementsAPI.update(websiteId, elementId, data),
-    onSuccess: (updatedElement, { websiteId, elementId }) => {
-      // Update in list cache
+    onMutate: async ({ websiteId, elementId, data }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.elements.list(websiteId) });
+      
+      // Snapshot the previous value
+      const previousElements = queryClient.getQueryData<WebsiteElement[]>(
+        queryKeys.elements.list(websiteId)
+      );
+      
+      // Optimistically update the cache
       queryClient.setQueryData<WebsiteElement[]>(
         queryKeys.elements.list(websiteId),
         (old) => {
-          if (!old) return [updatedElement];
-          return old.map((el) =>
-            el.id === elementId ? updatedElement : el
-          );
+          if (!old) return [];
+          return old.map((el) => {
+            if (el.id === elementId) {
+              // Merge only non-null/undefined values from data
+              const updates: Partial<WebsiteElement> = {};
+              for (const [key, value] of Object.entries(data)) {
+                if (value !== null && value !== undefined) {
+                  (updates as Record<string, unknown>)[key] = value;
+                }
+              }
+              return { ...el, ...updates };
+            }
+            return el;
+          });
         }
       );
       
-      // Update individual cache
-      queryClient.setQueryData(
-        queryKeys.elements.detail(websiteId, elementId),
-        updatedElement
+      // Also update individual cache
+      const previousElement = queryClient.getQueryData<WebsiteElement>(
+        queryKeys.elements.detail(websiteId, elementId)
       );
+      
+      if (previousElement) {
+        const updates: Partial<WebsiteElement> = {};
+        for (const [key, value] of Object.entries(data)) {
+          if (value !== null && value !== undefined) {
+            (updates as Record<string, unknown>)[key] = value;
+          }
+        }
+        queryClient.setQueryData(
+          queryKeys.elements.detail(websiteId, elementId),
+          { ...previousElement, ...updates }
+        );
+      }
+      
+      return { previousElements, previousElement };
+    },
+    onError: (err, { websiteId, elementId }, context) => {
+      // Rollback on error
+      if (context?.previousElements) {
+        queryClient.setQueryData(
+          queryKeys.elements.list(websiteId),
+          context.previousElements
+        );
+      }
+      if (context?.previousElement) {
+        queryClient.setQueryData(
+          queryKeys.elements.detail(websiteId, elementId),
+          context.previousElement
+        );
+      }
+    },
+    onSettled: (_, __, { websiteId }) => {
+      // Don't refetch - trust the optimistic update and WebSocket sync
     },
   });
 }

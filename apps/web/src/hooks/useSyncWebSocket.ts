@@ -199,8 +199,13 @@ export function useSyncWebSocket(options: UseSyncWebSocketOptions = {}): UseSync
         break;
 
       case 'sync:element:updated':
-        if (!skipCacheUpdate && eventData?.website_id && eventData?.element) {
-          syncElementUpdated(queryClient, eventData.website_id as string, eventData.element as any);
+        if (!skipCacheUpdate && eventData?.website_id && eventData?.element_id) {
+          syncElementUpdated(
+            queryClient, 
+            eventData.website_id as string, 
+            eventData.element_id as string,
+            eventData.element as any
+          );
         }
         h?.onElementUpdated?.(eventData as any);
         break;
