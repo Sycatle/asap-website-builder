@@ -13,6 +13,8 @@ import {
   Key,
   Loader2,
   Check,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 
 import {
@@ -54,6 +56,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { getPasswordStrength } from "@/lib/validations/auth"
 import { filesAPI, websitesAPI, extensionsAPI, authAPI, accountsAPI, type QuotaUsage, type FileMetadata, type Website, type WebsiteExtension } from "@/lib/api"
 import { formatBytes } from "@/lib/utils/formatters"
 import { FilePickerDialog } from "@/components/features/cloud/file-picker-dialog"
@@ -558,6 +561,12 @@ function SecuritySettings() {
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordSuccess, setPasswordSuccess] = useState(false)
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  
+  // Password strength calculation
+  const passwordStrength = getPasswordStrength(passwordData.newPassword)
 
   const handlePasswordChange = async () => {
     // Reset states
@@ -653,42 +662,90 @@ function SecuritySettings() {
           )}
           <div className="grid gap-1.5 sm:gap-2">
             <Label htmlFor="current-password" className="text-sm">Mot de passe actuel</Label>
-            <Input
-              id="current-password"
-              type="password"
-              placeholder="••••••••"
-              value={passwordData.currentPassword}
-              onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-              disabled={isChangingPassword}
-              className="h-9 sm:h-10 text-sm"
-            />
+            <div className="relative">
+              <Input
+                id="current-password"
+                type={showCurrentPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={passwordData.currentPassword}
+                onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                disabled={isChangingPassword}
+                className="h-9 sm:h-10 text-sm pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                tabIndex={-1}
+              >
+                {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
           <div className="grid gap-1.5 sm:gap-2">
             <Label htmlFor="new-password" className="text-sm">Nouveau mot de passe</Label>
-            <Input
-              id="new-password"
-              type="password"
-              placeholder="••••••••"
-              value={passwordData.newPassword}
-              onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-              disabled={isChangingPassword}
-              className="h-9 sm:h-10 text-sm"
-            />
+            <div className="relative">
+              <Input
+                id="new-password"
+                type={showNewPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={passwordData.newPassword}
+                onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                disabled={isChangingPassword}
+                className="h-9 sm:h-10 text-sm pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                tabIndex={-1}
+              >
+                {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            {passwordData.newPassword.length > 0 && (
+              <div className="space-y-1">
+                <div className="flex gap-1">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <div
+                      key={i}
+                      className={cn(
+                        "h-1 flex-1 rounded-full transition-colors",
+                        i <= passwordStrength.score ? passwordStrength.color : "bg-muted"
+                      )}
+                    />
+                  ))}
+                </div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  Force: {passwordStrength.label}
+                </p>
+              </div>
+            )}
             <p className="text-[10px] sm:text-xs text-muted-foreground">
-              Minimum 8 caractères
+              Min. 8 caractères, majuscule, minuscule et chiffre
             </p>
           </div>
           <div className="grid gap-1.5 sm:gap-2">
             <Label htmlFor="confirm-password" className="text-sm">Confirmer le mot de passe</Label>
-            <Input
-              id="confirm-password"
-              type="password"
-              placeholder="••••••••"
-              value={passwordData.confirmPassword}
-              onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-              disabled={isChangingPassword}
-              className="h-9 sm:h-10 text-sm"
-            />
+            <div className="relative">
+              <Input
+                id="confirm-password"
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={passwordData.confirmPassword}
+                onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                disabled={isChangingPassword}
+                className="h-9 sm:h-10 text-sm pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                tabIndex={-1}
+              >
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
           <Button onClick={handlePasswordChange} disabled={isChangingPassword} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
             {isChangingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
