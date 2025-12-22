@@ -236,16 +236,21 @@ export default function Dashboard() {
   // GAMIFIED Analytics data - comprehensive KPIs like YouTube Studio / Google Analytics / Shopify
   const analyticsData = useMemo(() => {
     // Linear Congruential Generator (LCG) for stable pseudo-random numbers
-    const LCG_MULTIPLIER = 9301;
-    const LCG_INCREMENT = 49297;
-    const LCG_MODULUS = 233280;
+    // Using well-known parameters from MINSTD generator for better distribution
+    const LCG_MULTIPLIER = 48271;
+    const LCG_MODULUS = 2147483647; // 2^31 - 1 (Mersenne prime)
     
+    // Generate seed from full website ID using simple hash function
     const seedFromId = website?.id 
-      ? (website.id.charCodeAt(0) || 0) + (website.id.length > 1 ? website.id.charCodeAt(1) : 0)
+      ? website.id.split('').reduce((hash, char) => ((hash << 5) - hash + char.charCodeAt(0)) | 0, 0)
       : 42;
     
-    const random = (min: number, max: number, offset = 0) => 
-      Math.floor((((seedFromId + offset) * LCG_MULTIPLIER + LCG_INCREMENT) % LCG_MODULUS) / LCG_MODULUS * (max - min)) + min;
+    // LCG random function that produces values between min and max
+    const random = (min: number, max: number, offset = 0) => {
+      const seed = Math.abs((seedFromId + offset * 12345) % LCG_MODULUS);
+      const value = (seed * LCG_MULTIPLIER) % LCG_MODULUS;
+      return Math.floor((value / LCG_MODULUS) * (max - min)) + min;
+    };
 
     // 30-day trend data for main chart
     const last30Days = Array.from({ length: 30 }, (_, i) => {
