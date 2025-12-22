@@ -11,6 +11,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use asap_core_shared::{Claims, SharedWsBroadcaster};
+use crate::queries;
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct WebsitePage {
@@ -337,11 +338,18 @@ pub async fn create_page(
                 "visible": payload.visible.unwrap_or(true),
                 "metadata": payload.metadata.as_ref().unwrap_or(&serde_json::json!({}))
             });
-            ws_broadcaster.sync_page_created(
-                &account_id.to_string(),
-                &website_id,
-                page_data,
-            );
+
+            // Broadcast to all users with access (owner + active administrators)
+            let website_uuid = Uuid::parse_str(&website_id).unwrap();
+            if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
+                for acc_id in account_ids {
+                    ws_broadcaster.sync_page_created(
+                        &acc_id.to_string(),
+                        &website_id,
+                        page_data.clone(),
+                    );
+                }
+            }
 
             (StatusCode::CREATED, Json(serde_json::json!({
                 "id": page_id.to_string(),
@@ -511,21 +519,28 @@ pub async fn update_page(
 
     match q.execute(&pool).await {
         Ok(_) => {
-            // Emit WebSocket event for real-time sync
-            ws_broadcaster.sync_page_updated(
-                &account_id.to_string(),
-                &website_id,
-                &page_id,
-                serde_json::json!({
-                    "slug": payload.slug,
-                    "title": payload.title,
-                    "description": payload.description,
-                    "is_homepage": payload.is_homepage,
-                    "order": payload.order,
-                    "visible": payload.visible,
-                    "metadata": payload.metadata
-                }),
-            );
+            let update_data = serde_json::json!({
+                "slug": payload.slug,
+                "title": payload.title,
+                "description": payload.description,
+                "is_homepage": payload.is_homepage,
+                "order": payload.order,
+                "visible": payload.visible,
+                "metadata": payload.metadata
+            });
+
+            // Broadcast to all users with access (owner + active administrators)
+            let website_uuid = Uuid::parse_str(&website_id).unwrap();
+            if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
+                for acc_id in account_ids {
+                    ws_broadcaster.sync_page_updated(
+                        &acc_id.to_string(),
+                        &website_id,
+                        &page_id,
+                        update_data.clone(),
+                    );
+                }
+            }
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Page updated successfully"
@@ -608,12 +623,17 @@ pub async fn delete_page(
             .execute(&pool)
             .await;
 
-            // Emit WebSocket event for real-time sync
-            ws_broadcaster.sync_page_deleted(
-                &account_id.to_string(),
-                &website_id,
-                &page_id,
-            );
+            // Broadcast to all users with access (owner + active administrators)
+            let website_uuid = Uuid::parse_str(&website_id).unwrap();
+            if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
+                for acc_id in account_ids {
+                    ws_broadcaster.sync_page_deleted(
+                        &acc_id.to_string(),
+                        &website_id,
+                        &page_id,
+                    );
+                }
+            }
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Page deleted successfully"
@@ -700,12 +720,16 @@ pub async fn reorder_pages(
         .await;
     }
 
-    // Emit WebSocket event for real-time sync
-    ws_broadcaster.sync_pages_reordered(
-        &account_id.to_string(),
-        &website_id,
-        &payload.page_ids,
-    );
+    // Broadcast to all users with access (owner + active administrators)
+    if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
+        for acc_id in account_ids {
+            ws_broadcaster.sync_pages_reordered(
+                &acc_id.to_string(),
+                &website_id,
+                &payload.page_ids,
+            );
+        }
+    }
 
     (StatusCode::OK, Json(serde_json::json!({
         "message": "Pages reordered successfully"

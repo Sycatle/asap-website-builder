@@ -494,18 +494,11 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                                                 joined_at: Utc::now().to_rfc3339(),
                                                             };
                                                             state.join_website(client_id, website_id.to_string(), user).await;
-                                                            info!("User {} joined website {} presence (2 users)", account_id, website_id);
+                                                            info!("User {} joined website {} presence", account_id, website_id);
                                                             
-                                                            // Send current users to the joining client
-                                                            let users = state.get_website_users(website_id).await;
-                                                            let users_msg = WsMessage {
-                                                                msg_type: "presence:website:users".to_string(),
-                                                                data: serde_json::json!({
-                                                                    "website_id": website_id,
-                                                                    "users": users
-                                                                }),
-                                                            };
-                                                            let _ = direct_tx.send(users_msg).await;
+                                                            // Note: We don't send the users list here anymore
+                                                            // The client will request it explicitly via presence:get-website-users
+                                                            // when it's ready to receive it (after setting up listeners)
                                                         }
                                                         Err(_) => {
                                                             warn!("Invalid account_id UUID: {}", account_id);

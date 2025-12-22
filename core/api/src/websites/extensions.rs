@@ -242,17 +242,24 @@ pub async fn activate_extension(
                 }
             }
 
-            // Emit WebSocket event for real-time sync
-            ws_broadcaster.sync_extension_activated(
-                &account_id.to_string(),
-                &website_id,
-                &payload.extension_id,
-                serde_json::json!({
-                    "extension_id": extension_uuid.to_string(),
-                    "extension_name": extension_name,
-                    "settings": settings
-                }),
-            );
+            let extension_data = serde_json::json!({
+                "extension_id": extension_uuid.to_string(),
+                "extension_name": extension_name,
+                "settings": settings
+            });
+
+            // Broadcast to all users with access (owner + active administrators)
+            let website_uuid = Uuid::parse_str(&website_id).unwrap();
+            if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
+                for acc_id in account_ids {
+                    ws_broadcaster.sync_extension_activated(
+                        &acc_id.to_string(),
+                        &website_id,
+                        &payload.extension_id,
+                        extension_data.clone(),
+                    );
+                }
+            }
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Extension activated successfully"
@@ -313,13 +320,18 @@ pub async fn update_website_extension(
 
     match result {
         Ok(updated) if updated => {
-            // Emit WebSocket event for real-time sync
-            ws_broadcaster.sync_extension_configured(
-                &account_id.to_string(),
-                &website_id,
-                &extension_id,
-                payload.settings.clone(),
-            );
+            // Broadcast to all users with access (owner + active administrators)
+            let website_uuid = Uuid::parse_str(&website_id).unwrap();
+            if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
+                for acc_id in account_ids {
+                    ws_broadcaster.sync_extension_configured(
+                        &acc_id.to_string(),
+                        &website_id,
+                        &extension_id,
+                        payload.settings.clone(),
+                    );
+                }
+            }
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Extension updated successfully"
@@ -421,12 +433,17 @@ pub async fn deactivate_extension(
                 }
             }
 
-            // Emit WebSocket event for real-time sync
-            ws_broadcaster.sync_extension_deactivated(
-                &account_id.to_string(),
-                &website_id,
-                &extension_id,
-            );
+            // Broadcast to all users with access (owner + active administrators)
+            let website_uuid = Uuid::parse_str(&website_id).unwrap();
+            if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
+                for acc_id in account_ids {
+                    ws_broadcaster.sync_extension_deactivated(
+                        &acc_id.to_string(),
+                        &website_id,
+                        &extension_id,
+                    );
+                }
+            }
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Extension deactivated successfully"

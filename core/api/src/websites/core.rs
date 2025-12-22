@@ -230,6 +230,7 @@ pub async fn create_website(
     };
 
     // Emit WebSocket event for real-time sync
+    // Note: For newly created websites, only the owner exists at creation time
     ws_broadcaster.sync_website_created(
         &account_id.to_string(),
         serde_json::to_value(&website_response).unwrap_or_default(),
@@ -338,16 +339,22 @@ pub async fn update_website(
 
     match result {
         Ok(_) => {
-            // Emit WebSocket event for real-time sync
-            ws_broadcaster.sync_website_updated(
-                &account_id.to_string(),
-                &id,
-                serde_json::json!({
-                    "title": payload.title,
-                    "tagline": payload.tagline,
-                    "metadata": payload.metadata
-                }),
-            );
+            let update_data = serde_json::json!({
+                "title": payload.title,
+                "tagline": payload.tagline,
+                "metadata": payload.metadata
+            });
+
+            // Broadcast to all users with access (owner + active administrators)
+            if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_id).await {
+                for acc_id in account_ids {
+                    ws_broadcaster.sync_website_updated(
+                        &acc_id.to_string(),
+                        &id,
+                        update_data.clone(),
+                    );
+                }
+            }
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Website updated successfully"
@@ -464,12 +471,16 @@ pub async fn patch_website_data(
 
     match result {
         Ok(_) => {
-            // Emit WebSocket event for real-time sync
-            ws_broadcaster.sync_website_data_updated(
-                &account_id.to_string(),
-                &id,
-                payload.data.clone(),
-            );
+            // Broadcast to all users with access (owner + active administrators)
+            if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_id).await {
+                for acc_id in account_ids {
+                    ws_broadcaster.sync_website_data_updated(
+                        &acc_id.to_string(),
+                        &id,
+                        payload.data.clone(),
+                    );
+                }
+            }
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Website data updated successfully"
@@ -551,12 +562,16 @@ pub async fn publish_website(
 
             tracing::info!("Website published: {}", website_id);
 
-            // Emit WebSocket event for real-time sync
-            ws_broadcaster.sync_website_published(
-                &account_id.to_string(),
-                &id,
-                "published",
-            );
+            // Broadcast to all users with access (owner + active administrators)
+            if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_id).await {
+                for acc_id in account_ids {
+                    ws_broadcaster.sync_website_published(
+                        &acc_id.to_string(),
+                        &id,
+                        "published",
+                    );
+                }
+            }
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Website published successfully",

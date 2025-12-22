@@ -178,11 +178,18 @@ pub async fn create_element(
                 "data": data,
                 "visible": true
             });
-            ws_broadcaster.sync_element_created(
-                &account_id.to_string(),
-                &website_id,
-                element_data,
-            );
+
+            // Broadcast to all users with access (owner + active administrators)
+            let website_uuid = Uuid::parse_str(&website_id).unwrap();
+            if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
+                for acc_id in account_ids {
+                    ws_broadcaster.sync_element_created(
+                        &acc_id.to_string(),
+                        &website_id,
+                        element_data.clone(),
+                    );
+                }
+            }
 
             (StatusCode::CREATED, Json(serde_json::json!({
                 "id": element_id.to_string(),
@@ -247,19 +254,28 @@ pub async fn update_element(
 
     match result {
         Ok(updated) if updated => {
-            // Emit WebSocket event for real-time sync
-            ws_broadcaster.sync_element_updated(
-                &account_id.to_string(),
-                &website_id,
-                &element_id,
-                serde_json::json!({
-                    "title": payload.title,
-                    "layout": payload.layout,
-                    "settings": payload.settings,
-                    "data": payload.data,
-                    "visible": payload.visible
-                }),
-            );
+            // Broadcast to all users with access (owner + administrators)
+            match queries::get_website_account_ids(&pool, website_uuid).await {
+                Ok(account_ids) => {
+                    for acc_id in account_ids {
+                        ws_broadcaster.sync_element_updated(
+                            &acc_id.to_string(),
+                            &website_id,
+                            &element_id,
+                            serde_json::json!({
+                                "title": payload.title,
+                                "layout": payload.layout,
+                                "settings": payload.settings,
+                                "data": payload.data,
+                                "visible": payload.visible
+                            }),
+                        );
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to get account IDs for broadcast: {}", e);
+                }
+            }
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Element updated successfully"
@@ -330,12 +346,17 @@ pub async fn delete_element(
             .execute(&pool)
             .await;
 
-            // Emit WebSocket event for real-time sync
-            ws_broadcaster.sync_element_deleted(
-                &account_id.to_string(),
-                &website_id,
-                &element_id,
-            );
+            // Broadcast to all users with access (owner + active administrators)
+            let website_uuid = Uuid::parse_str(&website_id).unwrap();
+            if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
+                for acc_id in account_ids {
+                    ws_broadcaster.sync_element_deleted(
+                        &acc_id.to_string(),
+                        &website_id,
+                        &element_id,
+                    );
+                }
+            }
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Element deleted successfully"
@@ -412,12 +433,17 @@ pub async fn reorder_elements(
             .execute(&pool)
             .await;
 
-            // Emit WebSocket event for real-time sync
-            ws_broadcaster.sync_elements_reordered(
-                &account_id.to_string(),
-                &website_id,
-                &payload.element_ids,
-            );
+            // Broadcast to all users with access (owner + active administrators)
+            let website_uuid = Uuid::parse_str(&website_id).unwrap();
+            if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
+                for acc_id in account_ids {
+                    ws_broadcaster.sync_elements_reordered(
+                        &acc_id.to_string(),
+                        &website_id,
+                        &payload.element_ids,
+                    );
+                }
+            }
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Elements reordered successfully"

@@ -54,3 +54,27 @@ pub async fn verify_website_access(
 
     Ok(count.0 > 0)
 }
+
+/// Get all account IDs that have access to a website (owner + active administrators)
+/// Used for broadcasting WebSocket events to all relevant users
+pub async fn get_website_account_ids(
+    pool: &PgPool,
+    website_id: Uuid,
+) -> Result<Vec<Uuid>, Box<dyn std::error::Error + Send + Sync>> {
+    let account_ids: Vec<(Uuid,)> = sqlx::query_as(
+        r#"
+        SELECT DISTINCT account_id
+        FROM (
+            SELECT account_id FROM websites WHERE id = $1
+            UNION
+            SELECT account_id FROM website_administrators 
+            WHERE website_id = $1 AND status = 'active'
+        ) AS all_accounts
+        "#
+    )
+    .bind(website_id)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(account_ids.into_iter().map(|(id,)| id).collect())
+}
