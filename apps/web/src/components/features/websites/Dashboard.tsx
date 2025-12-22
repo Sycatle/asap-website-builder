@@ -6,8 +6,7 @@ import { queryKeys } from '@/lib/query';
 import { useQueryClient } from '@tanstack/react-query';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { Link } from '@/components/app-router';
-import { formatBytes, formatDate } from '@/lib/utils/formatters';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,16 +23,14 @@ import {
 } from "@/components/ui/chart";
 import type { ChartConfig } from "@/components/ui/chart";
 import { 
-  Label,
-  PolarGrid,
-  PolarRadiusAxis,
-  RadialBar,
-  RadialBarChart,
   BarChart,
   Bar,
   XAxis,
   YAxis,
   Cell,
+  Area,
+  AreaChart,
+  CartesianGrid,
 } from "recharts";
 import { 
   Globe, 
@@ -59,6 +56,10 @@ import {
   Palette,
   Zap,
   Target,
+  TrendingUp,
+  Users,
+  MousePointerClick,
+  Activity,
 } from "lucide-react";
 import { FormActions } from "@/components/ui/form-actions";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -309,22 +310,59 @@ export default function Dashboard() {
     },
   } satisfies ChartConfig;
 
-  // Chart configuration for storage
-  const storageChartConfig = {
-    used: {
-      label: "Utilisé",
+  const storagePercentage = quota?.usage_percentage || 0;
+
+  // Simulated analytics data - stable per website to avoid re-renders
+  const simulatedData = useMemo(() => {
+    // Use website ID as seed for consistent random data
+    const seed = website?.id ? website.id.charCodeAt(0) + website.id.charCodeAt(1) : 42;
+    const random = (min: number, max: number, offset = 0) => 
+      Math.floor((((seed + offset) * 9301 + 49297) % 233280) / 233280 * (max - min)) + min;
+    
+    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    const visitsData = days.map((day, i) => ({
+      day,
+      visits: random(20, 120, i * 10) + (i * 8), // Trending up
+      pageViews: random(40, 200, i * 20) + (i * 12),
+    }));
+
+    const trafficSources = [
+      { source: 'Direct', value: random(35, 55, 1), fill: 'hsl(var(--primary))' },
+      { source: 'Social', value: random(20, 35, 2), fill: 'hsl(221.2 83.2% 53.3%)' },
+      { source: 'Search', value: random(10, 25, 3), fill: 'hsl(142.1 76.2% 36.3%)' },
+      { source: 'Referral', value: random(5, 15, 4), fill: 'hsl(262.1 83.3% 57.8%)' },
+    ];
+
+    const metrics = {
+      totalVisits: random(150, 650, 5),
+      uniqueVisitors: random(80, 400, 6),
+      pageViews: random(400, 1500, 7),
+      avgTimeOnSite: `${random(1, 4, 8)}:${String(random(10, 59, 9)).padStart(2, '0')}`,
+      bounceRate: random(25, 55, 10),
+      ctaClicks: random(10, 80, 11),
+    };
+
+    // Calculate percentage changes (simulated)
+    const changes = {
+      visits: random(-5, 25, 12),
+      pageViews: random(-3, 30, 13),
+      visitors: random(-8, 20, 14),
+    };
+
+    return { visitsData, trafficSources, metrics, changes };
+  }, [website?.id]);
+
+  // Chart configs for analytics
+  const visitsChartConfig = {
+    visits: {
+      label: "Visites",
       color: "hsl(var(--primary))",
     },
+    pageViews: {
+      label: "Pages vues",
+      color: "hsl(221.2 83.2% 53.3%)",
+    },
   } satisfies ChartConfig;
-
-  const storagePercentage = quota?.usage_percentage || 0;
-  const storageChartData = [
-    { 
-      name: "storage", 
-      value: storagePercentage, 
-      fill: storagePercentage > 80 ? "hsl(var(--destructive))" : "hsl(var(--primary))" 
-    }
-  ];
 
   if (isLoading) {
     return (
@@ -516,148 +554,264 @@ export default function Dashboard() {
             </Card>
           )}
 
-          {/* Clickable Stats Cards */}
+          {/* Analytics Stats Cards */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-            {/* Site Status - Clickable to view site */}
-            <Link
-              href={website?.status === 'published' ? `/${website.slug}` : `#`}
-              className="block"
-              target={website?.status === 'published' ? '_blank' : undefined}
-              onClick={(e) => {
-                if (website?.status !== 'published') {
-                  e.preventDefault();
-                  toast.info('Publiez votre site pour le voir en ligne');
-                }
-              }}
-            >
-              <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up cursor-pointer h-full" style={{ animationDelay: '0.05s', animationFillMode: 'both' }}>
-                <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Statut</CardTitle>
-                  <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform group-hover:rotate-12" />
-                </CardHeader>
-                <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    {website?.status === 'published' ? (
-                      <>
-                        <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-green-500 animate-pulse" />
-                        <span className="text-lg sm:text-2xl font-bold">En ligne</span>
-                      </>
-                    ) : (
-                      <>
-                        <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-amber-500 animate-pulse" />
-                        <span className="text-lg sm:text-2xl font-bold">Brouillon</span>
-                      </>
-                    )}
+            {/* Total Visits */}
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.05s', animationFillMode: 'both' }}>
+              <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Visites (7j)</CardTitle>
+                <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-lg sm:text-2xl font-bold">{simulatedData.metrics.totalVisits}</div>
+                <div className="flex items-center gap-1 mt-1.5 sm:mt-2">
+                  <div className={`flex items-center gap-0.5 text-[10px] sm:text-xs ${simulatedData.changes.visits >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                    <TrendingUp className={`h-2.5 w-2.5 sm:h-3 sm:w-3 ${simulatedData.changes.visits < 0 ? 'rotate-180' : ''}`} />
+                    <span>{simulatedData.changes.visits >= 0 ? '+' : ''}{simulatedData.changes.visits}%</span>
                   </div>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
-                    {website?.slug ? `${website.slug}.asap.cool` : 'Configurez votre site'}
-                  </p>
-                  <div className="flex items-center gap-1 mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Eye className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                    <span>{website?.status === 'published' ? 'Voir le site' : 'Publier pour voir'}</span>
-                  </div>
-                </CardContent>
-                <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
-                  <Globe className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
+                  <span className="text-[10px] sm:text-xs text-muted-foreground">vs semaine dernière</span>
                 </div>
-              </Card>
-            </Link>
+              </CardContent>
+              <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
+                <Activity className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
+              </div>
+            </Card>
 
-            {/* Pages Card - Clickable */}
-            <Link href={`/app/${currentWebsiteId}/pages`} className="block">
-              <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up cursor-pointer h-full" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
-                <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Pages</CardTitle>
-                  <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-                  <div className="text-lg sm:text-2xl font-bold">{pages.length}</div>
-                  {(() => {
-                    const visibleCount = pages.filter(p => p.visible).length;
-                    return (
-                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                        {visibleCount} visible{visibleCount > 1 ? 's' : ''}
-                      </p>
-                    );
-                  })()}
-                  <div className="flex items-center gap-1 mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ArrowRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                    <span>Gérer les pages</span>
+            {/* Unique Visitors */}
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
+              <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Visiteurs uniques</CardTitle>
+                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-lg sm:text-2xl font-bold">{simulatedData.metrics.uniqueVisitors}</div>
+                <div className="flex items-center gap-1 mt-1.5 sm:mt-2">
+                  <div className={`flex items-center gap-0.5 text-[10px] sm:text-xs ${simulatedData.changes.visitors >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                    <TrendingUp className={`h-2.5 w-2.5 sm:h-3 sm:w-3 ${simulatedData.changes.visitors < 0 ? 'rotate-180' : ''}`} />
+                    <span>{simulatedData.changes.visitors >= 0 ? '+' : ''}{simulatedData.changes.visitors}%</span>
                   </div>
-                </CardContent>
-                <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
-                  <FileText className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
+                  <span className="text-[10px] sm:text-xs text-muted-foreground">vs semaine dernière</span>
                 </div>
-              </Card>
-            </Link>
+              </CardContent>
+              <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
+                <Users className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
+              </div>
+            </Card>
 
-            {/* Extensions - Clickable */}
-            <Link href={`/app/${currentWebsiteId}/extensions`} className="block">
-              <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up cursor-pointer h-full" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
-                <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Extensions</CardTitle>
-                  <Puzzle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform group-hover:rotate-12" />
-                </CardHeader>
-                <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-                  <div className="text-lg sm:text-2xl font-bold">{enabledExtensionsCount}</div>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                    {enabledExtensionsCount > 1 ? 'activées' : 'activée'}
-                  </p>
-                  <div className="flex gap-0.5 sm:gap-1 mt-1.5 sm:mt-2">
-                    {extensions.slice(0, 4).map((e, index) => (
-                      <div
-                        key={e.extension_id}
-                        className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full transition-all duration-300 ${e.enabled ? 'bg-primary scale-100' : 'bg-muted scale-90'}`}
-                        style={{ animationDelay: `${index * 0.05}s` }}
-                        title={e.extension_slug}
-                      />
-                    ))}
-                    {extensions.length > 4 && (
-                      <span className="text-[10px] sm:text-xs text-muted-foreground">+{extensions.length - 4}</span>
-                    )}
+            {/* Page Views */}
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
+              <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Pages vues</CardTitle>
+                <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-lg sm:text-2xl font-bold">{simulatedData.metrics.pageViews}</div>
+                <div className="flex items-center gap-1 mt-1.5 sm:mt-2">
+                  <div className={`flex items-center gap-0.5 text-[10px] sm:text-xs ${simulatedData.changes.pageViews >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                    <TrendingUp className={`h-2.5 w-2.5 sm:h-3 sm:w-3 ${simulatedData.changes.pageViews < 0 ? 'rotate-180' : ''}`} />
+                    <span>{simulatedData.changes.pageViews >= 0 ? '+' : ''}{simulatedData.changes.pageViews}%</span>
                   </div>
-                </CardContent>
-                <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
-                  <Puzzle className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
+                  <span className="text-[10px] sm:text-xs text-muted-foreground">vs semaine dernière</span>
                 </div>
-              </Card>
-            </Link>
+              </CardContent>
+              <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
+                <Eye className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
+              </div>
+            </Card>
 
-            {/* Cloud/Files - Clickable */}
-            <Link href={`/app/${currentWebsiteId}/cloud`} className="block">
-              <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up cursor-pointer h-full" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
-                <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Médias</CardTitle>
-                  <HardDrive className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-                  <div className="text-lg sm:text-2xl font-bold">
-                    {quota ? formatBytes(quota.total_size_used) : '0 B'}
-                  </div>
-                  <div className="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2">
-                    <Progress 
-                      value={storagePercentage} 
-                      className="h-1.5 sm:h-2 flex-1"
-                    />
-                    <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
-                      {storagePercentage.toFixed(0)}%
-                    </span>
-                  </div>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
-                    sur {quota ? formatBytes(quota.quota_limit) : '50 MB'}
-                  </p>
-                </CardContent>
-                <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
-                  <HardDrive className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
+            {/* CTA Clicks */}
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
+              <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Clics CTA</CardTitle>
+                <MousePointerClick className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-lg sm:text-2xl font-bold">{simulatedData.metrics.ctaClicks}</div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+                  Taux de conversion: {((simulatedData.metrics.ctaClicks / simulatedData.metrics.totalVisits) * 100).toFixed(1)}%
+                </p>
+                <div className="flex items-center gap-1 mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-green-600">
+                  <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                  <span>Bon taux</span>
                 </div>
-              </Card>
-            </Link>
+              </CardContent>
+              <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
+                <MousePointerClick className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
+              </div>
+            </Card>
           </div>
 
-          {/* Main Content Grid - 3 columns */}
+          {/* Charts Row - Visits Trend & Traffic Sources */}
           <div className="grid gap-3 sm:gap-4 lg:grid-cols-12">
+            {/* Visits Trend Chart */}
+            <Card className="lg:col-span-8 animate-fade-in-up" style={{ animationDelay: '0.25s', animationFillMode: 'both' }}>
+              <CardHeader className="px-4 sm:px-6">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                  Tendance des visites
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Visites et pages vues des 7 derniers jours
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="px-4 sm:px-6">
+                <ChartContainer config={visitsChartConfig} className="h-[200px] sm:h-[250px] w-full">
+                  <AreaChart data={simulatedData.visitsData} margin={{ left: 0, right: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis
+                      dataKey="day"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tick={{ fontSize: 11 }}
+                      width={30}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <defs>
+                      <linearGradient id="fillVisits" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="fillPageViews" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(221.2 83.2% 53.3%)" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(221.2 83.2% 53.3%)" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Area
+                      type="monotone"
+                      dataKey="pageViews"
+                      stroke="hsl(221.2 83.2% 53.3%)"
+                      fill="url(#fillPageViews)"
+                      strokeWidth={2}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="visits"
+                      stroke="hsl(var(--primary))"
+                      fill="url(#fillVisits)"
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            {/* Traffic Sources */}
+            <Card className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
+              <CardHeader className="px-4 sm:px-6">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                  <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                  Sources de trafic
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  D'où viennent vos visiteurs
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="px-4 sm:px-6">
+                <div className="space-y-4">
+                  {simulatedData.trafficSources.map((source) => (
+                    <div key={source.source} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="h-3 w-3 rounded-full" 
+                            style={{ backgroundColor: source.fill }}
+                          />
+                          <span>{source.source}</span>
+                        </div>
+                        <span className="font-medium">{source.value}%</span>
+                      </div>
+                      <Progress value={source.value} className="h-2" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Site Resources & Quick Actions Row */}
+          <div className="grid gap-3 sm:gap-4 lg:grid-cols-12">
+            {/* Site Status & Resources */}
+            <Card className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.35s', animationFillMode: 'both' }}>
+              <CardHeader className="px-4 sm:px-6">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                  <Layers className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                  Ressources du site
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Aperçu de votre contenu
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="px-4 sm:px-6">
+                <ChartContainer
+                  config={resourcesChartConfig}
+                  className="mx-auto h-[140px] sm:h-[160px]"
+                >
+                  <BarChart
+                    data={siteResourcesData}
+                    layout="vertical"
+                    margin={{ left: 0, right: 20 }}
+                  >
+                    <YAxis
+                      dataKey="name"
+                      type="category"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={10}
+                      width={70}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <XAxis type="number" hide />
+                    <ChartTooltip
+                      cursor={false}
+                      content={<ChartTooltipContent hideLabel />}
+                    />
+                    <Bar
+                      dataKey="value"
+                      radius={[0, 4, 4, 0]}
+                      barSize={20}
+                    >
+                      {siteResourcesData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+                <Separator className="my-3" />
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <Link href={`/app/${currentWebsiteId}/pages`} className="group">
+                    <div className="p-2 rounded-lg hover:bg-muted transition-colors">
+                      <FileText className="h-4 w-4 mx-auto text-muted-foreground group-hover:text-primary transition-colors" />
+                      <p className="text-lg font-bold mt-1">{pages.length}</p>
+                      <p className="text-[10px] text-muted-foreground">Pages</p>
+                    </div>
+                  </Link>
+                  <Link href={`/app/${currentWebsiteId}/extensions`} className="group">
+                    <div className="p-2 rounded-lg hover:bg-muted transition-colors">
+                      <Puzzle className="h-4 w-4 mx-auto text-muted-foreground group-hover:text-primary transition-colors" />
+                      <p className="text-lg font-bold mt-1">{enabledExtensionsCount}</p>
+                      <p className="text-[10px] text-muted-foreground">Extensions</p>
+                    </div>
+                  </Link>
+                  <Link href={`/app/${currentWebsiteId}/cloud`} className="group">
+                    <div className="p-2 rounded-lg hover:bg-muted transition-colors">
+                      <HardDrive className="h-4 w-4 mx-auto text-muted-foreground group-hover:text-primary transition-colors" />
+                      <p className="text-lg font-bold mt-1">{storagePercentage.toFixed(0)}%</p>
+                      <p className="text-[10px] text-muted-foreground">Stockage</p>
+                    </div>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Site Completion Checklist */}
-            <Card className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.25s', animationFillMode: 'both' }}>
+            <Card className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
               <CardHeader className="px-4 sm:px-6">
                 <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                   <Target className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
@@ -715,69 +869,8 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Site Resources Chart */}
-            <Card className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
-              <CardHeader className="px-4 sm:px-6">
-                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                  <Layers className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                  Ressources du site
-                </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Aperçu de votre contenu
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="px-4 sm:px-6">
-                <ChartContainer
-                  config={resourcesChartConfig}
-                  className="mx-auto h-[180px] sm:h-[200px]"
-                >
-                  <BarChart
-                    data={siteResourcesData}
-                    layout="vertical"
-                    margin={{ left: 0, right: 20 }}
-                  >
-                    <YAxis
-                      dataKey="name"
-                      type="category"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={10}
-                      width={70}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <XAxis type="number" hide />
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent hideLabel />}
-                    />
-                    <Bar
-                      dataKey="value"
-                      radius={[0, 4, 4, 0]}
-                      barSize={24}
-                    >
-                      {siteResourcesData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ChartContainer>
-                <div className="grid grid-cols-2 gap-2 mt-3">
-                  {siteResourcesData.map((item, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs">
-                      <div 
-                        className="h-2 w-2 rounded-full" 
-                        style={{ backgroundColor: item.fill }}
-                      />
-                      <span className="text-muted-foreground">{item.name}:</span>
-                      <span className="font-medium">{item.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Quick Actions */}
-            <Card className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.35s', animationFillMode: 'both' }}>
+            <Card className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.45s', animationFillMode: 'both' }}>
               <CardHeader className="px-4 sm:px-6">
                 <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                   <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
@@ -843,170 +936,6 @@ export default function Dashboard() {
                     <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all duration-200" />
                   </a>
                 )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Bottom Row - Storage Chart */}
-          <div className="grid gap-3 sm:gap-4 lg:grid-cols-12">
-            {/* Storage Usage */}
-            <Card className="lg:col-span-5 animate-fade-in-up" style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
-              <CardHeader className="px-4 sm:px-6">
-                <CardTitle className="text-sm sm:text-base">Utilisation du stockage</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Espace disque utilisé
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex items-center justify-center pb-0 px-4 sm:px-6">
-                <ChartContainer
-                  config={storageChartConfig}
-                  className="mx-auto aspect-square max-h-[140px] sm:max-h-[160px]"
-                >
-                  <RadialBarChart
-                    data={storageChartData}
-                    startAngle={90}
-                    endAngle={90 - (storagePercentage / 100) * 360}
-                    innerRadius={50}
-                    outerRadius={70}
-                  >
-                    <PolarGrid
-                      gridType="circle"
-                      radialLines={false}
-                      stroke="none"
-                      className="first:fill-muted last:fill-background"
-                      polarRadius={[55, 45]}
-                    />
-                    <RadialBar 
-                      dataKey="value" 
-                      background 
-                      cornerRadius={10}
-                      fill={storageChartData[0].fill}
-                    />
-                    <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
-                      <Label
-                        content={({ viewBox }) => {
-                          if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                            return (
-                              <text
-                                x={viewBox.cx}
-                                y={viewBox.cy}
-                                textAnchor="middle"
-                                dominantBaseline="middle"
-                              >
-                                <tspan
-                                  x={viewBox.cx}
-                                  y={viewBox.cy}
-                                  className="fill-foreground text-2xl font-bold"
-                                >
-                                  {storagePercentage.toFixed(0)}%
-                                </tspan>
-                                <tspan
-                                  x={viewBox.cx}
-                                  y={(viewBox.cy || 0) + 16}
-                                  className="fill-muted-foreground text-xs"
-                                >
-                                  utilisé
-                                </tspan>
-                              </text>
-                            )
-                          }
-                        }}
-                      />
-                    </PolarRadiusAxis>
-                  </RadialBarChart>
-                </ChartContainer>
-              </CardContent>
-              <CardFooter className="flex-col gap-2 text-sm pt-4 px-4 sm:px-6">
-                <div className="flex items-center justify-between w-full text-xs sm:text-sm">
-                  <span className="text-muted-foreground">Utilisé</span>
-                  <span className="font-medium">{quota ? formatBytes(quota.total_size_used) : '0 B'}</span>
-                </div>
-                <div className="flex items-center justify-between w-full text-xs sm:text-sm">
-                  <span className="text-muted-foreground">Disponible</span>
-                  <span className="font-medium">
-                    {quota ? formatBytes(quota.quota_limit - quota.total_size_used) : '50 MB'}
-                  </span>
-                </div>
-              </CardFooter>
-            </Card>
-
-            {/* Site Info Summary */}
-            <Card className="lg:col-span-7 animate-fade-in-up" style={{ animationDelay: '0.45s', animationFillMode: 'both' }}>
-              <CardHeader className="px-4 sm:px-6">
-                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                  <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                  Informations du site
-                </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Détails et configuration actuelle
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="px-4 sm:px-6">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
-                        <Link2 className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">URL du site</p>
-                        <p className="text-sm font-medium truncate">
-                          {website?.slug ? `${website.slug}.asap.cool` : '—'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
-                        <Type className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Titre</p>
-                        <p className="text-sm font-medium truncate">
-                          {website?.title || '—'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
-                        <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Tagline</p>
-                        <p className="text-sm font-medium truncate">
-                          {website?.tagline || '—'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Dernière modification</p>
-                        <p className="text-sm font-medium">
-                          {website?.updated_at ? formatDate(new Date(website.updated_at)) : '—'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <Separator className="my-4" />
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Button variant="outline" size="sm" asChild className="flex-1">
-                    <Link href={`/app/${currentWebsiteId}/settings`}>
-                      <Settings className="h-3.5 w-3.5 mr-1.5" />
-                      Paramètres
-                    </Link>
-                  </Button>
-                  <Button variant="outline" size="sm" asChild className="flex-1">
-                    <Link href={`/app/${currentWebsiteId}/studio`}>
-                      <Edit className="h-3.5 w-3.5 mr-1.5" />
-                      Modifier le contenu
-                    </Link>
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           </div>
