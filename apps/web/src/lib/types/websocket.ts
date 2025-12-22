@@ -9,31 +9,30 @@ import type { JsonValue } from './common';
 // ============================================
 
 /**
- * Presence user data from WebSocket
+ * Website presence user data from WebSocket
+ * Matches the server-side WebsitePresenceUser structure
  */
-export interface PresenceUser {
+export interface WebsitePresenceUser {
   id: string;
   email: string;
-  username?: string;
-  editing?: string;
-  editing_context?: string;
-  last_active?: string;
+  name?: string;
+  avatar?: string;
+  joined_at?: string;
 }
 
 /**
  * WebSocket event data payloads
  */
 export interface WebSocketEventData {
-  users?: PresenceUser[];
-  user?: PresenceUser;
+  users?: WebsitePresenceUser[];
+  user?: WebsitePresenceUser;
   user_id?: string;
   field?: string;
   context?: string;
   website_id?: string;
   extension_id?: string;
-  module_id?: string;
   // Allow additional dynamic properties
-  [key: string]: PresenceUser[] | PresenceUser | JsonValue | undefined;
+  [key: string]: WebsitePresenceUser[] | WebsitePresenceUser | JsonValue | undefined;
 }
 
 // ============================================
