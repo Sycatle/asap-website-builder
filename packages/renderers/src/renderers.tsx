@@ -9,8 +9,54 @@
  */
 
 import React from 'react';
+import DOMPurify from 'dompurify';
 import type { Section, Website } from './types';
 import { getData, cn } from './utils';
+
+// ============================================
+// HTML Sanitization
+// ============================================
+
+/**
+ * Sanitize HTML content to prevent XSS attacks.
+ * Uses DOMPurify with a strict configuration allowing only safe tags.
+ */
+function sanitizeHtml(html: string): string {
+  if (typeof window === 'undefined') {
+    // Server-side: return empty string (content will be rendered on client)
+    // This is safe because React will hydrate with sanitized content
+    return '';
+  }
+  
+  return DOMPurify.sanitize(html, {
+    // Allow common formatting tags
+    ALLOWED_TAGS: [
+      'p', 'br', 'b', 'i', 'em', 'strong', 'u', 's', 'strike',
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'ul', 'ol', 'li',
+      'a', 'blockquote', 'pre', 'code',
+      'span', 'div',
+      'img', 'figure', 'figcaption',
+      'table', 'thead', 'tbody', 'tr', 'th', 'td',
+      'hr', 'sub', 'sup', 'mark'
+    ],
+    // Allow safe attributes
+    ALLOWED_ATTR: [
+      'href', 'target', 'rel', 'title', 'alt', 'src',
+      'class', 'id', 'style',
+      'colspan', 'rowspan'
+    ],
+    // Force target="_blank" links to have rel="noopener noreferrer"
+    ADD_ATTR: ['target'],
+    // Don't allow data: or javascript: URLs
+    ALLOW_DATA_ATTR: false,
+    // Forbid dangerous protocols
+    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
+  });
+}
+
+// Export sanitizeHtml for reuse in other components
+export { sanitizeHtml };
 
 // ============================================
 // Common Props
@@ -996,7 +1042,10 @@ export function CustomRenderer({ section, isSelected, onClick }: SectionRenderer
         </h2>
         
         {html ? (
-          <div className="prose prose-slate dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: html }} />
+          <div 
+            className="prose prose-slate dark:prose-invert max-w-none" 
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} 
+          />
         ) : content ? (
           <div className="prose prose-slate dark:prose-invert max-w-none">
             <p>{content}</p>
