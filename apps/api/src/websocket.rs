@@ -88,20 +88,17 @@ impl WsState {
     
     /// Unregister a client
     pub async fn unregister_client(&self, account_id: &str, client_id: uuid::Uuid) {
-        // First, release the client from authenticated_clients
-        {
-            let mut clients = self.authenticated_clients.write().await;
-            if let Some(account_clients) = clients.get_mut(account_id) {
-                account_clients.retain(|c| c.client_id != client_id);
-                if account_clients.is_empty() {
-                    clients.remove(account_id);
-                }
-            }
-            // Lock is released here at end of block
-        }
+        // First, leave the website presence (while we still have the account_id)
+        self.leave_website_with_account(client_id, account_id).await;
         
-        // Now safe to call leave_website which may need read lock on authenticated_clients
-        self.leave_website(client_id).await;
+        // Then, release the client from authenticated_clients
+        let mut clients = self.authenticated_clients.write().await;
+        if let Some(account_clients) = clients.get_mut(account_id) {
+            account_clients.retain(|c| c.client_id != client_id);
+            if account_clients.is_empty() {
+                clients.remove(account_id);
+            }
+        }
     }
     
     /// Join a website presence room
@@ -157,6 +154,16 @@ impl WsState {
             if let Some(user_id) = user_id {
                 self.leave_website_internal(client_id, &website_id, &user_id).await;
             }
+        }
+    }
+    
+    /// Leave a website presence room with known account_id
+    /// Used when unregistering a client where we already know the account_id
+    pub async fn leave_website_with_account(&self, client_id: uuid::Uuid, account_id: &str) {
+        let mut client_websites = self.client_websites.write().await;
+        if let Some(website_id) = client_websites.remove(&client_id) {
+            drop(client_websites);
+            self.leave_website_internal(client_id, &website_id, account_id).await;
         }
     }
     
@@ -662,18 +669,25 @@ mod tests {
     }
 
     #[test]
-    fn test_ws_state_creation() {
-        let state = WsState::new();
-        // Should not panic
-        state.broadcast(WsMessage {
-            msg_type: "test".to_string(),
-            data: serde_json::json!({}),
-        });
+    fn test_ws_message_deserialization() {
+        let json = r#"{"type":"test","data":{"key":"value"}}"#;
+        let msg: WsMessage = serde_json::from_str(json).unwrap();
+        assert_eq!(msg.msg_type, "test");
+        assert_eq!(msg.data["key"], "value");
     }
 
     #[test]
-    fn test_verify_token() {
-        assert!(verify_token("valid-token"));
-        assert!(!verify_token(""));
+    fn test_website_presence_user_serialization() {
+        let user = WebsitePresenceUser {
+            id: "user-123".to_string(),
+            email: "test@example.com".to_string(),
+            name: Some("Test User".to_string()),
+            avatar: None,
+            joined_at: "2024-01-01T00:00:00Z".to_string(),
+        };
+
+        let json = serde_json::to_string(&user).unwrap();
+        assert!(json.contains("\"id\":\"user-123\""));
+        assert!(json.contains("\"email\":\"test@example.com\""));
     }
 }

@@ -46,7 +46,12 @@ export type SyncEventType =
   | 'sync:upload:complete'
   | 'sync:upload:failed'
   
-  // Presence events
+  // Website Presence events (primary presence system)
+  | 'presence:website:users'
+  | 'presence:website:user-joined'
+  | 'presence:website:user-left'
+  
+  // Legacy presence events (for backward compatibility)
   | 'presence:user:online'
   | 'presence:user:offline'
   | 'presence:user:editing'
@@ -62,6 +67,15 @@ export interface PresenceUser {
   username: string;
   avatar_url?: string;
   last_seen: string;
+}
+
+/** Website presence user - used by the website presence system */
+export interface WebsitePresenceUser {
+  id: string;
+  email: string;
+  name?: string;
+  avatar?: string;
+  joined_at?: string;
 }
 
 export interface ResourceReference {
@@ -385,7 +399,38 @@ export interface UploadFailedEvent {
 }
 
 // ============================================
-// Presence Events
+// Website Presence Events (Primary System)
+// ============================================
+
+/** Event sent when the users list for a website is requested/updated */
+export interface WebsiteUsersEvent {
+  type: 'presence:website:users';
+  data: {
+    website_id: string;
+    users: WebsitePresenceUser[];
+  };
+}
+
+/** Event sent when a user joins a website presence room */
+export interface WebsiteUserJoinedEvent {
+  type: 'presence:website:user-joined';
+  data: {
+    website_id: string;
+    user: WebsitePresenceUser;
+  };
+}
+
+/** Event sent when a user leaves a website presence room */
+export interface WebsiteUserLeftEvent {
+  type: 'presence:website:user-left';
+  data: {
+    website_id: string;
+    user_id: string;
+  };
+}
+
+// ============================================
+// Legacy Presence Events (for backward compatibility)
 // ============================================
 
 export interface UserOnlineEvent {
@@ -457,6 +502,11 @@ export type ExtensionSyncEvent =
   | ExtensionDeactivatedEvent
   | ExtensionConfiguredEvent;
 
+export type WebsitePresenceEvent =
+  | WebsiteUsersEvent
+  | WebsiteUserJoinedEvent
+  | WebsiteUserLeftEvent;
+
 export type SyncEvent =
   // Website
   | WebsiteCreatedEvent
@@ -490,7 +540,11 @@ export type SyncEvent =
   | UploadProgressEvent
   | UploadCompleteEvent
   | UploadFailedEvent
-  // Presence
+  // Website Presence
+  | WebsiteUsersEvent
+  | WebsiteUserJoinedEvent
+  | WebsiteUserLeftEvent
+  // Legacy Presence
   | UserOnlineEvent
   | UserOfflineEvent
   | UserEditingEvent
@@ -536,7 +590,11 @@ export function isFileEvent(event: SyncEvent): event is FileUploadedEvent | File
   return event.type.startsWith('sync:file:') || event.type.startsWith('sync:upload:');
 }
 
-export function isPresenceEvent(event: SyncEvent): event is UserOnlineEvent | UserOfflineEvent | UserEditingEvent | UserStoppedEditingEvent | UsersListEvent {
+export function isWebsitePresenceEvent(event: SyncEvent): event is WebsitePresenceEvent {
+  return event.type.startsWith('presence:website:');
+}
+
+export function isPresenceEvent(event: SyncEvent): event is WebsitePresenceEvent | UserOnlineEvent | UserOfflineEvent | UserEditingEvent | UserStoppedEditingEvent | UsersListEvent {
   return event.type.startsWith('presence:');
 }
 
@@ -594,7 +652,12 @@ export interface SyncEventHandlers {
   onUploadComplete?: (event: UploadCompleteEvent['data']) => void;
   onUploadFailed?: (event: UploadFailedEvent['data']) => void;
   
-  // Presence handlers
+  // Website Presence handlers
+  onWebsiteUsers?: (event: WebsiteUsersEvent['data']) => void;
+  onWebsiteUserJoined?: (event: WebsiteUserJoinedEvent['data']) => void;
+  onWebsiteUserLeft?: (event: WebsiteUserLeftEvent['data']) => void;
+  
+  // Legacy Presence handlers
   onUserOnline?: (event: UserOnlineEvent['data']) => void;
   onUserOffline?: (event: UserOfflineEvent['data']) => void;
   onUserEditing?: (event: UserEditingEvent['data']) => void;

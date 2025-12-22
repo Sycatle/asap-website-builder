@@ -1,276 +1,216 @@
 /**
  * usePresence Hook
  * 
- * Handles user presence tracking and real-time collaboration indicators
+ * Handles user presence tracking for website-based real-time collaboration.
+ * Uses the website presence system to track who is viewing/editing a website.
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useWebSocket } from './useWebSocket';
+import { useGlobalWebSocket } from '../components/providers/WebSocketProvider';
 import { useAuthStore } from '../lib/store/authStore';
-import { 
-  type PresenceUser,
-  type UserOnlineEvent,
-  type UserOfflineEvent,
-  type UserEditingEvent,
-  type UserStoppedEditingEvent,
-  type UsersListEvent,
-  parseSyncEvent
-} from '../lib/websocket/syncEvents';
+
+// ============================================
+// Types
+// ============================================
+
+export interface WebsitePresenceUser {
+  id: string;
+  email: string;
+  name?: string;
+  avatar?: string;
+  joined_at?: string;
+}
 
 interface UsePresenceOptions {
-  /** Type of resource being edited (e.g., 'website', 'module') */
-  resourceType?: string;
-  /** ID of the resource being edited */
-  resourceId?: string;
+  /** Website ID to track presence for */
+  websiteId?: string;
   /** Enable debug logging */
   debug?: boolean;
 }
 
 interface UsePresenceReturn {
-  /** List of all online users */
-  onlineUsers: PresenceUser[];
-  /** Users currently editing the same resource */
-  editingUsers: PresenceUser[];
-  /** Indicate this user is editing the resource */
-  startEditing: () => void;
-  /** Indicate this user stopped editing */
-  stopEditing: () => void;
+  /** List of all users present on the website */
+  onlineUsers: WebsitePresenceUser[];
   /** Whether presence tracking is active */
   isTracking: boolean;
+  /** Whether WebSocket is connected */
+  isConnected: boolean;
+  /** Join a website presence room */
+  joinWebsite: (websiteId: string) => void;
+  /** Leave the current website presence room */
+  leaveWebsite: () => void;
 }
 
 /**
- * Hook to track user presence and collaborative editing
+ * Hook to track user presence on a website
  * 
- * Tracks who is online and who is editing the same resource.
- * Automatically sends presence updates when user starts/stops editing.
+ * Tracks who is currently viewing/editing a specific website.
+ * Automatically joins/leaves presence room when websiteId changes.
  * 
  * @example
  * ```tsx
- * // Track presence on a specific resource
- * const {
- *   onlineUsers,
- *   editingUsers,
- *   startEditing,
- *   stopEditing
- * } = usePresence({
- *   resourceType: 'website',
- *   resourceId: websiteId
+ * // Track presence on a specific website
+ * const { onlineUsers, isTracking, isConnected } = usePresence({
+ *   websiteId: websiteId,
+ *   debug: true
  * });
  * 
- * // Show who's editing
- * useEffect(() => {
- *   if (editingUsers.length > 0) {
- *     console.log('Users editing:', editingUsers.map(u => u.username));
- *   }
- * }, [editingUsers]);
- * 
- * // Start editing when user focuses
- * useEffect(() => {
- *   const handleFocus = () => startEditing();
- *   const handleBlur = () => stopEditing();
- *   
- *   window.addEventListener('focus', handleFocus);
- *   window.addEventListener('blur', handleBlur);
- *   
- *   return () => {
- *     window.removeEventListener('focus', handleFocus);
- *     window.removeEventListener('blur', handleBlur);
- *     stopEditing();
- *   };
- * }, [startEditing, stopEditing]);
+ * // Show who's online
+ * return (
+ *   <div>
+ *     {onlineUsers.map(user => (
+ *       <span key={user.id}>{user.name || user.email}</span>
+ *     ))}
+ *   </div>
+ * );
  * ```
  */
 export function usePresence(options: UsePresenceOptions = {}): UsePresenceReturn {
-  const { resourceType, resourceId, debug = false } = options;
+  const { websiteId, debug = false } = options;
   
   const { user, isAuthenticated } = useAuthStore();
-  const ws = useWebSocket({
-    url: import.meta.env.PUBLIC_WS_URL || 'ws://localhost:3000/ws',
-    autoConnect: true
-  });
+  const ws = useGlobalWebSocket();
 
-  const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([]);
-  const [editingUsers, setEditingUsers] = useState<PresenceUser[]>([]);
+  const [onlineUsers, setOnlineUsers] = useState<WebsitePresenceUser[]>([]);
   const [isTracking, setIsTracking] = useState(false);
   
-  const isEditingRef = useRef(false);
-  const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Track current website ID to handle changes
+  const currentWebsiteIdRef = useRef<string | null>(null);
 
-  // Start editing - send presence update
-  const startEditing = useCallback(() => {
-    if (!ws.isConnected || !isAuthenticated || !resourceType || !resourceId) {
-      if (debug) console.log('[Presence] Cannot start editing - not ready');
+  // Log helper
+  const log = useCallback((...args: unknown[]) => {
+    if (debug) {
+      console.log('[Presence]', ...args);
+    }
+  }, [debug]);
+
+  // Join a website presence room
+  const joinWebsite = useCallback((targetWebsiteId: string) => {
+    if (!ws.isConnected || !ws.isWsAuthenticated || !user) {
+      log('Cannot join website - not ready', { 
+        connected: ws.isConnected, 
+        authenticated: ws.isWsAuthenticated, 
+        hasUser: !!user 
+      });
       return;
     }
 
-    if (isEditingRef.current) {
-      if (debug) console.log('[Presence] Already editing');
-      return;
+    // Leave previous website if any
+    if (currentWebsiteIdRef.current && currentWebsiteIdRef.current !== targetWebsiteId) {
+      log('Leaving previous website:', currentWebsiteIdRef.current);
+      ws.send('presence:leave-website', { website_id: currentWebsiteIdRef.current });
     }
 
-    isEditingRef.current = true;
+    currentWebsiteIdRef.current = targetWebsiteId;
     setIsTracking(true);
 
-    ws.send('presence:start-editing', {
-      resource_type: resourceType,
-      resource_id: resourceId,
-      user_id: user?.id,
-      username: user?.email
+    log('Joining website:', targetWebsiteId);
+    ws.send('presence:join-website', {
+      website_id: targetWebsiteId,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: (user as any).name,
+        avatar: (user as any).avatar,
+      }
     });
 
-    if (debug) console.log('[Presence] Started editing', { resourceType, resourceId });
+    // Request current users list after a short delay to ensure handlers are set up
+    setTimeout(() => {
+      ws.send('presence:get-website-users', { website_id: targetWebsiteId });
+    }, 100);
+  }, [ws, user, log]);
 
-    // Send heartbeat every 30 seconds to keep presence active
-    heartbeatTimerRef.current = setInterval(() => {
-      if (isEditingRef.current) {
-        ws.send('presence:heartbeat', {
-          resource_type: resourceType,
-          resource_id: resourceId
-        });
-      }
-    }, 30000);
-  }, [ws, isAuthenticated, resourceType, resourceId, user, debug]);
-
-  // Stop editing - clear presence
-  const stopEditing = useCallback(() => {
-    if (!isEditingRef.current) {
-      if (debug) console.log('[Presence] Not editing');
+  // Leave the current website presence room
+  const leaveWebsite = useCallback(() => {
+    if (!currentWebsiteIdRef.current) {
       return;
     }
 
-    isEditingRef.current = false;
-    setIsTracking(false);
-
-    if (heartbeatTimerRef.current) {
-      clearInterval(heartbeatTimerRef.current);
-      heartbeatTimerRef.current = null;
-    }
-
-    if (ws.isConnected && resourceType && resourceId) {
-      ws.send('presence:stop-editing', {
-        resource_type: resourceType,
-        resource_id: resourceId
-      });
-
-      if (debug) console.log('[Presence] Stopped editing');
-    }
-  }, [ws, resourceType, resourceId, debug]);
-
-  // Handle online users list
-  const handleUsersList = useCallback((data: any) => {
-    const event = parseSyncEvent(data);
-    if (!event || event.type !== 'presence:users:list') return;
-
-    setOnlineUsers(event.data.online_users);
-    if (debug) console.log('[Presence] Users list:', event.data.online_users.length);
-  }, [debug]);
-
-  // Handle user online
-  const handleUserOnline = useCallback((data: any) => {
-    const event = parseSyncEvent(data);
-    if (!event || event.type !== 'presence:user:online') return;
-
-    const newUser = event.data.user;
+    log('Leaving website:', currentWebsiteIdRef.current);
     
+    if (ws.isConnected) {
+      ws.send('presence:leave-website', { website_id: currentWebsiteIdRef.current });
+    }
+
+    currentWebsiteIdRef.current = null;
+    setIsTracking(false);
+    setOnlineUsers([]);
+  }, [ws, log]);
+
+  // Handle users list update
+  const handleUsersUpdate = useCallback((data: any) => {
+    if (!data || !currentWebsiteIdRef.current) return;
+    if (data.website_id !== currentWebsiteIdRef.current) return;
+
+    if (data.users && Array.isArray(data.users)) {
+      log('Users list updated:', data.users.length);
+      setOnlineUsers(data.users);
+    }
+  }, [log]);
+
+  // Handle user joined
+  const handleUserJoined = useCallback((data: any) => {
+    if (!data || !currentWebsiteIdRef.current) return;
+    if (data.website_id !== currentWebsiteIdRef.current) return;
+    if (!data.user) return;
+
+    log('User joined:', data.user.email);
     setOnlineUsers(prev => {
       // Don't add if already in list
-      if (prev.some(u => u.id === newUser.id)) return prev;
-      return [...prev, newUser];
+      if (prev.some(u => u.id === data.user.id)) return prev;
+      return [...prev, data.user];
     });
+  }, [log]);
 
-    if (debug) console.log('[Presence] User online:', newUser.username);
-  }, [debug]);
+  // Handle user left
+  const handleUserLeft = useCallback((data: any) => {
+    if (!data || !currentWebsiteIdRef.current) return;
+    if (data.website_id !== currentWebsiteIdRef.current) return;
+    if (!data.user_id) return;
 
-  // Handle user offline
-  const handleUserOffline = useCallback((data: any) => {
-    const event = parseSyncEvent(data);
-    if (!event || event.type !== 'presence:user:offline') return;
+    log('User left:', data.user_id);
+    setOnlineUsers(prev => prev.filter(u => u.id !== data.user_id));
+  }, [log]);
 
-    const { user_id } = event.data;
-    
-    setOnlineUsers(prev => prev.filter(u => u.id !== user_id));
-    setEditingUsers(prev => prev.filter(u => u.id !== user_id));
-
-    if (debug) console.log('[Presence] User offline:', user_id);
-  }, [debug]);
-
-  // Handle user started editing
-  const handleUserEditing = useCallback((data: any) => {
-    const event = parseSyncEvent(data);
-    if (!event || event.type !== 'presence:user:editing') return;
-
-    const { user: editingUser, resource_type, resource_id: editing_resource_id } = event.data;
-
-    // Only track users editing the same resource
-    if (resource_type !== resourceType || editing_resource_id !== resourceId) {
-      return;
-    }
-
-    // Don't add ourselves
-    if (editingUser.id === user?.id) {
-      return;
-    }
-
-    setEditingUsers(prev => {
-      // Don't add if already in list
-      if (prev.some(u => u.id === editingUser.id)) return prev;
-      return [...prev, editingUser];
-    });
-
-    if (debug) console.log('[Presence] User editing:', editingUser.username);
-  }, [resourceType, resourceId, user, debug]);
-
-  // Handle user stopped editing
-  const handleUserStoppedEditing = useCallback((data: any) => {
-    const event = parseSyncEvent(data);
-    if (!event || event.type !== 'presence:user:stopped-editing') return;
-
-    const { user_id, resource_type, resource_id: editing_resource_id } = event.data;
-
-    if (resource_type !== resourceType || editing_resource_id !== resourceId) {
-      return;
-    }
-
-    setEditingUsers(prev => prev.filter(u => u.id !== user_id));
-
-    if (debug) console.log('[Presence] User stopped editing:', user_id);
-  }, [resourceType, resourceId, debug]);
-
-  // Register event handlers
+  // Set up event listeners
   useEffect(() => {
     if (!ws.isConnected) return;
 
-    ws.on('presence:users:list', handleUsersList);
-    ws.on('presence:user:online', handleUserOnline);
-    ws.on('presence:user:offline', handleUserOffline);
-    ws.on('presence:user:editing', handleUserEditing);
-    ws.on('presence:user:stopped-editing', handleUserStoppedEditing);
+    log('Setting up presence event handlers');
 
-    // Request initial users list
-    ws.send('presence:request-users', {});
+    ws.on('presence:website:users', handleUsersUpdate);
+    ws.on('presence:website:user-joined', handleUserJoined);
+    ws.on('presence:website:user-left', handleUserLeft);
 
     return () => {
-      ws.off('presence:users:list', handleUsersList);
-      ws.off('presence:user:online', handleUserOnline);
-      ws.off('presence:user:offline', handleUserOffline);
-      ws.off('presence:user:editing', handleUserEditing);
-      ws.off('presence:user:stopped-editing', handleUserStoppedEditing);
+      log('Cleaning up presence event handlers');
+      ws.off('presence:website:users', handleUsersUpdate);
+      ws.off('presence:website:user-joined', handleUserJoined);
+      ws.off('presence:website:user-left', handleUserLeft);
     };
-  }, [ws, handleUsersList, handleUserOnline, handleUserOffline, handleUserEditing, handleUserStoppedEditing]);
+  }, [ws.isConnected, ws.on, ws.off, handleUsersUpdate, handleUserJoined, handleUserLeft, log]);
 
-  // Cleanup on unmount
+  // Auto-join website when websiteId prop changes
   useEffect(() => {
+    if (!websiteId || !ws.isConnected || !ws.isWsAuthenticated || !isAuthenticated) {
+      return;
+    }
+
+    // Join the website
+    joinWebsite(websiteId);
+
+    // Cleanup: leave when websiteId changes or component unmounts
     return () => {
-      stopEditing();
+      leaveWebsite();
     };
-  }, [stopEditing]);
+  }, [websiteId, ws.isConnected, ws.isWsAuthenticated, isAuthenticated, joinWebsite, leaveWebsite]);
 
   return {
     onlineUsers,
-    editingUsers,
-    startEditing,
-    stopEditing,
-    isTracking
+    isTracking,
+    isConnected: ws.isConnected,
+    joinWebsite,
+    leaveWebsite,
   };
 }

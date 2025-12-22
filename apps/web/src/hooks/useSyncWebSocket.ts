@@ -278,7 +278,20 @@ export function useSyncWebSocket(options: UseSyncWebSocketOptions = {}): UseSync
         h?.onUploadFailed?.(eventData as any);
         break;
 
-      // ========== PRESENCE EVENTS ==========
+      // ========== WEBSITE PRESENCE EVENTS ==========
+      case 'presence:website:users':
+        h?.onWebsiteUsers?.(eventData as any);
+        break;
+
+      case 'presence:website:user-joined':
+        h?.onWebsiteUserJoined?.(eventData as any);
+        break;
+
+      case 'presence:website:user-left':
+        h?.onWebsiteUserLeft?.(eventData as any);
+        break;
+
+      // ========== LEGACY PRESENCE EVENTS ==========
       case 'presence:user:online':
         h?.onUserOnline?.(eventData as any);
         break;
@@ -353,13 +366,17 @@ export function useSyncWebSocket(options: UseSyncWebSocketOptions = {}): UseSync
       'sync:upload:progress',
       'sync:upload:complete',
       'sync:upload:failed',
-      // Presence
+      // Website Presence
+      'presence:website:users',
+      'presence:website:user-joined',
+      'presence:website:user-left',
+      // Legacy Presence
       'presence:user:online',
       'presence:user:offline',
       'presence:user:editing',
       'presence:user:stopped-editing',
       'presence:users:list',
-      // Legacy
+      // Legacy Module
       'sync:module:activated',
       'sync:module:deactivated',
       'sync:module:configured',
