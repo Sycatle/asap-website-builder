@@ -1,20 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { authAPI, type MeResponse } from '../api/auth';
+import { authAPI } from '../api/auth';
 import { accountsAPI } from '../api/accounts';
-import { websitesAPI, type Website } from '../api/websites';
+import { websitesAPI } from '../api/websites';
+import type { MeResponse, UserData, Website } from '../types';
 
-// ============================================
-// TYPES
-// ============================================
-
-export interface UserData {
-  id: string;
-  email: string;
-  name: string;
-  avatar?: string;
-  plan?: string;
-}
+// Re-export UserData type for backward compatibility
+export type { UserData } from '../types';
 
 interface AuthState {
   // Core auth data
