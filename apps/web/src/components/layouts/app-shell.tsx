@@ -16,6 +16,7 @@ import { WebsiteProvider, useWebsiteContext } from "@/contexts/WebsiteContext"
 import { HeaderUser } from "@/components/layouts/header-user"
 import { useKeyboardShortcuts, getModifierKey } from "@/hooks/useKeyboardShortcuts"
 import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket"
+import { useSyncWebSocket } from "@/hooks/useSyncWebSocket"
 import { navigate } from "@/components/app-router"
 import { toast } from "sonner"
 import {
@@ -152,6 +153,11 @@ function AppShellContent({
         })
       }
     }
+  })
+
+  // Real-time data sync via WebSocket - auto-updates React Query cache
+  useSyncWebSocket({
+    websiteId: currentWebsiteId || undefined,
   })
 
   // Global keyboard shortcuts
