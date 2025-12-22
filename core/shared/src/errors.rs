@@ -20,6 +20,9 @@ pub enum SharedError {
 
     #[error("CSRF error: {0}")]
     CsrfError(String),
+
+    #[error("Internal error: {0}")]
+    InternalError(String),
 }
 
 impl From<jsonwebtoken::errors::Error> for SharedError {

@@ -118,7 +118,7 @@ pub async fn publish_new_notifications(
             "metadata": notification.metadata,
             "read": false,
             "created_at": notification.created_at.to_rfc3339(),
-            "read_at": null::<String>
+            "read_at": serde_json::Value::Null
         });
         
         // Publish to Redis
