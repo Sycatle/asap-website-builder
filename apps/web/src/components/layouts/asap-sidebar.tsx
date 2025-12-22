@@ -12,6 +12,7 @@ import {
   Settings,
   FileText,
   Users,
+  Search,
 } from "lucide-react"
 
 import {
@@ -143,6 +144,14 @@ export function AsapSidebar({
                     <Link href={buildUrl('/analytics')}>
                       <BarChart3 />
                       <span>Analytics</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="SEO">
+                    <Link href={buildUrl('/seo')}>
+                      <Search />
+                      <span>SEO</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
