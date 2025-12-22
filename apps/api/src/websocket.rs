@@ -52,6 +52,7 @@ pub struct WebsitePresenceUser {
 pub struct WsState {
     pub tx: broadcast::Sender<WsMessage>,
     pub config: Arc<SharedConfig>,
+    pub pool: sqlx::PgPool,
     /// Map of authenticated clients: account_id -> Vec<ClientInfo>
     pub authenticated_clients: Arc<RwLock<HashMap<String, Vec<ClientInfo>>>>,
     /// Map of website presence: website_id -> Vec<WebsitePresenceUser>
@@ -61,11 +62,12 @@ pub struct WsState {
 }
 
 impl WsState {
-    pub fn new(config: SharedConfig) -> Self {
+    pub fn new(config: SharedConfig, pool: sqlx::PgPool) -> Self {
         let (tx, _) = broadcast::channel(100);
         Self {
             tx,
             config: Arc::new(config),
+            pool,
             authenticated_clients: Arc::new(RwLock::new(HashMap::new())),
             website_presence: Arc::new(RwLock::new(HashMap::new())),
             client_websites: Arc::new(RwLock::new(HashMap::new())),
@@ -442,25 +444,78 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                             ws_msg.data.get("website_id").and_then(|v| v.as_str()),
                                             ws_msg.data.get("user")
                                         ) {
-                                            let user = WebsitePresenceUser {
-                                                id: account_id.clone(),
-                                                email: user_data.get("email").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                                                name: user_data.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                                                avatar: user_data.get("avatar").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                                                joined_at: Utc::now().to_rfc3339(),
-                                            };
-                                            state.join_website(client_id, website_id.to_string(), user).await;
-                                            
-                                            // Send current users to the joining client
-                                            let users = state.get_website_users(website_id).await;
-                                            let users_msg = WsMessage {
-                                                msg_type: "presence:website:users".to_string(),
-                                                data: serde_json::json!({
-                                                    "website_id": website_id,
-                                                    "users": users
-                                                }),
-                                            };
-                                            let _ = direct_tx.send(users_msg).await;
+                                            // Verify user has access to this website (owner or active administrator)
+                                            match uuid::Uuid::parse_str(website_id) {
+                                                Ok(website_uuid) => {
+                                                    match uuid::Uuid::parse_str(account_id) {
+                                                        Ok(account_uuid) => {
+                                                            // Check access using the verify_website_access query
+                                                            let has_access = sqlx::query_scalar::<_, bool>(
+                                                                r#"
+                                                                SELECT EXISTS (
+                                                                    SELECT 1 
+                                                                    FROM websites w
+                                                                    WHERE w.id = $1 
+                                                                      AND (w.account_id = $2 
+                                                                           OR EXISTS (
+                                                                               SELECT 1 
+                                                                               FROM website_administrators wa 
+                                                                               WHERE wa.website_id = w.id 
+                                                                                 AND wa.account_id = $2 
+                                                                                 AND wa.status = 'active'
+                                                                           ))
+                                                                )
+                                                                "#
+                                                            )
+                                                            .bind(website_uuid)
+                                                            .bind(account_uuid)
+                                                            .fetch_one(&state.pool)
+                                                            .await
+                                                            .unwrap_or(false);
+                                                            
+                                                            if !has_access {
+                                                                warn!("User {} attempted to join website {} without access", account_id, website_id);
+                                                                let error_msg = WsMessage {
+                                                                    msg_type: "error".to_string(),
+                                                                    data: serde_json::json!({
+                                                                        "message": "You don't have access to this website"
+                                                                    }),
+                                                                };
+                                                                let _ = direct_tx.send(error_msg).await;
+                                                                continue;
+                                                            }
+                                                            
+                                                            // User has access, proceed with joining
+                                                            let user = WebsitePresenceUser {
+                                                                id: account_id.clone(),
+                                                                email: user_data.get("email").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                                                name: user_data.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                                                                avatar: user_data.get("avatar").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                                                                joined_at: Utc::now().to_rfc3339(),
+                                                            };
+                                                            state.join_website(client_id, website_id.to_string(), user).await;
+                                                            info!("User {} joined website {} presence (2 users)", account_id, website_id);
+                                                            
+                                                            // Send current users to the joining client
+                                                            let users = state.get_website_users(website_id).await;
+                                                            let users_msg = WsMessage {
+                                                                msg_type: "presence:website:users".to_string(),
+                                                                data: serde_json::json!({
+                                                                    "website_id": website_id,
+                                                                    "users": users
+                                                                }),
+                                                            };
+                                                            let _ = direct_tx.send(users_msg).await;
+                                                        }
+                                                        Err(_) => {
+                                                            warn!("Invalid account_id UUID: {}", account_id);
+                                                        }
+                                                    }
+                                                }
+                                                Err(_) => {
+                                                    warn!("Invalid website_id UUID: {}", website_id);
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -470,17 +525,50 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                     }
                                 }
                                 "presence:get-website-users" => {
-                                    if authenticated_account.read().await.is_some() {
+                                    if let Some(account_id) = authenticated_account.read().await.as_ref() {
                                         if let Some(website_id) = ws_msg.data.get("website_id").and_then(|v| v.as_str()) {
-                                            let users = state.get_website_users(website_id).await;
-                                            let users_msg = WsMessage {
-                                                msg_type: "presence:website:users".to_string(),
-                                                data: serde_json::json!({
-                                                    "website_id": website_id,
-                                                    "users": users
-                                                }),
-                                            };
-                                            let _ = direct_tx.send(users_msg).await;
+                                            // Verify user has access to this website
+                                            match (uuid::Uuid::parse_str(website_id), uuid::Uuid::parse_str(account_id)) {
+                                                (Ok(website_uuid), Ok(account_uuid)) => {
+                                                    let has_access = sqlx::query_scalar::<_, bool>(
+                                                        r#"
+                                                        SELECT EXISTS (
+                                                            SELECT 1 
+                                                            FROM websites w
+                                                            WHERE w.id = $1 
+                                                              AND (w.account_id = $2 
+                                                                   OR EXISTS (
+                                                                       SELECT 1 
+                                                                       FROM website_administrators wa 
+                                                                       WHERE wa.website_id = w.id 
+                                                                         AND wa.account_id = $2 
+                                                                         AND wa.status = 'active'
+                                                                   ))
+                                                        )
+                                                        "#
+                                                    )
+                                                    .bind(website_uuid)
+                                                    .bind(account_uuid)
+                                                    .fetch_one(&state.pool)
+                                                    .await
+                                                    .unwrap_or(false);
+                                                    
+                                                    if has_access {
+                                                        let users = state.get_website_users(website_id).await;
+                                                        let users_msg = WsMessage {
+                                                            msg_type: "presence:website:users".to_string(),
+                                                            data: serde_json::json!({
+                                                                "website_id": website_id,
+                                                                "users": users
+                                                            }),
+                                                        };
+                                                        let _ = direct_tx.send(users_msg).await;
+                                                    }
+                                                }
+                                                _ => {
+                                                    warn!("Invalid UUID in presence:get-website-users");
+                                                }
+                                            }
                                         }
                                     }
                                 }

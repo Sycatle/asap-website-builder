@@ -101,8 +101,8 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
-    // Create WebSocket state with shared config
-    let ws_state = Arc::new(websocket::WsState::new(shared_config.clone()));
+    // Create WebSocket state with shared config and database pool
+    let ws_state = Arc::new(websocket::WsState::new(shared_config.clone(), pool.clone()));
     tracing::info!("WebSocket state initialized with authentication");
 
     // Start Redis Pub/Sub subscribers for real-time features
