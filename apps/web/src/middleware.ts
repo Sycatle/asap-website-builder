@@ -8,7 +8,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const response = await next();
   
   // Get the API URL for CSP connect-src directive
-  const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+  const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
+  // Extract the origin (protocol + host) for CSP - CSP needs the origin, not paths
+  const apiOrigin = new URL(apiUrl).origin;
   const apiHost = new URL(apiUrl).host;
   
   // Security headers
@@ -38,12 +40,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
       "script-src 'self' 'unsafe-inline'",
       // Styles: self + inline for Tailwind
       "style-src 'self' 'unsafe-inline'",
-      // Images: self + data URIs + known CDNs
-      "img-src 'self' data: blob: https://avatars.githubusercontent.com https://images.unsplash.com",
+      // Images: self + data URIs + API (for file uploads) + known CDNs
+      `img-src 'self' data: blob: ${apiOrigin} https://avatars.githubusercontent.com https://images.unsplash.com`,
       // Fonts: self + Google Fonts
       "font-src 'self' https://fonts.gstatic.com",
-      // Connect: self + API + WebSocket
-      `connect-src 'self' ${apiUrl} wss://${apiHost} ws://localhost:*`,
+      // Connect: self + API origin + WebSocket
+      `connect-src 'self' ${apiOrigin} wss://${apiHost} ws://localhost:*`,
       // Frame ancestors: none (anti-clickjacking)
       "frame-ancestors 'none'",
       // Form submissions: self only
