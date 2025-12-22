@@ -88,15 +88,19 @@ impl WsState {
     
     /// Unregister a client
     pub async fn unregister_client(&self, account_id: &str, client_id: uuid::Uuid) {
-        let mut clients = self.authenticated_clients.write().await;
-        if let Some(account_clients) = clients.get_mut(account_id) {
-            account_clients.retain(|c| c.client_id != client_id);
-            if account_clients.is_empty() {
-                clients.remove(account_id);
+        // First, release the client from authenticated_clients
+        {
+            let mut clients = self.authenticated_clients.write().await;
+            if let Some(account_clients) = clients.get_mut(account_id) {
+                account_clients.retain(|c| c.client_id != client_id);
+                if account_clients.is_empty() {
+                    clients.remove(account_id);
+                }
             }
+            // Lock is released here at end of block
         }
         
-        // Also remove from website presence
+        // Now safe to call leave_website which may need read lock on authenticated_clients
         self.leave_website(client_id).await;
     }
     
@@ -341,7 +345,13 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                 }
                 // Handle broadcast messages (only if authenticated)
                 Ok(mut msg) = broadcast_rx.recv() => {
-                    if let Some(account_id) = auth_clone.read().await.as_ref() {
+                    // Copy account_id to avoid holding read lock during message send
+                    let account_id = {
+                        let auth = auth_clone.read().await;
+                        auth.clone()
+                    };
+                    
+                    if let Some(account_id) = account_id.as_ref() {
                         // Check if message is targeted for this account
                         let should_send = if let Some(target_account) = msg.data.get("__account_id") {
                             // Message is account-specific, only send if it matches
@@ -383,16 +393,19 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                             match ws_msg.msg_type.as_str() {
                                 "auth" => {
                                     // Handle authentication
-                                    if let Ok(payload) = serde_json::from_value::<AuthPayload>(ws_msg.data) {
+                                    if let Ok(payload) = serde_json::from_value::<AuthPayload>(ws_msg.data.clone()) {
                                         // Verify JWT token and extract account ID
                                         if let Some(claims) = verify_token_and_get_claims(&payload.token, &state.config) {
                                             let account_id = claims.sub.clone();
-                                            *authenticated_account.write().await = Some(account_id.clone());
+                                            {
+                                                let mut auth = authenticated_account.write().await;
+                                                *auth = Some(account_id.clone());
+                                            }
                                             
                                             // Register this client
                                             state.register_client(account_id.clone(), client_id).await;
                                             
-                                            info!("Client {} authenticated successfully for account: {}", client_id, account_id);
+                                            info!("Client {} authenticated for account: {}", client_id, account_id);
                                             
                                             // Send auth success message directly to this client
                                             let auth_success = WsMessage {
@@ -605,7 +618,12 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
     }
     
     // Cleanup: Unregister client if authenticated
-    if let Some(account_id) = auth_for_cleanup.read().await.as_ref() {
+    let account_id = {
+        let auth = auth_for_cleanup.read().await;
+        auth.clone()
+    };
+    
+    if let Some(account_id) = account_id.as_ref() {
         state_for_cleanup.unregister_client(account_id, client_id).await;
         info!("Unregistered client {} for account {}", client_id, account_id);
     }
