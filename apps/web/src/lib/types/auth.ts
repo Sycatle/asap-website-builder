@@ -40,6 +40,15 @@ export interface ChangePasswordRequest {
   new_password: string;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  new_password: string;
+}
+
 export interface UpdateGitHubIntegrationRequest {
   github_username: string;
   github_token?: string | null;

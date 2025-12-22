@@ -17,10 +17,11 @@ serde_json.workspace = true
 tracing.workspace = true
 async-trait.workspace = true
 tokio = { workspace = true, features = ["sync"] }
-# CSRF protection
+# CSRF protection & password reset
 hmac.workspace = true
 sha2.workspace = true
 rand = "0.8"
 base64 = "0.21"
+hex = "0.4"
 
 [dev-dependencies]

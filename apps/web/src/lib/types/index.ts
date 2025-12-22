@@ -71,6 +71,8 @@ export {
   type LoginResponse,
   type MeResponse,
   type ChangePasswordRequest,
+  type ForgotPasswordRequest,
+  type ResetPasswordRequest,
   type UpdateGitHubIntegrationRequest,
   type UserData,
 } from './auth';

@@ -54,6 +54,25 @@ export const changePasswordSchema = z.object({
   path: ['confirmPassword'],
 });
 
+/**
+ * Forgot password validation schema
+ */
+export const forgotPasswordSchema = z.object({
+  email: emailSchema,
+});
+
+/**
+ * Reset password validation schema
+ */
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Token requis'),
+  newPassword: passwordSchema,
+  confirmPassword: z.string(),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: 'Les mots de passe ne correspondent pas',
+  path: ['confirmPassword'],
+});
+
 // ============================================
 // TYPE EXPORTS
 // ============================================
@@ -61,6 +80,8 @@ export const changePasswordSchema = z.object({
 export type LoginFormData = z.infer<typeof loginSchema>;
 export type SignupFormData = z.infer<typeof signupSchema>;
 export type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
+export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 // ============================================
 // VALIDATION HELPERS

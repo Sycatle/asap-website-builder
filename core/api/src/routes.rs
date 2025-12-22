@@ -149,6 +149,8 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         .route("/", get(root))
         .route("/auth/signup", post(crate::auth::signup))
         .route("/auth/login", post(crate::auth::login))
+        .route("/auth/forgot-password", post(crate::auth::forgot_password))
+        .route("/auth/reset-password", post(crate::auth::reset_password))
         // CSRF token endpoint (public, needed before login)
         .route("/auth/csrf-token", get(crate::csrf::get_csrf_token))
         // Public website routes

@@ -6,6 +6,8 @@ import type {
   LoginResponse,
   MeResponse,
   ChangePasswordRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
   UpdateGitHubIntegrationRequest,
 } from '../types';
 
@@ -17,6 +19,8 @@ export type {
   LoginResponse,
   MeResponse,
   ChangePasswordRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
   UpdateGitHubIntegrationRequest,
 };
 
@@ -35,6 +39,14 @@ export const authAPI = {
 
   async changePassword(data: ChangePasswordRequest): Promise<{ message: string }> {
     return apiClient.post<{ message: string }>('/auth/change-password', data);
+  },
+
+  async forgotPassword(data: ForgotPasswordRequest): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>('/auth/forgot-password', data);
+  },
+
+  async resetPassword(data: ResetPasswordRequest): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>('/auth/reset-password', data);
   },
 
   logout() {

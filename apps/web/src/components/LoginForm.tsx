@@ -160,6 +160,14 @@ export default function LoginForm({
               {errors.password && (
                 <p id="password-error" className="text-sm text-destructive">{errors.password}</p>
               )}
+              <div className="text-right">
+                <a 
+                  href="/forgot-password" 
+                  className="text-sm text-muted-foreground hover:text-primary underline underline-offset-4"
+                >
+                  Mot de passe oublié ?
+                </a>
+              </div>
             </div>
             {isRateLimited && (
               <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
