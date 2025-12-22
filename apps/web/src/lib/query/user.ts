@@ -1,6 +1,7 @@
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
-import { authAPI, type MeResponse } from '../api';
-import { queryKeys, staleTimes } from './queryClient';
+import { authAPI } from '../api';
+import { queryKeys, staleTimes } from './queryKeys';
+import type { MeResponse } from '../types';
 
 // ============================================
 // USER/AUTH QUERIES
@@ -13,7 +14,7 @@ export function useUserQuery(
   options?: Omit<UseQueryOptions<MeResponse, Error>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
-    queryKey: queryKeys.user,
+    queryKey: queryKeys.user.me(),
     queryFn: () => authAPI.me(),
     staleTime: staleTimes.user,
     // Don't retry on 401 errors (not authenticated)

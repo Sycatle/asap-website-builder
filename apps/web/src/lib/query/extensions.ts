@@ -1,13 +1,7 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
-import { 
-  extensionsAPI, 
-  type Extension, 
-  type WebsiteExtension, 
-  type ExtensionData,
-  type ActivateExtensionRequest,
-  type UpdateExtensionSettingsRequest,
-} from '../api';
-import { queryKeys, staleTimes } from './queryClient';
+import { extensionsAPI } from '../api';
+import { queryKeys, staleTimes } from './queryKeys';
+import type { Extension, WebsiteExtension, ExtensionData } from '../types';
 
 // ============================================
 // EXTENSION CATALOG QUERIES
@@ -20,7 +14,7 @@ export function useExtensionCatalogQuery(
   options?: Omit<UseQueryOptions<Extension[], Error>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
-    queryKey: queryKeys.extensionCatalog,
+    queryKey: queryKeys.extensions.catalog(),
     queryFn: () => extensionsAPI.catalog(),
     staleTime: staleTimes.extensions,
     ...options,
@@ -39,7 +33,7 @@ export function useWebsiteExtensionsQuery(
   options?: Omit<UseQueryOptions<WebsiteExtension[], Error>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
-    queryKey: queryKeys.websiteExtensions(websiteId!),
+    queryKey: queryKeys.extensions.list(websiteId!),
     queryFn: () => extensionsAPI.listForWebsite(websiteId!),
     staleTime: staleTimes.extensions,
     enabled: !!websiteId,
@@ -56,7 +50,7 @@ export function useExtensionDataQuery(
   options?: Omit<UseQueryOptions<ExtensionData, Error>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
-    queryKey: queryKeys.extensionData(websiteId!, extensionSlug!),
+    queryKey: queryKeys.extensions.data(websiteId!, extensionSlug!),
     queryFn: () => extensionsAPI.getExtensionData(websiteId!, extensionSlug!),
     staleTime: staleTimes.extensionData,
     enabled: !!websiteId && !!extensionSlug,
@@ -84,7 +78,7 @@ export function useActivateExtensionMutation() {
     onSuccess: (newExtension, { websiteId }) => {
       // Add to the website extensions list
       queryClient.setQueryData<WebsiteExtension[]>(
-        queryKeys.websiteExtensions(websiteId),
+        queryKeys.extensions.list(websiteId),
         (old) => {
           if (!old) return [newExtension];
           // Replace if exists, otherwise add
@@ -111,7 +105,7 @@ export function useDeactivateExtensionMutation() {
     onSuccess: (_, { websiteId, extensionId }) => {
       // Remove from the website extensions list
       queryClient.setQueryData<WebsiteExtension[]>(
-        queryKeys.websiteExtensions(websiteId),
+        queryKeys.extensions.list(websiteId),
         (old) => {
           if (!old) return [];
           return old.filter((e) => e.id !== extensionId);
@@ -152,7 +146,7 @@ export function useUpdateExtensionSettingsMutation() {
     onSuccess: (updatedExtension, { websiteId }) => {
       // Update in the website extensions list
       queryClient.setQueryData<WebsiteExtension[]>(
-        queryKeys.websiteExtensions(websiteId),
+        queryKeys.extensions.list(websiteId),
         (old) => {
           if (!old) return [updatedExtension];
           const exists = old.some((e) => e.id === updatedExtension.id);
@@ -187,7 +181,7 @@ export function useTriggerExtensionActionMutation() {
     onSuccess: (result, { websiteId, extensionSlug }) => {
       // Invalidate extension data to refetch
       queryClient.invalidateQueries({
-        queryKey: queryKeys.extensionData(websiteId, extensionSlug),
+        queryKey: queryKeys.extensions.data(websiteId, extensionSlug),
       });
       return result;
     },

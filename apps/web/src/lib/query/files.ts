@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
-import { filesAPI, type FileMetadata, type QuotaUsage } from '../api';
-import { queryKeys, staleTimes } from './queryClient';
+import { filesAPI } from '../api';
+import { queryKeys, staleTimes } from './queryKeys';
+import type { FileMetadata, QuotaUsage } from '../types';
 
 // ============================================
 // FILES QUERIES
@@ -13,7 +14,7 @@ export function useFilesQuery(
   options?: Omit<UseQueryOptions<FileMetadata[], Error>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
-    queryKey: queryKeys.files,
+    queryKey: queryKeys.files.list(),
     queryFn: () => filesAPI.list(),
     staleTime: staleTimes.files,
     ...options,
@@ -27,7 +28,7 @@ export function useQuotaQuery(
   options?: Omit<UseQueryOptions<QuotaUsage, Error>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
-    queryKey: queryKeys.quota,
+    queryKey: queryKeys.files.quota(),
     queryFn: () => filesAPI.getQuota(),
     staleTime: staleTimes.quota,
     ...options,
@@ -48,13 +49,13 @@ export function useUploadFileMutation() {
     mutationFn: (file: File) => filesAPI.upload(file),
     onSuccess: (newFile) => {
       // Add to files list
-      queryClient.setQueryData<FileMetadata[]>(queryKeys.files, (old) => {
+      queryClient.setQueryData<FileMetadata[]>(queryKeys.files.list(), (old) => {
         if (!old) return [newFile];
         return [newFile, ...old];
       });
       
       // Invalidate quota since it changed
-      queryClient.invalidateQueries({ queryKey: queryKeys.quota });
+      queryClient.invalidateQueries({ queryKey: queryKeys.files.quota() });
     },
   });
 }
@@ -69,13 +70,13 @@ export function useDeleteFileMutation() {
     mutationFn: (fileId: string) => filesAPI.delete(fileId),
     onSuccess: (_, fileId) => {
       // Remove from files list
-      queryClient.setQueryData<FileMetadata[]>(queryKeys.files, (old) => {
+      queryClient.setQueryData<FileMetadata[]>(queryKeys.files.list(), (old) => {
         if (!old) return [];
         return old.filter((f) => f.id !== fileId);
       });
       
       // Invalidate quota since it changed
-      queryClient.invalidateQueries({ queryKey: queryKeys.quota });
+      queryClient.invalidateQueries({ queryKey: queryKeys.files.quota() });
     },
   });
 }
@@ -95,7 +96,7 @@ export function useDeleteFilesMutation() {
     },
     onSuccess: (_, fileIds) => {
       // Remove from files list
-      queryClient.setQueryData<FileMetadata[]>(queryKeys.files, (old) => {
+      queryClient.setQueryData<FileMetadata[]>(queryKeys.files.list(), (old) => {
         if (!old) return [];
         return old.filter((f) => !fileIds.includes(f.id));
       });

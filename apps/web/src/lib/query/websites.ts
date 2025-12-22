@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
-import { websitesAPI, type Website, type UpdateWebsiteRequest } from '../api';
-import { queryKeys, staleTimes } from './queryClient';
-import type { WebsiteData } from '../types';
+import { websitesAPI } from '../api';
+import { queryKeys, staleTimes } from './queryKeys';
+import type { Website, WebsiteData, UpdateWebsiteRequest } from '../types';
 
 // ============================================
 // WEBSITES QUERIES
@@ -14,7 +14,7 @@ export function useWebsitesQuery(
   options?: Omit<UseQueryOptions<Website[], Error>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
-    queryKey: queryKeys.websites,
+    queryKey: queryKeys.websites.lists(),
     queryFn: () => websitesAPI.list(),
     staleTime: staleTimes.websites,
     ...options,
@@ -29,7 +29,7 @@ export function useWebsiteQuery(
   options?: Omit<UseQueryOptions<Website, Error>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
-    queryKey: queryKeys.website(websiteId!),
+    queryKey: queryKeys.websites.detail(websiteId!),
     queryFn: () => websitesAPI.get(websiteId!),
     staleTime: staleTimes.websites,
     enabled: !!websiteId,
@@ -45,7 +45,7 @@ export function useWebsiteDataQuery(
   options?: Omit<UseQueryOptions<Record<string, unknown>, Error>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
-    queryKey: queryKeys.websiteData(websiteId!),
+    queryKey: queryKeys.websites.data(websiteId!),
     queryFn: () => websitesAPI.getData(websiteId!),
     staleTime: staleTimes.websites,
     enabled: !!websiteId,
@@ -68,10 +68,10 @@ export function useUpdateWebsiteMutation() {
       websitesAPI.update(id, data),
     onSuccess: (updatedWebsite) => {
       // Update the specific website in cache
-      queryClient.setQueryData(queryKeys.website(updatedWebsite.id), updatedWebsite);
+      queryClient.setQueryData(queryKeys.websites.detail(updatedWebsite.id), updatedWebsite);
       
       // Update the website in the list
-      queryClient.setQueryData<Website[]>(queryKeys.websites, (old) => {
+      queryClient.setQueryData<Website[]>(queryKeys.websites.lists(), (old) => {
         if (!old) return [updatedWebsite];
         return old.map((w) => (w.id === updatedWebsite.id ? updatedWebsite : w));
       });
@@ -90,13 +90,13 @@ export function useCreateWebsiteMutation() {
       websitesAPI.create(data),
     onSuccess: (newWebsite) => {
       // Add to the websites list
-      queryClient.setQueryData<Website[]>(queryKeys.websites, (old) => {
+      queryClient.setQueryData<Website[]>(queryKeys.websites.lists(), (old) => {
         if (!old) return [newWebsite];
         return [...old, newWebsite];
       });
       
       // Also cache individually
-      queryClient.setQueryData(queryKeys.website(newWebsite.id), newWebsite);
+      queryClient.setQueryData(queryKeys.websites.detail(newWebsite.id), newWebsite);
     },
   });
 }
@@ -111,16 +111,18 @@ export function useDeleteWebsiteMutation() {
     mutationFn: (websiteId: string) => websitesAPI.delete(websiteId),
     onSuccess: (_, websiteId) => {
       // Remove from list
-      queryClient.setQueryData<Website[]>(queryKeys.websites, (old) => {
+      queryClient.setQueryData<Website[]>(queryKeys.websites.lists(), (old) => {
         if (!old) return [];
         return old.filter((w) => w.id !== websiteId);
       });
       
       // Remove individual cache
-      queryClient.removeQueries({ queryKey: queryKeys.website(websiteId) });
+      queryClient.removeQueries({ queryKey: queryKeys.websites.detail(websiteId) });
       
       // Remove related data
-      queryClient.removeQueries({ queryKey: queryKeys.websiteExtensions(websiteId) });
+      queryClient.removeQueries({ queryKey: queryKeys.extensions.list(websiteId) });
+      queryClient.removeQueries({ queryKey: queryKeys.pages.list(websiteId) });
+      queryClient.removeQueries({ queryKey: queryKeys.elements.list(websiteId) });
     },
   });
 }
@@ -135,11 +137,11 @@ export function usePublishWebsiteMutation() {
     mutationFn: (websiteId: string) => websitesAPI.publish(websiteId),
     onSuccess: (response, websiteId) => {
       // Update cache with new status
-      queryClient.setQueryData<Website[]>(queryKeys.websites, (old) => {
+      queryClient.setQueryData<Website[]>(queryKeys.websites.lists(), (old) => {
         if (!old) return [];
         return old.map((w) => (w.id === websiteId ? { ...w, status: 'published' as const } : w));
       });
-      queryClient.setQueryData<Website>(queryKeys.website(websiteId), (old) => {
+      queryClient.setQueryData<Website>(queryKeys.websites.detail(websiteId), (old) => {
         if (!old) return old;
         return { ...old, status: 'published' as const };
       });
@@ -157,7 +159,7 @@ export function useUpdateWebsiteDataMutation() {
     mutationFn: ({ id, data }: { id: string; data: WebsiteData }) =>
       websitesAPI.patchData(id, data),
     onSuccess: (updatedData, { id }) => {
-      queryClient.setQueryData(queryKeys.websiteData(id), updatedData);
+      queryClient.setQueryData(queryKeys.websites.data(id), updatedData);
     },
   });
 }
