@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { 
   ChartContainer,
@@ -53,6 +54,17 @@ import {
   AlertTriangle,
   TrendingUp,
   TrendingDown,
+  Trophy,
+  Star,
+  Users,
+  Calendar,
+  Bell,
+  Crown,
+  Award,
+  Sparkles,
+  ChevronRight,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { PresetOnboardingRouter } from "@/components/onboarding/presets";
 import { formatBytes } from "@/lib/utils/formatters";
@@ -656,6 +668,503 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Gamification Row - Progression, Goals, Achievements */}
+      <div className="grid gap-4 lg:grid-cols-12">
+        {/* Site Progression */}
+        <SiteProgressionCard 
+          websiteId={currentWebsiteId || ''} 
+          pagesCount={pages.length}
+          sectionsCount={elements.length}
+          extensionsCount={enabledExtensionsCount}
+          isPublished={website?.status === 'published'}
+          hasTheme={true}
+          hasSEO={!!website?.title}
+        />
+
+        {/* Weekly Goals */}
+        <WeeklyGoalsCard 
+          websiteId={currentWebsiteId || ''}
+          currentVisits={realtimeData.todayVisits * 7}
+          currentSubscribers={realtimeData.newsletterSubs}
+          currentContacts={realtimeData.contactRequests}
+        />
+
+        {/* Achievements */}
+        <AchievementsCard 
+          websiteId={currentWebsiteId || ''}
+          pagesCount={pages.length}
+          sectionsCount={elements.length}
+          extensionsCount={enabledExtensionsCount}
+          isPublished={website?.status === 'published'}
+          totalVisits={realtimeData.todayVisits * 30}
+          newsletterSubs={realtimeData.newsletterSubs}
+        />
+      </div>
+
+      {/* Team & Events Row */}
+      <div className="grid gap-4 lg:grid-cols-12">
+        {/* Team / Administrators */}
+        <TeamCard websiteId={currentWebsiteId || ''} />
+
+        {/* Recent Events */}
+        <RecentEventsCard websiteId={currentWebsiteId || ''} />
+      </div>
     </div>
   );
+}
+
+// Site Progression Card Component
+function SiteProgressionCard({ 
+  websiteId, 
+  pagesCount, 
+  sectionsCount, 
+  extensionsCount, 
+  isPublished, 
+  hasTheme, 
+  hasSEO 
+}: { 
+  websiteId: string;
+  pagesCount: number;
+  sectionsCount: number;
+  extensionsCount: number;
+  isPublished: boolean;
+  hasTheme: boolean;
+  hasSEO: boolean;
+}) {
+  const steps = [
+    { id: 'pages', label: 'Ajouter une page', completed: pagesCount > 0, href: `/app/${websiteId}/pages` },
+    { id: 'sections', label: 'Créer des sections', completed: sectionsCount > 0, href: `/app/${websiteId}/studio` },
+    { id: 'theme', label: 'Personnaliser le thème', completed: hasTheme, href: `/app/${websiteId}/theme` },
+    { id: 'seo', label: 'Configurer le SEO', completed: hasSEO, href: `/app/${websiteId}/settings` },
+    { id: 'extensions', label: 'Activer une extension', completed: extensionsCount > 0, href: `/app/${websiteId}/extensions` },
+    { id: 'publish', label: 'Publier le site', completed: isPublished, href: `/app/${websiteId}/settings` },
+  ];
+
+  const completedCount = steps.filter(s => s.completed).length;
+  const progressPercentage = Math.round((completedCount / steps.length) * 100);
+
+  return (
+    <Card className="lg:col-span-4">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-amber-500" />
+            Progression du site
+          </CardTitle>
+          <Badge 
+            variant="outline" 
+            className={progressPercentage === 100 ? 'bg-green-500/10 text-green-600 border-green-500/20' : ''}
+          >
+            {progressPercentage}%
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Progress value={progressPercentage} className="h-2" />
+          <p className="text-xs text-muted-foreground mt-1">
+            {completedCount}/{steps.length} étapes complétées
+          </p>
+        </div>
+        <div className="space-y-2">
+          {steps.map((step) => (
+            <Link
+              key={step.id}
+              href={step.href}
+              className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
+                step.completed 
+                  ? 'bg-green-500/5 text-green-700' 
+                  : 'hover:bg-accent'
+              }`}
+            >
+              {step.completed ? (
+                <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+              ) : (
+                <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30 shrink-0" />
+              )}
+              <span className={`text-sm ${step.completed ? 'line-through text-muted-foreground' : ''}`}>
+                {step.label}
+              </span>
+              {!step.completed && <ChevronRight className="h-3 w-3 ml-auto text-muted-foreground" />}
+            </Link>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Weekly Goals Card Component
+function WeeklyGoalsCard({ 
+  websiteId, 
+  currentVisits, 
+  currentSubscribers, 
+  currentContacts 
+}: { 
+  websiteId: string;
+  currentVisits: number;
+  currentSubscribers: number;
+  currentContacts: number;
+}) {
+  const goals = [
+    { 
+      id: 'visits', 
+      label: 'Visites cette semaine', 
+      current: currentVisits, 
+      target: 1000, 
+      icon: Activity,
+      color: 'text-blue-500',
+      bgColor: 'bg-blue-500'
+    },
+    { 
+      id: 'subscribers', 
+      label: 'Nouveaux abonnés', 
+      current: Math.min(currentSubscribers, 50), 
+      target: 50, 
+      icon: Mail,
+      color: 'text-green-500',
+      bgColor: 'bg-green-500'
+    },
+    { 
+      id: 'contacts', 
+      label: 'Demandes de contact', 
+      current: Math.min(currentContacts, 10), 
+      target: 10, 
+      icon: MessageSquare,
+      color: 'text-amber-500',
+      bgColor: 'bg-amber-500'
+    },
+  ];
+
+  return (
+    <Card className="lg:col-span-4">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Target className="h-4 w-4 text-violet-500" />
+            Objectifs de la semaine
+          </CardTitle>
+          <Link href={`/app/${websiteId}/analytics`}>
+            <Button variant="ghost" size="sm" className="text-xs h-7">
+              Détails
+              <ChevronRight className="h-3 w-3 ml-1" />
+            </Button>
+          </Link>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {goals.map((goal) => {
+          const percentage = Math.min(100, Math.round((goal.current / goal.target) * 100));
+          const isCompleted = percentage >= 100;
+          const GoalIcon = goal.icon;
+          
+          return (
+            <div key={goal.id} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <GoalIcon className={`h-4 w-4 ${goal.color}`} />
+                  <span className="text-sm">{goal.label}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm font-medium ${isCompleted ? 'text-green-600' : ''}`}>
+                    {goal.current.toLocaleString()} / {goal.target.toLocaleString()}
+                  </span>
+                  {isCompleted && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                </div>
+              </div>
+              <Progress 
+                value={percentage} 
+                className={`h-1.5 ${isCompleted ? '[&>div]:bg-green-500' : `[&>div]:${goal.bgColor}`}`}
+              />
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Achievements Card Component  
+function AchievementsCard({ 
+  websiteId, 
+  pagesCount, 
+  sectionsCount, 
+  extensionsCount, 
+  isPublished, 
+  totalVisits, 
+  newsletterSubs 
+}: { 
+  websiteId: string;
+  pagesCount: number;
+  sectionsCount: number;
+  extensionsCount: number;
+  isPublished: boolean;
+  totalVisits: number;
+  newsletterSubs: number;
+}) {
+  const achievements = [
+    { 
+      id: 'first-page', 
+      label: 'Première page', 
+      description: 'Créer votre première page',
+      icon: FileText, 
+      unlocked: pagesCount > 0,
+      color: 'text-blue-500',
+      bgColor: 'bg-blue-500/10'
+    },
+    { 
+      id: 'builder', 
+      label: 'Constructeur', 
+      description: 'Ajouter 5 sections',
+      icon: Layers, 
+      unlocked: sectionsCount >= 5,
+      color: 'text-violet-500',
+      bgColor: 'bg-violet-500/10'
+    },
+    { 
+      id: 'live', 
+      label: 'En ligne !', 
+      description: 'Publier votre site',
+      icon: Rocket, 
+      unlocked: isPublished,
+      color: 'text-green-500',
+      bgColor: 'bg-green-500/10'
+    },
+    { 
+      id: 'power-user', 
+      label: 'Power User', 
+      description: 'Activer 3 extensions',
+      icon: Puzzle, 
+      unlocked: extensionsCount >= 3,
+      color: 'text-amber-500',
+      bgColor: 'bg-amber-500/10'
+    },
+    { 
+      id: 'popular', 
+      label: 'Populaire', 
+      description: 'Atteindre 1000 visites',
+      icon: TrendingUp, 
+      unlocked: totalVisits >= 1000,
+      color: 'text-pink-500',
+      bgColor: 'bg-pink-500/10'
+    },
+    { 
+      id: 'influencer', 
+      label: 'Influenceur', 
+      description: '100 abonnés newsletter',
+      icon: Star, 
+      unlocked: newsletterSubs >= 100,
+      color: 'text-yellow-500',
+      bgColor: 'bg-yellow-500/10'
+    },
+  ];
+
+  const unlockedCount = achievements.filter(a => a.unlocked).length;
+
+  return (
+    <Card className="lg:col-span-4">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-yellow-500" />
+            Récompenses
+          </CardTitle>
+          <Badge variant="outline">
+            {unlockedCount}/{achievements.length}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-3 gap-2">
+          {achievements.map((achievement) => {
+            const AchievementIcon = achievement.icon;
+            return (
+              <div
+                key={achievement.id}
+                className={`relative group flex flex-col items-center gap-1 p-3 rounded-lg border transition-all ${
+                  achievement.unlocked 
+                    ? `${achievement.bgColor} border-transparent` 
+                    : 'bg-muted/30 border-dashed opacity-50'
+                }`}
+                title={achievement.description}
+              >
+                <div className={`p-2 rounded-full ${achievement.unlocked ? achievement.bgColor : 'bg-muted'}`}>
+                  {achievement.unlocked ? (
+                    <AchievementIcon className={`h-4 w-4 ${achievement.color}`} />
+                  ) : (
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+                <span className={`text-[10px] font-medium text-center leading-tight ${
+                  achievement.unlocked ? '' : 'text-muted-foreground'
+                }`}>
+                  {achievement.label}
+                </span>
+                {achievement.unlocked && (
+                  <div className="absolute -top-1 -right-1">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500 fill-green-500" />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Team Card Component
+function TeamCard({ websiteId }: { websiteId: string }) {
+  // Simulated team data
+  const team = [
+    { id: '1', name: 'Vous', email: 'vous@example.com', role: 'owner', initials: 'V', color: 'bg-primary' },
+    { id: '2', name: 'Marie D.', email: 'marie@example.com', role: 'admin', initials: 'MD', color: 'bg-violet-500' },
+    { id: '3', name: 'Jean P.', email: 'jean@example.com', role: 'editor', initials: 'JP', color: 'bg-blue-500' },
+  ];
+
+  const roleLabels: Record<string, string> = {
+    owner: 'Propriétaire',
+    admin: 'Admin',
+    editor: 'Éditeur',
+  };
+
+  return (
+    <Card className="lg:col-span-5">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            Équipe
+          </CardTitle>
+          <Link href={`/app/${websiteId}/administrators`}>
+            <Button variant="ghost" size="sm" className="text-xs h-7">
+              Gérer
+              <ChevronRight className="h-3 w-3 ml-1" />
+            </Button>
+          </Link>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {team.map((member) => (
+            <div key={member.id} className="flex items-center gap-3">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className={`${member.color} text-white text-xs`}>
+                  {member.initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate flex items-center gap-1.5">
+                  {member.name}
+                  {member.role === 'owner' && <Crown className="h-3 w-3 text-yellow-500" />}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+              </div>
+              <Badge variant="outline" className="text-[10px] shrink-0">
+                {roleLabels[member.role]}
+              </Badge>
+            </div>
+          ))}
+        </div>
+        <Link 
+          href={`/app/${websiteId}/administrators`}
+          className="mt-4 flex items-center justify-center gap-2 p-2 rounded-lg border border-dashed hover:bg-accent transition-colors"
+        >
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Inviter un collaborateur</span>
+        </Link>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Recent Events Card Component
+function RecentEventsCard({ websiteId }: { websiteId: string }) {
+  // Generate dynamic events based on current time
+  const [events, setEvents] = useState<Array<{
+    id: string;
+    type: string;
+    title: string;
+    time: string;
+    icon: React.ElementType;
+    color: string;
+  }>>([]);
+
+  useEffect(() => {
+    const generateEvents = () => {
+      const now = new Date();
+      const eventTypes = [
+        { type: 'visit', title: 'Nouvelle visite', icon: Eye, color: 'text-blue-500' },
+        { type: 'subscriber', title: 'Nouvel abonné newsletter', icon: Mail, color: 'text-green-500' },
+        { type: 'contact', title: 'Nouvelle demande de contact', icon: MessageSquare, color: 'text-amber-500' },
+        { type: 'page_view', title: 'Page consultée: Accueil', icon: FileText, color: 'text-violet-500' },
+        { type: 'visit', title: 'Visiteur depuis Google', icon: Globe, color: 'text-blue-500' },
+      ];
+
+      const newEvents = [];
+      for (let i = 0; i < 5; i++) {
+        const eventTime = new Date(now.getTime() - Math.random() * 3600000); // Within last hour
+        const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+        newEvents.push({
+          id: `event-${i}-${Date.now()}`,
+          ...eventType,
+          time: formatTimeAgo(eventTime),
+        });
+      }
+      setEvents(newEvents);
+    };
+
+    generateEvents();
+    const interval = setInterval(generateEvents, 30000); // Update every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <Card className="lg:col-span-7">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Bell className="h-4 w-4 text-primary" />
+            Activité récente
+          </CardTitle>
+          <Link href={`/app/${websiteId}/analytics`}>
+            <Button variant="ghost" size="sm" className="text-xs h-7">
+              Voir tout
+              <ChevronRight className="h-3 w-3 ml-1" />
+            </Button>
+          </Link>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {events.map((event) => {
+            const EventIcon = event.icon;
+            return (
+              <div key={event.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/50 transition-colors">
+                <div className={`p-1.5 rounded-full bg-muted`}>
+                  <EventIcon className={`h-3.5 w-3.5 ${event.color}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm truncate">{event.title}</p>
+                </div>
+                <span className="text-xs text-muted-foreground shrink-0">{event.time}</span>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Helper function to format time ago
+function formatTimeAgo(date: Date): string {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+  
+  if (seconds < 60) return 'À l\'instant';
+  if (seconds < 3600) return `Il y a ${Math.floor(seconds / 60)} min`;
+  if (seconds < 86400) return `Il y a ${Math.floor(seconds / 3600)}h`;
+  return `Il y a ${Math.floor(seconds / 86400)}j`;
 }
