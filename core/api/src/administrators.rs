@@ -293,13 +293,20 @@ pub async fn invite_administrator(
     })?;
 
     let invitation_token = Uuid::new_v4();
+    
+    // If user already has an account, activate immediately. Otherwise, pending.
+    let (status, accepted_at) = if existing_user.is_some() {
+        ("active", Some(chrono::Utc::now()))
+    } else {
+        ("pending", None)
+    };
 
     // Insert the new administrator
     let admin = sqlx::query!(
         r#"
         INSERT INTO website_administrators 
-            (website_id, account_id, email, role, permissions, status, invited_by, invitation_token)
-        VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7)
+            (website_id, account_id, email, role, permissions, status, invited_by, invitation_token, accepted_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id, email, role, status, invited_at
         "#,
         website_id,
@@ -307,8 +314,10 @@ pub async fn invite_administrator(
         request.email,
         request.role,
         permissions,
+        status,
         account_id,
-        invitation_token
+        invitation_token,
+        accepted_at
     )
     .fetch_one(&pool)
     .await
@@ -342,6 +351,12 @@ pub async fn invite_administrator(
 
     // TODO: Send invitation email via notification system
 
+    let message = if status == "active" {
+        "Administrator added successfully (user already has an account)"
+    } else {
+        "Invitation sent successfully"
+    };
+
     Ok(Json(serde_json::json!({
         "success": true,
         "administrator": {
@@ -351,7 +366,7 @@ pub async fn invite_administrator(
             "status": admin.status,
             "invited_at": admin.invited_at.to_rfc3339()
         },
-        "message": "Invitation sent successfully"
+        "message": message
     })))
 }
 
