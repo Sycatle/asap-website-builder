@@ -572,9 +572,14 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                   <div className="text-lg sm:text-2xl font-bold">{pages.length}</div>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                    {pages.filter(p => p.visible).length} visible{pages.filter(p => p.visible).length > 1 ? 's' : ''}
-                  </p>
+                  {(() => {
+                    const visibleCount = pages.filter(p => p.visible).length;
+                    return (
+                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+                        {visibleCount} visible{visibleCount > 1 ? 's' : ''}
+                      </p>
+                    );
+                  })()}
                   <div className="flex items-center gap-1 mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                     <ArrowRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                     <span>Gérer les pages</span>
@@ -596,7 +601,7 @@ export default function Dashboard() {
                 <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                   <div className="text-lg sm:text-2xl font-bold">{enabledExtensionsCount}</div>
                   <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                    activée{enabledExtensionsCount > 1 ? 's' : ''}
+                    {enabledExtensionsCount > 1 ? 'activées' : 'activée'}
                   </p>
                   <div className="flex gap-0.5 sm:gap-1 mt-1.5 sm:mt-2">
                     {extensions.slice(0, 4).map((e, index) => (
