@@ -48,9 +48,15 @@ export function useUploadFileMutation() {
   return useMutation({
     mutationFn: (file: File) => filesAPI.upload(file),
     onSuccess: (newFile) => {
-      // Add to files list
+      // Add to files list (avoid duplicates by checking ID)
       queryClient.setQueryData<FileMetadata[]>(queryKeys.files.list(), (old) => {
         if (!old) return [newFile];
+        // Check if file already exists (avoid duplicate from WebSocket)
+        const exists = old.some(f => f.id === newFile.id);
+        if (exists) {
+          // Update existing file instead of adding duplicate
+          return old.map(f => f.id === newFile.id ? newFile : f);
+        }
         return [newFile, ...old];
       });
       
@@ -102,7 +108,7 @@ export function useDeleteFilesMutation() {
       });
       
       // Invalidate quota since it changed
-      queryClient.invalidateQueries({ queryKey: queryKeys.quota });
+      queryClient.invalidateQueries({ queryKey: queryKeys.files.quota() });
     },
   });
 }

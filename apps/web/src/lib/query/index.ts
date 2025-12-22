@@ -2,6 +2,28 @@
 export { queryClient } from './queryClient';
 export { queryKeys, staleTimes } from './queryKeys';
 
+// Sync Helpers (for WebSocket → cache updates)
+export {
+  syncWebsiteCreated,
+  syncWebsiteUpdated,
+  syncWebsiteDeleted,
+  syncWebsitePublished,
+  syncWebsiteDataUpdated,
+  syncPageCreated,
+  syncPageUpdated,
+  syncPageDeleted,
+  syncPagesReordered,
+  syncElementCreated,
+  syncElementUpdated,
+  syncElementDeleted,
+  syncElementsReordered,
+  syncExtensionActivated,
+  syncExtensionDeactivated,
+  syncExtensionConfigured,
+  syncFileUploaded,
+  syncFileDeleted,
+} from './syncHelpers';
+
 // Website Queries & Mutations
 export {
   useWebsitesQuery,

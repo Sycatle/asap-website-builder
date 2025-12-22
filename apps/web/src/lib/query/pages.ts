@@ -54,9 +54,24 @@ export function useCreatePageMutation() {
     mutationFn: ({ websiteId, data }: { websiteId: string; data: CreatePageRequest }) =>
       pagesAPI.create(websiteId, data),
     onSuccess: (result, { websiteId, data }) => {
-      // Optimistically add to list cache
+      // Optimistically add to list cache (avoid duplicates by checking ID)
       queryClient.setQueryData<Page[]>(queryKeys.pages.list(websiteId), (old) => {
         if (!old) return [];
+        // Check if page already exists (avoid duplicate from WebSocket)
+        const exists = old.some(p => p.id === result.id);
+        if (exists) {
+          // Update existing page instead of adding duplicate
+          return old.map(p => p.id === result.id ? {
+            ...p,
+            slug: data.slug,
+            title: data.title,
+            description: data.description || '',
+            is_homepage: data.is_homepage || false,
+            order: data.order ?? p.order,
+            visible: data.visible ?? true,
+            metadata: data.metadata || {},
+          } : p).sort((a, b) => a.order - b.order);
+        }
         const newPage: Page = {
           id: result.id,
           website_id: websiteId,

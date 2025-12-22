@@ -89,9 +89,15 @@ export function useCreateWebsiteMutation() {
     mutationFn: (data: { title: string; slug: string; preset_id?: string }) =>
       websitesAPI.create(data),
     onSuccess: (newWebsite) => {
-      // Add to the websites list
+      // Add to the websites list (avoid duplicates by checking ID)
       queryClient.setQueryData<Website[]>(queryKeys.websites.lists(), (old) => {
         if (!old) return [newWebsite];
+        // Check if website already exists (avoid duplicate from WebSocket)
+        const exists = old.some(w => w.id === newWebsite.id);
+        if (exists) {
+          // Update existing website instead of adding duplicate
+          return old.map(w => w.id === newWebsite.id ? newWebsite : w);
+        }
         return [...old, newWebsite];
       });
       

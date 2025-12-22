@@ -54,11 +54,18 @@ export function useCreateElementMutation() {
     mutationFn: ({ websiteId, data }: { websiteId: string; data: CreateElementRequest }) =>
       elementsAPI.create(websiteId, data),
     onSuccess: (newElement, { websiteId }) => {
-      // Add to list cache
+      // Add to list cache (avoid duplicates by checking ID)
       queryClient.setQueryData<WebsiteElement[]>(
         queryKeys.elements.list(websiteId),
         (old) => {
           if (!old) return [newElement];
+          // Check if element already exists (avoid duplicate from WebSocket)
+          const exists = old.some(el => el.id === newElement.id);
+          if (exists) {
+            // Update existing element instead of adding duplicate
+            return old.map(el => el.id === newElement.id ? newElement : el)
+              .sort((a, b) => a.order - b.order);
+          }
           return [...old, newElement].sort((a, b) => a.order - b.order);
         }
       );
