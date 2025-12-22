@@ -10,12 +10,30 @@
 
 export type SyncEventType =
   // Website events
+  | 'sync:website:created'
   | 'sync:website:updated'
   | 'sync:website:deleted'
   | 'sync:website:published'
   | 'sync:website:unpublished'
+  | 'sync:website:data-updated'
   
-  // Module events
+  // Page events
+  | 'sync:page:created'
+  | 'sync:page:updated'
+  | 'sync:page:deleted'
+  | 'sync:page:reordered'
+  
+  // Element events
+  | 'sync:element:created'
+  | 'sync:element:updated'
+  | 'sync:element:deleted'
+  | 'sync:element:reordered'
+  
+  // Extension events (renamed from module)
+  | 'sync:extension:activated'
+  | 'sync:extension:deactivated'
+  | 'sync:extension:configured'
+  // Legacy module events for backward compatibility
   | 'sync:module:activated'
   | 'sync:module:deactivated'
   | 'sync:module:configured'
@@ -55,15 +73,32 @@ export interface ResourceReference {
 // Website Sync Events
 // ============================================
 
+export interface WebsiteCreatedEvent {
+  type: 'sync:website:created';
+  data: {
+    website: {
+      id: string;
+      account_id: string;
+      slug: string;
+      title: string;
+      tagline: string;
+      status: string;
+      creation_mode: string;
+      preset_id: string | null;
+      metadata: Record<string, unknown>;
+      data: Record<string, unknown>;
+    };
+  };
+}
+
 export interface WebsiteUpdatedEvent {
   type: 'sync:website:updated';
   data: {
     website_id: string;
-    updated_by: string;
-    updated_by_name: string;
-    changes: {
-      fields: string[];
-      timestamp: string;
+    website: {
+      title?: string;
+      tagline?: string;
+      metadata?: Record<string, unknown>;
     };
   };
 }
@@ -72,8 +107,6 @@ export interface WebsiteDeletedEvent {
   type: 'sync:website:deleted';
   data: {
     website_id: string;
-    deleted_by: string;
-    deleted_by_name: string;
   };
 }
 
@@ -81,9 +114,7 @@ export interface WebsitePublishedEvent {
   type: 'sync:website:published';
   data: {
     website_id: string;
-    url: string;
-    published_by: string;
-    published_by_name: string;
+    status: string;
   };
 }
 
@@ -96,8 +127,160 @@ export interface WebsiteUnpublishedEvent {
   };
 }
 
+export interface WebsiteDataUpdatedEvent {
+  type: 'sync:website:data-updated';
+  data: {
+    website_id: string;
+    data: Record<string, unknown>;
+  };
+}
+
 // ============================================
-// Module Sync Events
+// Page Sync Events
+// ============================================
+
+export interface PageCreatedEvent {
+  type: 'sync:page:created';
+  data: {
+    website_id: string;
+    page: {
+      id: string;
+      website_id: string;
+      slug: string;
+      title: string;
+      description: string;
+      is_homepage: boolean;
+      order: number;
+      visible: boolean;
+      metadata: Record<string, unknown>;
+    };
+  };
+}
+
+export interface PageUpdatedEvent {
+  type: 'sync:page:updated';
+  data: {
+    website_id: string;
+    page_id: string;
+    page: {
+      slug?: string;
+      title?: string;
+      description?: string;
+      is_homepage?: boolean;
+      order?: number;
+      visible?: boolean;
+      metadata?: Record<string, unknown>;
+    };
+  };
+}
+
+export interface PageDeletedEvent {
+  type: 'sync:page:deleted';
+  data: {
+    website_id: string;
+    page_id: string;
+  };
+}
+
+export interface PageReorderedEvent {
+  type: 'sync:page:reordered';
+  data: {
+    website_id: string;
+    page_ids: string[];
+  };
+}
+
+// ============================================
+// Element Sync Events
+// ============================================
+
+export interface ElementCreatedEvent {
+  type: 'sync:element:created';
+  data: {
+    website_id: string;
+    element: {
+      id: string;
+      website_id: string;
+      extension_id: string | null;
+      element_type: string;
+      slug: string;
+      title: string;
+      order: number;
+      layout: string;
+      settings: Record<string, unknown>;
+      data: Record<string, unknown>;
+      visible: boolean;
+    };
+  };
+}
+
+export interface ElementUpdatedEvent {
+  type: 'sync:element:updated';
+  data: {
+    website_id: string;
+    element_id: string;
+    element: {
+      title?: string;
+      layout?: string;
+      settings?: Record<string, unknown>;
+      data?: Record<string, unknown>;
+      visible?: boolean;
+    };
+  };
+}
+
+export interface ElementDeletedEvent {
+  type: 'sync:element:deleted';
+  data: {
+    website_id: string;
+    element_id: string;
+  };
+}
+
+export interface ElementReorderedEvent {
+  type: 'sync:element:reordered';
+  data: {
+    website_id: string;
+    element_ids: string[];
+  };
+}
+
+// ============================================
+// Extension Sync Events
+// ============================================
+
+export interface ExtensionActivatedEvent {
+  type: 'sync:extension:activated';
+  data: {
+    website_id: string;
+    extension_slug: string;
+    extension: {
+      extension_id: string;
+      extension_name: string | null;
+      settings: Record<string, unknown> | null;
+    };
+  };
+}
+
+export interface ExtensionDeactivatedEvent {
+  type: 'sync:extension:deactivated';
+  data: {
+    website_id: string;
+    extension_slug: string;
+  };
+}
+
+export interface ExtensionConfiguredEvent {
+  type: 'sync:extension:configured';
+  data: {
+    website_id: string;
+    extension_slug: string;
+    config: Record<string, unknown>;
+  };
+}
+
+// ============================================
+// Module Sync Events (Legacy - mapped to Extension)
 // ============================================
 
 export interface ModuleActivatedEvent {
@@ -249,13 +432,54 @@ export interface UsersListEvent {
 // Union Types
 // ============================================
 
-export type SyncEvent =
-  // Website
+export type WebsiteSyncEvent =
+  | WebsiteCreatedEvent
   | WebsiteUpdatedEvent
   | WebsiteDeletedEvent
   | WebsitePublishedEvent
   | WebsiteUnpublishedEvent
-  // Module
+  | WebsiteDataUpdatedEvent;
+
+export type PageSyncEvent =
+  | PageCreatedEvent
+  | PageUpdatedEvent
+  | PageDeletedEvent
+  | PageReorderedEvent;
+
+export type ElementSyncEvent =
+  | ElementCreatedEvent
+  | ElementUpdatedEvent
+  | ElementDeletedEvent
+  | ElementReorderedEvent;
+
+export type ExtensionSyncEvent =
+  | ExtensionActivatedEvent
+  | ExtensionDeactivatedEvent
+  | ExtensionConfiguredEvent;
+
+export type SyncEvent =
+  // Website
+  | WebsiteCreatedEvent
+  | WebsiteUpdatedEvent
+  | WebsiteDeletedEvent
+  | WebsitePublishedEvent
+  | WebsiteUnpublishedEvent
+  | WebsiteDataUpdatedEvent
+  // Page
+  | PageCreatedEvent
+  | PageUpdatedEvent
+  | PageDeletedEvent
+  | PageReorderedEvent
+  // Element
+  | ElementCreatedEvent
+  | ElementUpdatedEvent
+  | ElementDeletedEvent
+  | ElementReorderedEvent
+  // Extension
+  | ExtensionActivatedEvent
+  | ExtensionDeactivatedEvent
+  | ExtensionConfiguredEvent
+  // Module (legacy)
   | ModuleActivatedEvent
   | ModuleDeactivatedEvent
   | ModuleConfiguredEvent
@@ -288,8 +512,20 @@ export function isSyncEvent(event: any): event is SyncEvent {
   );
 }
 
-export function isWebsiteEvent(event: SyncEvent): event is WebsiteUpdatedEvent | WebsiteDeletedEvent | WebsitePublishedEvent | WebsiteUnpublishedEvent {
+export function isWebsiteEvent(event: SyncEvent): event is WebsiteSyncEvent {
   return event.type.startsWith('sync:website:');
+}
+
+export function isPageEvent(event: SyncEvent): event is PageSyncEvent {
+  return event.type.startsWith('sync:page:');
+}
+
+export function isElementEvent(event: SyncEvent): event is ElementSyncEvent {
+  return event.type.startsWith('sync:element:');
+}
+
+export function isExtensionEvent(event: SyncEvent): event is ExtensionSyncEvent {
+  return event.type.startsWith('sync:extension:');
 }
 
 export function isModuleEvent(event: SyncEvent): event is ModuleActivatedEvent | ModuleDeactivatedEvent | ModuleConfiguredEvent | ModuleCatalogUpdatedEvent {
@@ -321,12 +557,31 @@ export function parseSyncEvent(message: any): SyncEvent | null {
 
 export interface SyncEventHandlers {
   // Website handlers
+  onWebsiteCreated?: (event: WebsiteCreatedEvent['data']) => void;
   onWebsiteUpdated?: (event: WebsiteUpdatedEvent['data']) => void;
   onWebsiteDeleted?: (event: WebsiteDeletedEvent['data']) => void;
   onWebsitePublished?: (event: WebsitePublishedEvent['data']) => void;
   onWebsiteUnpublished?: (event: WebsiteUnpublishedEvent['data']) => void;
+  onWebsiteDataUpdated?: (event: WebsiteDataUpdatedEvent['data']) => void;
   
-  // Module handlers
+  // Page handlers
+  onPageCreated?: (event: PageCreatedEvent['data']) => void;
+  onPageUpdated?: (event: PageUpdatedEvent['data']) => void;
+  onPageDeleted?: (event: PageDeletedEvent['data']) => void;
+  onPageReordered?: (event: PageReorderedEvent['data']) => void;
+  
+  // Element handlers
+  onElementCreated?: (event: ElementCreatedEvent['data']) => void;
+  onElementUpdated?: (event: ElementUpdatedEvent['data']) => void;
+  onElementDeleted?: (event: ElementDeletedEvent['data']) => void;
+  onElementReordered?: (event: ElementReorderedEvent['data']) => void;
+  
+  // Extension handlers
+  onExtensionActivated?: (event: ExtensionActivatedEvent['data']) => void;
+  onExtensionDeactivated?: (event: ExtensionDeactivatedEvent['data']) => void;
+  onExtensionConfigured?: (event: ExtensionConfiguredEvent['data']) => void;
+  
+  // Module handlers (legacy)
   onModuleActivated?: (event: ModuleActivatedEvent['data']) => void;
   onModuleDeactivated?: (event: ModuleDeactivatedEvent['data']) => void;
   onModuleConfigured?: (event: ModuleConfiguredEvent['data']) => void;

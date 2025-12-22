@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use asap_core_shared::Claims;
+use asap_core_shared::{Claims, SharedWsBroadcaster};
 
 #[derive(Debug, Serialize)]
 pub struct Website {
@@ -98,6 +98,7 @@ pub async fn list_websites(
 pub async fn create_website(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Json(payload): Json<CreateWebsiteRequest>,
 ) -> impl IntoResponse {
     let account_id = match Uuid::parse_str(&claims.sub) {
@@ -215,18 +216,26 @@ pub async fn create_website(
 
     tracing::info!("Website {} created for account {}", slug, account_id);
 
-    (StatusCode::CREATED, Json(Website {
+    let website_response = Website {
         id: website_id.to_string(),
         account_id: account_id.to_string(),
-        slug,
-        title: payload.title,
-        tagline,
+        slug: slug.clone(),
+        title: payload.title.clone(),
+        tagline: tagline.clone(),
         status: "draft".to_string(),
-        creation_mode,
-        preset_id: payload.preset_id,
-        metadata,
+        creation_mode: creation_mode.clone(),
+        preset_id: payload.preset_id.clone(),
+        metadata: metadata.clone(),
         data: serde_json::json!({}),
-    })).into_response()
+    };
+
+    // Emit WebSocket event for real-time sync
+    ws_broadcaster.sync_website_created(
+        &account_id.to_string(),
+        serde_json::to_value(&website_response).unwrap_or_default(),
+    );
+
+    (StatusCode::CREATED, Json(website_response)).into_response()
 }
 
 pub async fn get_website(
@@ -288,6 +297,7 @@ pub async fn get_website(
 pub async fn update_website(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Path(id): Path<String>,
     Json(payload): Json<UpdateWebsiteRequest>,
 ) -> impl IntoResponse {
@@ -328,6 +338,17 @@ pub async fn update_website(
 
     match result {
         Ok(_) => {
+            // Emit WebSocket event for real-time sync
+            ws_broadcaster.sync_website_updated(
+                &account_id.to_string(),
+                &id,
+                serde_json::json!({
+                    "title": payload.title,
+                    "tagline": payload.tagline,
+                    "metadata": payload.metadata
+                }),
+            );
+
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Website updated successfully"
             }))).into_response()
@@ -400,6 +421,7 @@ pub async fn get_website_data(
 pub async fn patch_website_data(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Path(id): Path<String>,
     Json(payload): Json<PatchWebsiteDataRequest>,
 ) -> impl IntoResponse {
@@ -442,6 +464,13 @@ pub async fn patch_website_data(
 
     match result {
         Ok(_) => {
+            // Emit WebSocket event for real-time sync
+            ws_broadcaster.sync_website_data_updated(
+                &account_id.to_string(),
+                &id,
+                payload.data.clone(),
+            );
+
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Website data updated successfully"
             }))).into_response()
@@ -458,6 +487,7 @@ pub async fn patch_website_data(
 pub async fn publish_website(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
     let website_id = match Uuid::parse_str(&id) {
@@ -520,6 +550,13 @@ pub async fn publish_website(
             }
 
             tracing::info!("Website published: {}", website_id);
+
+            // Emit WebSocket event for real-time sync
+            ws_broadcaster.sync_website_published(
+                &account_id.to_string(),
+                &id,
+                "published",
+            );
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Website published successfully",

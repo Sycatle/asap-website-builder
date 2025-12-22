@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use asap_core_shared::{Claims, extension_catalog};
+use asap_core_shared::{Claims, SharedWsBroadcaster, extension_catalog};
 
 #[derive(Debug, Serialize)]
 pub struct WebsiteExtensionResponse {
@@ -167,6 +167,7 @@ pub async fn list_website_extensions(
 pub async fn activate_extension(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Path(website_id): Path<String>,
     Json(payload): Json<ActivateExtensionRequest>,
 ) -> impl IntoResponse {
@@ -197,13 +198,16 @@ pub async fn activate_extension(
         }
     };
 
+    // Clone settings before using them
+    let settings = payload.settings.clone().unwrap_or(serde_json::json!({}));
+
     use crate::queries;
     let result = queries::activate_website_extension(
         &pool,
         website_uuid,
         extension_uuid,
         account_id,
-        payload.settings.unwrap_or(serde_json::json!({})),
+        settings.clone(),
     ).await;
 
     match result {
@@ -232,11 +236,23 @@ pub async fn activate_extension(
             .await;
 
             // Create notification for extension activated
-            if let Some(name) = extension_name {
-                if let Err(e) = crate::notifications::create_extension_activated_notification(&pool, account_id, &name).await {
+            if let Some(ref name) = extension_name {
+                if let Err(e) = crate::notifications::create_extension_activated_notification(&pool, account_id, name).await {
                     tracing::error!("Failed to create extension activated notification: {}", e);
                 }
             }
+
+            // Emit WebSocket event for real-time sync
+            ws_broadcaster.sync_extension_activated(
+                &account_id.to_string(),
+                &website_id,
+                &payload.extension_id,
+                serde_json::json!({
+                    "extension_id": extension_uuid.to_string(),
+                    "extension_name": extension_name,
+                    "settings": settings
+                }),
+            );
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Extension activated successfully"
@@ -254,6 +270,7 @@ pub async fn activate_extension(
 pub async fn update_website_extension(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Path((website_id, extension_id)): Path<(String, String)>,
     Json(payload): Json<UpdateExtensionSettingsRequest>,
 ) -> impl IntoResponse {
@@ -296,6 +313,14 @@ pub async fn update_website_extension(
 
     match result {
         Ok(updated) if updated => {
+            // Emit WebSocket event for real-time sync
+            ws_broadcaster.sync_extension_configured(
+                &account_id.to_string(),
+                &website_id,
+                &extension_id,
+                payload.settings.clone(),
+            );
+
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Extension updated successfully"
             }))).into_response()
@@ -317,6 +342,7 @@ pub async fn update_website_extension(
 pub async fn deactivate_extension(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Path((website_id, extension_id)): Path<(String, String)>,
 ) -> impl IntoResponse {
     let website_uuid = match Uuid::parse_str(&website_id) {
@@ -394,6 +420,13 @@ pub async fn deactivate_extension(
                     tracing::error!("Failed to create extension deactivated notification: {}", e);
                 }
             }
+
+            // Emit WebSocket event for real-time sync
+            ws_broadcaster.sync_extension_deactivated(
+                &account_id.to_string(),
+                &website_id,
+                &extension_id,
+            );
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Extension deactivated successfully"

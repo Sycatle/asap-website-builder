@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use asap_core_shared::Claims;
+use asap_core_shared::{Claims, SharedWsBroadcaster};
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct WebsitePage {
@@ -224,6 +224,7 @@ pub async fn get_page(
 pub async fn create_page(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Path(website_id): Path<String>,
     Json(payload): Json<CreatePageRequest>,
 ) -> impl IntoResponse {
@@ -324,6 +325,24 @@ pub async fn create_page(
             .execute(&pool)
             .await;
 
+            // Emit WebSocket event for real-time sync
+            let page_data = serde_json::json!({
+                "id": page_id.to_string(),
+                "website_id": website_id,
+                "slug": payload.slug,
+                "title": payload.title,
+                "description": payload.description.as_deref().unwrap_or(""),
+                "is_homepage": payload.is_homepage.unwrap_or(false),
+                "order": payload.order.unwrap_or(next_order),
+                "visible": payload.visible.unwrap_or(true),
+                "metadata": payload.metadata.as_ref().unwrap_or(&serde_json::json!({}))
+            });
+            ws_broadcaster.sync_page_created(
+                &account_id.to_string(),
+                &website_id,
+                page_data,
+            );
+
             (StatusCode::CREATED, Json(serde_json::json!({
                 "id": page_id.to_string(),
                 "message": "Page created successfully"
@@ -347,6 +366,7 @@ pub async fn create_page(
 pub async fn update_page(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Path((website_id, page_id)): Path<(String, String)>,
     Json(payload): Json<UpdatePageRequest>,
 ) -> impl IntoResponse {
@@ -491,6 +511,22 @@ pub async fn update_page(
 
     match q.execute(&pool).await {
         Ok(_) => {
+            // Emit WebSocket event for real-time sync
+            ws_broadcaster.sync_page_updated(
+                &account_id.to_string(),
+                &website_id,
+                &page_id,
+                serde_json::json!({
+                    "slug": payload.slug,
+                    "title": payload.title,
+                    "description": payload.description,
+                    "is_homepage": payload.is_homepage,
+                    "order": payload.order,
+                    "visible": payload.visible,
+                    "metadata": payload.metadata
+                }),
+            );
+
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Page updated successfully"
             }))).into_response()
@@ -513,6 +549,7 @@ pub async fn update_page(
 pub async fn delete_page(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Path((website_id, page_id)): Path<(String, String)>,
 ) -> impl IntoResponse {
     let website_uuid = match Uuid::parse_str(&website_id) {
@@ -571,6 +608,13 @@ pub async fn delete_page(
             .execute(&pool)
             .await;
 
+            // Emit WebSocket event for real-time sync
+            ws_broadcaster.sync_page_deleted(
+                &account_id.to_string(),
+                &website_id,
+                &page_id,
+            );
+
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Page deleted successfully"
             }))).into_response()
@@ -593,6 +637,7 @@ pub async fn delete_page(
 pub async fn reorder_pages(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Path(website_id): Path<String>,
     Json(payload): Json<ReorderPagesRequest>,
 ) -> impl IntoResponse {
@@ -654,6 +699,13 @@ pub async fn reorder_pages(
         .execute(&pool)
         .await;
     }
+
+    // Emit WebSocket event for real-time sync
+    ws_broadcaster.sync_pages_reordered(
+        &account_id.to_string(),
+        &website_id,
+        &payload.page_ids,
+    );
 
     (StatusCode::OK, Json(serde_json::json!({
         "message": "Pages reordered successfully"

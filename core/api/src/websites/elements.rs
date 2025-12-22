@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use asap_core_shared::Claims;
+use asap_core_shared::{Claims, SharedWsBroadcaster};
 
 #[derive(Debug, Serialize)]
 pub struct WebsiteElementResponse {
@@ -95,6 +95,7 @@ pub async fn list_website_elements(
 pub async fn create_element(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Path(website_id): Path<String>,
     Json(payload): Json<CreateElementRequest>,
 ) -> impl IntoResponse {
@@ -128,6 +129,10 @@ pub async fn create_element(
         None => None,
     };
 
+    // Clone settings and data before using them for the query
+    let settings = payload.settings.clone().unwrap_or(serde_json::json!({}));
+    let data = payload.data.clone().unwrap_or(serde_json::json!({}));
+
     use crate::queries;
     let result = queries::create_website_element(
         &pool,
@@ -139,8 +144,8 @@ pub async fn create_element(
         &payload.title,
         payload.order.unwrap_or(0),
         payload.layout.as_deref().unwrap_or("full"),
-        &payload.settings.unwrap_or(serde_json::json!({})),
-        &payload.data.unwrap_or(serde_json::json!({})),
+        &settings,
+        &data,
     ).await;
 
     match result {
@@ -159,6 +164,26 @@ pub async fn create_element(
             .execute(&pool)
             .await;
 
+            // Emit WebSocket event for real-time sync
+            let element_data = serde_json::json!({
+                "id": element_id.to_string(),
+                "website_id": website_id,
+                "extension_id": payload.extension_id,
+                "element_type": payload.element_type,
+                "slug": payload.slug,
+                "title": payload.title,
+                "order": payload.order.unwrap_or(0),
+                "layout": payload.layout.as_deref().unwrap_or("full"),
+                "settings": settings,
+                "data": data,
+                "visible": true
+            });
+            ws_broadcaster.sync_element_created(
+                &account_id.to_string(),
+                &website_id,
+                element_data,
+            );
+
             (StatusCode::CREATED, Json(serde_json::json!({
                 "id": element_id.to_string(),
                 "message": "Element created successfully"
@@ -176,6 +201,7 @@ pub async fn create_element(
 pub async fn update_element(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Path((website_id, element_id)): Path<(String, String)>,
     Json(payload): Json<UpdateElementRequest>,
 ) -> impl IntoResponse {
@@ -221,6 +247,20 @@ pub async fn update_element(
 
     match result {
         Ok(updated) if updated => {
+            // Emit WebSocket event for real-time sync
+            ws_broadcaster.sync_element_updated(
+                &account_id.to_string(),
+                &website_id,
+                &element_id,
+                serde_json::json!({
+                    "title": payload.title,
+                    "layout": payload.layout,
+                    "settings": payload.settings,
+                    "data": payload.data,
+                    "visible": payload.visible
+                }),
+            );
+
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Element updated successfully"
             }))).into_response()
@@ -242,6 +282,7 @@ pub async fn update_element(
 pub async fn delete_element(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Path((website_id, element_id)): Path<(String, String)>,
 ) -> impl IntoResponse {
     let website_uuid = match Uuid::parse_str(&website_id) {
@@ -289,6 +330,13 @@ pub async fn delete_element(
             .execute(&pool)
             .await;
 
+            // Emit WebSocket event for real-time sync
+            ws_broadcaster.sync_element_deleted(
+                &account_id.to_string(),
+                &website_id,
+                &element_id,
+            );
+
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Element deleted successfully"
             }))).into_response()
@@ -310,6 +358,7 @@ pub async fn delete_element(
 pub async fn reorder_elements(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Path(website_id): Path<String>,
     Json(payload): Json<ReorderElementsRequest>,
 ) -> impl IntoResponse {
@@ -362,6 +411,13 @@ pub async fn reorder_elements(
             .bind(&event_payload)
             .execute(&pool)
             .await;
+
+            // Emit WebSocket event for real-time sync
+            ws_broadcaster.sync_elements_reordered(
+                &account_id.to_string(),
+                &website_id,
+                &payload.element_ids,
+            );
 
             (StatusCode::OK, Json(serde_json::json!({
                 "message": "Elements reordered successfully"

@@ -54,6 +54,8 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         .route("/auth/change-password", post(crate::auth::change_password))
         .route("/auth/logout", post(crate::auth::logout))
         .route("/auth/logout-all", post(crate::auth::logout_all))
+        .route("/auth/sessions", get(crate::auth::list_sessions))
+        .route("/auth/sessions/revoke", post(crate::auth::revoke_session))
         // Account routes
         .route("/accounts/:id", get(crate::accounts::get_account))
         .route("/accounts/:id", put(crate::accounts::update_account))
