@@ -11,6 +11,8 @@ import type {
   RefreshTokenRequest,
   TokenPairResponse,
   UpdateGitHubIntegrationRequest,
+  ListSessionsResponse,
+  RevokeSessionRequest,
 } from '../types';
 
 // Re-export types for backward compatibility
@@ -142,5 +144,19 @@ export const authAPI = {
 
   async updateGitHubIntegration(accountId: string, data: UpdateGitHubIntegrationRequest): Promise<void> {
     return apiClient.put<void>(`/accounts/${accountId}/integrations/github`, data);
+  },
+
+  /**
+   * List all active sessions for the current user
+   */
+  async listSessions(): Promise<ListSessionsResponse> {
+    return apiClient.get<ListSessionsResponse>('/auth/sessions');
+  },
+
+  /**
+   * Revoke a specific session
+   */
+  async revokeSession(sessionId: string): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>('/auth/sessions/revoke', { session_id: sessionId });
   },
 };

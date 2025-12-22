@@ -16,8 +16,11 @@ pub type Result<T> = std::result::Result<T, SharedError>;
 
 type HmacSha256 = Hmac<Sha256>;
 
-/// Refresh token lifetime in seconds (7 days)
+/// Refresh token lifetime in seconds (7 days) - for "remember me"
 pub const REFRESH_TOKEN_LIFETIME_SECS: i64 = 7 * 24 * 60 * 60;
+
+/// Short refresh token lifetime in seconds (24 hours) - for normal sessions
+pub const REFRESH_TOKEN_SHORT_LIFETIME_SECS: i64 = 24 * 60 * 60;
 
 /// Access token lifetime in seconds (15 minutes for security)
 pub const ACCESS_TOKEN_LIFETIME_SECS: i64 = 15 * 60;
@@ -39,14 +42,25 @@ pub struct RefreshToken {
 ///
 /// Returns a cryptographically secure token and its hash.
 /// The raw token is sent to the client, the hash is stored in the database.
-pub fn generate_refresh_token(secret: &str, family_id: Option<&str>) -> Result<RefreshToken> {
+/// 
+/// # Arguments
+/// * `secret` - The HMAC secret for signing
+/// * `family_id` - Optional family ID for token rotation (pass None for new family)
+/// * `remember_me` - If true, uses 7-day lifetime; if false, uses 24-hour lifetime
+pub fn generate_refresh_token(secret: &str, family_id: Option<&str>, remember_me: bool) -> Result<RefreshToken> {
     // Generate 32 random bytes
     let mut random_bytes = [0u8; 32];
     rand::thread_rng().fill_bytes(&mut random_bytes);
     
     // Create timestamp
     let timestamp = Utc::now().timestamp();
-    let expires_at = timestamp + REFRESH_TOKEN_LIFETIME_SECS;
+    // Use longer lifetime for "remember me", shorter for normal sessions
+    let lifetime = if remember_me {
+        REFRESH_TOKEN_LIFETIME_SECS
+    } else {
+        REFRESH_TOKEN_SHORT_LIFETIME_SECS
+    };
+    let expires_at = timestamp + lifetime;
     
     // Use provided family_id or generate new one
     let family = family_id

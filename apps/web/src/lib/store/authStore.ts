@@ -23,7 +23,7 @@ interface AuthState {
   lastFetchTime: number | null;
   
   // Actions
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: (fromAllDevices?: boolean) => Promise<void>;
   refreshToken: () => Promise<boolean>;
@@ -50,10 +50,10 @@ export const useAuthStore = create<AuthState>()(
       error: null,
       lastFetchTime: null,
 
-      login: async (email: string, password: string) => {
+      login: async (email: string, password: string, rememberMe = false) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await authAPI.login({ email, password });
+          const response = await authAPI.login({ email, password, remember_me: rememberMe });
           // Use new setTokens method to handle both access and refresh tokens
           authAPI.setTokens(response);
           
@@ -269,15 +269,18 @@ export const useAuthStore = create<AuthState>()(
       },
 
       getFileUrl: (storedUrl: string) => {
-        // Security: Don't expose token in URL parameters
-        // The API client will handle auth via Authorization header
-        // For file downloads, we return the clean URL
-        // Note: Ensure your API supports Authorization header for file routes
+        // For file URLs, add the auth token as query parameter
+        // This is needed for <img> tags which can't use Authorization headers
         const fileIdMatch = storedUrl.match(/\/files\/([a-f0-9-]+)/);
         if (fileIdMatch) {
           const baseUrl = typeof window !== 'undefined' 
             ? (import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api')
             : 'http://localhost:3000/api';
+          // Get token from localStorage for authenticated file access
+          const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+          if (token) {
+            return `${baseUrl}/files/${fileIdMatch[1]}?token=${token}`;
+          }
           return `${baseUrl}/files/${fileIdMatch[1]}`;
         }
         return storedUrl;

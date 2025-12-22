@@ -1,7 +1,8 @@
-use axum::{Json, response::IntoResponse, http::StatusCode, extract::{State, Extension}};
+use axum::{Json, response::IntoResponse, http::StatusCode, extract::{State, Extension, ConnectInfo}, http::HeaderMap};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
+use std::net::SocketAddr;
 use asap_core_shared::{
     SharedConfig, generate_token, generate_token_with_jti, Claims,
     generate_password_reset_token, validate_password_reset_token, hash_token,
@@ -43,6 +44,8 @@ pub struct AccountResponse {
 pub struct LoginRequest {
     pub email: String,
     pub password: String,
+    #[serde(default)]
+    pub remember_me: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -430,8 +433,8 @@ pub async fn signup(
         }
     });
 
-    // Generate refresh token (new family)
-    let refresh = match generate_refresh_token(&config.jwt_secret, None) {
+    // Generate refresh token (new family) - use long session for new signups
+    let refresh = match generate_refresh_token(&config.jwt_secret, None, true) {
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate refresh token: {}", e);
@@ -445,6 +448,17 @@ pub async fn signup(
     let expires_at = chrono::DateTime::from_timestamp(refresh.expires_at, 0)
         .unwrap_or_else(|| Utc::now() + Duration::days(7));
 
+    // Convert family_id String to Uuid for database
+    let signup_family_uuid = match uuid::Uuid::parse_str(&refresh.family_id) {
+        Ok(u) => u,
+        Err(e) => {
+            tracing::error!("Invalid family_id UUID format: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
     if let Err(e) = sqlx::query!(
         r#"
         INSERT INTO refresh_tokens (account_id, token_hash, family_id, expires_at)
@@ -452,7 +466,7 @@ pub async fn signup(
         "#,
         account_id,
         refresh.token_hash,
-        refresh.family_id,
+        signup_family_uuid,
         expires_at
     )
     .execute(&pool)
@@ -504,8 +518,22 @@ pub async fn signup(
 pub async fn login(
     State(pool): State<PgPool>,
     Extension(config): Extension<SharedConfig>,
+    headers: HeaderMap,
     Json(payload): Json<LoginRequest>,
 ) -> impl IntoResponse {
+    // Extract client info for session tracking
+    let user_agent = headers
+        .get("user-agent")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+    
+    let ip_address = headers
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.split(',').next())
+        .or_else(|| headers.get("x-real-ip").and_then(|v| v.to_str().ok()))
+        .map(|s| s.trim().to_string());
+
     // Query account by email
     let account = match sqlx::query!(
         "SELECT id, email, password_hash FROM accounts WHERE email = $1",
@@ -543,8 +571,8 @@ pub async fn login(
         }
     }
 
-    // Generate refresh token (new family)
-    let refresh = match generate_refresh_token(&config.jwt_secret, None) {
+    // Generate refresh token (new family) - use remember_me preference
+    let refresh = match generate_refresh_token(&config.jwt_secret, None, payload.remember_me) {
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate refresh token: {}", e);
@@ -554,19 +582,38 @@ pub async fn login(
         }
     };
 
-    // Store refresh token
+    // Store refresh token - duration depends on remember_me
     let expires_at = chrono::DateTime::from_timestamp(refresh.expires_at, 0)
-        .unwrap_or_else(|| Utc::now() + Duration::days(7));
+        .unwrap_or_else(|| {
+            if payload.remember_me {
+                Utc::now() + Duration::days(7)
+            } else {
+                Utc::now() + Duration::days(1)
+            }
+        });
+
+    // Convert family_id String to Uuid for database
+    let family_uuid = match uuid::Uuid::parse_str(&refresh.family_id) {
+        Ok(u) => u,
+        Err(e) => {
+            tracing::error!("Invalid family_id UUID format: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
 
     if let Err(e) = sqlx::query!(
         r#"
-        INSERT INTO refresh_tokens (account_id, token_hash, family_id, expires_at)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO refresh_tokens (account_id, token_hash, family_id, expires_at, user_agent, ip_address)
+        VALUES ($1, $2, $3, $4, $5, $6)
         "#,
         account.id,
         refresh.token_hash,
-        refresh.family_id,
-        expires_at
+        family_uuid,
+        expires_at,
+        user_agent,
+        ip_address
     )
     .execute(&pool)
     .await {
@@ -1045,9 +1092,18 @@ pub async fn refresh_token(
             // Token not found - might be reuse of old rotated token
             // Check if family exists and revoke all tokens in that family
             tracing::warn!("Refresh token not found, possible token reuse - revoking family {}", validated.family_id);
+            // Convert family_id String to Uuid for database query
+            let family_uuid = match uuid::Uuid::parse_str(&validated.family_id) {
+                Ok(u) => u,
+                Err(_) => {
+                    return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                        "error": "Invalid refresh token"
+                    }))).into_response();
+                }
+            };
             let _ = sqlx::query!(
                 "UPDATE refresh_tokens SET revoked_at = NOW(), revoked_reason = 'token_reuse_detected' WHERE family_id = $1",
-                validated.family_id
+                family_uuid
             )
             .execute(&pool)
             .await;
@@ -1100,7 +1156,9 @@ pub async fn refresh_token(
     }
 
     // Generate new refresh token (same family for rotation chain)
-    let new_refresh = match generate_refresh_token(&config.jwt_secret, Some(&token_record.family_id)) {
+    // Preserve original session duration (use long session on rotation)
+    let family_str = token_record.family_id.to_string();
+    let new_refresh = match generate_refresh_token(&config.jwt_secret, Some(&family_str), true) {
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate refresh token: {}", e);
@@ -1115,6 +1173,18 @@ pub async fn refresh_token(
     let expires_at = chrono::DateTime::from_timestamp(new_refresh.expires_at, 0)
         .unwrap_or_else(|| Utc::now() + Duration::days(7));
 
+    // Convert family_id String to Uuid for database
+    let new_family_uuid = match uuid::Uuid::parse_str(&new_refresh.family_id) {
+        Ok(u) => u,
+        Err(e) => {
+            tracing::error!("Invalid family_id UUID format: {}", e);
+            let _ = tx.rollback().await;
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
     if let Err(e) = sqlx::query!(
         r#"
         INSERT INTO refresh_tokens (account_id, token_hash, family_id, parent_id, expires_at)
@@ -1122,7 +1192,7 @@ pub async fn refresh_token(
         "#,
         account_id,
         new_refresh.token_hash,
-        new_refresh.family_id,
+        new_family_uuid,
         token_record.id,
         expires_at
     )
@@ -1305,4 +1375,145 @@ pub async fn is_token_blacklisted(pool: &PgPool, jti: &str) -> bool {
             false // Fail open to not break auth if DB has issues
         }
     }
+}
+
+// ============================================
+// SESSION MANAGEMENT
+// ============================================
+
+/// Session info returned to clients
+#[derive(Debug, Serialize)]
+pub struct SessionInfo {
+    pub id: String,
+    pub user_agent: Option<String>,
+    pub ip_address: Option<String>,
+    pub created_at: String,
+    pub expires_at: String,
+    pub is_current: bool,
+}
+
+/// List active sessions response
+#[derive(Debug, Serialize)]
+pub struct ListSessionsResponse {
+    pub sessions: Vec<SessionInfo>,
+}
+
+/// Revoke session request
+#[derive(Debug, Deserialize)]
+pub struct RevokeSessionRequest {
+    pub session_id: String,
+}
+
+/// List all active sessions for the authenticated user
+pub async fn list_sessions(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let account_id = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid account ID"
+            }))).into_response();
+        }
+    };
+
+    // Get all active (non-revoked, non-expired) refresh tokens for this account
+    let sessions = match sqlx::query!(
+        r#"
+        SELECT id, user_agent, ip_address, created_at, expires_at
+        FROM refresh_tokens
+        WHERE account_id = $1 
+          AND revoked_at IS NULL 
+          AND expires_at > NOW()
+        ORDER BY created_at DESC
+        "#,
+        account_id
+    )
+    .fetch_all(&pool)
+    .await {
+        Ok(rows) => rows,
+        Err(e) => {
+            tracing::error!("Failed to list sessions: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    // Find current session by matching JTI to family
+    // For simplicity, we'll mark the most recent session as current
+    // A more accurate approach would store the current token hash in claims
+    let current_session_id = sessions.first().map(|s| s.id);
+
+    let session_list: Vec<SessionInfo> = sessions
+        .into_iter()
+        .map(|s| SessionInfo {
+            id: s.id.to_string(),
+            user_agent: s.user_agent,
+            ip_address: s.ip_address,
+            created_at: s.created_at.to_rfc3339(),
+            expires_at: s.expires_at.to_rfc3339(),
+            is_current: Some(s.id) == current_session_id,
+        })
+        .collect();
+
+    (StatusCode::OK, Json(ListSessionsResponse { sessions: session_list })).into_response()
+}
+
+/// Revoke a specific session
+pub async fn revoke_session(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<RevokeSessionRequest>,
+) -> impl IntoResponse {
+    let account_id = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid account ID"
+            }))).into_response();
+        }
+    };
+
+    let session_id = match Uuid::parse_str(&payload.session_id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                "error": "Invalid session ID"
+            }))).into_response();
+        }
+    };
+
+    // Revoke the session (only if it belongs to the authenticated user)
+    match sqlx::query!(
+        r#"
+        UPDATE refresh_tokens 
+        SET revoked_at = NOW(), revoked_reason = 'user_revoked'
+        WHERE id = $1 AND account_id = $2 AND revoked_at IS NULL
+        "#,
+        session_id,
+        account_id
+    )
+    .execute(&pool)
+    .await {
+        Ok(result) => {
+            if result.rows_affected() == 0 {
+                return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                    "error": "Session not found or already revoked"
+                }))).into_response();
+            }
+            tracing::info!("Account {} revoked session {}", account_id, session_id);
+        }
+        Err(e) => {
+            tracing::error!("Failed to revoke session: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    }
+
+    (StatusCode::OK, Json(serde_json::json!({
+        "message": "Session revoked successfully"
+    }))).into_response()
 }

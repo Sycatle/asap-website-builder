@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Loader2, Clock } from "lucide-react";
 import { loginSchema, type LoginFormData } from "@/lib/validations/auth";
@@ -16,6 +17,7 @@ export default function LoginForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState<Partial<LoginFormData>>({});
   const [searchParams, setSearchParams] = useState('');
   const [rateLimitCountdown, setRateLimitCountdown] = useState<number | null>(null);
@@ -80,7 +82,7 @@ export default function LoginForm({
     }
     
     const loginPromise = async () => {
-      await login(result.data.email, result.data.password);
+      await login(result.data.email, result.data.password, rememberMe);
       return result.data.email;
     };
 
@@ -160,7 +162,21 @@ export default function LoginForm({
               {errors.password && (
                 <p id="password-error" className="text-sm text-destructive">{errors.password}</p>
               )}
-              <div className="text-right">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="remember-me"
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked === true)}
+                    disabled={isRateLimited}
+                  />
+                  <Label
+                    htmlFor="remember-me"
+                    className="text-sm font-normal text-muted-foreground cursor-pointer"
+                  >
+                    Se souvenir de moi
+                  </Label>
+                </div>
                 <a 
                   href="/forgot-password" 
                   className="text-sm text-muted-foreground hover:text-primary underline underline-offset-4"

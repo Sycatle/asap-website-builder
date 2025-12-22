@@ -28,6 +28,7 @@ pub use refresh_token::{
     RefreshToken,
     ValidatedRefreshToken,
     REFRESH_TOKEN_LIFETIME_SECS,
+    REFRESH_TOKEN_SHORT_LIFETIME_SECS,
     ACCESS_TOKEN_LIFETIME_SECS,
 };
 pub use extension_catalog::{

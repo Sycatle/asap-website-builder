@@ -77,6 +77,9 @@ export {
   type TokenPairResponse,
   type UpdateGitHubIntegrationRequest,
   type UserData,
+  type SessionInfo,
+  type ListSessionsResponse,
+  type RevokeSessionRequest,
 } from './auth';
 
 // File types

@@ -26,6 +26,7 @@ export interface SignupResponse {
 export interface LoginRequest {
   email: string;
   password: string;
+  remember_me?: boolean;
 }
 
 export interface LoginResponse {
@@ -68,6 +69,27 @@ export interface ResetPasswordRequest {
 export interface UpdateGitHubIntegrationRequest {
   github_username: string;
   github_token?: string | null;
+}
+
+// ============================================
+// SESSION MANAGEMENT TYPES
+// ============================================
+
+export interface SessionInfo {
+  id: string;
+  user_agent: string | null;
+  ip_address: string | null;
+  created_at: string;
+  expires_at: string;
+  is_current: boolean;
+}
+
+export interface ListSessionsResponse {
+  sessions: SessionInfo[];
+}
+
+export interface RevokeSessionRequest {
+  session_id: string;
 }
 
 // ============================================
