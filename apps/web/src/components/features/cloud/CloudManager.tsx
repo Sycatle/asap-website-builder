@@ -68,6 +68,7 @@ export default function CloudManager() {
   
   // Local UI state
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ total: number; completed: number; current: string }>({ total: 0, completed: 0, current: '' });
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -122,31 +123,52 @@ export default function CloudManager() {
   const isLoading = filesLoading || quotaLoading;
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const selectedFiles = e.target.files;
+    if (!selectedFiles || selectedFiles.length === 0) return;
 
+    const filesArray = Array.from(selectedFiles);
     setIsUploading(true);
+    setUploadProgress({ total: filesArray.length, completed: 0, current: filesArray[0].name });
 
-    const uploadPromise = async () => {
-      await uploadFileMutation.mutateAsync(file);
-      return file.name;
-    };
+    const results: { success: string[]; failed: string[] } = { success: [], failed: [] };
 
-    toast.promise(uploadPromise(), {
-      loading: `Upload de ${file.name}...`,
-      success: (name) => `${name} uploadé avec succès !`,
-      error: 'Erreur lors de l\'upload',
-    });
-
-    try {
-      await uploadPromise();
-    } catch (error) {
-      filesLogger.error('Failed to upload file:', error);
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+    // Upload files sequentially to avoid multipart parsing issues
+    for (const file of filesArray) {
+      try {
+        setUploadProgress(prev => ({ ...prev, current: file.name }));
+        await uploadFileMutation.mutateAsync(file);
+        results.success.push(file.name);
+      } catch (error) {
+        filesLogger.error(`Failed to upload ${file.name}:`, error);
+        results.failed.push(file.name);
+      } finally {
+        setUploadProgress(prev => ({ ...prev, completed: prev.completed + 1 }));
       }
+    }
+
+    // Show results
+    if (results.success.length > 0 && results.failed.length === 0) {
+      toast.success(
+        results.success.length === 1
+          ? `${results.success[0]} uploadé avec succès !`
+          : `${results.success.length} fichiers uploadés avec succès !`
+      );
+    } else if (results.failed.length > 0 && results.success.length === 0) {
+      toast.error(
+        results.failed.length === 1
+          ? `Échec de l'upload de ${results.failed[0]}`
+          : `Échec de l'upload de ${results.failed.length} fichiers`
+      );
+    } else if (results.success.length > 0 && results.failed.length > 0) {
+      toast.warning(
+        `${results.success.length} fichier(s) uploadé(s), ${results.failed.length} échec(s)`
+      );
+    }
+
+    setIsUploading(false);
+    setUploadProgress({ total: 0, completed: 0, current: '' });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -311,6 +333,7 @@ export default function CloudManager() {
             <input
               ref={fileInputRef}
               type="file"
+              multiple
               onChange={handleUpload}
               className="hidden"
               id="file-upload"
@@ -318,11 +341,20 @@ export default function CloudManager() {
             <Button asChild disabled={isUploading} className="h-9 sm:h-10 group">
               <label htmlFor="file-upload" className="cursor-pointer">
                 {isUploading ? (
-                  <Loader2 className="h-4 w-4 mr-1.5 sm:mr-2 animate-spin" />
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1.5 sm:mr-2 animate-spin" />
+                    <span className="text-sm">
+                      {uploadProgress.total > 1 
+                        ? `${uploadProgress.completed}/${uploadProgress.total}` 
+                        : 'Upload...'}
+                    </span>
+                  </>
                 ) : (
-                  <Upload className="h-4 w-4 mr-1.5 sm:mr-2 transition-transform group-hover:-translate-y-0.5" />
+                  <>
+                    <Upload className="h-4 w-4 mr-1.5 sm:mr-2 transition-transform group-hover:-translate-y-0.5" />
+                    <span className="text-sm">Upload</span>
+                  </>
                 )}
-                <span className="text-sm">{isUploading ? 'Upload...' : 'Upload'}</span>
               </label>
             </Button>
           </div>

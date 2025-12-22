@@ -11,7 +11,22 @@ export const filesAPI = {
 
   async upload(file: File): Promise<FileMetadata> {
     const formData = new FormData();
-    formData.append('file', file);
+    
+    // Sanitize filename to avoid multipart parsing issues with special characters
+    // Create a new File object with a sanitized name if needed
+    let fileToUpload = file;
+    const sanitizedName = file.name
+      .normalize('NFD') // Decompose accented characters
+      .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+      .replace(/['']/g, '_') // Replace curly quotes
+      .replace(/[^\w\s.-]/g, '_') // Replace other special chars
+      .replace(/\s+/g, '_'); // Replace spaces with underscores
+    
+    if (sanitizedName !== file.name) {
+      fileToUpload = new File([file], sanitizedName, { type: file.type });
+    }
+    
+    formData.append('file', fileToUpload);
 
     // Get CSRF token for the upload
     let csrfToken = apiClient.getCsrfToken();
