@@ -233,23 +233,38 @@ export default function Dashboard() {
   const enabledExtensionsCount = extensions.filter(e => e.enabled).length;
   const storagePercentage = quota?.usage_percentage || 0;
 
+  // Dynamic refresh key for real-time feel
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Auto-refresh every 30 seconds for dynamic data
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshKey(prev => prev + 1);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   // GAMIFIED Analytics data - comprehensive KPIs like YouTube Studio / Google Analytics / Shopify
+  // Now DYNAMIC - changes every 30 seconds
   const analyticsData = useMemo(() => {
-    // Linear Congruential Generator (LCG) for stable pseudo-random numbers
-    // Using well-known parameters from MINSTD generator for better distribution
-    const LCG_MULTIPLIER = 48271;
-    const LCG_MODULUS = 2147483647; // 2^31 - 1 (Mersenne prime)
+    // Use current time slot for dynamic data
+    const timeSlot = Math.floor(Date.now() / 30000);
     
     // Generate seed from full website ID using simple hash function
-    const seedFromId = website?.id 
+    const baseSeed = website?.id 
       ? website.id.split('').reduce((hash, char) => ((hash << 5) - hash + char.charCodeAt(0)) | 0, 0)
       : 42;
     
-    // LCG random function that produces values between min and max
+    // Dynamic random function with time-based variation
     const random = (min: number, max: number, offset = 0) => {
-      const seed = Math.abs((seedFromId + offset * 12345) % LCG_MODULUS);
-      const value = (seed * LCG_MULTIPLIER) % LCG_MODULUS;
-      return Math.floor((value / LCG_MODULUS) * (max - min)) + min;
+      const seed = Math.abs((baseSeed + offset + timeSlot + refreshKey) * 2654435761 % 2147483647);
+      return Math.floor((seed / 2147483647) * (max - min)) + min;
+    };
+
+    // Small variation for real-time feel
+    const vary = (base: number, percent = 5) => {
+      const variation = base * (percent / 100);
+      return Math.floor(base + (Math.random() * variation * 2 - variation));
     };
 
     // 30-day trend data for main chart
@@ -257,12 +272,16 @@ export default function Dashboard() {
       const date = new Date();
       date.setDate(date.getDate() - (29 - i));
       const dayNum = date.getDate();
+      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+      const weekendMultiplier = isWeekend ? 0.7 : 1;
+      const trendMultiplier = 1 + (i / 30) * 0.3;
+      
       return {
         date: `${dayNum}`,
         fullDate: date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }),
-        visits: random(50, 200, i * 3) + Math.floor(i * 2.5), // Upward trend
-        pageViews: random(100, 400, i * 5) + Math.floor(i * 4),
-        uniqueVisitors: random(30, 150, i * 7) + Math.floor(i * 1.8),
+        visits: Math.floor(random(50, 200, i * 3) * weekendMultiplier * trendMultiplier),
+        pageViews: Math.floor(random(100, 400, i * 5) * weekendMultiplier * trendMultiplier),
+        uniqueVisitors: Math.floor(random(30, 150, i * 7) * weekendMultiplier * trendMultiplier * 0.65),
       };
     });
 
@@ -406,7 +425,7 @@ export default function Dashboard() {
       weeklyGoals,
       healthScore,
     };
-  }, [website?.id, website?.status, website?.title, enabledExtensionsCount, pages.length, elements.length, storagePercentage]);
+  }, [website?.id, website?.status, website?.title, enabledExtensionsCount, pages.length, elements.length, storagePercentage, refreshKey]);
 
   // Chart config for main analytics
   const analyticsChartConfig = {

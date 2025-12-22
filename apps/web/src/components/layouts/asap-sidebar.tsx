@@ -132,6 +132,25 @@ export function AsapSidebar({
           </SidebarGroup>
         )}
 
+        {/* Analytics */}
+        {currentWebsite && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Analyse</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Analytics">
+                    <Link href={buildUrl('/analytics')}>
+                      <BarChart3 />
+                      <span>Analytics</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         {/* Configuration */}
         <SidebarGroup>
           <SidebarGroupLabel>Configuration</SidebarGroupLabel>
