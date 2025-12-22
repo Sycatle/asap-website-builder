@@ -295,10 +295,10 @@ pub async fn invite_administrator(
     let invitation_token = Uuid::new_v4();
     
     // If user already has an account, activate immediately. Otherwise, pending.
-    let (status, accepted_at) = if existing_user.is_some() {
-        ("active", Some(chrono::Utc::now()))
+    let status = if existing_user.is_some() {
+        "active"
     } else {
-        ("pending", None)
+        "pending"
     };
 
     // Insert the new administrator
@@ -306,7 +306,7 @@ pub async fn invite_administrator(
         r#"
         INSERT INTO website_administrators 
             (website_id, account_id, email, role, permissions, status, invited_by, invitation_token, accepted_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $6 = 'active' THEN now() ELSE NULL END)
         RETURNING id, email, role, status, invited_at
         "#,
         website_id,
@@ -316,8 +316,7 @@ pub async fn invite_administrator(
         permissions,
         status,
         account_id,
-        invitation_token,
-        accepted_at
+        invitation_token
     )
     .fetch_one(&pool)
     .await
