@@ -4,14 +4,14 @@
  * Handles real-time sync events via WebSocket
  * and automatically updates React Query cache.
  * 
+ * Uses the global WebSocket provider for a single shared connection.
  * Uses centralized sync helpers to avoid duplicates
  * when both API responses and WebSocket events update the cache.
  */
 
 import { useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuthStore } from '../lib/store/authStore';
-import { useWebSocket } from './useWebSocket';
+import { useGlobalWebSocket } from '../components/providers/WebSocketProvider';
 import { loggers } from '../lib/logger';
 import {
   // Sync helpers for cache updates
@@ -84,28 +84,13 @@ interface UseSyncWebSocketReturn {
 export function useSyncWebSocket(options: UseSyncWebSocketOptions = {}): UseSyncWebSocketReturn {
   const { handlers, websiteId, debug = false, skipCacheUpdate = false } = options;
   
-  const { isAuthenticated } = useAuthStore();
   const queryClient = useQueryClient();
+  
+  // Use the global WebSocket connection
+  const ws = useGlobalWebSocket();
   
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
-
-  // Get token from localStorage
-  const getToken = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('auth_token');
-    }
-    return null;
-  }, []);
-
-  // Get WebSocket URL from env
-  const wsUrl = import.meta.env.PUBLIC_WS_URL || 'ws://localhost:3000/ws';
-
-  // Use the WebSocket hook
-  const ws = useWebSocket({
-    url: wsUrl,
-    autoConnect: isAuthenticated,
-  });
 
   // Log helper
   const log = useCallback((...args: unknown[]) => {
@@ -394,14 +379,7 @@ export function useSyncWebSocket(options: UseSyncWebSocketOptions = {}): UseSync
     };
   }, [ws.isConnected, ws.on, ws.off, handleMessage, log]);
 
-  // Authenticate when connected
-  useEffect(() => {
-    const token = getToken();
-    if (ws.isConnected && isAuthenticated && token) {
-      log('Authenticating WebSocket connection');
-      ws.send('auth', { token });
-    }
-  }, [ws.isConnected, isAuthenticated, getToken, ws.send, log]);
+  // No need to authenticate here - WebSocketProvider handles it automatically
 
   return {
     isConnected: ws.isConnected,
