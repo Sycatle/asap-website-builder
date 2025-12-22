@@ -46,24 +46,29 @@ export function LogoutConfirmDialog({ open, onOpenChange }: LogoutConfirmDialogP
             Vous allez être déconnecté de votre compte. Vous pourrez vous reconnecter à tout moment.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-          <AlertDialogCancel disabled={isLoggingOut}>Annuler</AlertDialogCancel>
+        <AlertDialogFooter className="flex-col gap-2 sm:gap-3">
+          <div className="flex flex-col-reverse sm:flex-row gap-2 w-full">
+            <AlertDialogCancel disabled={isLoggingOut} className="sm:flex-1">
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handleLogout(false)}
+              disabled={isLoggingOut}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 sm:flex-1"
+            >
+              {isLoggingOut ? "Déconnexion..." : "Se déconnecter"}
+            </AlertDialogAction>
+          </div>
           <Button
-            variant="outline"
+            variant="ghost"
+            size="sm"
             onClick={() => handleLogout(true)}
             disabled={isLoggingOut}
-            className="gap-2"
+            className="gap-2 text-muted-foreground hover:text-foreground w-full"
           >
             <Monitor className="h-4 w-4" />
             Déconnecter tous les appareils
           </Button>
-          <AlertDialogAction
-            onClick={() => handleLogout(false)}
-            disabled={isLoggingOut}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            {isLoggingOut ? "Déconnexion..." : "Se déconnecter"}
-          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

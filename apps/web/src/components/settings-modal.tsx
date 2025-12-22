@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
   User,
   Shield,
@@ -15,6 +15,10 @@ import {
   Check,
   Eye,
   EyeOff,
+  Monitor,
+  Smartphone,
+  Tablet,
+  X,
 } from "lucide-react"
 
 import {
@@ -58,6 +62,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { getPasswordStrength } from "@/lib/validations/auth"
 import { filesAPI, websitesAPI, extensionsAPI, authAPI, accountsAPI, type QuotaUsage, type FileMetadata, type Website, type WebsiteExtension } from "@/lib/api"
+import type { SessionInfo } from "@/lib/types"
 import { formatBytes } from "@/lib/utils/formatters"
 import { FilePickerDialog } from "@/components/features/cloud/file-picker-dialog"
 import { useWebsiteContext } from "@/contexts/WebsiteContext"
@@ -565,8 +570,111 @@ function SecuritySettings() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   
+  // Sessions state
+  const [sessions, setSessions] = useState<SessionInfo[]>([])
+  const [isLoadingSessions, setIsLoadingSessions] = useState(true)
+  const [isRevokingSession, setIsRevokingSession] = useState<string | null>(null)
+  
   // Password strength calculation
   const passwordStrength = getPasswordStrength(passwordData.newPassword)
+
+  // Fetch sessions on mount
+  const fetchSessions = useCallback(async () => {
+    setIsLoadingSessions(true)
+    try {
+      const response = await authAPI.listSessions()
+      setSessions(response.sessions)
+    } catch (error) {
+      console.error('Failed to fetch sessions:', error)
+      toast.error('Impossible de charger les sessions')
+    } finally {
+      setIsLoadingSessions(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchSessions()
+  }, [fetchSessions])
+
+  // Parse user agent to get device info
+  const parseUserAgent = (userAgent: string | null): { device: string; browser: string; os: string } => {
+    if (!userAgent) return { device: 'Appareil inconnu', browser: '', os: '' }
+    
+    let browser = 'Navigateur inconnu'
+    let os = ''
+    let device = 'desktop'
+    
+    // Detect browser
+    if (userAgent.includes('Firefox')) browser = 'Firefox'
+    else if (userAgent.includes('Edg')) browser = 'Edge'
+    else if (userAgent.includes('Chrome')) browser = 'Chrome'
+    else if (userAgent.includes('Safari')) browser = 'Safari'
+    else if (userAgent.includes('Opera')) browser = 'Opera'
+    
+    // Detect OS
+    if (userAgent.includes('Windows')) os = 'Windows'
+    else if (userAgent.includes('Mac OS')) os = 'macOS'
+    else if (userAgent.includes('Linux')) os = 'Linux'
+    else if (userAgent.includes('Android')) { os = 'Android'; device = 'mobile' }
+    else if (userAgent.includes('iPhone') || userAgent.includes('iPad')) { 
+      os = userAgent.includes('iPad') ? 'iPadOS' : 'iOS'
+      device = userAgent.includes('iPad') ? 'tablet' : 'mobile'
+    }
+    
+    return { 
+      device, 
+      browser, 
+      os: os ? `${browser} sur ${os}` : browser 
+    }
+  }
+
+  // Get device icon
+  const getDeviceIcon = (deviceType: string) => {
+    switch (deviceType) {
+      case 'mobile': return <Smartphone className="h-4 w-4" />
+      case 'tablet': return <Tablet className="h-4 w-4" />
+      default: return <Monitor className="h-4 w-4" />
+    }
+  }
+
+  // Format relative time
+  const formatRelativeTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    
+    if (diffMins < 5) return 'Actif maintenant'
+    if (diffMins < 60) return `Il y a ${diffMins} min`
+    if (diffHours < 24) return `Il y a ${diffHours}h`
+    if (diffDays < 7) return `Il y a ${diffDays}j`
+    return date.toLocaleDateString('fr-FR')
+  }
+
+  // Revoke a session
+  const handleRevokeSession = async (sessionId: string) => {
+    setIsRevokingSession(sessionId)
+    try {
+      await authAPI.revokeSession(sessionId)
+      toast.success('Session révoquée')
+      fetchSessions()
+    } catch (error) {
+      console.error('Failed to revoke session:', error)
+      toast.error('Impossible de révoquer la session')
+    } finally {
+      setIsRevokingSession(null)
+    }
+  }
+
+  // Revoke all other sessions
+  const handleRevokeAllOtherSessions = async () => {
+    const otherSessions = sessions.filter(s => !s.is_current)
+    for (const session of otherSessions) {
+      await handleRevokeSession(session.id)
+    }
+  }
 
   const handlePasswordChange = async () => {
     // Reset states
@@ -787,18 +895,78 @@ function SecuritySettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2">
-              <div>
-                <p className="text-sm font-medium">Chrome sur Linux</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Actif maintenant • France</p>
-              </div>
-              <Badge variant="secondary" className="w-fit text-xs">Session actuelle</Badge>
+          {isLoadingSessions ? (
+            <div className="space-y-3">
+              {[1, 2].map((i) => (
+                <div key={i} className="flex items-center justify-between gap-2 py-2">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <Skeleton className="h-6 w-20" />
+                </div>
+              ))}
             </div>
-          </div>
-          <Button variant="outline" size="sm" className="mt-4 w-full sm:w-auto text-xs sm:text-sm">
-            Déconnecter toutes les autres sessions
-          </Button>
+          ) : sessions.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aucune session active</p>
+          ) : (
+            <div className="space-y-3">
+              {sessions.map((session) => {
+                const { device, os } = parseUserAgent(session.user_agent)
+                return (
+                  <div 
+                    key={session.id} 
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2 border-b last:border-0"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 text-muted-foreground">
+                        {getDeviceIcon(device)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{os}</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">
+                          {formatRelativeTime(session.created_at)}
+                          {session.ip_address && ` • ${session.ip_address}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-7 sm:ml-0">
+                      {session.is_current ? (
+                        <Badge variant="secondary" className="text-xs">Session actuelle</Badge>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleRevokeSession(session.id)}
+                          disabled={isRevokingSession === session.id}
+                        >
+                          {isRevokingSession === session.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <>
+                              <X className="h-3 w-3 mr-1" />
+                              Révoquer
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          {sessions.filter(s => !s.is_current).length > 0 && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-4 w-full sm:w-auto text-xs sm:text-sm"
+              onClick={handleRevokeAllOtherSessions}
+            >
+              Déconnecter toutes les autres sessions
+            </Button>
+          )}
         </CardContent>
       </Card>
     </div>
