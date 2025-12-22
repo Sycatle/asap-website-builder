@@ -11,7 +11,7 @@ use std::sync::Arc;
 use axum::{Router, routing::get, Json, extract::State};
 use serde_json::json;
 use sqlx::PgPool;
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{CorsLayer, Any};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -137,11 +137,26 @@ async fn main() -> anyhow::Result<()> {
         .with_state(ws_state);
     
     // Create main app router by merging routers
+    // CORS configuration - explicitly list headers for Firefox compatibility
+    use axum::http::header::{AUTHORIZATION, CONTENT_TYPE, ACCEPT, ORIGIN, HeaderName};
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers([
+            AUTHORIZATION,
+            CONTENT_TYPE,
+            ACCEPT,
+            ORIGIN,
+            HeaderName::from_static("x-requested-with"),
+            HeaderName::from_static("x-csrf-token"),
+        ])
+        .expose_headers(Any);
+
     let app = Router::new()
         .merge(health_router)
         .merge(ws_router)
         .nest("/api", api_router)
-        .layer(CorsLayer::permissive())
+        .layer(cors)
         .layer(TraceLayer::new_for_http());
 
     // Start server
