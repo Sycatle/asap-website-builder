@@ -8,13 +8,16 @@
 
 export interface FileMetadata {
   id: string;
-  account_id: string;
   filename: string;
   mime_type: string;
-  size_bytes: number;
-  compressed_size_bytes: number;
-  sha256_hash: string;
-  uploaded_at: string;
+  /** Original file size in bytes (from API: original_size) */
+  original_size: number;
+  /** Compressed file size in bytes (from API: compressed_size) */
+  compressed_size: number;
+  /** Compression ratio (original/compressed) */
+  compression_ratio: number;
+  /** Upload timestamp (from API: created_at) */
+  created_at: string;
 }
 
 export interface QuotaUsage {
