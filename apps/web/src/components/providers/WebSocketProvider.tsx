@@ -19,6 +19,7 @@ interface WsMessage {
 
 interface WebSocketContextValue {
   isConnected: boolean
+  isWsAuthenticated: boolean
   reconnectAttempts: number
   send: (event: string, data: any) => void
   on: (event: string, handler: (data: any) => void) => void
@@ -53,6 +54,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const { isAuthenticated } = useAuthStore()
   
   const [isConnected, setIsConnected] = useState(false)
+  const [isWsAuthenticated, setIsWsAuthenticated] = useState(false)
   const [reconnectAttempts, setReconnectAttempts] = useState(0)
   
   const ws = useRef<WebSocket | null>(null)
@@ -61,6 +63,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const mountedRef = useRef(true)
   const reconnectAttemptsRef = useRef(0)
   const isConnectingRef = useRef(false)
+  const socketIdRef = useRef(0)
   
   const wsUrl = typeof window !== 'undefined' 
     ? (import.meta.env.PUBLIC_WS_URL || 'ws://localhost:3000/ws')
@@ -87,6 +90,15 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       const message: WsMessage = JSON.parse(event.data)
       wsLogger.debug('WS message received:', message.type)
       
+      // Track auth success
+      if (message.type === 'auth-success') {
+        wsLogger.info('WebSocket authenticated successfully')
+        setIsWsAuthenticated(true)
+      } else if (message.type === 'auth-failed') {
+        wsLogger.warn('WebSocket authentication failed')
+        setIsWsAuthenticated(false)
+      }
+      
       // Get handlers for this event type
       const handlers = eventHandlers.current.get(message.type)
       if (handlers) {
@@ -106,7 +118,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   // Connect
   const connect = useCallback(() => {
     if (!isOnline) {
-      wsLogger.debug('Cannot connect while offline')
       return
     }
     
@@ -117,13 +128,23 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     }
     
     isConnectingRef.current = true
+    const currentSocketId = ++socketIdRef.current
     
     try {
       wsLogger.info('Connecting to WebSocket:', wsUrl)
-      ws.current = new WebSocket(wsUrl)
+      const socket = new WebSocket(wsUrl)
       
-      ws.current.onopen = () => {
-        if (!mountedRef.current) return
+      socket.onopen = () => {
+        // Check if this is still the current socket
+        if (currentSocketId !== socketIdRef.current) {
+          socket.close()
+          return
+        }
+        
+        if (!mountedRef.current) {
+          socket.close()
+          return
+        }
         
         wsLogger.info('WebSocket connected')
         isConnectingRef.current = false
@@ -133,19 +154,35 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         
         // Auto-authenticate
         const token = localStorage.getItem('auth_token')
-        if (token) {
-          send('auth', { token })
+        if (token && socket.readyState === WebSocket.OPEN) {
+          const authMessage = JSON.stringify({ type: 'auth', data: { token } })
+          socket.send(authMessage)
         }
       }
       
-      ws.current.onmessage = handleMessage
+      socket.onmessage = (event) => {
+        // Check if this is still the current socket
+        if (currentSocketId !== socketIdRef.current) {
+          return
+        }
+        
+        handleMessage(event)
+      }
       
-      ws.current.onclose = () => {
-        if (!mountedRef.current) return
+      socket.onclose = () => {
+        // Only update state if this is still the current socket
+        if (currentSocketId !== socketIdRef.current) {
+          return
+        }
         
         wsLogger.info('WebSocket disconnected')
         isConnectingRef.current = false
         setIsConnected(false)
+        setIsWsAuthenticated(false)
+        
+        if (!mountedRef.current) {
+          return
+        }
         
         // Schedule reconnect
         if (isAuthenticated && reconnectAttemptsRef.current < maxReconnectAttempts) {
@@ -163,16 +200,19 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         }
       }
       
-      ws.current.onerror = (error) => {
+      socket.onerror = (error) => {
         wsLogger.error('WebSocket error:', error)
         isConnectingRef.current = false
       }
+      
+      // Store socket in ref after all handlers are attached
+      ws.current = socket
       
     } catch (err) {
       wsLogger.error('Failed to create WebSocket:', err)
       isConnectingRef.current = false
     }
-  }, [wsUrl, isOnline, isAuthenticated, send, handleMessage])
+  }, [wsUrl, isOnline, isAuthenticated, handleMessage])
 
   // Disconnect
   const disconnect = useCallback(() => {
@@ -185,6 +225,10 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       ws.current.close()
       ws.current = null
     }
+    
+    isConnectingRef.current = false
+    setIsConnected(false)
+    setIsWsAuthenticated(false)
   }, [])
 
   // Subscribe to event
@@ -208,37 +252,41 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
   // Connect when authenticated
   useEffect(() => {
-    mountedRef.current = true
+    if (ws.current?.readyState === WebSocket.OPEN) {
+      return
+    }
     
     if (isAuthenticated && isOnline) {
       connect()
-    } else {
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, isOnline])
+
+  // Handle disconnect when auth state changes to false
+  useEffect(() => {
+    if (!isAuthenticated && ws.current) {
       disconnect()
     }
-    
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated])
+  
+  // Cleanup on actual unmount
+  useEffect(() => {
+    mountedRef.current = true
     return () => {
       mountedRef.current = false
       disconnect()
     }
-  }, [isAuthenticated, isOnline, connect, disconnect])
-
-  // Re-authenticate when token changes
-  useEffect(() => {
-    if (isConnected && isAuthenticated) {
-      const token = localStorage.getItem('auth_token')
-      if (token) {
-        send('auth', { token })
-      }
-    }
-  }, [isConnected, isAuthenticated, send])
+  }, [])
 
   const value = useMemo<WebSocketContextValue>(() => ({
     isConnected,
+    isWsAuthenticated,
     reconnectAttempts,
     send,
     on,
     off,
-  }), [isConnected, reconnectAttempts, send, on, off])
+  }), [isConnected, isWsAuthenticated, reconnectAttempts, send, on, off])
 
   return (
     <WebSocketContext.Provider value={value}>
