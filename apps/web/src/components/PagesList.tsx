@@ -57,8 +57,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { usePages, getPagePath, getPageIcon } from "@/hooks/usePages";
-import type { Page, CreatePageRequest, UpdatePageRequest } from "@/lib/api";
+import { 
+  usePagesQuery, 
+  useCreatePageMutation, 
+  useUpdatePageMutation, 
+  useDeletePageMutation,
+  useReorderPagesMutation 
+} from "@/lib/query";
+import { getPagePath, getPageIcon } from "@/lib/utils/pages";
+import type { Page, CreatePageRequest, UpdatePageRequest } from "@/lib/types";
 import { slugify } from "@/lib/utils/formatters";
 import { cn } from "@/lib/utils";
 
@@ -76,14 +83,13 @@ export function PagesList({
   onPageSelect 
 }: PagesListProps) {
   const { toast } = useToast();
-  const { 
-    pages, 
-    isLoading, 
-    createPage, 
-    updatePage, 
-    deletePage,
-    reorderPages
-  } = usePages(websiteId);
+  
+  // React Query hooks
+  const { data: pages = [], isLoading } = usePagesQuery(websiteId);
+  const createPageMutation = useCreatePageMutation();
+  const updatePageMutation = useUpdatePageMutation();
+  const deletePageMutation = useDeletePageMutation();
+  const reorderPagesMutation = useReorderPagesMutation();
 
   const [isOpen, setIsOpen] = React.useState(true);
   const [createDialogOpen, setCreateDialogOpen] = React.useState(false);
@@ -128,10 +134,14 @@ export function PagesList({
     }
 
     try {
+      if (!websiteId) return;
       const slug = formData.slug.trim() || slugify(formData.title);
-      await createPage({
-        ...formData,
-        slug,
+      await createPageMutation.mutateAsync({
+        websiteId,
+        data: {
+          ...formData,
+          slug,
+        },
       });
       
       toast({
@@ -155,6 +165,7 @@ export function PagesList({
     if (!selectedPage || !formData.title.trim()) return;
 
     try {
+      if (!websiteId) return;
       const updateData: UpdatePageRequest = {
         title: formData.title,
         slug: formData.slug,
@@ -163,7 +174,7 @@ export function PagesList({
         visible: formData.visible,
       };
 
-      await updatePage(selectedPage.id, updateData);
+      await updatePageMutation.mutateAsync({ websiteId, pageId: selectedPage.id, data: updateData });
       
       toast({
         title: "Page modifiée",
@@ -183,10 +194,10 @@ export function PagesList({
 
   // Handle delete
   const handleDelete = async () => {
-    if (!selectedPage) return;
+    if (!selectedPage || !websiteId) return;
 
     try {
-      await deletePage(selectedPage.id);
+      await deletePageMutation.mutateAsync({ websiteId, pageId: selectedPage.id });
       
       toast({
         title: "Page supprimée",
@@ -206,9 +217,10 @@ export function PagesList({
 
   // Handle visibility toggle
   const handleToggleVisibility = async (page: Page) => {
+    if (!websiteId) return;
     const newVisibility = !page.visible;
     try {
-      await updatePage(page.id, { visible: newVisibility });
+      await updatePageMutation.mutateAsync({ websiteId, pageId: page.id, data: { visible: newVisibility } });
       toast({
         title: newVisibility ? "Page visible" : "Page masquée",
         description: `La page "${page.title}" est maintenant ${newVisibility ? 'visible' : 'masquée'}`,
@@ -282,7 +294,8 @@ export function PagesList({
     const pageIds = newOrder.map(p => p.id);
 
     try {
-      await reorderPages(pageIds);
+      if (!websiteId) return;
+      await reorderPagesMutation.mutateAsync({ websiteId, pageIds });
       toast({
         title: "Ordre mis à jour",
         description: "L'ordre des pages a été modifié",
