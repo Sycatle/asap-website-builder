@@ -34,7 +34,6 @@ interface WsMessage {
  * - Event-based message handling
  * - Integration with PWA offline detection
  * - Authentication support
- * - Ping/pong heartbeat
  * 
  * @example
  * ```tsx
@@ -58,7 +57,6 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
   const ws = useRef<WebSocket | null>(null);
   const eventHandlers = useRef<Map<string, Set<Function>>>(new Map());
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
   const reconnectAttemptsRef = useRef(0);
   const isConnectingRef = useRef(false);
@@ -72,27 +70,6 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
     onClose,
     onError
   } = options;
-
-  // Start heartbeat ping
-  const startHeartbeat = useCallback(() => {
-    if (pingTimer.current) {
-      clearInterval(pingTimer.current);
-    }
-
-    pingTimer.current = setInterval(() => {
-      if (ws.current?.readyState === WebSocket.OPEN) {
-        send('ping', {});
-      }
-    }, 30000); // Ping every 30 seconds
-  }, []);
-
-  // Stop heartbeat
-  const stopHeartbeat = useCallback(() => {
-    if (pingTimer.current) {
-      clearInterval(pingTimer.current);
-      pingTimer.current = null;
-    }
-  }, []);
 
   // Connect to WebSocket
   const connect = useCallback(() => {
@@ -137,7 +114,6 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
           send('auth', { token });
         }
 
-        startHeartbeat();
         onOpen?.();
       };
 
@@ -177,7 +153,6 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
         console.log('[WS] Disconnected');
         isConnectingRef.current = false;
         setIsConnected(false);
-        stopHeartbeat();
         onClose?.();
         
         // Auto-reconnect with exponential backoff
@@ -205,7 +180,7 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
       console.error('[WS] Connection failed:', error);
       isConnectingRef.current = false;
     }
-  }, [url, isOnline, maxReconnectAttempts, reconnectInterval, onOpen, onClose, onError, startHeartbeat, stopHeartbeat]);
+  }, [url, isOnline, maxReconnectAttempts, reconnectInterval, onOpen, onClose, onError]);
 
   // Disconnect from WebSocket
   const disconnect = useCallback(() => {
@@ -216,8 +191,6 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
       reconnectTimer.current = null;
     }
     
-    stopHeartbeat();
-    
     if (ws.current) {
       ws.current.close();
       ws.current = null;
@@ -226,7 +199,7 @@ export function useWebSocket(options: WebSocketHookOptions): WebSocketHookReturn
     setIsConnected(false);
     reconnectAttemptsRef.current = 0;
     setReconnectAttempts(0);
-  }, [stopHeartbeat]);
+  }, []);
 
   // Send message
   const send = useCallback((event: string, data: any) => {

@@ -47,7 +47,6 @@ interface WebSocketProviderProps {
  * - Auto-reconnection with exponential backoff
  * - Auto-authentication when connected
  * - Event-based message handling
- * - Ping/pong heartbeat
  */
 export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const { isOnline } = usePWA()
@@ -59,7 +58,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const ws = useRef<WebSocket | null>(null)
   const eventHandlers = useRef<Map<string, Set<(data: any) => void>>>(new Map())
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pingTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const mountedRef = useRef(true)
   const reconnectAttemptsRef = useRef(0)
   const isConnectingRef = useRef(false)
@@ -78,26 +76,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       ws.current.send(JSON.stringify(message))
     } else {
       wsLogger.warn('Cannot send message, WebSocket not connected:', event)
-    }
-  }, [])
-
-  // Start heartbeat
-  const startHeartbeat = useCallback(() => {
-    if (pingTimer.current) {
-      clearInterval(pingTimer.current)
-    }
-    pingTimer.current = setInterval(() => {
-      if (ws.current?.readyState === WebSocket.OPEN) {
-        send('ping', {})
-      }
-    }, 30000)
-  }, [send])
-
-  // Stop heartbeat
-  const stopHeartbeat = useCallback(() => {
-    if (pingTimer.current) {
-      clearInterval(pingTimer.current)
-      pingTimer.current = null
     }
   }, [])
 
@@ -158,8 +136,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         if (token) {
           send('auth', { token })
         }
-        
-        startHeartbeat()
       }
       
       ws.current.onmessage = handleMessage
@@ -170,7 +146,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         wsLogger.info('WebSocket disconnected')
         isConnectingRef.current = false
         setIsConnected(false)
-        stopHeartbeat()
         
         // Schedule reconnect
         if (isAuthenticated && reconnectAttemptsRef.current < maxReconnectAttempts) {
@@ -197,7 +172,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       wsLogger.error('Failed to create WebSocket:', err)
       isConnectingRef.current = false
     }
-  }, [wsUrl, isOnline, isAuthenticated, send, startHeartbeat, stopHeartbeat, handleMessage])
+  }, [wsUrl, isOnline, isAuthenticated, send, handleMessage])
 
   // Disconnect
   const disconnect = useCallback(() => {
@@ -205,13 +180,12 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       clearTimeout(reconnectTimer.current)
       reconnectTimer.current = null
     }
-    stopHeartbeat()
     
     if (ws.current) {
       ws.current.close()
       ws.current = null
     }
-  }, [stopHeartbeat])
+  }, [])
 
   // Subscribe to event
   const on = useCallback((event: string, handler: (data: any) => void) => {
