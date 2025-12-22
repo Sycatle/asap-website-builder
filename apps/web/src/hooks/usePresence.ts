@@ -8,18 +8,10 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useGlobalWebSocket } from '../components/providers/WebSocketProvider';
 import { useAuthStore } from '../lib/store/authStore';
+import type { WebsitePresenceUser } from '../lib/types';
 
-// ============================================
-// Types
-// ============================================
-
-export interface WebsitePresenceUser {
-  id: string;
-  email: string;
-  name?: string;
-  avatar?: string;
-  joined_at?: string;
-}
+// Re-export for convenience
+export type { WebsitePresenceUser };
 
 interface UsePresenceOptions {
   /** Website ID to track presence for */
@@ -39,6 +31,8 @@ interface UsePresenceReturn {
   joinWebsite: (websiteId: string) => void;
   /** Leave the current website presence room */
   leaveWebsite: () => void;
+  /** Request the current users list for a website */
+  requestUsersList: (websiteId: string) => void;
 }
 
 /**
@@ -68,7 +62,7 @@ interface UsePresenceReturn {
 export function usePresence(options: UsePresenceOptions = {}): UsePresenceReturn {
   const { websiteId, debug = false } = options;
   
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, userData, isAuthenticated } = useAuthStore();
   const ws = useGlobalWebSocket();
 
   const [onlineUsers, setOnlineUsers] = useState<WebsitePresenceUser[]>([]);
@@ -83,6 +77,15 @@ export function usePresence(options: UsePresenceOptions = {}): UsePresenceReturn
       console.log('[Presence]', ...args);
     }
   }, [debug]);
+
+  // Request users list for a website
+  const requestUsersList = useCallback((targetWebsiteId: string) => {
+    if (!ws.isConnected || !ws.isWsAuthenticated) {
+      log('Cannot request users list - not ready');
+      return;
+    }
+    ws.send('presence:get-website-users', { website_id: targetWebsiteId });
+  }, [ws, log]);
 
   // Join a website presence room
   const joinWebsite = useCallback((targetWebsiteId: string) => {
@@ -104,22 +107,21 @@ export function usePresence(options: UsePresenceOptions = {}): UsePresenceReturn
     currentWebsiteIdRef.current = targetWebsiteId;
     setIsTracking(true);
 
+    // Use userData for name/avatar if available, fallback to user
+    const userName = userData?.name;
+    const userAvatar = userData?.avatar;
+
     log('Joining website:', targetWebsiteId);
     ws.send('presence:join-website', {
       website_id: targetWebsiteId,
       user: {
         id: user.id,
         email: user.email,
-        name: (user as any).name,
-        avatar: (user as any).avatar,
+        name: userName,
+        avatar: userAvatar,
       }
     });
-
-    // Request current users list after a short delay to ensure handlers are set up
-    setTimeout(() => {
-      ws.send('presence:get-website-users', { website_id: targetWebsiteId });
-    }, 100);
-  }, [ws, user, log]);
+  }, [ws, user, userData, log]);
 
   // Leave the current website presence room
   const leaveWebsite = useCallback(() => {
@@ -200,11 +202,14 @@ export function usePresence(options: UsePresenceOptions = {}): UsePresenceReturn
     // Join the website
     joinWebsite(websiteId);
 
+    // Request current users list after joining and handlers are set up
+    requestUsersList(websiteId);
+
     // Cleanup: leave when websiteId changes or component unmounts
     return () => {
       leaveWebsite();
     };
-  }, [websiteId, ws.isConnected, ws.isWsAuthenticated, isAuthenticated, joinWebsite, leaveWebsite]);
+  }, [websiteId, ws.isConnected, ws.isWsAuthenticated, isAuthenticated, joinWebsite, leaveWebsite, requestUsersList]);
 
   return {
     onlineUsers,
@@ -212,5 +217,6 @@ export function usePresence(options: UsePresenceOptions = {}): UsePresenceReturn
     isConnected: ws.isConnected,
     joinWebsite,
     leaveWebsite,
+    requestUsersList,
   };
 }

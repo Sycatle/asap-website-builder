@@ -100,7 +100,7 @@ export {
 
 // WebSocket types
 export {
-  type PresenceUser,
+  type WebsitePresenceUser,
   type WebSocketEventData,
   type ChangelogEntry,
 } from './websocket';

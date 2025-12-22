@@ -21,19 +21,6 @@ export interface WebsitePresenceUser {
 }
 
 /**
- * Legacy presence user data from WebSocket
- * @deprecated Use WebsitePresenceUser instead
- */
-export interface PresenceUser {
-  id: string;
-  email: string;
-  username?: string;
-  editing?: string;
-  editing_context?: string;
-  last_active?: string;
-}
-
-/**
  * WebSocket event data payloads
  */
 export interface WebSocketEventData {
@@ -44,7 +31,6 @@ export interface WebSocketEventData {
   context?: string;
   website_id?: string;
   extension_id?: string;
-  module_id?: string;
   // Allow additional dynamic properties
   [key: string]: WebsitePresenceUser[] | WebsitePresenceUser | JsonValue | undefined;
 }

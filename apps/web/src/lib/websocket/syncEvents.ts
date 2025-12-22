@@ -1,5 +1,5 @@
 /**
- * WebSocket Sync Events - Phase 3
+ * WebSocket Sync Events
  * 
  * Types and handlers for real-time synchronization events
  */
@@ -29,15 +29,10 @@ export type SyncEventType =
   | 'sync:element:deleted'
   | 'sync:element:reordered'
   
-  // Extension events (renamed from module)
+  // Extension events
   | 'sync:extension:activated'
   | 'sync:extension:deactivated'
   | 'sync:extension:configured'
-  // Legacy module events for backward compatibility
-  | 'sync:module:activated'
-  | 'sync:module:deactivated'
-  | 'sync:module:configured'
-  | 'sync:module:catalog:updated'
   
   // Cloud/File events
   | 'sync:file:uploaded'
@@ -46,37 +41,18 @@ export type SyncEventType =
   | 'sync:upload:complete'
   | 'sync:upload:failed'
   
-  // Website Presence events (primary presence system)
+  // Website Presence events
   | 'presence:website:users'
   | 'presence:website:user-joined'
-  | 'presence:website:user-left'
-  
-  // Legacy presence events (for backward compatibility)
-  | 'presence:user:online'
-  | 'presence:user:offline'
-  | 'presence:user:editing'
-  | 'presence:user:stopped-editing'
-  | 'presence:users:list';
+  | 'presence:website:user-left';
 
 // ============================================
 // Common Types
 // ============================================
 
-export interface PresenceUser {
-  id: string;
-  username: string;
-  avatar_url?: string;
-  last_seen: string;
-}
-
-/** Website presence user - used by the website presence system */
-export interface WebsitePresenceUser {
-  id: string;
-  email: string;
-  name?: string;
-  avatar?: string;
-  joined_at?: string;
-}
+// Import and re-export WebsitePresenceUser from centralized types
+import type { WebsitePresenceUser } from '../types/websocket';
+export type { WebsitePresenceUser };
 
 export interface ResourceReference {
   resource_type: string;
@@ -294,52 +270,6 @@ export interface ExtensionConfiguredEvent {
 }
 
 // ============================================
-// Module Sync Events (Legacy - mapped to Extension)
-// ============================================
-
-export interface ModuleActivatedEvent {
-  type: 'sync:module:activated';
-  data: {
-    module_id: string;
-    module_name: string;
-    module_slug: string;
-    activated_by: string;
-    activated_by_name: string;
-  };
-}
-
-export interface ModuleDeactivatedEvent {
-  type: 'sync:module:deactivated';
-  data: {
-    module_id: string;
-    module_name: string;
-    module_slug: string;
-    deactivated_by: string;
-    deactivated_by_name: string;
-  };
-}
-
-export interface ModuleConfiguredEvent {
-  type: 'sync:module:configured';
-  data: {
-    module_id: string;
-    module_name: string;
-    configured_by: string;
-    configured_by_name: string;
-    config_changes: string[];
-  };
-}
-
-export interface ModuleCatalogUpdatedEvent {
-  type: 'sync:module:catalog:updated';
-  data: {
-    new_modules: number;
-    updated_modules: number;
-    updated_by: string;
-  };
-}
-
-// ============================================
 // Cloud/File Sync Events
 // ============================================
 
@@ -430,50 +360,6 @@ export interface WebsiteUserLeftEvent {
 }
 
 // ============================================
-// Legacy Presence Events (for backward compatibility)
-// ============================================
-
-export interface UserOnlineEvent {
-  type: 'presence:user:online';
-  data: {
-    user: PresenceUser;
-  };
-}
-
-export interface UserOfflineEvent {
-  type: 'presence:user:offline';
-  data: {
-    user_id: string;
-  };
-}
-
-export interface UserEditingEvent {
-  type: 'presence:user:editing';
-  data: {
-    user: PresenceUser;
-    resource_type: string;
-    resource_id: string;
-    started_at: string;
-  };
-}
-
-export interface UserStoppedEditingEvent {
-  type: 'presence:user:stopped-editing';
-  data: {
-    user_id: string;
-    resource_type: string;
-    resource_id: string;
-  };
-}
-
-export interface UsersListEvent {
-  type: 'presence:users:list';
-  data: {
-    online_users: PresenceUser[];
-  };
-}
-
-// ============================================
 // Union Types
 // ============================================
 
@@ -502,6 +388,13 @@ export type ExtensionSyncEvent =
   | ExtensionDeactivatedEvent
   | ExtensionConfiguredEvent;
 
+export type FileSyncEvent =
+  | FileUploadedEvent
+  | FileDeletedEvent
+  | UploadProgressEvent
+  | UploadCompleteEvent
+  | UploadFailedEvent;
+
 export type WebsitePresenceEvent =
   | WebsiteUsersEvent
   | WebsiteUserJoinedEvent
@@ -529,11 +422,6 @@ export type SyncEvent =
   | ExtensionActivatedEvent
   | ExtensionDeactivatedEvent
   | ExtensionConfiguredEvent
-  // Module (legacy)
-  | ModuleActivatedEvent
-  | ModuleDeactivatedEvent
-  | ModuleConfiguredEvent
-  | ModuleCatalogUpdatedEvent
   // File
   | FileUploadedEvent
   | FileDeletedEvent
@@ -543,13 +431,7 @@ export type SyncEvent =
   // Website Presence
   | WebsiteUsersEvent
   | WebsiteUserJoinedEvent
-  | WebsiteUserLeftEvent
-  // Legacy Presence
-  | UserOnlineEvent
-  | UserOfflineEvent
-  | UserEditingEvent
-  | UserStoppedEditingEvent
-  | UsersListEvent;
+  | WebsiteUserLeftEvent;
 
 // ============================================
 // Type Guards
@@ -562,7 +444,7 @@ export function isSyncEvent(event: any): event is SyncEvent {
     'type' in event &&
     'data' in event &&
     typeof event.type === 'string' &&
-    event.type.startsWith('sync:') || event.type.startsWith('presence:')
+    (event.type.startsWith('sync:') || event.type.startsWith('presence:'))
   );
 }
 
@@ -582,19 +464,11 @@ export function isExtensionEvent(event: SyncEvent): event is ExtensionSyncEvent 
   return event.type.startsWith('sync:extension:');
 }
 
-export function isModuleEvent(event: SyncEvent): event is ModuleActivatedEvent | ModuleDeactivatedEvent | ModuleConfiguredEvent | ModuleCatalogUpdatedEvent {
-  return event.type.startsWith('sync:module:');
-}
-
-export function isFileEvent(event: SyncEvent): event is FileUploadedEvent | FileDeletedEvent | UploadProgressEvent | UploadCompleteEvent | UploadFailedEvent {
+export function isFileEvent(event: SyncEvent): event is FileSyncEvent {
   return event.type.startsWith('sync:file:') || event.type.startsWith('sync:upload:');
 }
 
-export function isWebsitePresenceEvent(event: SyncEvent): event is WebsitePresenceEvent {
-  return event.type.startsWith('presence:website:');
-}
-
-export function isPresenceEvent(event: SyncEvent): event is WebsitePresenceEvent | UserOnlineEvent | UserOfflineEvent | UserEditingEvent | UserStoppedEditingEvent | UsersListEvent {
+export function isPresenceEvent(event: SyncEvent): event is WebsitePresenceEvent {
   return event.type.startsWith('presence:');
 }
 
@@ -639,12 +513,6 @@ export interface SyncEventHandlers {
   onExtensionDeactivated?: (event: ExtensionDeactivatedEvent['data']) => void;
   onExtensionConfigured?: (event: ExtensionConfiguredEvent['data']) => void;
   
-  // Module handlers (legacy)
-  onModuleActivated?: (event: ModuleActivatedEvent['data']) => void;
-  onModuleDeactivated?: (event: ModuleDeactivatedEvent['data']) => void;
-  onModuleConfigured?: (event: ModuleConfiguredEvent['data']) => void;
-  onModuleCatalogUpdated?: (event: ModuleCatalogUpdatedEvent['data']) => void;
-  
   // File handlers
   onFileUploaded?: (event: FileUploadedEvent['data']) => void;
   onFileDeleted?: (event: FileDeletedEvent['data']) => void;
@@ -656,11 +524,4 @@ export interface SyncEventHandlers {
   onWebsiteUsers?: (event: WebsiteUsersEvent['data']) => void;
   onWebsiteUserJoined?: (event: WebsiteUserJoinedEvent['data']) => void;
   onWebsiteUserLeft?: (event: WebsiteUserLeftEvent['data']) => void;
-  
-  // Legacy Presence handlers
-  onUserOnline?: (event: UserOnlineEvent['data']) => void;
-  onUserOffline?: (event: UserOfflineEvent['data']) => void;
-  onUserEditing?: (event: UserEditingEvent['data']) => void;
-  onUserStoppedEditing?: (event: UserStoppedEditingEvent['data']) => void;
-  onUsersList?: (event: UsersListEvent['data']) => void;
 }

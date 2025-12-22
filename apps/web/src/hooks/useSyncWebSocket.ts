@@ -290,44 +290,6 @@ export function useSyncWebSocket(options: UseSyncWebSocketOptions = {}): UseSync
       case 'presence:website:user-left':
         h?.onWebsiteUserLeft?.(eventData as any);
         break;
-
-      // ========== LEGACY PRESENCE EVENTS ==========
-      case 'presence:user:online':
-        h?.onUserOnline?.(eventData as any);
-        break;
-
-      case 'presence:user:offline':
-        h?.onUserOffline?.(eventData as any);
-        break;
-
-      case 'presence:user:editing':
-        h?.onUserEditing?.(eventData as any);
-        break;
-
-      case 'presence:user:stopped-editing':
-        h?.onUserStoppedEditing?.(eventData as any);
-        break;
-
-      case 'presence:users:list':
-        h?.onUsersList?.(eventData as any);
-        break;
-
-      // ========== LEGACY MODULE EVENTS ==========
-      case 'sync:module:activated':
-        h?.onModuleActivated?.(eventData as any);
-        break;
-
-      case 'sync:module:deactivated':
-        h?.onModuleDeactivated?.(eventData as any);
-        break;
-
-      case 'sync:module:configured':
-        h?.onModuleConfigured?.(eventData as any);
-        break;
-
-      case 'sync:module:catalog:updated':
-        h?.onModuleCatalogUpdated?.(eventData as any);
-        break;
     }
   }, [websiteId, log, queryClient, skipCacheUpdate]);
 
@@ -370,17 +332,6 @@ export function useSyncWebSocket(options: UseSyncWebSocketOptions = {}): UseSync
       'presence:website:users',
       'presence:website:user-joined',
       'presence:website:user-left',
-      // Legacy Presence
-      'presence:user:online',
-      'presence:user:offline',
-      'presence:user:editing',
-      'presence:user:stopped-editing',
-      'presence:users:list',
-      // Legacy Module
-      'sync:module:activated',
-      'sync:module:deactivated',
-      'sync:module:configured',
-      'sync:module:catalog:updated',
     ];
 
     // Create handlers map for cleanup

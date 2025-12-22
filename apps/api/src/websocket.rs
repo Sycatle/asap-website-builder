@@ -87,8 +87,13 @@ impl WsState {
     }
     
     /// Unregister a client
+    /// 
+    /// IMPORTANT: Must leave website presence BEFORE removing from authenticated_clients.
+    /// This prevents a race condition where leave_website() would fail to find the user_id
+    /// (needed to broadcast the user-left event) because the client was already removed.
     pub async fn unregister_client(&self, account_id: &str, client_id: uuid::Uuid) {
-        // First, leave the website presence (while we still have the account_id)
+        // First, leave the website presence while we still have the account_id
+        // This ensures the user-left event is properly broadcast
         self.leave_website_with_account(client_id, account_id).await;
         
         // Then, release the client from authenticated_clients

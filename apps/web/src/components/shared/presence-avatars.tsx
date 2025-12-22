@@ -15,19 +15,10 @@ import {
 } from "@/components/ui/tooltip"
 import { useGlobalWebSocket } from "@/components/providers/WebSocketProvider"
 import { useAuthStore } from "@/lib/store/authStore"
+import type { WebsitePresenceUser } from "@/lib/types"
 
-// ============================================
-// Types
-// ============================================
-
-export interface PresenceUser {
-  id: string
-  email: string
-  name?: string
-  avatar?: string
-  website_id?: string
-  joined_at?: string
-}
+// Re-export type for consumers
+export type { WebsitePresenceUser }
 
 interface PresenceAvatarsProps {
   /** Website ID to track presence for */
@@ -97,7 +88,7 @@ interface UseWebsitePresenceOptions {
 }
 
 function useWebsitePresence({ websiteId, user, enabled }: UseWebsitePresenceOptions) {
-  const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([])
+  const [onlineUsers, setOnlineUsers] = useState<WebsitePresenceUser[]>([])
   const ws = useGlobalWebSocket()
   
   // Track the session we've joined
