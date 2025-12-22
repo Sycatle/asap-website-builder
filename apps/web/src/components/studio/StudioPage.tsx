@@ -2,9 +2,15 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react"
 import { useWebsiteContext } from "@/contexts/WebsiteContext"
-import { useElements } from "@/hooks/useElements"
-import { usePages } from "@/hooks/usePages"
-import type { WebsiteElement, UpdateElementRequest } from "@/lib/api"
+import { 
+  useElementsQuery,
+  useCreateElementMutation,
+  useUpdateElementMutation,
+  useReorderElementsMutation,
+  usePagesQuery,
+  useHomepage,
+} from "@/lib/query"
+import type { WebsiteElement, UpdateElementRequest } from "@/lib/types"
 import { SectionRenderer } from "./section-renderers"
 import { PropertyEditor } from "./property-editors"
 import { getElementIcon, getElementLabel } from "@/lib/constants/elements"
@@ -78,21 +84,45 @@ export default function StudioPage({ onBack }: StudioPageProps) {
   
   // Data hooks
   const { currentWebsite: website, isLoading: isLoadingWebsite } = useWebsiteContext()
-  const { 
-    elements, 
-    isLoading: isLoadingElements, 
-    updateElement,
-    createElement,
-    reorderElements,
-    isUpdating,
-    refetch,
-  } = useElements(website?.id ?? null)
   
+  // Elements queries and mutations
   const { 
-    pages, 
+    data: elements = [], 
+    isLoading: isLoadingElements, 
+    refetch,
+  } = useElementsQuery(website?.id)
+  
+  const createElementMutation = useCreateElementMutation()
+  const updateElementMutation = useUpdateElementMutation()
+  const reorderElementsMutation = useReorderElementsMutation()
+  
+  // Pages queries
+  const { 
+    data: pages = [], 
     isLoading: isLoadingPages,
-    getHomepage,
-  } = usePages(website?.id ?? null)
+  } = usePagesQuery(website?.id)
+  
+  const homepage = useHomepage(website?.id)
+
+  // Wrapper functions for mutations (to maintain API compatibility)
+  const updateElement = useCallback(async (elementId: string, data: UpdateElementRequest) => {
+    if (!website?.id) throw new Error('No website selected')
+    return updateElementMutation.mutateAsync({ websiteId: website.id, elementId, data })
+  }, [website?.id, updateElementMutation])
+  
+  const createElement = useCallback(async (data: Parameters<typeof createElementMutation.mutateAsync>[0]['data']) => {
+    if (!website?.id) throw new Error('No website selected')
+    return createElementMutation.mutateAsync({ websiteId: website.id, data })
+  }, [website?.id, createElementMutation])
+  
+  const reorderElements = useCallback(async (elementIds: string[]) => {
+    if (!website?.id) throw new Error('No website selected')
+    return reorderElementsMutation.mutateAsync({ websiteId: website.id, elementIds })
+  }, [website?.id, reorderElementsMutation])
+  
+  const isUpdating = updateElementMutation.isPending || createElementMutation.isPending
+  
+  const getHomepage = useCallback(() => homepage, [homepage])
 
   // UI state
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null)
@@ -107,8 +137,8 @@ export default function StudioPage({ onBack }: StudioPageProps) {
   // Auto-select homepage on first load
   useEffect(() => {
     if (!selectedPageId && pages.length > 0) {
-      const homepage = getHomepage()
-      setSelectedPageId(homepage?.id ?? pages[0]?.id ?? null)
+      const homePage = getHomepage()
+      setSelectedPageId(homePage?.id ?? pages[0]?.id ?? null)
     }
   }, [pages, selectedPageId, getHomepage])
 
