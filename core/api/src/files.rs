@@ -9,13 +9,14 @@ use uuid::Uuid;
 use std::collections::HashMap;
 
 use crate::storage::FileStorageService;
-use asap_core_shared::{Claims, SharedConfig, validate_token};
+use asap_core_shared::{Claims, SharedConfig, SharedWsBroadcaster, WsBroadcaster, validate_token};
 use asap_core_domain::{FileUploadResponse, StorageQuotaResponse};
 
 /// Upload file handler
 pub async fn upload_file(
     Extension(claims): Extension<Claims>,
     Extension(storage): Extension<std::sync::Arc<FileStorageService>>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     mut multipart: Multipart,
 ) -> Result<(StatusCode, Json<FileUploadResponse>), (StatusCode, String)> {
     let account_id = uuid::Uuid::parse_str(&claims.sub)
@@ -56,7 +57,16 @@ pub async fn upload_file(
             .await
             .map_err(|e| (StatusCode::BAD_REQUEST, format!("Upload failed: {}", e)))?;
 
-        return Ok((StatusCode::CREATED, Json(FileUploadResponse::from(file))));
+        let response = FileUploadResponse::from(file);
+        
+        // Broadcast file uploaded event to all connected clients for this account
+        ws_broadcaster.sync_file_uploaded(
+            &claims.sub,
+            None, // No specific website - files are account-level
+            serde_json::to_value(&response).unwrap_or_default(),
+        );
+
+        return Ok((StatusCode::CREATED, Json(response)));
     }
 
     Err((StatusCode::BAD_REQUEST, "No file provided".to_string()))
@@ -103,6 +113,7 @@ pub async fn list_files(
 pub async fn delete_file(
     Extension(claims): Extension<Claims>,
     Extension(storage): Extension<std::sync::Arc<FileStorageService>>,
+    Extension(ws_broadcaster): Extension<SharedWsBroadcaster>,
     Path(file_id): Path<Uuid>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let account_id = uuid::Uuid::parse_str(&claims.sub)
@@ -112,6 +123,13 @@ pub async fn delete_file(
         .delete_file(account_id, file_id)
         .await
         .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+
+    // Broadcast file deleted event to all connected clients for this account
+    ws_broadcaster.sync_file_deleted(
+        &claims.sub,
+        None, // No specific website - files are account-level
+        &file_id.to_string(),
+    );
 
     Ok(StatusCode::NO_CONTENT)
 }
