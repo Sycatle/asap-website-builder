@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SettingsModal } from "@/components/settings-modal"
+import { LogoutConfirmDialog } from "@/components/shared/logout-confirm-dialog"
 import { authAPI, websitesAPI, accountsAPI, type Website } from "@/lib/api"
 
 interface UserData {
@@ -48,6 +49,7 @@ export function NavUserAsap({ user: initialUser }: NavUserAsapProps) {
   const { isMobile } = useSidebar()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'account' | 'billing'>('account')
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState<UserData>({
     id: "",
@@ -118,8 +120,7 @@ export function NavUserAsap({ user: initialUser }: NavUserAsapProps) {
   }, [])
 
   const handleLogout = () => {
-    localStorage.removeItem('auth_token')
-    window.location.href = '/login'
+    setLogoutDialogOpen(true)
   }
 
   const handleUserUpdate = (updatedData: Partial<UserData>) => {
@@ -226,6 +227,12 @@ export function NavUserAsap({ user: initialUser }: NavUserAsapProps) {
         user={user}
         onUserUpdate={handleUserUpdate}
         defaultTab={settingsTab}
+      />
+
+      {/* Logout Confirmation Dialog */}
+      <LogoutConfirmDialog
+        open={logoutDialogOpen}
+        onOpenChange={setLogoutDialogOpen}
       />
     </>
   )

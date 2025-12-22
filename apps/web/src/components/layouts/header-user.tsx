@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SettingsModal } from "@/components/settings-modal"
 import { NotificationsDropdown } from "@/components/shared/notifications-dropdown"
+import { LogoutConfirmDialog } from "@/components/shared/logout-confirm-dialog"
 import { 
   useAuthStore, 
   useUserData, 
@@ -39,6 +40,7 @@ interface HeaderUserProps {
 export function HeaderUser({ user: initialUser }: HeaderUserProps) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'account' | 'billing'>('account')
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
   
   // Use the centralized auth store
   const userData = useUserData()
@@ -51,7 +53,7 @@ export function HeaderUser({ user: initialUser }: HeaderUserProps) {
   }, [fetchFullUserData])
 
   const handleLogout = () => {
-    logout()
+    setLogoutDialogOpen(true)
   }
 
   const handleUserUpdate = (updatedData: Partial<UserData>) => {
@@ -139,6 +141,12 @@ export function HeaderUser({ user: initialUser }: HeaderUserProps) {
         user={user}
         onUserUpdate={handleUserUpdate}
         defaultTab={settingsTab}
+      />
+
+      {/* Logout Confirmation Dialog */}
+      <LogoutConfirmDialog
+        open={logoutDialogOpen}
+        onOpenChange={setLogoutDialogOpen}
       />
     </>
   )
