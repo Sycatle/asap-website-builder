@@ -143,7 +143,7 @@ export function FilePickerDialog({
                     <div className="w-full min-w-0">
                       <p className="text-xs sm:text-sm font-medium truncate">{file.filename}</p>
                       <p className="text-[10px] sm:text-xs text-muted-foreground">
-                        {formatBytes(file.size_bytes)}
+                        {formatBytes(file.original_size)}
                       </p>
                     </div>
                   </button>

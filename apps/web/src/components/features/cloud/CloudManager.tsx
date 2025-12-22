@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { filesAPI, type FileMetadata } from '@/lib/api';
-import { formatBytes } from '@/lib/utils/formatters';
+import { formatBytes, formatDate } from '@/lib/utils/formatters';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +62,9 @@ export default function CloudManager() {
   const uploadFileMutation = useUploadFileMutation();
   const deleteFileMutation = useDeleteFileMutation();
   const deleteFilesMutation = useDeleteFilesMutation();
+  
+  // Note: Real-time sync is handled globally in app-shell via useSyncWebSocket
+  // which auto-updates React Query cache for file events
   
   // Local UI state
   const [isUploading, setIsUploading] = useState(false);
@@ -343,11 +346,11 @@ export default function CloudManager() {
           </CardHeader>
           <CardContent className="px-4 sm:px-6">
             <Progress 
-              value={quota.usage_percentage} 
-              className={`h-1.5 sm:h-2 transition-all duration-500 ${quota.usage_percentage > 80 ? '[&>div]:bg-destructive' : ''}`}
+              value={quota.usage_percentage ?? 0} 
+              className={`h-1.5 sm:h-2 transition-all duration-500 ${(quota.usage_percentage ?? 0) > 80 ? '[&>div]:bg-destructive' : ''}`}
             />
             <p className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-muted-foreground">
-              {quota.usage_percentage.toFixed(1)}% utilisé · {formatBytes(quota.remaining)} restant
+              {(quota.usage_percentage ?? 0).toFixed(1)}% utilisé · {formatBytes(quota.remaining)} restant
             </p>
           </CardContent>
         </Card>
@@ -453,7 +456,7 @@ export default function CloudManager() {
                           {getFileTypeLabel(file.mime_type)}
                         </Badge>
                         <span className="text-[10px] sm:text-xs text-muted-foreground">
-                          {formatBytes(file.size_bytes)}
+                          {formatBytes(file.original_size)}
                         </span>
                       </div>
                     </CardContent>
@@ -558,7 +561,7 @@ export default function CloudManager() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm sm:text-base font-medium truncate">{file.filename}</p>
                           <p className="text-xs sm:text-sm text-muted-foreground">
-                            {formatBytes(file.size_bytes)} · {new Date(file.uploaded_at).toLocaleDateString('fr-FR')}
+                            {formatBytes(file.original_size)} · {formatDate(file.created_at)}
                           </p>
                         </div>
                         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
@@ -723,7 +726,7 @@ export default function CloudManager() {
               <span className="truncate">{previewFile?.filename}</span>
             </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
-              {previewFile && `${getFileTypeLabel(previewFile.mime_type)} · ${formatBytes(previewFile.size_bytes)}`}
+              {previewFile && `${getFileTypeLabel(previewFile.mime_type)} · ${formatBytes(previewFile.original_size)}`}
             </DialogDescription>
           </DialogHeader>
           
