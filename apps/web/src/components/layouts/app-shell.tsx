@@ -33,6 +33,7 @@ import {
 import { Keyboard } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SkipLink } from "@/components/ui/accessibility"
+import { PresenceAvatars } from "@/components/shared/presence-avatars"
 
 interface AppShellProps {
   children: React.ReactNode
@@ -293,6 +294,16 @@ function AppShellContent({
               <p>Raccourcis clavier <kbd className="ml-1 px-1 py-0.5 text-xs bg-muted rounded">?</kbd></p>
             </TooltipContent>
           </Tooltip>
+          
+          {/* Real-time presence avatars - shows other users viewing this website */}
+          {currentWebsiteId && (
+            <PresenceAvatars 
+              websiteId={currentWebsiteId} 
+              maxAvatars={3}
+              size="sm"
+              className="mr-2"
+            />
+          )}
           
           <HeaderUser />
         </header>
