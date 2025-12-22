@@ -54,13 +54,15 @@ pub async fn list_websites_with_data(
 ) -> Result<Vec<WebsiteWithData>, sqlx::Error> {
     sqlx::query_as::<_, WebsiteWithData>(
         r#"
-        SELECT 
+        SELECT DISTINCT
             w.id, w.account_id, w.slug, w.title, w.tagline, w.status, 
             w.creation_mode, w.preset_id, w.metadata, w.created_at, w.updated_at,
             COALESCE(wd.data, '{}'::jsonb) as data
         FROM websites w
         LEFT JOIN website_data wd ON w.id = wd.website_id
-        WHERE w.account_id = $1
+        LEFT JOIN website_administrators wa ON w.id = wa.website_id
+        WHERE w.account_id = $1 
+           OR (wa.account_id = $1 AND wa.status = 'active')
         ORDER BY w.created_at DESC
         "#
     )
