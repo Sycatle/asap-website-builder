@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect, useState } from "react"
 import { AppShell } from "./layouts/app-shell"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { QueryProvider } from "@/components/providers"
+import { QueryProvider, WebSocketProvider } from "@/components/providers"
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary"
 import { Loader2 } from "lucide-react"
 
@@ -292,36 +292,40 @@ export default function AppRouter() {
   if (isSelectPage) {
     return (
       <QueryProvider>
-        <TooltipProvider>
-          <ErrorBoundary level="page">
-            <Suspense fallback={<PageLoader />}>
-              <WebsiteSelector />
-            </Suspense>
-          </ErrorBoundary>
-        </TooltipProvider>
+        <WebSocketProvider>
+          <TooltipProvider>
+            <ErrorBoundary level="page">
+              <Suspense fallback={<PageLoader />}>
+                <WebsiteSelector />
+              </Suspense>
+            </ErrorBoundary>
+          </TooltipProvider>
+        </WebSocketProvider>
       </QueryProvider>
     )
   }
 
   return (
     <QueryProvider>
-      <TooltipProvider>
-        <ErrorBoundary level="page">
-          <AppShell 
-            title={title} 
-            breadcrumbs={breadcrumbs}
-            isStudioPage={isStudioPage}
-            websiteId={websiteId}
-            showSidebar={true}
-          >
-            <ErrorBoundary level="section" title={title}>
-              <Suspense fallback={<PageLoader />}>
-                {renderPage()}
-              </Suspense>
-            </ErrorBoundary>
-          </AppShell>
-        </ErrorBoundary>
-      </TooltipProvider>
+      <WebSocketProvider>
+        <TooltipProvider>
+          <ErrorBoundary level="page">
+            <AppShell 
+              title={title} 
+              breadcrumbs={breadcrumbs}
+              isStudioPage={isStudioPage}
+              websiteId={websiteId}
+              showSidebar={true}
+            >
+              <ErrorBoundary level="section" title={title}>
+                <Suspense fallback={<PageLoader />}>
+                  {renderPage()}
+                </Suspense>
+              </ErrorBoundary>
+            </AppShell>
+          </ErrorBoundary>
+        </TooltipProvider>
+      </WebSocketProvider>
     </QueryProvider>
   )
 }
