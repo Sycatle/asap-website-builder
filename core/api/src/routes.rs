@@ -162,6 +162,7 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         // Public website routes
         .route("/public/websites/:slug", get(crate::websites::get_public_website))
         .route("/public/websites/:slug/elements", get(crate::websites::get_public_website_elements))
+        .route("/public/websites/:slug/pages", get(crate::websites::get_public_website_pages))
         // File download (auth via query param for media embeds)
         .route("/files/:file_id", get(crate::files::download_file))
         // Webhook routes (public but signature verified)

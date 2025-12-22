@@ -106,28 +106,20 @@ pub async fn list_website_pages(
         }
     };
 
-    // Verify website ownership
-    let website_exists = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND account_id = $2)"
-    )
-    .bind(website_uuid)
-    .bind(account_id)
-    .fetch_one(&pool)
-    .await;
-
-    match website_exists {
+    // Verify website access (owner or active administrator)
+    match queries::verify_website_access(&pool, website_uuid, account_id).await {
+        Ok(true) => {}
         Ok(false) => {
             return (StatusCode::NOT_FOUND, Json(serde_json::json!({
                 "error": "Website not found"
             }))).into_response();
         }
         Err(e) => {
-            tracing::error!("Database error verifying website: {}", e);
+            tracing::error!("Database error verifying website access: {}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response();
         }
-        _ => {}
     }
 
     let result = sqlx::query_as::<_, WebsitePage>(
@@ -189,17 +181,31 @@ pub async fn get_page(
         }
     };
 
+    // Verify website access (owner or active administrator)
+    match queries::verify_website_access(&pool, website_uuid, account_id).await {
+        Ok(true) => {}
+        Ok(false) => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Website not found"
+            }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Database error verifying website access: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    }
+
     let result = sqlx::query_as::<_, WebsitePage>(
         r#"
         SELECT p.id, p.website_id, p.slug, p.title, p.description, p.is_homepage, p."order", p.visible, p.metadata
         FROM website_pages p
-        JOIN websites w ON p.website_id = w.id
-        WHERE p.id = $1 AND p.website_id = $2 AND w.account_id = $3
+        WHERE p.id = $1 AND p.website_id = $2
         "#
     )
     .bind(page_uuid)
     .bind(website_uuid)
-    .bind(account_id)
     .fetch_optional(&pool)
     .await;
 
@@ -247,28 +253,20 @@ pub async fn create_page(
         }
     };
 
-    // Verify website ownership
-    let website_exists = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND account_id = $2)"
-    )
-    .bind(website_uuid)
-    .bind(account_id)
-    .fetch_one(&pool)
-    .await;
-
-    match website_exists {
+    // Verify website access (owner or active administrator)
+    match queries::verify_website_access(&pool, website_uuid, account_id).await {
+        Ok(true) => {}
         Ok(false) => {
             return (StatusCode::NOT_FOUND, Json(serde_json::json!({
                 "error": "Website not found"
             }))).into_response();
         }
         Err(e) => {
-            tracing::error!("Database error verifying website: {}", e);
+            tracing::error!("Database error verifying website access: {}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response();
         }
-        _ => {}
     }
 
     // If this is set as homepage, unset other homepages
@@ -405,19 +403,28 @@ pub async fn update_page(
         }
     };
 
-    // Verify ownership
+    // Verify website access (owner or active administrator)
+    match queries::verify_website_access(&pool, website_uuid, account_id).await {
+        Ok(true) => {}
+        Ok(false) => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Website not found"
+            }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Database error verifying website access: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    }
+
+    // Verify page exists for this website
     let page_exists = sqlx::query_scalar::<_, bool>(
-        r#"
-        SELECT EXISTS(
-            SELECT 1 FROM website_pages p
-            JOIN websites w ON p.website_id = w.id
-            WHERE p.id = $1 AND p.website_id = $2 AND w.account_id = $3
-        )
-        "#
+        r#"SELECT EXISTS(SELECT 1 FROM website_pages WHERE id = $1 AND website_id = $2)"#
     )
     .bind(page_uuid)
     .bind(website_uuid)
-    .bind(account_id)
     .fetch_one(&pool)
     .await;
 
@@ -594,16 +601,27 @@ pub async fn delete_page(
         }
     };
 
+    // Verify website access (owner or active administrator)
+    match queries::verify_website_access(&pool, website_uuid, account_id).await {
+        Ok(true) => {}
+        Ok(false) => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Website not found"
+            }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Database error verifying website access: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    }
+
     let result = sqlx::query(
-        r#"
-        DELETE FROM website_pages p
-        USING websites w
-        WHERE p.id = $1 AND p.website_id = $2 AND w.id = p.website_id AND w.account_id = $3
-        "#
+        r#"DELETE FROM website_pages WHERE id = $1 AND website_id = $2"#
     )
     .bind(page_uuid)
     .bind(website_uuid)
-    .bind(account_id)
     .execute(&pool)
     .await;
 
@@ -679,28 +697,20 @@ pub async fn reorder_pages(
         }
     };
 
-    // Verify website ownership
-    let website_exists = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND account_id = $2)"
-    )
-    .bind(website_uuid)
-    .bind(account_id)
-    .fetch_one(&pool)
-    .await;
-
-    match website_exists {
+    // Verify website access (owner or active administrator)
+    match queries::verify_website_access(&pool, website_uuid, account_id).await {
+        Ok(true) => {}
         Ok(false) => {
             return (StatusCode::NOT_FOUND, Json(serde_json::json!({
                 "error": "Website not found"
             }))).into_response();
         }
         Err(e) => {
-            tracing::error!("Database error verifying website: {}", e);
+            tracing::error!("Database error verifying website access: {}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
                 "error": "Internal server error"
             }))).into_response();
         }
-        _ => {}
     }
 
     // Update order for each page
@@ -734,4 +744,56 @@ pub async fn reorder_pages(
     (StatusCode::OK, Json(serde_json::json!({
         "message": "Pages reordered successfully"
     }))).into_response()
+}
+
+/// Get public pages for a published website (no auth required)
+pub async fn get_public_website_pages(
+    State(pool): State<PgPool>,
+    Path(slug): Path<String>,
+) -> impl IntoResponse {
+    use crate::queries;
+    
+    // First get the website by slug to verify it's published
+    let website_result = queries::get_public_website(&pool, &slug).await;
+    
+    let website = match website_result {
+        Ok(Some(w)) => w,
+        Ok(None) => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Website not found or not published"
+            }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Database error fetching website: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+    
+    // Get pages for this website (public - only visible ones)
+    let result = sqlx::query_as::<_, WebsitePage>(
+        r#"
+        SELECT id, website_id, slug, title, description, is_homepage, "order", visible, metadata
+        FROM website_pages
+        WHERE website_id = $1 AND visible = true
+        ORDER BY "order" ASC
+        "#
+    )
+    .bind(website.id)
+    .fetch_all(&pool)
+    .await;
+
+    match result {
+        Ok(pages) => {
+            let response: Vec<WebsitePageResponse> = pages.into_iter().map(Into::into).collect();
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Database error fetching public pages: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response()
+        }
+    }
 }
