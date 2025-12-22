@@ -23,11 +23,8 @@ import {
 } from "@/components/ui/chart";
 import type { ChartConfig } from "@/components/ui/chart";
 import { 
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
-  Cell,
   Area,
   AreaChart,
   CartesianGrid,
@@ -38,8 +35,8 @@ import {
   Upload, 
   ExternalLink, 
   Puzzle, 
-  HardDrive,
-  ArrowRight,
+  ArrowUpRight,
+  ArrowDownRight,
   CheckCircle2,
   Clock,
   Rocket,
@@ -53,13 +50,18 @@ import {
   Layers,
   FileText,
   Eye,
-  Palette,
   Zap,
   Target,
-  TrendingUp,
   Users,
-  MousePointerClick,
   Activity,
+  Mail,
+  Star,
+  Trophy,
+  Share2,
+  BarChart3,
+  PieChart as PieChartIcon,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
 import { FormActions } from "@/components/ui/form-actions";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -229,131 +231,180 @@ export default function Dashboard() {
   };
 
   const enabledExtensionsCount = extensions.filter(e => e.enabled).length;
-
-  // Calculate site completion/activation score
-  const activationChecklist = useMemo(() => {
-    const items = [
-      {
-        id: 'published',
-        label: 'Site publié',
-        description: 'Publiez votre site pour le rendre accessible',
-        completed: website?.status === 'published',
-        href: null, // Handled by publish button
-        icon: Globe,
-      },
-      {
-        id: 'title',
-        label: 'Titre configuré',
-        description: 'Définissez un titre pour votre site',
-        completed: !!website?.title && website.title.length > 0,
-        href: null, // Handled in settings tab
-        icon: Type,
-      },
-      {
-        id: 'extensions',
-        label: 'Extensions activées',
-        description: 'Activez au moins une extension pour enrichir votre site',
-        completed: enabledExtensionsCount > 0,
-        href: `/app/${currentWebsiteId}/extensions`,
-        icon: Puzzle,
-      },
-      {
-        id: 'files',
-        label: 'Médias uploadés',
-        description: 'Ajoutez des images ou fichiers à votre site',
-        completed: (quota?.total_size_used || 0) > 0,
-        href: `/app/${currentWebsiteId}/cloud`,
-        icon: Upload,
-      },
-    ];
-    
-    const completedCount = items.filter(i => i.completed).length;
-    const score = Math.round((completedCount / items.length) * 100);
-    
-    return { items, completedCount, total: items.length, score };
-  }, [website, enabledExtensionsCount, quota, currentWebsiteId]);
-
-  // Site resources data for bar chart
-  const siteResourcesData = useMemo(() => [
-    {
-      name: 'Pages',
-      value: pages.length,
-      fill: 'hsl(var(--primary))',
-    },
-    {
-      name: 'Sections',
-      value: elements.length,
-      fill: 'hsl(221.2 83.2% 53.3%)',
-    },
-    {
-      name: 'Extensions',
-      value: enabledExtensionsCount,
-      fill: 'hsl(262.1 83.3% 57.8%)',
-    },
-  ], [pages.length, elements.length, enabledExtensionsCount]);
-
-  const resourcesChartConfig = {
-    value: {
-      label: "Nombre",
-    },
-    Pages: {
-      label: "Pages",
-      color: "hsl(var(--primary))",
-    },
-    Sections: {
-      label: "Sections",
-      color: "hsl(221.2 83.2% 53.3%)",
-    },
-    Extensions: {
-      label: "Extensions",
-      color: "hsl(262.1 83.3% 57.8%)",
-    },
-  } satisfies ChartConfig;
-
   const storagePercentage = quota?.usage_percentage || 0;
 
-  // Simulated analytics data - stable per website to avoid re-renders
-  const simulatedData = useMemo(() => {
-    // Use website ID as seed for consistent random data
-    const seed = website?.id ? website.id.charCodeAt(0) + website.id.charCodeAt(1) : 42;
-    const random = (min: number, max: number, offset = 0) => 
-      Math.floor((((seed + offset) * 9301 + 49297) % 233280) / 233280 * (max - min)) + min;
+  // GAMIFIED Analytics data - comprehensive KPIs like YouTube Studio / Google Analytics / Shopify
+  const analyticsData = useMemo(() => {
+    // Linear Congruential Generator (LCG) for stable pseudo-random numbers
+    const LCG_MULTIPLIER = 9301;
+    const LCG_INCREMENT = 49297;
+    const LCG_MODULUS = 233280;
     
-    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-    const visitsData = days.map((day, i) => ({
-      day,
-      visits: random(20, 120, i * 10) + (i * 8), // Trending up
-      pageViews: random(40, 200, i * 20) + (i * 12),
-    }));
+    const seedFromId = website?.id 
+      ? (website.id.charCodeAt(0) || 0) + (website.id.length > 1 ? website.id.charCodeAt(1) : 0)
+      : 42;
+    
+    const random = (min: number, max: number, offset = 0) => 
+      Math.floor((((seedFromId + offset) * LCG_MULTIPLIER + LCG_INCREMENT) % LCG_MODULUS) / LCG_MODULUS * (max - min)) + min;
 
+    // 30-day trend data for main chart
+    const last30Days = Array.from({ length: 30 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (29 - i));
+      const dayNum = date.getDate();
+      return {
+        date: `${dayNum}`,
+        fullDate: date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }),
+        visits: random(50, 200, i * 3) + Math.floor(i * 2.5), // Upward trend
+        pageViews: random(100, 400, i * 5) + Math.floor(i * 4),
+        uniqueVisitors: random(30, 150, i * 7) + Math.floor(i * 1.8),
+      };
+    });
+
+    // 7-day sparkline data
+    const last7Days = last30Days.slice(-7);
+
+    // Real-time visitors (simulated)
+    const realtimeVisitors = random(3, 25, 100);
+
+    // Main KPIs with changes
+    const kpis = {
+      // Traffic metrics
+      totalVisits: {
+        value: random(2500, 8500, 1),
+        change: random(-8, 35, 2),
+        previousValue: random(2000, 7000, 3),
+      },
+      uniqueVisitors: {
+        value: random(1500, 5000, 4),
+        change: random(-5, 28, 5),
+        previousValue: random(1200, 4500, 6),
+      },
+      pageViews: {
+        value: random(8000, 25000, 7),
+        change: random(-3, 42, 8),
+        previousValue: random(7000, 22000, 9),
+      },
+      avgSessionDuration: {
+        value: `${random(2, 6, 10)}:${String(random(10, 59, 11)).padStart(2, '0')}`,
+        seconds: random(120, 360, 12),
+        change: random(-12, 25, 13),
+      },
+      bounceRate: {
+        value: random(25, 55, 14),
+        change: random(-15, 10, 15), // Negative is good for bounce rate
+      },
+      pagesPerSession: {
+        value: (random(20, 45, 16) / 10).toFixed(1),
+        change: random(-8, 22, 17),
+      },
+
+      // Conversion metrics
+      conversionRate: {
+        value: (random(15, 65, 18) / 10).toFixed(1),
+        change: random(-5, 35, 19),
+      },
+      goalCompletions: {
+        value: random(50, 350, 20),
+        change: random(-10, 45, 21),
+      },
+      
+      // Engagement metrics
+      newsletterSubscribers: {
+        value: random(150, 800, 22),
+        change: random(5, 45, 23), // Always positive growth
+        newThisWeek: random(8, 45, 24),
+      },
+      contactRequests: {
+        value: random(15, 85, 25),
+        change: random(-5, 55, 26),
+        pending: random(2, 12, 27),
+      },
+      socialShares: {
+        value: random(80, 450, 28),
+        change: random(-8, 65, 29),
+      },
+      
+      // Content metrics
+      topPageViews: random(500, 2500, 30),
+      avgTimeOnPage: `${random(1, 4, 31)}:${String(random(15, 55, 32)).padStart(2, '0')}`,
+      scrollDepth: random(55, 85, 33),
+      
+      // CTA Performance
+      ctaClicks: {
+        value: random(120, 650, 34),
+        change: random(-5, 40, 35),
+        rate: (random(25, 85, 36) / 10).toFixed(1),
+      },
+    };
+
+    // Traffic sources breakdown
     const trafficSources = [
-      { source: 'Direct', value: random(35, 55, 1), fill: 'hsl(var(--primary))' },
-      { source: 'Social', value: random(20, 35, 2), fill: 'hsl(221.2 83.2% 53.3%)' },
-      { source: 'Search', value: random(10, 25, 3), fill: 'hsl(142.1 76.2% 36.3%)' },
-      { source: 'Referral', value: random(5, 15, 4), fill: 'hsl(262.1 83.3% 57.8%)' },
+      { name: 'Direct', value: random(30, 45, 40), color: '#6366f1', visitors: random(500, 2000, 41), change: random(-5, 25, 42) },
+      { name: 'Réseaux sociaux', value: random(20, 35, 43), color: '#8b5cf6', visitors: random(300, 1500, 44), change: random(5, 45, 45) },
+      { name: 'Recherche organique', value: random(15, 30, 46), color: '#22c55e', visitors: random(250, 1200, 47), change: random(-3, 30, 48) },
+      { name: 'Référents', value: random(5, 15, 49), color: '#f59e0b', visitors: random(100, 600, 50), change: random(-10, 35, 51) },
+      { name: 'Email', value: random(3, 12, 52), color: '#ec4899', visitors: random(50, 400, 53), change: random(0, 50, 54) },
     ];
 
-    const metrics = {
-      totalVisits: random(150, 650, 5),
-      uniqueVisitors: random(80, 400, 6),
-      pageViews: random(400, 1500, 7),
-      avgTimeOnSite: `${random(1, 4, 8)}:${String(random(10, 59, 9)).padStart(2, '0')}`,
-      bounceRate: random(25, 55, 10),
-      ctaClicks: random(10, 80, 11),
+    // Device breakdown
+    const devices = [
+      { name: 'Mobile', value: random(55, 70, 55), color: '#6366f1' },
+      { name: 'Desktop', value: random(25, 40, 56), color: '#8b5cf6' },
+      { name: 'Tablet', value: random(3, 10, 57), color: '#22c55e' },
+    ];
+
+    // Top pages
+    const topPages = [
+      { path: '/', name: 'Accueil', views: random(1500, 5000, 58), change: random(-5, 35, 59) },
+      { path: '/projets', name: 'Projets', views: random(800, 2500, 60), change: random(5, 45, 61) },
+      { path: '/about', name: 'À propos', views: random(400, 1500, 62), change: random(-8, 28, 63) },
+      { path: '/contact', name: 'Contact', views: random(200, 800, 64), change: random(10, 55, 65) },
+    ];
+
+    // Goals/Achievements
+    const achievements = [
+      { id: 'first100', name: '100 visiteurs', description: 'Atteindre 100 visiteurs', progress: Math.min(100, (kpis.totalVisits.value / 100) * 100), unlocked: kpis.totalVisits.value >= 100, icon: Users },
+      { id: 'first500', name: '500 visiteurs', description: 'Atteindre 500 visiteurs', progress: Math.min(100, (kpis.totalVisits.value / 500) * 100), unlocked: kpis.totalVisits.value >= 500, icon: Users },
+      { id: 'newsletter50', name: '50 abonnés', description: '50 abonnés newsletter', progress: Math.min(100, (kpis.newsletterSubscribers.value / 50) * 100), unlocked: kpis.newsletterSubscribers.value >= 50, icon: Mail },
+      { id: 'contact10', name: '10 contacts', description: '10 demandes de contact', progress: Math.min(100, (kpis.contactRequests.value / 10) * 100), unlocked: kpis.contactRequests.value >= 10, icon: MessageSquare },
+      { id: 'shares100', name: '100 partages', description: '100 partages sociaux', progress: Math.min(100, (kpis.socialShares.value / 100) * 100), unlocked: kpis.socialShares.value >= 100, icon: Share2 },
+      { id: 'conversion5', name: '5% conversion', description: 'Taux de conversion 5%', progress: Math.min(100, (parseFloat(kpis.conversionRate.value) / 5) * 100), unlocked: parseFloat(kpis.conversionRate.value) >= 5, icon: Target },
+    ];
+
+    // Weekly goals
+    const weeklyGoals = {
+      visits: { target: 1000, current: random(600, 1200, 70), label: 'Visites cette semaine' },
+      subscribers: { target: 20, current: kpis.newsletterSubscribers.newThisWeek, label: 'Nouveaux abonnés' },
+      contacts: { target: 5, current: kpis.contactRequests.pending + random(1, 5, 71), label: 'Demandes de contact' },
     };
 
-    // Calculate percentage changes (simulated)
-    const changes = {
-      visits: random(-5, 25, 12),
-      pageViews: random(-3, 30, 13),
-      visitors: random(-8, 20, 14),
+    // Site health score (gamified)
+    const healthScore = Math.min(100, Math.round(
+      (website?.status === 'published' ? 25 : 0) +
+      (website?.title ? 15 : 0) +
+      (enabledExtensionsCount > 0 ? 15 : 0) +
+      (pages.length > 1 ? 15 : 0) +
+      (elements.length > 3 ? 15 : 0) +
+      (storagePercentage > 0 ? 15 : 0)
+    ));
+
+    return {
+      last30Days,
+      last7Days,
+      realtimeVisitors,
+      kpis,
+      trafficSources,
+      devices,
+      topPages,
+      achievements,
+      weeklyGoals,
+      healthScore,
     };
+  }, [website?.id, website?.status, website?.title, enabledExtensionsCount, pages.length, elements.length, storagePercentage]);
 
-    return { visitsData, trafficSources, metrics, changes };
-  }, [website?.id]);
-
-  // Chart configs for analytics
-  const visitsChartConfig = {
+  // Chart config for main analytics
+  const analyticsChartConfig = {
     visits: {
       label: "Visites",
       color: "hsl(var(--primary))",
@@ -362,7 +413,29 @@ export default function Dashboard() {
       label: "Pages vues",
       color: "hsl(221.2 83.2% 53.3%)",
     },
+    uniqueVisitors: {
+      label: "Visiteurs uniques",
+      color: "hsl(142.1 76.2% 36.3%)",
+    },
   } satisfies ChartConfig;
+
+  // Helper component for KPI change indicator
+  const ChangeIndicator = ({ value, inverted = false }: { value: number; inverted?: boolean }) => {
+    const isPositive = inverted ? value < 0 : value > 0;
+    const isNegative = inverted ? value > 0 : value < 0;
+    return (
+      <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${
+        isPositive ? 'text-green-600' : isNegative ? 'text-red-500' : 'text-muted-foreground'
+      }`}>
+        {value > 0 ? (
+          <ArrowUpRight className="h-3 w-3" />
+        ) : value < 0 ? (
+          <ArrowDownRight className="h-3 w-3" />
+        ) : null}
+        {value > 0 ? '+' : ''}{value}%
+      </span>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -527,174 +600,245 @@ export default function Dashboard() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Overview Tab */}
+        {/* Overview Tab - GAMIFIED Analytics Dashboard */}
         <TabsContent value="overview" className="space-y-4 sm:space-y-6 animate-fade-in">
-          {/* Site Completion Banner - Only shown if not fully completed */}
-          {activationChecklist.score < 100 && (
-            <Card className="bg-gradient-to-r from-primary/5 via-violet-500/5 to-primary/5 border-primary/20 animate-fade-in-up" style={{ animationDelay: '0.02s', animationFillMode: 'both' }}>
-              <CardContent className="py-4 px-4 sm:px-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-primary/10">
-                      <Target className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+          
+          {/* Real-time Banner & Site Health */}
+          <div className="grid gap-3 sm:gap-4 lg:grid-cols-4">
+            {/* Real-time Visitors */}
+            <Card className="bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-transparent border-green-500/20 animate-fade-in-up" style={{ animationDelay: '0.02s', animationFillMode: 'both' }}>
+              <CardContent className="py-3 px-4 sm:py-4 sm:px-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse" />
+                      <div className="absolute inset-0 h-3 w-3 rounded-full bg-green-500 animate-ping opacity-75" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-sm sm:text-base">Complétez votre site</h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground">
-                        {activationChecklist.completedCount}/{activationChecklist.total} étapes • {activationChecklist.score}% terminé
-                      </p>
+                      <p className="text-xs text-muted-foreground">En ce moment</p>
+                      <p className="text-xl sm:text-2xl font-bold text-green-600">{analyticsData.realtimeVisitors}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <Progress value={activationChecklist.score} className="flex-1 sm:w-32 h-2" />
-                    <span className="text-xs font-medium whitespace-nowrap">{activationChecklist.score}%</span>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">visiteurs</p>
+                    <p className="text-xs text-green-600 font-medium">en ligne</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          )}
 
-          {/* Analytics Stats Cards */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-            {/* Total Visits */}
-            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.05s', animationFillMode: 'both' }}>
-              <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Visites (7j)</CardTitle>
-                <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-                <div className="text-lg sm:text-2xl font-bold">{simulatedData.metrics.totalVisits}</div>
-                <div className="flex items-center gap-1 mt-1.5 sm:mt-2">
-                  <div className={`flex items-center gap-0.5 text-[10px] sm:text-xs ${simulatedData.changes.visits >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                    <TrendingUp className={`h-2.5 w-2.5 sm:h-3 sm:w-3 ${simulatedData.changes.visits < 0 ? 'rotate-180' : ''}`} />
-                    <span>{simulatedData.changes.visits >= 0 ? '+' : ''}{simulatedData.changes.visits}%</span>
+            {/* Site Health Score */}
+            <Card className="lg:col-span-2 animate-fade-in-up" style={{ animationDelay: '0.04s', animationFillMode: 'both' }}>
+              <CardContent className="py-3 px-4 sm:py-4 sm:px-6">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`p-1.5 rounded-lg ${
+                      analyticsData.healthScore >= 80 ? 'bg-green-500/10 text-green-600' :
+                      analyticsData.healthScore >= 50 ? 'bg-amber-500/10 text-amber-600' :
+                      'bg-red-500/10 text-red-500'
+                    }`}>
+                      {analyticsData.healthScore >= 80 ? <CheckCircle2 className="h-4 w-4" /> :
+                       analyticsData.healthScore >= 50 ? <AlertTriangle className="h-4 w-4" /> :
+                       <Info className="h-4 w-4" />}
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Santé du site</p>
+                      <p className="text-sm font-semibold">{analyticsData.healthScore}% optimisé</p>
+                    </div>
                   </div>
-                  <span className="text-[10px] sm:text-xs text-muted-foreground">vs semaine dernière</span>
+                  <div className={`text-2xl font-bold ${
+                    analyticsData.healthScore >= 80 ? 'text-green-600' :
+                    analyticsData.healthScore >= 50 ? 'text-amber-600' :
+                    'text-red-500'
+                  }`}>
+                    {analyticsData.healthScore >= 80 ? 'A' :
+                     analyticsData.healthScore >= 60 ? 'B' :
+                     analyticsData.healthScore >= 40 ? 'C' : 'D'}
+                  </div>
+                </div>
+                <Progress 
+                  value={analyticsData.healthScore} 
+                  className={`h-2 ${
+                    analyticsData.healthScore >= 80 ? '[&>div]:bg-green-500' :
+                    analyticsData.healthScore >= 50 ? '[&>div]:bg-amber-500' :
+                    '[&>div]:bg-red-500'
+                  }`}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Quick Status */}
+            <Card className="animate-fade-in-up" style={{ animationDelay: '0.06s', animationFillMode: 'both' }}>
+              <CardContent className="py-3 px-4 sm:py-4 sm:px-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Statut</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <div className={`h-2 w-2 rounded-full ${website?.status === 'published' ? 'bg-green-500' : 'bg-amber-500'}`} />
+                      <span className="text-sm font-medium">{website?.status === 'published' ? 'En ligne' : 'Brouillon'}</span>
+                    </div>
+                  </div>
+                  {website?.status === 'published' ? (
+                    <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
+                      <Globe className="h-3 w-3 mr-1" />
+                      Public
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+                      <Eye className="h-3 w-3 mr-1" />
+                      Privé
+                    </Badge>
+                  )}
                 </div>
               </CardContent>
-              <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
-                <Activity className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
-              </div>
+            </Card>
+          </div>
+
+          {/* Main KPI Cards - 6 columns */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
+            {/* Total Visits */}
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.08s', animationFillMode: 'both' }}>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <Activity className="h-4 w-4 text-primary" />
+                  <ChangeIndicator value={analyticsData.kpis.totalVisits.change} />
+                </div>
+                <p className="text-lg sm:text-xl font-bold">{analyticsData.kpis.totalVisits.value.toLocaleString()}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Visites (30j)</p>
+              </CardContent>
             </Card>
 
             {/* Unique Visitors */}
             <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
-              <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Visiteurs uniques</CardTitle>
-                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-                <div className="text-lg sm:text-2xl font-bold">{simulatedData.metrics.uniqueVisitors}</div>
-                <div className="flex items-center gap-1 mt-1.5 sm:mt-2">
-                  <div className={`flex items-center gap-0.5 text-[10px] sm:text-xs ${simulatedData.changes.visitors >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                    <TrendingUp className={`h-2.5 w-2.5 sm:h-3 sm:w-3 ${simulatedData.changes.visitors < 0 ? 'rotate-180' : ''}`} />
-                    <span>{simulatedData.changes.visitors >= 0 ? '+' : ''}{simulatedData.changes.visitors}%</span>
-                  </div>
-                  <span className="text-[10px] sm:text-xs text-muted-foreground">vs semaine dernière</span>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <Users className="h-4 w-4 text-violet-500" />
+                  <ChangeIndicator value={analyticsData.kpis.uniqueVisitors.change} />
                 </div>
+                <p className="text-lg sm:text-xl font-bold">{analyticsData.kpis.uniqueVisitors.value.toLocaleString()}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Visiteurs uniques</p>
               </CardContent>
-              <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
-                <Users className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
-              </div>
             </Card>
 
             {/* Page Views */}
-            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
-              <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Pages vues</CardTitle>
-                <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-                <div className="text-lg sm:text-2xl font-bold">{simulatedData.metrics.pageViews}</div>
-                <div className="flex items-center gap-1 mt-1.5 sm:mt-2">
-                  <div className={`flex items-center gap-0.5 text-[10px] sm:text-xs ${simulatedData.changes.pageViews >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                    <TrendingUp className={`h-2.5 w-2.5 sm:h-3 sm:w-3 ${simulatedData.changes.pageViews < 0 ? 'rotate-180' : ''}`} />
-                    <span>{simulatedData.changes.pageViews >= 0 ? '+' : ''}{simulatedData.changes.pageViews}%</span>
-                  </div>
-                  <span className="text-[10px] sm:text-xs text-muted-foreground">vs semaine dernière</span>
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.12s', animationFillMode: 'both' }}>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <Eye className="h-4 w-4 text-blue-500" />
+                  <ChangeIndicator value={analyticsData.kpis.pageViews.change} />
                 </div>
+                <p className="text-lg sm:text-xl font-bold">{analyticsData.kpis.pageViews.value.toLocaleString()}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Pages vues</p>
               </CardContent>
-              <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
-                <Eye className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
-              </div>
             </Card>
 
-            {/* CTA Clicks */}
-            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
-              <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Clics CTA</CardTitle>
-                <MousePointerClick className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-                <div className="text-lg sm:text-2xl font-bold">{simulatedData.metrics.ctaClicks}</div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                  Taux de conversion: {((simulatedData.metrics.ctaClicks / simulatedData.metrics.totalVisits) * 100).toFixed(1)}%
-                </p>
-                <div className="flex items-center gap-1 mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-green-600">
-                  <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                  <span>Bon taux</span>
+            {/* Conversion Rate */}
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up border-green-500/20 bg-gradient-to-br from-green-500/5 to-transparent" style={{ animationDelay: '0.14s', animationFillMode: 'both' }}>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <Target className="h-4 w-4 text-green-500" />
+                  <ChangeIndicator value={analyticsData.kpis.conversionRate.change} />
                 </div>
+                <p className="text-lg sm:text-xl font-bold text-green-600">{analyticsData.kpis.conversionRate.value}%</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Taux conversion</p>
               </CardContent>
-              <div className="absolute right-0 bottom-0 opacity-5 transition-transform duration-300 group-hover:scale-110">
-                <MousePointerClick className="h-16 w-16 sm:h-24 sm:w-24 -mr-4 sm:-mr-6 -mb-4 sm:-mb-6" />
-              </div>
+            </Card>
+
+            {/* Newsletter Subscribers */}
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.16s', animationFillMode: 'both' }}>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <Mail className="h-4 w-4 text-pink-500" />
+                  <ChangeIndicator value={analyticsData.kpis.newsletterSubscribers.change} />
+                </div>
+                <p className="text-lg sm:text-xl font-bold">{analyticsData.kpis.newsletterSubscribers.value}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Abonnés newsletter</p>
+                <Badge variant="secondary" className="mt-1 text-[9px] px-1.5 py-0 bg-green-500/10 text-green-600">
+                  +{analyticsData.kpis.newsletterSubscribers.newThisWeek} cette semaine
+                </Badge>
+              </CardContent>
+            </Card>
+
+            {/* Contact Requests */}
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.18s', animationFillMode: 'both' }}>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <MessageSquare className="h-4 w-4 text-amber-500" />
+                  <ChangeIndicator value={analyticsData.kpis.contactRequests.change} />
+                </div>
+                <p className="text-lg sm:text-xl font-bold">{analyticsData.kpis.contactRequests.value}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Demandes contact</p>
+                {analyticsData.kpis.contactRequests.pending > 0 && (
+                  <Badge variant="destructive" className="mt-1 text-[9px] px-1.5 py-0">
+                    {analyticsData.kpis.contactRequests.pending} en attente
+                  </Badge>
+                )}
+              </CardContent>
             </Card>
           </div>
 
-          {/* Charts Row - Visits Trend & Traffic Sources */}
+          {/* Charts Row */}
           <div className="grid gap-3 sm:gap-4 lg:grid-cols-12">
-            {/* Visits Trend Chart */}
-            <Card className="lg:col-span-8 animate-fade-in-up" style={{ animationDelay: '0.25s', animationFillMode: 'both' }}>
-              <CardHeader className="px-4 sm:px-6">
-                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                  Tendance des visites
-                </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Visites et pages vues des 7 derniers jours
-                </CardDescription>
+            {/* Main Traffic Chart */}
+            <Card className="lg:col-span-8 animate-fade-in-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
+              <CardHeader className="pb-2 px-4 sm:px-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                      Trafic des 30 derniers jours
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
+                      Visites et pages vues quotidiennes
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-2.5 w-2.5 rounded-full bg-primary" />
+                      <span className="text-muted-foreground">Visites</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+                      <span className="text-muted-foreground">Pages vues</span>
+                    </div>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="px-4 sm:px-6">
-                <ChartContainer config={visitsChartConfig} className="h-[200px] sm:h-[250px] w-full">
-                  <AreaChart data={simulatedData.visitsData} margin={{ left: 0, right: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis
-                      dataKey="day"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      tick={{ fontSize: 11 }}
-                      width={30}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
+              <CardContent className="px-2 sm:px-6 pb-4">
+                <ChartContainer config={analyticsChartConfig} className="h-[200px] sm:h-[250px] w-full">
+                  <AreaChart data={analyticsData.last30Days} margin={{ left: 0, right: 0, top: 10, bottom: 0 }}>
                     <defs>
-                      <linearGradient id="fillVisits" x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id="fillVisitsGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
                         <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                       </linearGradient>
-                      <linearGradient id="fillPageViews" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(221.2 83.2% 53.3%)" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="hsl(221.2 83.2% 53.3%)" stopOpacity={0} />
+                      <linearGradient id="fillPageViewsGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                       </linearGradient>
                     </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" vertical={false} />
+                    <XAxis 
+                      dataKey="date" 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tick={{ fontSize: 10 }}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10 }} width={35} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
                     <Area
                       type="monotone"
                       dataKey="pageViews"
-                      stroke="hsl(221.2 83.2% 53.3%)"
-                      fill="url(#fillPageViews)"
+                      stroke="#3b82f6"
+                      fill="url(#fillPageViewsGrad)"
                       strokeWidth={2}
                     />
                     <Area
                       type="monotone"
                       dataKey="visits"
                       stroke="hsl(var(--primary))"
-                      fill="url(#fillVisits)"
+                      fill="url(#fillVisitsGrad)"
                       strokeWidth={2}
                     />
                   </AreaChart>
@@ -703,31 +847,28 @@ export default function Dashboard() {
             </Card>
 
             {/* Traffic Sources */}
-            <Card className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
-              <CardHeader className="px-4 sm:px-6">
-                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                  <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            <Card className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.22s', animationFillMode: 'both' }}>
+              <CardHeader className="pb-2 px-4 sm:px-6">
+                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                  <PieChartIcon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   Sources de trafic
                 </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  D'où viennent vos visiteurs
-                </CardDescription>
               </CardHeader>
-              <CardContent className="px-4 sm:px-6">
-                <div className="space-y-4">
-                  {simulatedData.trafficSources.map((source) => (
-                    <div key={source.source} className="space-y-2">
+              <CardContent className="px-4 sm:px-6 pb-4">
+                <div className="space-y-3">
+                  {analyticsData.trafficSources.map((source) => (
+                    <div key={source.name} className="space-y-1.5">
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
-                          <div 
-                            className="h-3 w-3 rounded-full" 
-                            style={{ backgroundColor: source.fill }}
-                          />
-                          <span>{source.source}</span>
+                          <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: source.color }} />
+                          <span className="text-xs sm:text-sm">{source.name}</span>
                         </div>
-                        <span className="font-medium">{source.value}%</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-xs sm:text-sm">{source.value}%</span>
+                          <ChangeIndicator value={source.change} />
+                        </div>
                       </div>
-                      <Progress value={source.value} className="h-2" />
+                      <Progress value={source.value} className="h-1.5" style={{ '--progress-color': source.color } as React.CSSProperties} />
                     </div>
                   ))}
                 </div>
@@ -735,210 +876,229 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* Site Resources & Quick Actions Row */}
+          {/* Engagement & Goals Row */}
           <div className="grid gap-3 sm:gap-4 lg:grid-cols-12">
-            {/* Site Status & Resources */}
-            <Card className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.35s', animationFillMode: 'both' }}>
-              <CardHeader className="px-4 sm:px-6">
-                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                  <Layers className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                  Ressources du site
-                </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Aperçu de votre contenu
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="px-4 sm:px-6">
-                <ChartContainer
-                  config={resourcesChartConfig}
-                  className="mx-auto h-[140px] sm:h-[160px]"
-                >
-                  <BarChart
-                    data={siteResourcesData}
-                    layout="vertical"
-                    margin={{ left: 0, right: 20 }}
-                  >
-                    <YAxis
-                      dataKey="name"
-                      type="category"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={10}
-                      width={70}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <XAxis type="number" hide />
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent hideLabel />}
-                    />
-                    <Bar
-                      dataKey="value"
-                      radius={[0, 4, 4, 0]}
-                      barSize={20}
-                    >
-                      {siteResourcesData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ChartContainer>
-                <Separator className="my-3" />
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <Link href={`/app/${currentWebsiteId}/pages`} className="group">
-                    <div className="p-2 rounded-lg hover:bg-muted transition-colors">
-                      <FileText className="h-4 w-4 mx-auto text-muted-foreground group-hover:text-primary transition-colors" />
-                      <p className="text-lg font-bold mt-1">{pages.length}</p>
-                      <p className="text-[10px] text-muted-foreground">Pages</p>
-                    </div>
-                  </Link>
-                  <Link href={`/app/${currentWebsiteId}/extensions`} className="group">
-                    <div className="p-2 rounded-lg hover:bg-muted transition-colors">
-                      <Puzzle className="h-4 w-4 mx-auto text-muted-foreground group-hover:text-primary transition-colors" />
-                      <p className="text-lg font-bold mt-1">{enabledExtensionsCount}</p>
-                      <p className="text-[10px] text-muted-foreground">Extensions</p>
-                    </div>
-                  </Link>
-                  <Link href={`/app/${currentWebsiteId}/cloud`} className="group">
-                    <div className="p-2 rounded-lg hover:bg-muted transition-colors">
-                      <HardDrive className="h-4 w-4 mx-auto text-muted-foreground group-hover:text-primary transition-colors" />
-                      <p className="text-lg font-bold mt-1">{storagePercentage.toFixed(0)}%</p>
-                      <p className="text-[10px] text-muted-foreground">Stockage</p>
-                    </div>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Site Completion Checklist */}
-            <Card className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
-              <CardHeader className="px-4 sm:px-6">
-                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            {/* Weekly Goals Progress */}
+            <Card className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.24s', animationFillMode: 'both' }}>
+              <CardHeader className="pb-2 px-4 sm:px-6">
+                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
                   <Target className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                  Configuration du site
+                  Objectifs de la semaine
                 </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Étapes pour un site complet
-                </CardDescription>
+                <CardDescription className="text-xs">Progression vers vos objectifs</CardDescription>
               </CardHeader>
-              <CardContent className="px-4 sm:px-6 space-y-3">
-                {activationChecklist.items.map((item, index) => {
-                  const IconComponent = item.icon;
+              <CardContent className="px-4 sm:px-6 space-y-4">
+                {Object.entries(analyticsData.weeklyGoals).map(([key, goal]) => {
+                  const progress = Math.min(100, (goal.current / goal.target) * 100);
+                  const isComplete = progress >= 100;
                   return (
-                    <div
-                      key={item.id}
-                      className={`flex items-start gap-3 p-2.5 sm:p-3 rounded-lg border transition-all duration-200 ${
-                        item.completed 
-                          ? 'bg-green-500/5 border-green-500/20' 
-                          : 'bg-muted/50 border-border hover:border-primary/50 hover:bg-accent/50'
-                      }`}
-                      style={{ animationDelay: `${(index + 1) * 0.05}s` }}
-                    >
-                      <div className={`flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full ${
-                        item.completed 
-                          ? 'bg-green-500/20 text-green-600' 
-                          : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {item.completed ? (
-                          <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        ) : (
-                          <IconComponent className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className={`text-xs sm:text-sm font-medium ${item.completed ? 'text-green-600' : ''}`}>
-                            {item.label}
-                          </p>
-                          {!item.completed && item.href && (
-                            <Link
-                              href={item.href}
-                              className="text-[10px] sm:text-xs text-primary hover:underline whitespace-nowrap"
-                            >
-                              Configurer →
-                            </Link>
-                          )}
+                    <div key={key} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-xs sm:text-sm">{goal.label}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`font-medium ${isComplete ? 'text-green-600' : ''}`}>
+                            {goal.current}/{goal.target}
+                          </span>
+                          {isComplete && <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />}
                         </div>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                          {item.description}
-                        </p>
                       </div>
+                      <Progress 
+                        value={progress} 
+                        className={`h-2 ${isComplete ? '[&>div]:bg-green-500' : ''}`}
+                      />
                     </div>
                   );
                 })}
               </CardContent>
             </Card>
 
-            {/* Quick Actions */}
-            <Card className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.45s', animationFillMode: 'both' }}>
-              <CardHeader className="px-4 sm:px-6">
-                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                  <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
-                  Actions rapides
+            {/* Achievements */}
+            <Card className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.26s', animationFillMode: 'both' }}>
+              <CardHeader className="pb-2 px-4 sm:px-6">
+                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                  <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
+                  Succès
                 </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Accès direct aux fonctionnalités
+                <CardDescription className="text-xs">
+                  {analyticsData.achievements.filter(a => a.unlocked).length}/{analyticsData.achievements.length} débloqués
                 </CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-2 px-4 sm:px-6">
+              <CardContent className="px-4 sm:px-6">
+                <div className="grid grid-cols-3 gap-2">
+                  {analyticsData.achievements.map((achievement) => {
+                    const IconComp = achievement.icon;
+                    return (
+                      <div
+                        key={achievement.id}
+                        className={`relative p-2 rounded-lg border text-center transition-all ${
+                          achievement.unlocked 
+                            ? 'bg-gradient-to-br from-amber-500/10 to-yellow-500/5 border-amber-500/30' 
+                            : 'bg-muted/30 border-border opacity-60'
+                        }`}
+                        title={`${achievement.name}: ${achievement.description}`}
+                      >
+                        <div className={`mx-auto mb-1 p-1.5 rounded-full w-fit ${
+                          achievement.unlocked ? 'bg-amber-500/20 text-amber-600' : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {achievement.unlocked ? (
+                            <Star className="h-3.5 w-3.5 fill-current" />
+                          ) : (
+                            <IconComp className="h-3.5 w-3.5" />
+                          )}
+                        </div>
+                        <p className="text-[9px] sm:text-[10px] font-medium truncate">{achievement.name}</p>
+                        {!achievement.unlocked && (
+                          <div className="mt-1">
+                            <Progress value={achievement.progress} className="h-1" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Top Pages */}
+            <Card className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.28s', animationFillMode: 'both' }}>
+              <CardHeader className="pb-2 px-4 sm:px-6">
+                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                  Pages populaires
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 sm:px-6">
+                <div className="space-y-2">
+                  {analyticsData.topPages.map((page, index) => (
+                    <div key={page.path} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-bold w-5 h-5 rounded flex items-center justify-center ${
+                          index === 0 ? 'bg-amber-500/20 text-amber-600' :
+                          index === 1 ? 'bg-gray-300/30 text-gray-600' :
+                          index === 2 ? 'bg-orange-500/20 text-orange-600' :
+                          'bg-muted text-muted-foreground'
+                        }`}>
+                          {index + 1}
+                        </span>
+                        <span className="text-xs sm:text-sm truncate max-w-[100px]">{page.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs sm:text-sm font-medium">{page.views.toLocaleString()}</span>
+                        <ChangeIndicator value={page.change} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Additional Metrics Row */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+            {/* Bounce Rate */}
+            <Card className="animate-fade-in-up" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-muted-foreground">Taux de rebond</span>
+                  <ChangeIndicator value={analyticsData.kpis.bounceRate.change} inverted />
+                </div>
+                <p className="text-lg sm:text-xl font-bold">{analyticsData.kpis.bounceRate.value}%</p>
+                <p className={`text-[10px] ${analyticsData.kpis.bounceRate.value < 40 ? 'text-green-600' : analyticsData.kpis.bounceRate.value < 60 ? 'text-amber-600' : 'text-red-500'}`}>
+                  {analyticsData.kpis.bounceRate.value < 40 ? '✓ Excellent' : analyticsData.kpis.bounceRate.value < 60 ? '⚠ Moyen' : '✗ À améliorer'}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Session Duration */}
+            <Card className="animate-fade-in-up" style={{ animationDelay: '0.32s', animationFillMode: 'both' }}>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-muted-foreground">Durée moyenne</span>
+                  <ChangeIndicator value={analyticsData.kpis.avgSessionDuration.change} />
+                </div>
+                <p className="text-lg sm:text-xl font-bold">{analyticsData.kpis.avgSessionDuration.value}</p>
+                <p className="text-[10px] text-muted-foreground">minutes par session</p>
+              </CardContent>
+            </Card>
+
+            {/* Pages per Session */}
+            <Card className="animate-fade-in-up" style={{ animationDelay: '0.34s', animationFillMode: 'both' }}>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-muted-foreground">Pages/session</span>
+                  <ChangeIndicator value={analyticsData.kpis.pagesPerSession.change} />
+                </div>
+                <p className="text-lg sm:text-xl font-bold">{analyticsData.kpis.pagesPerSession.value}</p>
+                <p className="text-[10px] text-muted-foreground">pages consultées</p>
+              </CardContent>
+            </Card>
+
+            {/* Social Shares */}
+            <Card className="animate-fade-in-up" style={{ animationDelay: '0.36s', animationFillMode: 'both' }}>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-muted-foreground">Partages sociaux</span>
+                  <ChangeIndicator value={analyticsData.kpis.socialShares.change} />
+                </div>
+                <p className="text-lg sm:text-xl font-bold">{analyticsData.kpis.socialShares.value}</p>
+                <p className="text-[10px] text-muted-foreground">sur les réseaux</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Quick Actions */}
+          <Card className="animate-fade-in-up" style={{ animationDelay: '0.38s', animationFillMode: 'both' }}>
+            <CardHeader className="pb-2 px-4 sm:px-6">
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
+                Actions rapides
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 sm:px-6 pb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <Link
                   href={`/app/${currentWebsiteId}/studio`}
-                  className="group flex items-center justify-between p-2.5 sm:p-3 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-sm active:scale-[0.99]"
+                  className="group flex flex-col items-center gap-1.5 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-all hover:border-primary/50"
                 >
-                  <div className="flex items-center gap-2.5 sm:gap-3">
-                    <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200">
-                      <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    </div>
-                    <span className="font-medium text-xs sm:text-sm">Ouvrir le Studio</span>
+                  <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    <Edit className="h-4 w-4" />
                   </div>
-                  <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200" />
+                  <span className="text-xs font-medium">Studio</span>
                 </Link>
-
                 <Link
-                  href={`/app/${currentWebsiteId}/theme`}
-                  className="group flex items-center justify-between p-2.5 sm:p-3 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-sm active:scale-[0.99]"
+                  href={`/app/${currentWebsiteId}/extensions`}
+                  className="group flex flex-col items-center gap-1.5 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-all hover:border-violet-500/50"
                 >
-                  <div className="flex items-center gap-2.5 sm:gap-3">
-                    <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 group-hover:bg-violet-500 group-hover:text-white transition-all duration-200">
-                      <Palette className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    </div>
-                    <span className="font-medium text-xs sm:text-sm">Personnaliser le thème</span>
+                  <div className="p-2 rounded-lg bg-violet-500/10 text-violet-600 group-hover:bg-violet-500 group-hover:text-white transition-colors">
+                    <Puzzle className="h-4 w-4" />
                   </div>
-                  <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground group-hover:text-violet-600 group-hover:translate-x-0.5 transition-all duration-200" />
+                  <span className="text-xs font-medium">Extensions</span>
                 </Link>
-
                 <Link
                   href={`/app/${currentWebsiteId}/cloud`}
-                  className="group flex items-center justify-between p-2.5 sm:p-3 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-sm active:scale-[0.99]"
+                  className="group flex flex-col items-center gap-1.5 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-all hover:border-emerald-500/50"
                 >
-                  <div className="flex items-center gap-2.5 sm:gap-3">
-                    <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-200">
-                      <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    </div>
-                    <span className="font-medium text-xs sm:text-sm">Uploader des médias</span>
+                  <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                    <Upload className="h-4 w-4" />
                   </div>
-                  <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all duration-200" />
+                  <span className="text-xs font-medium">Médias</span>
                 </Link>
-
                 {website && (
                   <a
                     href={`/${website.slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group flex items-center justify-between p-2.5 sm:p-3 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200 hover:border-primary/50 hover:shadow-sm active:scale-[0.99]"
+                    className="group flex flex-col items-center gap-1.5 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-all hover:border-amber-500/50"
                   >
-                    <div className="flex items-center gap-2.5 sm:gap-3">
-                      <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-all duration-200">
-                        <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      </div>
-                      <span className="font-medium text-xs sm:text-sm">Voir mon site</span>
+                    <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                      <ExternalLink className="h-4 w-4" />
                     </div>
-                    <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all duration-200" />
+                    <span className="text-xs font-medium">Voir le site</span>
                   </a>
                 )}
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Sections Tab */}
