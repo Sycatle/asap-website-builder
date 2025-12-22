@@ -1,34 +1,14 @@
 import { apiClient } from './client';
-import type { JsonObject, WebsiteData } from '../types';
+import type { 
+  Website, 
+  CreateWebsiteRequest, 
+  UpdateWebsiteRequest, 
+  WebsiteData,
+  JsonObject,
+} from '../types';
 
-export interface Website {
-  id: string;
-  account_id: string;  // Backend includes account_id in response
-  slug: string;
-  title: string;
-  tagline: string;
-  status: 'draft' | 'published';
-  creation_mode: 'from_preset' | 'from_scratch' | 'onboarding';
-  preset_id?: string;
-  metadata: JsonObject;
-  data: WebsiteData;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface CreateWebsiteRequest {
-  slug: string;
-  title: string;
-  tagline?: string;
-  creation_mode?: 'from_preset' | 'from_scratch' | 'onboarding';
-  preset_id?: string;
-}
-
-export interface UpdateWebsiteRequest {
-  title?: string;
-  tagline?: string;
-  metadata?: JsonObject;
-}
+// Re-export types for backward compatibility
+export type { Website, CreateWebsiteRequest, UpdateWebsiteRequest, WebsiteData };
 
 export const websitesAPI = {
   // List all websites for the current account

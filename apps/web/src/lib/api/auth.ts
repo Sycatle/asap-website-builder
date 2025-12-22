@@ -1,43 +1,24 @@
 import { apiClient } from './client';
+import type {
+  SignupRequest,
+  SignupResponse,
+  LoginRequest,
+  LoginResponse,
+  MeResponse,
+  ChangePasswordRequest,
+  UpdateGitHubIntegrationRequest,
+} from '../types';
 
-export interface SignupRequest {
-  email: string;
-  password: string;
-  portfolio_slug?: string;  // Optional - website is created during onboarding
-}
-
-export interface SignupResponse {
-  token: string;
-  account: {
-    id: string;
-    email: string;
-  };
-}
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  token: string;
-}
-
-export interface MeResponse {
-  id: string;
-  email: string;
-  plan: string;
-}
-
-export interface UpdateGitHubIntegrationRequest {
-  github_username: string;
-  github_token?: string | null;
-}
-
-export interface ChangePasswordRequest {
-  current_password: string;
-  new_password: string;
-}
+// Re-export types for backward compatibility
+export type {
+  SignupRequest,
+  SignupResponse,
+  LoginRequest,
+  LoginResponse,
+  MeResponse,
+  ChangePasswordRequest,
+  UpdateGitHubIntegrationRequest,
+};
 
 export const authAPI = {
   async signup(data: SignupRequest): Promise<SignupResponse> {

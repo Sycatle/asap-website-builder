@@ -1,42 +1,13 @@
 import { apiClient } from './client';
+import type { 
+  Page, 
+  CreatePageRequest, 
+  UpdatePageRequest, 
+  ReorderPagesRequest,
+} from '../types';
 
-export interface Page {
-  id: string;
-  website_id: string;
-  slug: string;  // '', 'contact', 'about', etc.
-  title: string;
-  description: string;
-  is_homepage: boolean;
-  order: number;
-  visible: boolean;
-  metadata: Record<string, any>;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface CreatePageRequest {
-  slug: string;
-  title: string;
-  description?: string;
-  is_homepage?: boolean;
-  order?: number;
-  visible?: boolean;
-  metadata?: Record<string, any>;
-}
-
-export interface UpdatePageRequest {
-  slug?: string;
-  title?: string;
-  description?: string;
-  is_homepage?: boolean;
-  order?: number;
-  visible?: boolean;
-  metadata?: Record<string, any>;
-}
-
-export interface ReorderPagesRequest {
-  page_ids: string[];
-}
+// Re-export types for backward compatibility
+export type { Page, CreatePageRequest, UpdatePageRequest, ReorderPagesRequest };
 
 export const pagesAPI = {
   // List pages for a website

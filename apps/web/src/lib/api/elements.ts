@@ -1,36 +1,14 @@
 import { apiClient } from './client';
-import type { Element as BaseElement, ElementType } from '@asap/shared';
+import type { 
+  WebsiteElement, 
+  CreateElementRequest, 
+  UpdateElementRequest, 
+  ReorderElementsRequest,
+} from '../types';
 
-// Re-export ElementType from @asap/shared
-export type { ElementType } from '@asap/shared';
-
-// Extend Element with API-specific fields - use WebsiteElement to avoid DOM Element conflict
-export interface WebsiteElement extends BaseElement {
-  slug: string;
-  order: number;
-}
-
-export interface CreateElementRequest {
-  element_type: string;
-  slug: string;
-  title: string;
-  order: number;
-  layout: string;
-  settings?: Record<string, any>;
-  visible?: boolean;
-}
-
-export interface UpdateElementRequest {
-  title?: string;
-  layout?: string;
-  settings?: Record<string, any>;
-  data?: Record<string, any>;
-  visible?: boolean;
-}
-
-export interface ReorderElementsRequest {
-  element_ids: string[];
-}
+// Re-export types for backward compatibility
+export type { ElementType } from '../types';
+export type { WebsiteElement, CreateElementRequest, UpdateElementRequest, ReorderElementsRequest };
 
 // Helper to normalize element data (adds order_index from order for renderers compatibility)
 function normalizeElement(element: Omit<WebsiteElement, 'order_index'> & { order: number }): WebsiteElement {

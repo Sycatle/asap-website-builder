@@ -1,22 +1,8 @@
 import { apiClient } from './client';
+import type { FileMetadata, QuotaUsage } from '../types';
 
-export interface FileMetadata {
-  id: string;
-  account_id: string;
-  filename: string;
-  mime_type: string;
-  size_bytes: number;
-  compressed_size_bytes: number;
-  sha256_hash: string;
-  uploaded_at: string;
-}
-
-export interface QuotaUsage {
-  total_size_used: number;
-  quota_limit: number;
-  remaining: number;
-  usage_percentage: number;
-}
+// Re-export types for backward compatibility
+export type { FileMetadata, QuotaUsage };
 
 export const filesAPI = {
   async list(): Promise<FileMetadata[]> {
