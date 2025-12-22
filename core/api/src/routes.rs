@@ -7,7 +7,9 @@ use axum::{
 };
 use sqlx::PgPool;
 use serde_json::json;
+use std::sync::Arc;
 use asap_core_shared::{SharedConfig, SharedWsBroadcaster, NoOpBroadcaster};
+use crate::rate_limit::{RateLimiter, SharedRateLimiter};
 
 async fn root() -> Json<serde_json::Value> {
     Json(json!({
@@ -26,6 +28,9 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
 pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster: Option<SharedWsBroadcaster>) -> Router {
     // Use no-op broadcaster if none provided
     let broadcaster: SharedWsBroadcaster = ws_broadcaster.unwrap_or_else(|| NoOpBroadcaster::new());
+
+    // Initialize rate limiter
+    let rate_limiter: SharedRateLimiter = Arc::new(RateLimiter::new());
 
     // Initialize file storage service
     let storage_service = std::sync::Arc::new(crate::storage::FileStorageService::new(pool.clone()));
@@ -135,13 +140,17 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         .layer(Extension(config.clone()))
         .layer(Extension(broadcaster.clone()))
         .with_state(pool.clone())
-        .layer(middleware::from_fn_with_state(config.clone(), crate::middleware::auth_middleware));
+        .layer(middleware::from_fn_with_state(config.clone(), crate::middleware::auth_middleware))
+        // CSRF protection for state-changing requests
+        .layer(middleware::from_fn_with_state(config.clone(), crate::csrf::csrf_middleware));
 
     // Public routes (no auth required)
     let public_routes = Router::new()
         .route("/", get(root))
         .route("/auth/signup", post(crate::auth::signup))
         .route("/auth/login", post(crate::auth::login))
+        // CSRF token endpoint (public, needed before login)
+        .route("/auth/csrf-token", get(crate::csrf::get_csrf_token))
         // Public website routes
         .route("/public/websites/:slug", get(crate::websites::get_public_website))
         .route("/public/websites/:slug/elements", get(crate::websites::get_public_website_elements))
@@ -154,8 +163,12 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         .route("/metrics/events/batch", post(crate::metrics::track_events_batch))
         .layer(Extension(storage_service))
         .layer(Extension(payment_gateway))
-        .layer(Extension(config))
-        .with_state(pool);
+        .layer(Extension(config.clone()))
+        .with_state(pool)
+        // Rate limiting for auth endpoints (applied before CSRF)
+        .layer(middleware::from_fn_with_state(rate_limiter, crate::rate_limit::auth_rate_limit_middleware))
+        // CSRF protection for public routes (login/signup)
+        .layer(middleware::from_fn_with_state(config, crate::csrf::csrf_middleware));
 
     // Combine routers
     Router::new()

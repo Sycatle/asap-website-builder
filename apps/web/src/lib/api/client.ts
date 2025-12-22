@@ -12,18 +12,45 @@ export class APIError extends Error {
 }
 
 export class RateLimitError extends APIError {
+  /** Seconds until rate limit resets */
+  public retryAfter: number;
+  /** Maximum requests allowed in window */
+  public limit: number;
+  /** Remaining requests in current window */
+  public remaining: number;
+  
   constructor(
-    public retryAfter: number,
-    message: string = 'Trop de requêtes. Veuillez réessayer plus tard.'
+    retryAfter: number,
+    limit: number = 5,
+    remaining: number = 0,
+    message: string = 'Trop de tentatives. Veuillez réessayer plus tard.'
   ) {
     super(429, message);
     this.name = 'RateLimitError';
+    this.retryAfter = retryAfter;
+    this.limit = limit;
+    this.remaining = remaining;
   }
 }
+
+export class CsrfError extends APIError {
+  constructor(message: string = 'Erreur de sécurité CSRF. Veuillez rafraîchir la page.') {
+    super(403, message);
+    this.name = 'CsrfError';
+  }
+}
+
+// CSRF token storage key
+const CSRF_TOKEN_KEY = 'csrf_token';
+const CSRF_HEADER = 'X-CSRF-Token';
+
+// Methods that require CSRF protection
+const CSRF_PROTECTED_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
 export class APIClient {
   private client: AxiosInstance;
   private baseURL: string;
+  private csrfToken: string | null = null;
 
   constructor() {
     this.baseURL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -36,12 +63,29 @@ export class APIClient {
       timeout: 30000,
     });
 
-    // Request interceptor to add auth token
-    this.client.interceptors.request.use((config) => {
+    // Load CSRF token from storage on init
+    if (typeof window !== 'undefined') {
+      this.csrfToken = sessionStorage.getItem(CSRF_TOKEN_KEY);
+    }
+
+    // Request interceptor to add auth token and CSRF token
+    this.client.interceptors.request.use(async (config) => {
       if (typeof window !== 'undefined') {
+        // Add auth token
         const token = localStorage.getItem('auth_token');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
+        }
+
+        // Add CSRF token for state-changing requests
+        if (config.method && CSRF_PROTECTED_METHODS.includes(config.method.toUpperCase())) {
+          // Fetch CSRF token if we don't have one
+          if (!this.csrfToken) {
+            await this.fetchCsrfToken();
+          }
+          if (this.csrfToken) {
+            config.headers[CSRF_HEADER] = this.csrfToken;
+          }
         }
       }
       return config;
@@ -50,15 +94,46 @@ export class APIClient {
     // Response interceptor for error handling
     this.client.interceptors.response.use(
       (response) => response,
-      (error: AxiosError) => {
+      async (error: AxiosError) => {
         if (error.response) {
+          // Handle CSRF errors (403 with CSRF code)
+          if (error.response.status === 403) {
+            const data = error.response.data as any;
+            if (data?.code?.startsWith('CSRF_')) {
+              // Clear invalid token and retry once
+              this.clearCsrfToken();
+              
+              // Don't retry if this was already a retry
+              if (!error.config?.headers?.['X-CSRF-Retry']) {
+                await this.fetchCsrfToken();
+                if (error.config && this.csrfToken) {
+                  error.config.headers[CSRF_HEADER] = this.csrfToken;
+                  error.config.headers['X-CSRF-Retry'] = 'true';
+                  return this.client.request(error.config);
+                }
+              }
+              
+              throw new CsrfError(data?.error || 'CSRF validation failed');
+            }
+          }
+          
           // Handle rate limiting (429)
           if (error.response.status === 429) {
             const retryAfter = parseInt(
               error.response.headers['retry-after'] || '60',
               10
             );
-            throw new RateLimitError(retryAfter);
+            const limit = parseInt(
+              error.response.headers['x-ratelimit-limit'] || '5',
+              10
+            );
+            const remaining = parseInt(
+              error.response.headers['x-ratelimit-remaining'] || '0',
+              10
+            );
+            const data = error.response.data as any;
+            const message = data?.error || 'Trop de tentatives. Veuillez réessayer plus tard.';
+            throw new RateLimitError(retryAfter, limit, remaining, message);
           }
           
           throw new APIError(
@@ -70,6 +145,42 @@ export class APIClient {
         throw error;
       }
     );
+  }
+
+  /**
+   * Fetch a new CSRF token from the server
+   */
+  async fetchCsrfToken(): Promise<string | null> {
+    try {
+      const response = await axios.get<{ csrf_token: string }>(
+        `${this.baseURL}/auth/csrf-token`
+      );
+      this.csrfToken = response.data.csrf_token;
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(CSRF_TOKEN_KEY, this.csrfToken);
+      }
+      return this.csrfToken;
+    } catch (error) {
+      console.error('Failed to fetch CSRF token:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Clear the stored CSRF token
+   */
+  clearCsrfToken(): void {
+    this.csrfToken = null;
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(CSRF_TOKEN_KEY);
+    }
+  }
+
+  /**
+   * Get the current CSRF token (for manual use if needed)
+   */
+  getCsrfToken(): string | null {
+    return this.csrfToken;
   }
 
   async get<T>(endpoint: string): Promise<T> {

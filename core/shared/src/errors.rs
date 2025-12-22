@@ -17,6 +17,9 @@ pub enum SharedError {
 
     #[error("Token expired")]
     TokenExpired,
+
+    #[error("CSRF error: {0}")]
+    CsrfError(String),
 }
 
 impl From<jsonwebtoken::errors::Error> for SharedError {

@@ -4,11 +4,13 @@ pub mod errors;
 pub mod extension_catalog;
 pub mod websocket;
 pub mod pubsub;
+pub mod csrf;
 
 // Re-export commonly used types
 pub use auth::{generate_token, validate_token, Claims};
 pub use config::SharedConfig;
 pub use errors::SharedError;
+pub use csrf::{generate_csrf_token, validate_csrf_token, CsrfToken, CSRF_HEADER, CSRF_COOKIE};
 pub use extension_catalog::{
     ExtensionDefinition, 
     get_extension_catalog, 

@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { authAPI } from '../api/auth';
 import { accountsAPI } from '../api/accounts';
 import { websitesAPI } from '../api/websites';
+import { apiClient } from '../api/client';
 import type { MeResponse, UserData, Website } from '../types';
 
 // Re-export UserData type for backward compatibility
@@ -93,6 +94,8 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         authAPI.logout();
+        // Clear CSRF token on logout
+        apiClient.clearCsrfToken();
         set({ 
           user: null, 
           userData: null, 
