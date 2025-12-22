@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { safeNavigate } from "@/lib/utils/security"
 import { 
   notificationsAPI,
   type Notification, 
@@ -218,12 +219,9 @@ export default function NotificationsPage() {
       }
     }
 
+    // Navigate to action URL with security validation
     if (notification.action_url) {
-      if (notification.action_url.startsWith('http')) {
-        window.open(notification.action_url, '_blank')
-      } else {
-        window.location.href = notification.action_url
-      }
+      safeNavigate(notification.action_url)
     }
   }
 

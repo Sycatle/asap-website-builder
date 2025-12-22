@@ -11,14 +11,22 @@ export class APIError extends Error {
   }
 }
 
+export class RateLimitError extends APIError {
+  constructor(
+    public retryAfter: number,
+    message: string = 'Trop de requêtes. Veuillez réessayer plus tard.'
+  ) {
+    super(429, message);
+    this.name = 'RateLimitError';
+  }
+}
+
 export class APIClient {
   private client: AxiosInstance;
   private baseURL: string;
 
   constructor() {
     this.baseURL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
-    console.log('🔧 API Client - Base URL:', this.baseURL);
-    console.log('🔧 API Client - Env PUBLIC_API_URL:', import.meta.env.PUBLIC_API_URL);
     
     this.client = axios.create({
       baseURL: this.baseURL,
@@ -44,6 +52,15 @@ export class APIClient {
       (response) => response,
       (error: AxiosError) => {
         if (error.response) {
+          // Handle rate limiting (429)
+          if (error.response.status === 429) {
+            const retryAfter = parseInt(
+              error.response.headers['retry-after'] || '60',
+              10
+            );
+            throw new RateLimitError(retryAfter);
+          }
+          
           throw new APIError(
             error.response.status,
             error.response.statusText,

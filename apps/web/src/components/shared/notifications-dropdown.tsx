@@ -42,6 +42,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+import { safeNavigate } from "@/lib/utils/security"
 import { 
   type Notification, 
   type NotificationCategory,
@@ -184,13 +185,9 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
       }
     }
 
-    // Navigate to action URL if present
+    // Navigate to action URL if present (with security validation)
     if (notification.action_url) {
-      if (notification.action_url.startsWith('http')) {
-        window.open(notification.action_url, '_blank')
-      } else {
-        window.location.href = notification.action_url
-      }
+      safeNavigate(notification.action_url)
       setOpen(false)
     }
   }

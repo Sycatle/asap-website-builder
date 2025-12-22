@@ -19,6 +19,7 @@ import {
   getNextStep,
 } from '@/lib/api/onboarding';
 import { metricsAPI, trackEvent } from '@/lib/api/metrics';
+import { openExternalUrl } from '@/lib/utils/security';
 import { DEFAULT_FREELANCE_PROFILE, type FreelanceDevProfile, type FreelanceProject } from '@asap/shared';
 import { toast } from 'sonner';
 
@@ -198,8 +199,8 @@ export function OnboardingWizard({ websiteId, initialStep = 'github_connect' }: 
   };
 
   const handlePreviewProfile = () => {
-    // Open preview in new tab
-    window.open(`/preview/${websiteId}`, '_blank');
+    // Open preview in new tab (internal URL, use openExternalUrl for safety)
+    openExternalUrl(`/preview/${websiteId}`);
     trackEvent('profile_previewed', websiteId);
   };
 

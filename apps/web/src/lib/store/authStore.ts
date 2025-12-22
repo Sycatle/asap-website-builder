@@ -225,13 +225,16 @@ export const useAuthStore = create<AuthState>()(
       },
 
       getFileUrl: (storedUrl: string) => {
+        // Security: Don't expose token in URL parameters
+        // The API client will handle auth via Authorization header
+        // For file downloads, we return the clean URL
+        // Note: Ensure your API supports Authorization header for file routes
         const fileIdMatch = storedUrl.match(/\/files\/([a-f0-9-]+)/);
         if (fileIdMatch) {
-          const token = authAPI.getToken();
           const baseUrl = typeof window !== 'undefined' 
             ? (import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api')
             : 'http://localhost:3000/api';
-          return `${baseUrl}/files/${fileIdMatch[1]}?token=${token}`;
+          return `${baseUrl}/files/${fileIdMatch[1]}`;
         }
         return storedUrl;
       },

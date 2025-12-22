@@ -14,6 +14,7 @@ import {
   ArrowLeft, Rocket, Globe, Check, Copy, ExternalLink, 
   PartyPopper, Share2, Twitter, Linkedin, Loader2
 } from 'lucide-react';
+import { openExternalUrl } from '@/lib/utils/security';
 import type { FreelanceDevProfile } from '@asap/shared';
 
 interface PublishStepProps {
@@ -49,11 +50,11 @@ export function PublishStep({
 
   const shareOnTwitter = () => {
     const text = encodeURIComponent(`🚀 Je viens de créer mon portfolio de développeur freelance avec @asap_cool ! Découvrez-le ici 👇`);
-    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(fullUrl)}`, '_blank');
+    openExternalUrl(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(fullUrl)}`);
   };
 
   const shareOnLinkedin = () => {
-    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(fullUrl)}`, '_blank');
+    openExternalUrl(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(fullUrl)}`);
   };
 
   // Published state
@@ -94,7 +95,7 @@ export function PublishStep({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => window.open(fullUrl, '_blank')}
+                onClick={() => openExternalUrl(fullUrl)}
                 className="flex-shrink-0"
               >
                 <ExternalLink className="h-4 w-4" />
@@ -178,7 +179,7 @@ export function PublishStep({
 
         {/* CTA */}
         <div className="flex justify-center gap-4">
-          <Button variant="outline" onClick={() => window.open(fullUrl, '_blank')} className="gap-2">
+          <Button variant="outline" onClick={() => openExternalUrl(fullUrl)} className="gap-2">
             <ExternalLink className="h-4 w-4" />
             Voir mon portfolio
           </Button>

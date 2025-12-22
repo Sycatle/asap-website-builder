@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { signupSchema, getPasswordStrength, type SignupFormData } from "@/lib/validations/auth";
+import { isValidRedirectUrl } from "@/lib/utils/security";
 
 export default function SignupForm({
   className,
@@ -13,6 +15,7 @@ export default function SignupForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState<Partial<SignupFormData>>({});
   const [searchParams, setSearchParams] = useState('');
   const { signup, isLoading } = useAuthStore();
 
@@ -21,23 +24,38 @@ export default function SignupForm({
     setSearchParams(window.location.search);
   }, []);
 
-  // Get redirect URL from query params
+  // Get redirect URL from query params with security validation
   const getRedirectUrl = () => {
     const params = new URLSearchParams(searchParams);
     const redirect = params.get('redirect');
     // Validate that redirect is a safe internal URL
-    if (redirect && redirect.startsWith('/app')) {
+    if (redirect && isValidRedirectUrl(redirect)) {
       return redirect;
     }
     return '/app';
   };
 
+  const passwordStrength = getPasswordStrength(password);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
+    
+    // Validate with Zod
+    const result = signupSchema.safeParse({ email, password });
+    if (!result.success) {
+      const fieldErrors: Partial<SignupFormData> = {};
+      for (const error of result.error.errors) {
+        const field = error.path[0] as keyof SignupFormData;
+        fieldErrors[field] = error.message;
+      }
+      setErrors(fieldErrors);
+      return;
+    }
     
     const signupPromise = async () => {
-      await signup(email, password);
-      return email;
+      await signup(result.data.email, result.data.password);
+      return result.data.email;
     };
 
     toast.promise(signupPromise(), {
@@ -84,7 +102,12 @@ export default function SignupForm({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="vous@exemple.com"
                 required
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? "email-error" : undefined}
               />
+              {errors.email && (
+                <p id="email-error" className="text-sm text-destructive">{errors.email}</p>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Mot de passe</Label>
@@ -96,8 +119,34 @@ export default function SignupForm({
                 placeholder="••••••••"
                 required
                 minLength={8}
+                aria-invalid={!!errors.password}
+                aria-describedby="password-requirements"
               />
-              <p className="text-xs text-muted-foreground">Minimum 8 caractères</p>
+              {password.length > 0 && (
+                <div className="space-y-1">
+                  <div className="flex gap-1">
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <div
+                        key={i}
+                        className={cn(
+                          "h-1 flex-1 rounded-full transition-colors",
+                          i <= passwordStrength.score ? passwordStrength.color : "bg-muted"
+                        )}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Force: {passwordStrength.label}
+                  </p>
+                </div>
+              )}
+              {errors.password ? (
+                <p id="password-requirements" className="text-sm text-destructive">{errors.password}</p>
+              ) : (
+                <p id="password-requirements" className="text-xs text-muted-foreground">
+                  Min. 8 caractères, majuscule, minuscule et chiffre
+                </p>
+              )}
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (

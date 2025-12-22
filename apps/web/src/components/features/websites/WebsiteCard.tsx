@@ -6,6 +6,7 @@ import { websitesAPI } from '@/lib/api';
 import { queryKeys } from '@/lib/query';
 import { useQueryClient } from '@tanstack/react-query';
 import { getWebsiteDisplayUrl, getWebsiteUrl } from '@/lib/utils/formatters';
+import { openExternalUrl } from '@/lib/utils/security';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -101,7 +102,7 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
         description: `Votre site est maintenant accessible à l'adresse ${displayUrl}`,
         action: {
           label: 'Voir le site',
-          onClick: () => window.open(fullUrl, '_blank'),
+          onClick: () => openExternalUrl(fullUrl),
         },
       });
     } catch (error) {

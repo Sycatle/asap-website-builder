@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { loginSchema, type LoginFormData } from "@/lib/validations/auth";
+import { isValidRedirectUrl } from "@/lib/utils/security";
 
 export default function LoginForm({
   className,
@@ -13,6 +15,7 @@ export default function LoginForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState<Partial<LoginFormData>>({});
   const [searchParams, setSearchParams] = useState('');
   const { login, isLoading } = useAuthStore();
 
@@ -21,12 +24,12 @@ export default function LoginForm({
     setSearchParams(window.location.search);
   }, []);
 
-  // Get redirect URL from query params
+  // Get redirect URL from query params with security validation
   const getRedirectUrl = () => {
     const params = new URLSearchParams(searchParams);
     const redirect = params.get('redirect');
     // Validate that redirect is a safe internal URL
-    if (redirect && redirect.startsWith('/app')) {
+    if (redirect && isValidRedirectUrl(redirect)) {
       return redirect;
     }
     return '/app';
@@ -34,10 +37,23 @@ export default function LoginForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
+    
+    // Validate with Zod
+    const result = loginSchema.safeParse({ email, password });
+    if (!result.success) {
+      const fieldErrors: Partial<LoginFormData> = {};
+      for (const error of result.error.errors) {
+        const field = error.path[0] as keyof LoginFormData;
+        fieldErrors[field] = error.message;
+      }
+      setErrors(fieldErrors);
+      return;
+    }
     
     const loginPromise = async () => {
-      await login(email, password);
-      return email;
+      await login(result.data.email, result.data.password);
+      return result.data.email;
     };
 
     toast.promise(loginPromise(), {
@@ -84,7 +100,12 @@ export default function LoginForm({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="vous@exemple.com"
                 required
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? "email-error" : undefined}
               />
+              {errors.email && (
+                <p id="email-error" className="text-sm text-destructive">{errors.email}</p>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Mot de passe</Label>
@@ -95,7 +116,12 @@ export default function LoginForm({
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
+                aria-invalid={!!errors.password}
+                aria-describedby={errors.password ? "password-error" : undefined}
               />
+              {errors.password && (
+                <p id="password-error" className="text-sm text-destructive">{errors.password}</p>
+              )}
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
