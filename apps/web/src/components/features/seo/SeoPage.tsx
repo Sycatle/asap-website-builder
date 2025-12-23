@@ -12,6 +12,12 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { 
   ChartContainer,
   ChartTooltip,
@@ -380,9 +386,18 @@ export default function SeoPage() {
                   <SelectItem value="90d">3 derniers mois</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                <Download className="h-4 w-4" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Exporter les données SEO</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         }
@@ -448,65 +463,95 @@ export default function SeoPage() {
 
       {/* Main KPIs */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Impressions</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data.totalImpressions.toLocaleString()}</div>
-            <div className="flex items-center gap-2 mt-1">
-              <ChangeIndicator value={data.changes.impressions} />
-              <span className="text-xs text-muted-foreground">vs période précédente</span>
-            </div>
-          </CardContent>
-        </Card>
+        <TooltipProvider>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Impressions</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Eye className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Nombre de fois où votre site apparaît dans les résultats de recherche</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{data.totalImpressions.toLocaleString()}</div>
+              <div className="flex items-center gap-2 mt-1">
+                <ChangeIndicator value={data.changes.impressions} />
+                <span className="text-xs text-muted-foreground">vs période précédente</span>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Clics</CardTitle>
-            <MousePointerClick className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data.totalClicks.toLocaleString()}</div>
-            <div className="flex items-center gap-2 mt-1">
-              <ChangeIndicator value={data.changes.clicks} />
-              <span className="text-xs text-muted-foreground">vs période précédente</span>
-            </div>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Clics</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <MousePointerClick className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Nombre de clics vers votre site depuis les résultats de recherche</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{data.totalClicks.toLocaleString()}</div>
+              <div className="flex items-center gap-2 mt-1">
+                <ChangeIndicator value={data.changes.clicks} />
+                <span className="text-xs text-muted-foreground">vs période précédente</span>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">CTR moyen</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data.avgCtr}%</div>
-            <div className="flex items-center gap-2 mt-1">
-              <ChangeIndicator value={data.changes.ctr} />
-              <span className={`text-xs ${parseFloat(data.avgCtr) >= 5 ? 'text-green-600' : parseFloat(data.avgCtr) >= 2 ? 'text-amber-600' : 'text-red-500'}`}>
-                {parseFloat(data.avgCtr) >= 5 ? 'Excellent' : parseFloat(data.avgCtr) >= 2 ? 'Bon' : 'À améliorer'}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">CTR moyen</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Target className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Taux de clics : pourcentage d'impressions convertis en clics</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{data.avgCtr}%</div>
+              <div className="flex items-center gap-2 mt-1">
+                <ChangeIndicator value={data.changes.ctr} />
+                <span className={`text-xs ${parseFloat(data.avgCtr) >= 5 ? 'text-green-600' : parseFloat(data.avgCtr) >= 2 ? 'text-amber-600' : 'text-red-500'}`}>
+                  {parseFloat(data.avgCtr) >= 5 ? 'Excellent' : parseFloat(data.avgCtr) >= 2 ? 'Bon' : 'À améliorer'}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Position moyenne</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data.avgPosition}</div>
-            <div className="flex items-center gap-2 mt-1">
-              <ChangeIndicator value={data.changes.position} inverted />
-              <span className={`text-xs ${parseFloat(data.avgPosition) <= 10 ? 'text-green-600' : parseFloat(data.avgPosition) <= 30 ? 'text-amber-600' : 'text-red-500'}`}>
-                {parseFloat(data.avgPosition) <= 10 ? 'Page 1' : parseFloat(data.avgPosition) <= 30 ? 'Top 3 pages' : 'À optimiser'}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Position moyenne</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Position moyenne de votre site dans les résultats de recherche</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{data.avgPosition}</div>
+              <div className="flex items-center gap-2 mt-1">
+                <ChangeIndicator value={data.changes.position} inverted />
+                <span className={`text-xs ${parseFloat(data.avgPosition) <= 10 ? 'text-green-600' : parseFloat(data.avgPosition) <= 30 ? 'text-amber-600' : 'text-red-500'}`}>
+                  {parseFloat(data.avgPosition) <= 10 ? 'Page 1' : parseFloat(data.avgPosition) <= 30 ? 'Top 3 pages' : 'À optimiser'}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </TooltipProvider>
       </div>
 
       {/* Tabs */}

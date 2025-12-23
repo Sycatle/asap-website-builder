@@ -434,57 +434,87 @@ export default function PagesPage() {
 
       {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total des pages</CardTitle>
-            <Layers className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Pages sur votre site
-            </p>
-          </CardContent>
-        </Card>
+        <TooltipProvider>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total des pages</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Layers className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Nombre total de pages créées</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.total}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Pages sur votre site
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pages publiées</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.published}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Visibles sur le site
-            </p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Pages publiées</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <CheckCircle2 className="h-4 w-4 text-green-500 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Pages visibles publiquement</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{stats.published}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Visibles sur le site
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Brouillons</CardTitle>
-            <Clock className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{stats.draft}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Pages non publiées
-            </p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Brouillons</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Clock className="h-4 w-4 text-amber-500 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Pages masquées non visibles</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-amber-600">{stats.draft}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Pages non publiées
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Page d'accueil</CardTitle>
-            <Home className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.homepage}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Page principale
-            </p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Page d'accueil</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Home className="h-4 w-4 text-primary cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Page principale du site (URL: /)</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.homepage}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Page principale
+              </p>
+            </CardContent>
+          </Card>
+        </TooltipProvider>
       </div>
 
       {/* Pages List Card */}
@@ -557,7 +587,16 @@ export default function PagesPage() {
                     draggedPageId === page.id && "opacity-50"
                   )}
                 >
-                  <GripVertical className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab flex-shrink-0" />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <GripVertical className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab flex-shrink-0" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Glisser pour réorganiser</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   
                   <div className="text-2xl flex-shrink-0">{getPageIcon(page.slug)}</div>
                   
@@ -570,16 +609,34 @@ export default function PagesPage() {
                         {page.title}
                       </h3>
                       {page.is_homepage && (
-                        <Badge variant="secondary" className="text-xs">
-                          <Home className="h-3 w-3 mr-1" />
-                          Accueil
-                        </Badge>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="secondary" className="text-xs cursor-help">
+                                <Home className="h-3 w-3 mr-1" />
+                                Accueil
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Cette page est la page d'accueil du site</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                       {!page.visible && (
-                        <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
-                          <EyeOff className="h-3 w-3 mr-1" />
-                          Masquée
-                        </Badge>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="text-xs text-amber-600 border-amber-300 cursor-help">
+                                <EyeOff className="h-3 w-3 mr-1" />
+                                Masquée
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Cette page n'est pas visible publiquement</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </div>
                     
@@ -596,86 +653,104 @@ export default function PagesPage() {
 
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {website?.slug && page.visible && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        asChild
-                      >
-                        <a 
-                          href={`https://${website.slug}.${PUBLIC_DOMAIN}${getPagePath(page)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              asChild
+                            >
+                              <a 
+                                href={`https://${website.slug}.${PUBLIC_DOMAIN}${getPagePath(page)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Voir la page sur le site</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     )}
                     
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem onClick={() => openEditDialog(page)}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Modifier
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDuplicatePage(page)}>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Dupliquer
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleVisibility(page)}>
-                          {page.visible ? (
-                            <>
-                              <EyeOff className="h-4 w-4 mr-2" />
-                              Masquer
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="h-4 w-4 mr-2" />
-                              Afficher
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        {website?.slug && (
-                          <DropdownMenuItem asChild>
-                            <a 
-                              href={`https://${website.slug}.${PUBLIC_DOMAIN}${getPagePath(page)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              Voir la page
-                            </a>
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuSeparator />
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div>
-                                <DropdownMenuItem 
-                                  onClick={() => openDeleteDialog(page)}
-                                  className="text-destructive focus:text-destructive"
-                                  disabled={page.is_homepage}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Supprimer
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem onClick={() => openEditDialog(page)}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Modifier
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDuplicatePage(page)}>
+                                <Copy className="h-4 w-4 mr-2" />
+                                Dupliquer
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleToggleVisibility(page)}>
+                                {page.visible ? (
+                                  <>
+                                    <EyeOff className="h-4 w-4 mr-2" />
+                                    Masquer
+                                  </>
+                                ) : (
+                                  <>
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    Afficher
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                              {website?.slug && (
+                                <DropdownMenuItem asChild>
+                                  <a 
+                                    href={`https://${website.slug}.${PUBLIC_DOMAIN}${getPagePath(page)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <ExternalLink className="h-4 w-4 mr-2" />
+                                    Voir la page
+                                  </a>
                                 </DropdownMenuItem>
-                              </div>
-                            </TooltipTrigger>
-                            {page.is_homepage && (
-                              <TooltipContent>
-                                <p>La page d'accueil ne peut pas être supprimée</p>
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                        </TooltipProvider>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                              )}
+                              <DropdownMenuSeparator />
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div>
+                                      <DropdownMenuItem 
+                                        onClick={() => openDeleteDialog(page)}
+                                        className="text-destructive focus:text-destructive"
+                                        disabled={page.is_homepage}
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Supprimer
+                                      </DropdownMenuItem>
+                                    </div>
+                                  </TooltipTrigger>
+                                  {page.is_homepage && (
+                                    <TooltipContent>
+                                      <p>La page d'accueil ne peut pas être supprimée</p>
+                                    </TooltipContent>
+                                  )}
+                                </Tooltip>
+                              </TooltipProvider>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Actions de la page</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
               ))}

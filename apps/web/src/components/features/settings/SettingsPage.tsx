@@ -15,6 +15,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { FormActions } from "@/components/ui/form-actions";
 import {
@@ -379,10 +385,21 @@ export default function SettingsPage() {
                   Autoriser Google et autres à indexer votre site
                 </p>
               </div>
-              <Switch
-                checked={isIndexable}
-                onCheckedChange={setIsIndexable}
-              />
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Switch
+                        checked={isIndexable}
+                        onCheckedChange={setIsIndexable}
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Active/désactive l'indexation par les moteurs de recherche</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             {!isIndexable && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 text-amber-600 text-sm">
@@ -445,31 +462,49 @@ export default function SettingsPage() {
             </div>
             
             {website?.status === 'published' ? (
-              <Button 
-                variant="outline" 
-                onClick={handleUnpublish}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <EyeOff className="h-4 w-4 mr-2" />
-                )}
-                Mettre en brouillon
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      onClick={handleUnpublish}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <EyeOff className="h-4 w-4 mr-2" />
+                      )}
+                      Mettre en brouillon
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Rendre le site privé et non accessible publiquement</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             ) : (
-              <Button 
-                onClick={handlePublish}
-                disabled={isSaving}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {isSaving ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Rocket className="h-4 w-4 mr-2" />
-                )}
-                Publier le site
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      onClick={handlePublish}
+                      disabled={isSaving}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {isSaving ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Rocket className="h-4 w-4 mr-2" />
+                      )}
+                      Publier le site
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Rendre le site public et accessible à tous</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
         </CardContent>
@@ -495,16 +530,25 @@ export default function SettingsPage() {
               </p>
             </div>
             <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" disabled={isDeleting}>
-                  {isDeleting ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4 mr-2" />
-                  )}
-                  Supprimer
-                </Button>
-              </AlertDialogTrigger>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" disabled={isDeleting}>
+                        {isDeleting ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4 mr-2" />
+                        )}
+                        Supprimer
+                      </Button>
+                    </AlertDialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Attention : cette action est irréversible</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Supprimer le site ?</AlertDialogTitle>
