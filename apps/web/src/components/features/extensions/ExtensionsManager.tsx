@@ -3,6 +3,7 @@ import type { Extension, WebsiteExtension } from '@/lib/api/extensions';
 import { useWebsitesQuery, useExtensionCatalogQuery, useWebsiteExtensionsQuery, useActivateExtensionMutation, useDeactivateExtensionMutation } from '@/lib/query';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { Link } from '@/components/app-router';
+import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -238,17 +239,43 @@ export default function ExtensionsManager() {
   }
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col gap-1.5 sm:gap-2 animate-fade-in-down">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Extensions</h1>
-          <Badge variant="outline" className="text-xs">{catalogExtensions.length} disponibles</Badge>
-        </div>
-        <p className="text-sm sm:text-base text-muted-foreground">
-          Activez des extensions pour débloquer de nouvelles fonctionnalités
-        </p>
-      </div>
+    <div className="flex flex-col gap-6 sm:gap-8 animate-fade-in">
+      {/* Page Header */}
+      <PageHeader
+        title="Extensions"
+        subtitle="Activez des extensions pour débloquer de nouvelles fonctionnalités"
+        icon={
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+            <Puzzle className="h-5 w-5 text-white" />
+          </div>
+        }
+        badge={{
+          label: `${catalogExtensions.length} disponibles`,
+          variant: 'outline',
+        }}
+        backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
+        stickyContent={
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <Puzzle className="h-4 w-4 text-white" />
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-sm font-semibold">Extensions</p>
+                <p className="text-[11px] text-muted-foreground">{enabledActiveExtensions.length} actives sur {catalogExtensions.length}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {enabledActiveExtensions.length > 0 && (
+                <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] h-5">
+                  <div className="h-1.5 w-1.5 rounded-full bg-green-500 mr-1" />
+                  {enabledActiveExtensions.length} active{enabledActiveExtensions.length > 1 ? 's' : ''}
+                </Badge>
+              )}
+            </div>
+          </div>
+        }
+      />
 
       {/* Active Extensions */}
       {enabledActiveExtensions.length > 0 && (

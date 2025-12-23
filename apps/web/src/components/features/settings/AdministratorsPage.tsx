@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useWebsitesQuery } from '@/lib/query';
 import { formatDate } from '@/lib/utils/formatters';
+import { PageHeader } from '@/components/shared/page-header';
 import { 
   Users, 
   UserPlus, 
@@ -242,17 +243,46 @@ export default function AdministratorsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Administrateurs</h1>
-          <Badge variant="outline">{stats.total} collaborateur{stats.total > 1 ? 's' : ''}</Badge>
-        </div>
-        <p className="text-sm sm:text-base text-muted-foreground">
-          Gérez les accès et permissions des collaborateurs de votre site
-        </p>
-      </div>
+    <div className="flex flex-col gap-6 sm:gap-8 animate-fade-in">
+      {/* Page Header */}
+      <PageHeader
+        title="Administrateurs"
+        subtitle="Gérez les accès et permissions des collaborateurs de votre site"
+        icon={
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
+            <Users className="h-5 w-5 text-white" />
+          </div>
+        }
+        badge={{
+          label: `${stats.total} collaborateur${stats.total > 1 ? 's' : ''}`,
+          variant: 'outline',
+        }}
+        backHref={currentWebsite ? `/app/${currentWebsite.id}` : '/app'}
+        stickyContent={
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                <Users className="h-4 w-4 text-white" />
+              </div>
+              <div className="hidden sm:flex items-center gap-3">
+                <p className="text-sm font-semibold">Administrateurs</p>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-[10px] h-5">
+                    <Check className="h-2.5 w-2.5 mr-1 text-green-500" />
+                    {stats.active} actif{stats.active > 1 ? 's' : ''}
+                  </Badge>
+                  {stats.pending > 0 && (
+                    <Badge variant="outline" className="text-[10px] h-5">
+                      <Clock className="h-2.5 w-2.5 mr-1 text-yellow-500" />
+                      {stats.pending} en attente
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">

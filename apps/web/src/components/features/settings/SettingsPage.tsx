@@ -5,6 +5,7 @@ import { websitesAPI, type Website, type UpdateWebsiteRequest } from '@/lib/api'
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query';
+import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -211,17 +212,39 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-3">
-          <Settings className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Paramètres du site</h1>
-        </div>
-        <p className="text-muted-foreground">
-          Configurez les informations et le comportement de votre site
-        </p>
-      </div>
+    <div className="flex flex-col gap-6 sm:gap-8 max-w-4xl animate-fade-in">
+      {/* Page Header */}
+      <PageHeader
+        title="Paramètres du site"
+        subtitle="Configurez les informations et le comportement de votre site"
+        icon={
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center shadow-lg">
+            <Settings className="h-5 w-5 text-white" />
+          </div>
+        }
+        backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
+        stickyContent={
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center">
+                <Settings className="h-4 w-4 text-white" />
+              </div>
+              <p className="text-sm font-semibold hidden sm:block">Paramètres</p>
+            </div>
+            {isFormDirty && (
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleCancel} className="h-8">
+                  Annuler
+                </Button>
+                <Button size="sm" onClick={handleSave} disabled={isSaving} className="h-8">
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <CheckCircle2 className="h-4 w-4 mr-1.5" />}
+                  Enregistrer
+                </Button>
+              </div>
+            )}
+          </div>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* General Information */}

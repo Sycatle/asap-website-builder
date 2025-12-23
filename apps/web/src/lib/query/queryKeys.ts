@@ -76,6 +76,12 @@ export const queryKeys = {
         : ['notifications', 'list'] as const,
     unreadCount: () => ['notifications', 'unread-count'] as const,
   },
+
+  // Administrator queries
+  administrators: {
+    all: ['administrators'] as const,
+    list: (websiteId: string) => ['administrators', 'list', websiteId] as const,
+  },
 } as const;
 
 // ============================================

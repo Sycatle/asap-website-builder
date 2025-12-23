@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { filesAPI, type FileMetadata } from '@/lib/api';
 import { formatBytes, formatDate } from '@/lib/utils/formatters';
+import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,7 @@ import {
   Link2
 } from "lucide-react";
 import { useFilesQuery, useQuotaQuery, useUploadFileMutation, useDeleteFileMutation, useDeleteFilesMutation } from '@/lib/query';
+import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { useGridNavigation, KeyboardHint } from '@/hooks/useGridNavigation';
 import { loggers } from '@/lib/logger';
 
@@ -56,6 +58,7 @@ const filesLogger = loggers.files;
 type ViewMode = 'grid' | 'list';
 
 export default function CloudManager() {
+  const { currentWebsiteId } = useWebsiteContext();
   // React Query hooks
   const { data: files = [], isLoading: filesLoading, refetch: refetchFiles } = useFilesQuery();
   const { data: quota = null, isLoading: quotaLoading, refetch: refetchQuota } = useQuotaQuery();
@@ -299,67 +302,98 @@ export default function CloudManager() {
   }
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:gap-2 animate-fade-in-down">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Fichiers</h1>
-            <p className="text-sm sm:text-base text-muted-foreground mt-1">
-              Gérez vos fichiers et médias
-            </p>
+    <div className="flex flex-col gap-6 sm:gap-8 animate-fade-in">
+      {/* Page Header */}
+      <PageHeader
+        title="Fichiers"
+        subtitle="Gérez vos fichiers et médias"
+        icon={
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+            <HardDrive className="h-5 w-5 text-white" />
           </div>
-          <div className="flex items-center gap-2">
-            {/* View Toggle */}
-            <div className="flex items-center border rounded-lg p-1">
-              <Button
-                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className="h-8 w-8 p-0 transition-all duration-200"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className="h-8 w-8 p-0 transition-all duration-200"
-              >
-                <List className="h-4 w-4" />
+        }
+        badge={quota ? {
+          label: `${formatBytes(quota.used)} / ${formatBytes(quota.total)}`,
+          variant: 'outline',
+        } : undef{currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
+        backHref="/app"
+        actions={[
+          {
+            label: isUploading ? (uploadProgress.total > 1 ? `${uploadProgress.completed}/${uploadProgress.total}` : 'Upload...') : 'Upload',
+            icon: isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />,
+            onClick: () => fileInputRef.current?.click(),
+            disabled: isUploading,
+          }
+        ]}
+        stickyContent={
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                <HardDrive className="h-4 w-4 text-white" />
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-sm font-semibold">Fichiers</p>
+                {quota && <p className="text-[11px] text-muted-foreground">{formatBytes(quota.used)} / {formatBytes(quota.total)}</p>}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center border rounded-lg p-0.5">
+                <Button
+                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                  className="h-7 w-7 p-0"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  className="h-7 w-7 p-0"
+                >
+                  <List className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="h-8">
+                {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                <span className="hidden sm:inline ml-1.5">Upload</span>
               </Button>
             </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              onChange={handleUpload}
-              className="hidden"
-              id="file-upload"
-            />
-            <Button asChild disabled={isUploading} className="h-9 sm:h-10 group">
-              <label htmlFor="file-upload" className="cursor-pointer">
-                {isUploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-1.5 sm:mr-2 animate-spin" />
-                    <span className="text-sm">
-                      {uploadProgress.total > 1 
-                        ? `${uploadProgress.completed}/${uploadProgress.total}` 
-                        : 'Upload...'}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4 mr-1.5 sm:mr-2 transition-transform group-hover:-translate-y-0.5" />
-                    <span className="text-sm">Upload</span>
-                  </>
-                )}
-              </label>
+          </div>
+        }
+      >
+        {/* View Toggle */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center border rounded-lg p-1">
+            <Button
+              variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              className="h-8 w-8 p-0 transition-all duration-200"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className="h-8 w-8 p-0 transition-all duration-200"
+            >
+              <List className="h-4 w-4" />
             </Button>
           </div>
         </div>
-      </div>
+      </PageHeader>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        onChange={handleUpload}
+        className="hidden"
+        id="file-upload"
+      />
 
       {/* Quota Card */}
       {quota && (

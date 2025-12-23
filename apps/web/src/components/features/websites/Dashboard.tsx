@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { websitesAPI, type UpdateWebsiteRequest } from '@/lib/api';
-import { queryKeys } from '@/lib/query';
+import { queryKeys, useAdministratorsQuery, useFilesQuery } from '@/lib/query';
 import { useQueryClient } from '@tanstack/react-query';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { Link } from '@/components/app-router';
@@ -11,8 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/shared/page-header";
 import { 
   ChartContainer,
   ChartTooltip,
@@ -51,6 +52,9 @@ import {
   HardDrive,
   Palette,
   Image,
+  Film,
+  Music,
+  File,
   AlertTriangle,
   TrendingUp,
   TrendingDown,
@@ -67,7 +71,8 @@ import {
   Unlock,
 } from "lucide-react";
 import { PresetOnboardingRouter } from "@/components/onboarding/presets";
-import { formatBytes } from "@/lib/utils/formatters";
+import { formatBytes, formatDate } from "@/lib/utils/formatters";
+import type { FileMetadata } from "@/lib/api";
 
 export default function Dashboard() {
   const { currentWebsite: website, currentWebsiteId, quota, extensions, isLoading, websites, pages, elements, refetch: refetchAll } = useWebsiteContext();
@@ -252,159 +257,221 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              {website?.title || 'Mon site'}
-            </h1>
-            {website?.status === 'published' ? (
-              <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
-                <CheckCircle2 className="w-3 h-3 mr-1" />
-                En ligne
-              </Badge>
-            ) : (
-              <Badge variant="secondary">
-                <Clock className="w-3 h-3 mr-1" />
-                Brouillon
-              </Badge>
-            )}
+    <div className="flex flex-col gap-6 sm:gap-8 animate-fade-in">
+      {/* Page Header with sticky behavior */}
+      <PageHeader
+        title={website?.title || 'Mon site'}
+        subtitle={website?.slug ? `${website.slug}.asap.cool` : undefined}
+        icon={
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center shadow-lg">
+            <Globe className="h-5 w-5 text-white" />
           </div>
-          <p className="text-sm text-muted-foreground">
-            {website?.slug ? (
-              <a 
-                href={`https://${website.slug}.asap.cool`} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="font-mono hover:text-primary transition-colors"
-              >
-                {website.slug}.asap.cool
-              </a>
-            ) : (
-              'Configurez votre site pour commencer'
-            )}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {website?.status === 'draft' && (
-            <Button onClick={handlePublish} disabled={isSaving} className="bg-green-600 hover:bg-green-700">
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+        }
+        badge={website?.status === 'published' ? {
+          label: 'En ligne',
+          className: 'bg-green-500/10 text-green-600 border-green-500/20',
+          icon: <CheckCircle2 className="w-3 h-3 mr-1" />,
+        } : {
+          label: 'Brouillon',
+          variant: 'secondary',
+          icon: <Clock className="w-3 h-3 mr-1" />,
+        }}
+        isMainPage={true}
+        actions={[
+          ...(website?.status === 'draft' ? [{
+            label: 'Publier',
+            icon: isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />,
+            onClick: handlePublish,
+            disabled: isSaving,
+            className: 'bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20',
+          }] : []),
+          {
+            label: 'Studio',
+            icon: <Edit className="h-4 w-4" />,
+            href: `/app/${currentWebsiteId}/studio`,
+            className: 'shadow-md',
+          },
+          ...(website ? [{
+            label: 'Voir',
+            icon: <ExternalLink className="h-4 w-4" />,
+            href: `/${website.slug}`,
+            variant: 'outline' as const,
+            className: 'shadow-sm',
+          }] : []),
+        ]}
+        stickyContent={
+          <div className="flex items-center justify-between h-12">
+            {/* Left - Site info */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center shrink-0">
+                  <Globe className="h-4 w-4 text-white" />
+                </div>
+                <div className="hidden sm:block">
+                  <p className="text-sm font-semibold leading-none">{website?.title || 'Mon site'}</p>
+                  <p className="text-[11px] text-muted-foreground font-mono">{website?.slug}.asap.cool</p>
+                </div>
+              </div>
+              {website?.status === 'published' ? (
+                <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] h-5">
+                  <div className="h-1.5 w-1.5 rounded-full bg-green-500 mr-1 animate-pulse" />
+                  En ligne
+                </Badge>
               ) : (
-                <Rocket className="h-4 w-4 mr-2" />
+                <Badge variant="secondary" className="text-[10px] h-5">
+                  <Clock className="w-2.5 h-2.5 mr-1" />
+                  Brouillon
+                </Badge>
               )}
-              Publier
-            </Button>
-          )}
-          <Button variant="default" asChild>
-            <Link href={`/app/${currentWebsiteId}/studio`}>
-              <Edit className="h-4 w-4 mr-2" />
-              Studio
-            </Link>
-          </Button>
-          {website && (
-            <Button variant="outline" asChild>
-              <a href={`/${website.slug}`} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Voir
-              </a>
-            </Button>
-          )}
-        </div>
-      </div>
+            </div>
 
-      {/* Real-time Stats Row */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        {/* Active Visitors - Real-time */}
-        <Card className="relative overflow-hidden border-green-500/20 bg-gradient-to-br from-green-500/5 to-transparent">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
+            {/* Center - Live stats */}
+            <div className="hidden md:flex items-center gap-4">
+              <div className="flex items-center gap-1.5 text-sm">
+                <div className="relative">
+                  <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                  <div className="absolute inset-0 h-1.5 w-1.5 rounded-full bg-green-500 animate-ping" />
+                </div>
+                <span className="text-green-600 font-semibold tabular-nums">{realtimeData.activeVisitors}</span>
+                <span className="text-muted-foreground text-xs">en ligne</span>
+              </div>
+              <div className="h-4 w-px bg-border" />
+              <div className="flex items-center gap-1.5 text-sm">
+                <Activity className="h-3.5 w-3.5 text-primary" />
+                <span className="font-semibold tabular-nums">{realtimeData.todayVisits.toLocaleString()}</span>
+                <span className="text-muted-foreground text-xs">visites</span>
+              </div>
+              <div className="h-4 w-px bg-border" />
+              <div className="flex items-center gap-1.5 text-sm">
+                <Target className="h-3.5 w-3.5 text-violet-500" />
+                <span className="font-semibold text-violet-600 tabular-nums">{realtimeData.conversionRate}%</span>
+              </div>
+            </div>
+
+            {/* Right - Actions */}
+            <div className="flex items-center gap-2">
+              {website?.status === 'draft' && (
+                <Button onClick={handlePublish} disabled={isSaving} size="sm" className="bg-green-600 hover:bg-green-700 h-8">
+                  {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}
+                  <span className="hidden sm:inline ml-1.5">Publier</span>
+                </Button>
+              )}
+              <Button variant="default" size="sm" className="h-8" asChild>
+                <Link href={`/app/${currentWebsiteId}/studio`}>
+                  <Edit className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline ml-1.5">Studio</span>
+                </Link>
+              </Button>
+              {website && (
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" asChild>
+                  <a href={`/${website.slug}`} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              )}
+            </div>
+          </div>
+        }
+      />
+
+      {/* Stats en temps réel - Design premium */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        {/* Active Visitors - Hero stat */}
+        <Card className="relative overflow-hidden border-green-500/30 bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent shadow-lg shadow-green-500/5">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 rounded-full blur-2xl" />
+          <CardContent className="p-4 relative">
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="relative">
-                  <div className="h-2.5 w-2.5 rounded-full bg-green-500 animate-pulse" />
-                  <div className="absolute inset-0 h-2.5 w-2.5 rounded-full bg-green-500 animate-ping opacity-75" />
+                  <div className="h-2 w-2 rounded-full bg-green-500" />
+                  <div className="absolute inset-0 h-2 w-2 rounded-full bg-green-500 animate-ping" />
                 </div>
-                <span className="text-xs font-medium text-green-600">En direct</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-green-600">Live</span>
               </div>
               <ChangeIndicator value={getChange(realtimeData.activeVisitors, prevDataRef.current.activeVisitors)} />
             </div>
-            <p className="text-3xl font-bold text-green-600 transition-all duration-500">{realtimeData.activeVisitors}</p>
+            <p className="text-4xl font-bold text-green-600 tabular-nums">{realtimeData.activeVisitors}</p>
             <p className="text-xs text-muted-foreground mt-1">visiteurs actifs</p>
           </CardContent>
         </Card>
 
         {/* Today's Visits */}
-        <Card>
+        <Card className="shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Activity className="h-4 w-4 text-primary" />
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-1.5 rounded-lg bg-primary/10">
+                <Activity className="h-4 w-4 text-primary" />
+              </div>
               <ChangeIndicator value={getChange(realtimeData.todayVisits, prevDataRef.current.todayVisits)} />
             </div>
-            <p className="text-2xl font-bold transition-all duration-500">{realtimeData.todayVisits.toLocaleString()}</p>
+            <p className="text-3xl font-bold tabular-nums">{realtimeData.todayVisits.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground mt-1">visites aujourd'hui</p>
           </CardContent>
         </Card>
 
         {/* Page Views */}
-        <Card>
+        <Card className="shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Eye className="h-4 w-4 text-blue-500" />
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-1.5 rounded-lg bg-blue-500/10">
+                <Eye className="h-4 w-4 text-blue-500" />
+              </div>
               <ChangeIndicator value={getChange(realtimeData.todayPageViews, prevDataRef.current.todayPageViews)} />
             </div>
-            <p className="text-2xl font-bold transition-all duration-500">{realtimeData.todayPageViews.toLocaleString()}</p>
+            <p className="text-3xl font-bold tabular-nums">{realtimeData.todayPageViews.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground mt-1">pages vues</p>
           </CardContent>
         </Card>
 
         {/* Conversion Rate */}
-        <Card className="border-violet-500/20 bg-gradient-to-br from-violet-500/5 to-transparent">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Target className="h-4 w-4 text-violet-500" />
+        <Card className="relative overflow-hidden border-violet-500/30 bg-gradient-to-br from-violet-500/10 via-violet-500/5 to-transparent shadow-lg shadow-violet-500/5">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/10 rounded-full blur-2xl" />
+          <CardContent className="p-4 relative">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-1.5 rounded-lg bg-violet-500/10">
+                <Target className="h-4 w-4 text-violet-500" />
+              </div>
               {realtimeData.conversionRate > prevDataRef.current.conversionRate ? (
                 <TrendingUp className="h-4 w-4 text-green-500" />
               ) : realtimeData.conversionRate < prevDataRef.current.conversionRate ? (
                 <TrendingDown className="h-4 w-4 text-red-500" />
               ) : null}
             </div>
-            <p className="text-2xl font-bold text-violet-600 transition-all duration-500">{realtimeData.conversionRate}%</p>
+            <p className="text-4xl font-bold text-violet-600 tabular-nums">{realtimeData.conversionRate}%</p>
             <p className="text-xs text-muted-foreground mt-1">taux de conversion</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content Grid */}
+      {/* Graphique + Conversions + Actions rapides */}
       <div className="grid gap-4 lg:grid-cols-12">
-        {/* Traffic Trend */}
-        <Card className="lg:col-span-5">
+        {/* Traffic Trend - Plus grand */}
+        <Card className="lg:col-span-7 shadow-sm">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-primary" />
-                Tendance (7 jours)
+                Tendance des 7 derniers jours
               </CardTitle>
               <Link href={`/app/${currentWebsiteId}/analytics`}>
                 <Button variant="ghost" size="sm" className="text-xs h-7">
-                  Voir plus
-                  <ExternalLink className="h-3 w-3 ml-1" />
+                  Analytics
+                  <ChevronRight className="h-3 w-3 ml-1" />
                 </Button>
               </Link>
             </div>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={trendChartConfig} className="h-[140px] w-full">
+            <ChartContainer config={trendChartConfig} className="h-[160px] w-full">
               <AreaChart data={trendData} margin={{ left: 0, right: 0, top: 5, bottom: 0 }}>
                 <defs>
                   <linearGradient id="fillTrend" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
                     <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" vertical={false} />
-                <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" vertical={false} />
+                <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
                 <YAxis hide />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Area
@@ -412,266 +479,141 @@ export default function Dashboard() {
                   dataKey="visits"
                   stroke="hsl(var(--primary))"
                   fill="url(#fillTrend)"
-                  strokeWidth={2}
+                  strokeWidth={2.5}
                 />
               </AreaChart>
             </ChartContainer>
           </CardContent>
         </Card>
 
-        {/* Conversions */}
-        <Card className="lg:col-span-4">
+        {/* Conversions - Compact */}
+        <Card className="lg:col-span-5 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Target className="h-4 w-4 text-primary" />
+              <Target className="h-4 w-4 text-violet-500" />
               Conversions
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/5 border border-green-500/20">
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-green-500/10 to-green-500/5 border border-green-500/20">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-500/10">
-                  <Mail className="h-4 w-4 text-green-600" />
+                <div className="p-2.5 rounded-xl bg-green-500/20">
+                  <Mail className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Newsletter</p>
-                  <p className="text-xs text-muted-foreground">abonnés</p>
+                  <p className="text-sm font-semibold">Newsletter</p>
+                  <p className="text-xs text-muted-foreground">abonnés actifs</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-xl font-bold text-green-600 transition-all duration-500">{realtimeData.newsletterSubs}</p>
+                <p className="text-2xl font-bold text-green-600 tabular-nums">{realtimeData.newsletterSubs}</p>
                 <ChangeIndicator value={getChange(realtimeData.newsletterSubs, prevDataRef.current.newsletterSubs)} />
               </div>
             </div>
             
-            <div className="flex items-center justify-between p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-amber-500/10 to-amber-500/5 border border-amber-500/20">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-amber-500/10">
-                  <MessageSquare className="h-4 w-4 text-amber-600" />
+                <div className="p-2.5 rounded-xl bg-amber-500/20">
+                  <MessageSquare className="h-5 w-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Contact</p>
-                  <p className="text-xs text-muted-foreground">demandes</p>
+                  <p className="text-sm font-semibold">Contact</p>
+                  <p className="text-xs text-muted-foreground">demandes reçues</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-xl font-bold text-amber-600 transition-all duration-500">{realtimeData.contactRequests}</p>
+                <p className="text-2xl font-bold text-amber-600 tabular-nums">{realtimeData.contactRequests}</p>
                 <ChangeIndicator value={getChange(realtimeData.contactRequests, prevDataRef.current.contactRequests)} />
               </div>
             </div>
           </CardContent>
         </Card>
+      </div>
 
-        {/* Site Resources */}
-        <Card className="lg:col-span-3">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Layers className="h-4 w-4 text-primary" />
-              Ressources
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Link 
-              href={`/app/${currentWebsiteId}/pages`}
-              className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Pages</span>
-              </div>
-              <Badge variant="secondary">{pages.length}</Badge>
-            </Link>
-            
-            <Link 
+      {/* Actions rapides - Horizontal compact */}
+      <Card className="shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-hide">
+            <Link
               href={`/app/${currentWebsiteId}/studio`}
-              className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors"
+              className="group flex items-center gap-2.5 px-4 py-2.5 rounded-full border bg-card hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all shrink-0"
             >
-              <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Sections</span>
-              </div>
-              <Badge variant="secondary">{elements.length}</Badge>
+              <Edit className="h-4 w-4" />
+              <span className="text-sm font-medium">Studio</span>
             </Link>
             
-            <Link 
+            <Link
+              href={`/app/${currentWebsiteId}/pages`}
+              className="group flex items-center gap-2.5 px-4 py-2.5 rounded-full border bg-card hover:bg-indigo-500 hover:text-white hover:border-indigo-500 transition-all shrink-0"
+            >
+              <FileText className="h-4 w-4" />
+              <span className="text-sm font-medium">Pages</span>
+              <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 group-hover:bg-white/20 group-hover:text-white">{pages.length}</Badge>
+            </Link>
+            
+            <Link
               href={`/app/${currentWebsiteId}/extensions`}
-              className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors"
+              className="group flex items-center gap-2.5 px-4 py-2.5 rounded-full border bg-card hover:bg-violet-500 hover:text-white hover:border-violet-500 transition-all shrink-0"
             >
-              <div className="flex items-center gap-2">
-                <Puzzle className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Extensions</span>
-              </div>
-              <Badge variant="secondary" className={enabledExtensionsCount > 0 ? 'bg-green-500/10 text-green-600' : ''}>
-                {enabledExtensionsCount} actives
-              </Badge>
+              <Puzzle className="h-4 w-4" />
+              <span className="text-sm font-medium">Extensions</span>
+              <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 group-hover:bg-white/20 group-hover:text-white">{enabledExtensionsCount}</Badge>
             </Link>
             
-            <Link 
+            <Link
               href={`/app/${currentWebsiteId}/cloud`}
-              className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors"
+              className="group flex items-center gap-2.5 px-4 py-2.5 rounded-full border bg-card hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all shrink-0"
             >
-              <div className="flex items-center gap-2">
-                <Image className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Médias</span>
-              </div>
-              <Badge variant="secondary">{formatBytes(storageUsed)}</Badge>
+              <HardDrive className="h-4 w-4" />
+              <span className="text-sm font-medium">Médias</span>
             </Link>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Access & Status */}
-      <div className="grid gap-4 lg:grid-cols-12">
-        {/* Quick Actions */}
-        <Card className="lg:col-span-8">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Zap className="h-4 w-4 text-amber-500" />
-              Accès rapide
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Link
-                href={`/app/${currentWebsiteId}/studio`}
-                className="group flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent/50 hover:border-primary/50 transition-all"
-              >
-                <div className="p-2.5 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  <Edit className="h-5 w-5" />
-                </div>
-                <span className="text-sm font-medium">Studio</span>
-              </Link>
-              
-              <Link
-                href={`/app/${currentWebsiteId}/extensions`}
-                className="group flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent/50 hover:border-violet-500/50 transition-all"
-              >
-                <div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-600 group-hover:bg-violet-500 group-hover:text-white transition-colors">
-                  <Puzzle className="h-5 w-5" />
-                </div>
-                <span className="text-sm font-medium">Extensions</span>
-              </Link>
-              
-              <Link
-                href={`/app/${currentWebsiteId}/cloud`}
-                className="group flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent/50 hover:border-emerald-500/50 transition-all"
-              >
-                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                  <Upload className="h-5 w-5" />
-                </div>
-                <span className="text-sm font-medium">Médias</span>
-              </Link>
-              
-              <Link
-                href={`/app/${currentWebsiteId}/analytics`}
-                className="group flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent/50 hover:border-blue-500/50 transition-all"
-              >
-                <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600 group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                  <BarChart3 className="h-5 w-5" />
-                </div>
-                <span className="text-sm font-medium">Analytics</span>
-              </Link>
-              
-              <Link
-                href={`/app/${currentWebsiteId}/theme`}
-                className="group flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent/50 hover:border-pink-500/50 transition-all"
-              >
-                <div className="p-2.5 rounded-xl bg-pink-500/10 text-pink-600 group-hover:bg-pink-500 group-hover:text-white transition-colors">
-                  <Palette className="h-5 w-5" />
-                </div>
-                <span className="text-sm font-medium">Thème</span>
-              </Link>
-              
-              <Link
-                href={`/app/${currentWebsiteId}/settings`}
-                className="group flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent/50 hover:border-gray-500/50 transition-all"
-              >
-                <div className="p-2.5 rounded-xl bg-gray-500/10 text-gray-600 group-hover:bg-gray-500 group-hover:text-white transition-colors">
-                  <Settings className="h-5 w-5" />
-                </div>
-                <span className="text-sm font-medium">Paramètres</span>
-              </Link>
-              
-              <Link
-                href={`/app/${currentWebsiteId}/pages`}
-                className="group flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent/50 hover:border-indigo-500/50 transition-all"
-              >
-                <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
-                  <FileText className="h-5 w-5" />
-                </div>
-                <span className="text-sm font-medium">Pages</span>
-              </Link>
-              
-              {website && (
-                <a
-                  href={`/${website.slug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent/50 hover:border-amber-500/50 transition-all"
-                >
-                  <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
-                    <ExternalLink className="h-5 w-5" />
-                  </div>
-                  <span className="text-sm font-medium">Voir le site</span>
-                </a>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Storage & Status */}
-        <Card className="lg:col-span-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <HardDrive className="h-4 w-4 text-primary" />
-              Stockage
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">Utilisé</span>
-                <span className="text-sm font-medium">{formatBytes(storageUsed)} / {formatBytes(storageLimit)}</span>
-              </div>
-              <Progress 
-                value={storagePercentage} 
-                className={`h-2 ${storagePercentage > 80 ? '[&>div]:bg-red-500' : storagePercentage > 60 ? '[&>div]:bg-amber-500' : ''}`}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                {storagePercentage > 80 ? (
-                  <span className="text-red-500 flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" />
-                    Espace presque plein
-                  </span>
-                ) : (
-                  `${Math.round(100 - storagePercentage)}% disponible`
-                )}
-              </p>
-            </div>
             
-            <div className="pt-2 border-t">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Statut du site</span>
-                {website?.status === 'published' ? (
-                  <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
-                    <Globe className="h-3 w-3 mr-1" />
-                    Public
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary">
-                    <Eye className="h-3 w-3 mr-1" />
-                    Privé
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <Link
+              href={`/app/${currentWebsiteId}/theme`}
+              className="group flex items-center gap-2.5 px-4 py-2.5 rounded-full border bg-card hover:bg-pink-500 hover:text-white hover:border-pink-500 transition-all shrink-0"
+            >
+              <Palette className="h-4 w-4" />
+              <span className="text-sm font-medium">Thème</span>
+            </Link>
+            
+            <Link
+              href={`/app/${currentWebsiteId}/analytics`}
+              className="group flex items-center gap-2.5 px-4 py-2.5 rounded-full border bg-card hover:bg-blue-500 hover:text-white hover:border-blue-500 transition-all shrink-0"
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span className="text-sm font-medium">Analytics</span>
+            </Link>
+            
+            <Link
+              href={`/app/${currentWebsiteId}/settings`}
+              className="group flex items-center gap-2.5 px-4 py-2.5 rounded-full border bg-card hover:bg-gray-600 hover:text-white hover:border-gray-600 transition-all shrink-0"
+            >
+              <Settings className="h-4 w-4" />
+              <span className="text-sm font-medium">Paramètres</span>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Cloud & Médias - Full width */}
+      <CloudPreviewCard 
+        websiteId={currentWebsiteId || ''} 
+        storageUsed={storageUsed}
+        storageLimit={storageLimit}
+        storagePercentage={storagePercentage}
+      />
+
+      {/* Team + Activity + Progression */}
+      <div className="grid gap-4 lg:grid-cols-12">
+        {/* Team */}
+        <TeamCard websiteId={currentWebsiteId || ''} />
+
+        {/* Recent Activity */}
+        <RecentEventsCard websiteId={currentWebsiteId || ''} />
       </div>
 
-      {/* Gamification Row - Progression, Goals, Achievements */}
+      {/* Gamification - Ligne du bas */}
       <div className="grid gap-4 lg:grid-cols-12">
-        {/* Site Progression */}
         <SiteProgressionCard 
           websiteId={currentWebsiteId || ''} 
           pagesCount={pages.length}
@@ -682,7 +624,6 @@ export default function Dashboard() {
           hasSEO={!!website?.title}
         />
 
-        {/* Weekly Goals */}
         <WeeklyGoalsCard 
           websiteId={currentWebsiteId || ''}
           currentVisits={realtimeData.todayVisits * 7}
@@ -690,7 +631,6 @@ export default function Dashboard() {
           currentContacts={realtimeData.contactRequests}
         />
 
-        {/* Achievements */}
         <AchievementsCard 
           websiteId={currentWebsiteId || ''}
           pagesCount={pages.length}
@@ -700,15 +640,6 @@ export default function Dashboard() {
           totalVisits={realtimeData.todayVisits * 30}
           newsletterSubs={realtimeData.newsletterSubs}
         />
-      </div>
-
-      {/* Team & Events Row */}
-      <div className="grid gap-4 lg:grid-cols-12">
-        {/* Team / Administrators */}
-        <TeamCard websiteId={currentWebsiteId || ''} />
-
-        {/* Recent Events */}
-        <RecentEventsCard websiteId={currentWebsiteId || ''} />
       </div>
     </div>
   );
@@ -1017,18 +948,79 @@ function AchievementsCard({
 
 // Team Card Component
 function TeamCard({ websiteId }: { websiteId: string }) {
-  // Simulated team data
-  const team = [
-    { id: '1', name: 'Vous', email: 'vous@example.com', role: 'owner', initials: 'V', color: 'bg-primary' },
-    { id: '2', name: 'Marie D.', email: 'marie@example.com', role: 'admin', initials: 'MD', color: 'bg-violet-500' },
-    { id: '3', name: 'Jean P.', email: 'jean@example.com', role: 'editor', initials: 'JP', color: 'bg-blue-500' },
-  ];
+  const { data: administrators = [], isLoading } = useAdministratorsQuery(websiteId);
 
   const roleLabels: Record<string, string> = {
     owner: 'Propriétaire',
     admin: 'Admin',
     editor: 'Éditeur',
+    viewer: 'Lecteur',
   };
+
+  const roleColors: Record<string, string> = {
+    owner: 'bg-amber-500',
+    admin: 'bg-violet-500',
+    editor: 'bg-blue-500',
+    viewer: 'bg-gray-500',
+  };
+
+  const getInitials = (name?: string, email?: string): string => {
+    if (name) {
+      return name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    if (email) {
+      return email.charAt(0).toUpperCase();
+    }
+    return '?';
+  };
+
+  const getAvatarUrl = (url?: string): string | undefined => {
+    if (!url) return undefined;
+    const fileIdMatch = url.match(/\/files\/([a-f0-9-]+)/);
+    if (fileIdMatch) {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const baseUrl = typeof window !== 'undefined'
+        ? (import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api')
+        : 'http://localhost:3000/api';
+      return token ? `${baseUrl}/files/${fileIdMatch[1]}?token=${token}` : url;
+    }
+    return url;
+  };
+
+  if (isLoading) {
+    return (
+      <Card className="lg:col-span-5">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            Équipe
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <div className="flex-1">
+                  <Skeleton className="h-4 w-24 mb-1" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+                <Skeleton className="h-5 w-16" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Filter only active administrators
+  const activeAdmins = administrators.filter(a => a.status === 'active');
 
   return (
     <Card className="lg:col-span-5">
@@ -1037,6 +1029,11 @@ function TeamCard({ websiteId }: { websiteId: string }) {
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" />
             Équipe
+            {activeAdmins.length > 0 && (
+              <Badge variant="secondary" className="text-[10px]">
+                {activeAdmins.length}
+              </Badge>
+            )}
           </CardTitle>
           <Link href={`/app/${websiteId}/administrators`}>
             <Button variant="ghost" size="sm" className="text-xs h-7">
@@ -1047,27 +1044,40 @@ function TeamCard({ websiteId }: { websiteId: string }) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          {team.map((member) => (
-            <div key={member.id} className="flex items-center gap-3">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className={`${member.color} text-white text-xs`}>
-                  {member.initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate flex items-center gap-1.5">
-                  {member.name}
-                  {member.role === 'owner' && <Crown className="h-3 w-3 text-yellow-500" />}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+        {activeAdmins.length === 0 ? (
+          <div className="text-center py-4 text-muted-foreground">
+            <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">Aucun collaborateur</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {activeAdmins.slice(0, 4).map((admin) => (
+              <div key={admin.id} className="flex items-center gap-3">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={getAvatarUrl(admin.avatar)} alt={admin.name || admin.email} />
+                  <AvatarFallback className={`${roleColors[admin.role] || 'bg-primary'} text-white text-xs`}>
+                    {getInitials(admin.name, admin.email)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate flex items-center gap-1.5">
+                    {admin.name || admin.email.split('@')[0]}
+                    {admin.role === 'owner' && <Crown className="h-3 w-3 text-yellow-500" />}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">{admin.email}</p>
+                </div>
+                <Badge variant="outline" className="text-[10px] shrink-0">
+                  {roleLabels[admin.role] || admin.role}
+                </Badge>
               </div>
-              <Badge variant="outline" className="text-[10px] shrink-0">
-                {roleLabels[member.role]}
-              </Badge>
-            </div>
-          ))}
-        </div>
+            ))}
+            {activeAdmins.length > 4 && (
+              <p className="text-xs text-muted-foreground text-center">
+                +{activeAdmins.length - 4} autre{activeAdmins.length - 4 > 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
+        )}
         <Link 
           href={`/app/${websiteId}/administrators`}
           className="mt-4 flex items-center justify-center gap-2 p-2 rounded-lg border border-dashed hover:bg-accent transition-colors"
@@ -1154,6 +1164,155 @@ function RecentEventsCard({ websiteId }: { websiteId: string }) {
             );
           })}
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Cloud Preview Card Component
+function CloudPreviewCard({ 
+  websiteId, 
+  storageUsed, 
+  storageLimit, 
+  storagePercentage 
+}: { 
+  websiteId: string;
+  storageUsed: number;
+  storageLimit: number;
+  storagePercentage: number;
+}) {
+  const { data: files = [], isLoading } = useFilesQuery();
+
+  const getFileUrl = (fileId: string) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const baseUrl = typeof window !== 'undefined'
+      ? (import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api')
+      : 'http://localhost:3000/api';
+    return token ? `${baseUrl}/files/${fileId}?token=${token}` : '';
+  };
+
+  const isImage = (mimeType: string) => mimeType.startsWith('image/');
+  const isVideo = (mimeType: string) => mimeType.startsWith('video/');
+  const isAudio = (mimeType: string) => mimeType.startsWith('audio/');
+
+  const getFileIcon = (mimeType: string, className = "h-5 w-5") => {
+    if (isImage(mimeType)) return <Image className={`${className} text-violet-500`} />;
+    if (isVideo(mimeType)) return <Film className={`${className} text-blue-500`} />;
+    if (isAudio(mimeType)) return <Music className={`${className} text-green-500`} />;
+    if (mimeType === 'application/pdf') return <FileText className={`${className} text-red-500`} />;
+    return <File className={`${className} text-gray-500`} />;
+  };
+
+  // Get recent files (last 8)
+  const recentFiles = files.slice(0, 8);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <HardDrive className="h-4 w-4 text-primary" />
+            Cloud & Stockage
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Skeleton className="h-2 w-full" />
+          <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <Skeleton key={i} className="aspect-square rounded-lg" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <HardDrive className="h-4 w-4 text-primary" />
+            Cloud & Stockage
+            {files.length > 0 && (
+              <Badge variant="secondary" className="text-[10px]">
+                {files.length} fichier{files.length > 1 ? 's' : ''}
+              </Badge>
+            )}
+          </CardTitle>
+          <Link href={`/app/${websiteId}/cloud`}>
+            <Button variant="ghost" size="sm" className="text-xs h-7">
+              Gérer les fichiers
+              <ChevronRight className="h-3 w-3 ml-1" />
+            </Button>
+          </Link>
+        </div>
+        {/* Storage Progress Bar */}
+        <div className="mt-3">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs text-muted-foreground">Espace utilisé</span>
+            <span className="text-xs font-medium">{formatBytes(storageUsed)} / {formatBytes(storageLimit)}</span>
+          </div>
+          <Progress 
+            value={storagePercentage} 
+            className={`h-1.5 ${storagePercentage > 80 ? '[&>div]:bg-red-500' : storagePercentage > 60 ? '[&>div]:bg-amber-500' : ''}`}
+          />
+          {storagePercentage > 80 && (
+            <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+              <AlertTriangle className="h-3 w-3" />
+              Espace presque plein
+            </p>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {recentFiles.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Upload className="h-10 w-10 mx-auto mb-3 opacity-50" />
+            <p className="text-sm font-medium">Aucun fichier</p>
+            <p className="text-xs mt-1">Uploadez vos premiers médias</p>
+            <Link href={`/app/${websiteId}/cloud`}>
+              <Button variant="outline" size="sm" className="mt-3">
+                <Upload className="h-3.5 w-3.5 mr-1.5" />
+                Ajouter des fichiers
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+              {recentFiles.map((file) => (
+                <Link
+                  key={file.id}
+                  href={`/app/${websiteId}/cloud`}
+                  className="group relative aspect-square rounded-lg border bg-muted overflow-hidden hover:ring-2 hover:ring-primary/50 transition-all"
+                >
+                  {isImage(file.mime_type) ? (
+                    <img
+                      src={getFileUrl(file.id)}
+                      alt={file.filename}
+                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      {getFileIcon(file.mime_type, "h-6 w-6")}
+                    </div>
+                  )}
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Eye className="h-4 w-4 text-white" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+            {files.length > 8 && (
+              <p className="text-xs text-muted-foreground text-center mt-3">
+                +{files.length - 8} autre{files.length - 8 > 1 ? 's' : ''} fichier{files.length - 8 > 1 ? 's' : ''}
+              </p>
+            )}
+          </>
+        )}
       </CardContent>
     </Card>
   );

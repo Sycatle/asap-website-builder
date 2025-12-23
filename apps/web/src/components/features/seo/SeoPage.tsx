@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { Link } from '@/components/app-router';
+import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -328,18 +329,65 @@ export default function SeoPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Search className="h-6 w-6 text-primary" />
-            SEO & Référencement
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Performances de recherche et optimisation du référencement
-          </p>
-        </div>
+    <div className="flex flex-col gap-6 sm:gap-8 animate-fade-in">
+      {/* Page Header */}
+      <PageHeader
+        title="SEO & Référencement"
+        subtitle="Performances de recherche et optimisation du référencement"
+        icon={
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg">
+            <Search className="h-5 w-5 text-white" />
+          </div>
+        }
+        badge={{
+          label: `Score ${data.seoScore}`,
+          className: data.seoScore >= 80 ? 'bg-green-500/10 text-green-600 border-green-500/20' :
+                     data.seoScore >= 50 ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                     'bg-red-500/10 text-red-600 border-red-500/20',
+        }}
+        backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
+        actions={[
+          {
+            label: 'Exporter',
+            icon: <Download className="h-4 w-4" />,
+            variant: 'outline',
+          }
+        ]}
+        stickyContent={
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                <Search className="h-4 w-4 text-white" />
+              </div>
+              <div className="hidden sm:flex items-center gap-3">
+                <p className="text-sm font-semibold">SEO</p>
+                <Badge className={data.seoScore >= 80 ? 'bg-green-500/10 text-green-600 border-green-500/20 text-[10px] h-5' :
+                                 data.seoScore >= 50 ? 'bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px] h-5' :
+                                 'bg-red-500/10 text-red-600 border-red-500/20 text-[10px] h-5'}>
+                  Score {data.seoScore}
+                </Badge>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={timeRange} onValueChange={setTimeRange}>
+                <SelectTrigger className="w-[130px] h-8 text-xs">
+                  <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7d">7 derniers jours</SelectItem>
+                  <SelectItem value="28d">28 derniers jours</SelectItem>
+                  <SelectItem value="90d">3 derniers mois</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                <Download className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        }
+      >
+        {/* Time range selector in header */}
         <div className="flex items-center gap-2">
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-[140px]">
@@ -352,11 +400,8 @@ export default function SeoPage() {
               <SelectItem value="90d">3 derniers mois</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="icon" title="Exporter">
-            <Download className="h-4 w-4" />
-          </Button>
         </div>
-      </div>
+      </PageHeader>
 
       {/* SEO Health Score Banner */}
       <Card className={`border-2 ${

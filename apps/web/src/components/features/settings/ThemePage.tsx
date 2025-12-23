@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useWebsitesQuery } from '@/lib/query';
+import { PageHeader } from '@/components/shared/page-header';
 import { 
   Palette, 
   RefreshCw,
@@ -167,32 +168,54 @@ export default function ThemePage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Thème</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            Personnalisez l'apparence de votre site
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {hasChanges && (
-            <Button variant="outline" onClick={handleRevert}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Annuler
-            </Button>
-          )}
-          <Button onClick={handleSave} disabled={!hasChanges || isSaving}>
-            {isSaving ? (
-              <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            Enregistrer
-          </Button>
-        </div>
-      </div>
+    <div className="flex flex-col gap-6 sm:gap-8 animate-fade-in">
+      {/* Page Header */}
+      <PageHeader
+        title="Thème"
+        subtitle="Personnalisez l'apparence de votre site"
+        icon={
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg">
+            <Palette className="h-5 w-5 text-white" />
+          </div>
+        }
+        backHref={currentWebsite ? `/app/${currentWebsite.id}` : '/app'}
+        actions={[
+          ...(hasChanges ? [{
+            label: 'Annuler',
+            icon: <RotateCcw className="h-4 w-4" />,
+            variant: 'outline' as const,
+            onClick: handleRevert,
+          }] : []),
+          {
+            label: 'Enregistrer',
+            icon: isSaving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />,
+            onClick: handleSave,
+            disabled: !hasChanges || isSaving,
+          }
+        ]}
+        stickyContent={
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
+                <Palette className="h-4 w-4 text-white" />
+              </div>
+              <p className="text-sm font-semibold hidden sm:block">Thème</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {hasChanges && (
+                <Button variant="outline" size="sm" onClick={handleRevert} className="h-8">
+                  <RotateCcw className="h-4 w-4 mr-1.5" />
+                  <span className="hidden sm:inline">Annuler</span>
+                </Button>
+              )}
+              <Button size="sm" onClick={handleSave} disabled={!hasChanges || isSaving} className="h-8">
+                {isSaving ? <RefreshCw className="h-4 w-4 animate-spin mr-1.5" /> : <Save className="h-4 w-4 mr-1.5" />}
+                <span className="hidden sm:inline">Enregistrer</span>
+              </Button>
+            </div>
+          </div>
+        }
+      />
 
       <Tabs defaultValue="colors" className="space-y-6">
         <TabsList>

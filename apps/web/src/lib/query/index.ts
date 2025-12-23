@@ -80,6 +80,12 @@ export {
   useDeleteFilesMutation,
 } from './files';
 
+// Administrator Queries
+export {
+  useAdministratorsQuery,
+  type Administrator,
+} from './administrators';
+
 // User Queries
 export { useUserQuery } from './user';
 
