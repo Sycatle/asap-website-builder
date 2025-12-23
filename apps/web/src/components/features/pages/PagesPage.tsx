@@ -36,6 +36,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { 
   usePagesQuery, 
@@ -66,6 +72,9 @@ import {
   Copy,
   Link as LinkIcon,
 } from "lucide-react";
+
+// Constants
+const PUBLIC_DOMAIN = 'asap.cool';
 
 export default function PagesPage() {
   const { currentWebsite: website, currentWebsiteId, isLoading: contextLoading } = useWebsiteContext();
@@ -254,11 +263,12 @@ export default function PagesPage() {
   // Duplicate page
   const handleDuplicatePage = async (page: Page) => {
     if (!currentWebsiteId) return;
+    const timestamp = Date.now();
     try {
       await createPageMutation.mutateAsync({
         websiteId: currentWebsiteId,
         data: {
-          slug: `${page.slug}-copie`,
+          slug: `${page.slug}-copie-${timestamp}`,
           title: `${page.title} (copie)`,
           description: page.description,
           visible: false,
@@ -344,7 +354,7 @@ export default function PagesPage() {
   const filteredPages = pages.filter(page => 
     page.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     page.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    page.description.toLowerCase().includes(searchQuery.toLowerCase())
+    (page.description?.toLowerCase() || '').includes(searchQuery.toLowerCase())
   );
 
   // Calculate statistics
@@ -592,7 +602,7 @@ export default function PagesPage() {
                         asChild
                       >
                         <a 
-                          href={`https://${website.slug}.asap.com${getPagePath(page)}`}
+                          href={`https://${website.slug}.${PUBLIC_DOMAIN}${getPagePath(page)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-1"
@@ -633,7 +643,7 @@ export default function PagesPage() {
                         {website?.slug && (
                           <DropdownMenuItem asChild>
                             <a 
-                              href={`https://${website.slug}.asap.com${getPagePath(page)}`}
+                              href={`https://${website.slug}.${PUBLIC_DOMAIN}${getPagePath(page)}`}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
@@ -643,14 +653,27 @@ export default function PagesPage() {
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          onClick={() => openDeleteDialog(page)}
-                          className="text-destructive focus:text-destructive"
-                          disabled={page.is_homepage}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Supprimer
-                        </DropdownMenuItem>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div>
+                                <DropdownMenuItem 
+                                  onClick={() => openDeleteDialog(page)}
+                                  className="text-destructive focus:text-destructive"
+                                  disabled={page.is_homepage}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Supprimer
+                                </DropdownMenuItem>
+                              </div>
+                            </TooltipTrigger>
+                            {page.is_homepage && (
+                              <TooltipContent>
+                                <p>La page d'accueil ne peut pas être supprimée</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -772,6 +795,11 @@ export default function PagesPage() {
                   disabled={formData.is_homepage}
                 />
               </div>
+              {formData.is_homepage && (
+                <p className="text-xs text-muted-foreground">
+                  Le slug ne peut pas être modifié pour la page d'accueil
+                </p>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-description">Description</Label>
