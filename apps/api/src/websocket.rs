@@ -45,6 +45,7 @@ pub struct WebsitePresenceUser {
     pub name: Option<String>,
     pub avatar: Option<String>,
     pub joined_at: String,
+    pub current_page: Option<String>,
 }
 
 /// Shared state for WebSocket connections
@@ -197,6 +198,35 @@ impl WsState {
     pub async fn get_website_users(&self, website_id: &str) -> Vec<WebsitePresenceUser> {
         let presence = self.website_presence.read().await;
         presence.get(website_id).cloned().unwrap_or_default()
+    }
+    
+    /// Update the current page for a user on a website
+    pub async fn update_user_page(&self, client_id: uuid::Uuid, user_id: &str, current_page: &str) {
+        // Get the website this client is on
+        let client_websites = self.client_websites.read().await;
+        let website_id = client_websites.get(&client_id).cloned();
+        drop(client_websites);
+        
+        if let Some(website_id) = website_id {
+            let mut presence = self.website_presence.write().await;
+            if let Some(users) = presence.get_mut(&website_id) {
+                if let Some(user) = users.iter_mut().find(|u| u.id == user_id) {
+                    user.current_page = Some(current_page.to_string());
+                    let user_clone = user.clone();
+                    drop(presence);
+                    
+                    // Broadcast the page update
+                    self.broadcast_website_presence(&website_id, "presence:website:user-page-updated", serde_json::json!({
+                        "website_id": website_id,
+                        "user_id": user_id,
+                        "current_page": current_page,
+                        "user": user_clone
+                    }));
+                    
+                    info!("User {} updated page to {} on website {}", user_id, current_page, website_id);
+                }
+            }
+        }
     }
     
     /// Broadcast presence message to all clients on a website
@@ -517,6 +547,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                                                 name: user_data.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()),
                                                                 avatar: user_data.get("avatar").and_then(|v| v.as_str()).map(|s| s.to_string()),
                                                                 joined_at: Utc::now().to_rfc3339(),
+                                                                current_page: user_data.get("current_page").and_then(|v| v.as_str()).map(|s| s.to_string()),
                                                             };
                                                             state.join_website(client_id, website_id.to_string(), user).await;
                                                             info!("User {} joined website {} presence", account_id, website_id);
@@ -587,6 +618,13 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                                     warn!("Invalid UUID in presence:get-website-users");
                                                 }
                                             }
+                                        }
+                                    }
+                                }
+                                "presence:update-page" => {
+                                    if let Some(account_id) = authenticated_account.read().await.as_ref() {
+                                        if let Some(current_page) = ws_msg.data.get("current_page").and_then(|v| v.as_str()) {
+                                            state.update_user_page(client_id, account_id, current_page).await;
                                         }
                                     }
                                 }
@@ -689,6 +727,7 @@ mod tests {
             name: Some("Test User".to_string()),
             avatar: None,
             joined_at: "2024-01-01T00:00:00Z".to_string(),
+            current_page: Some("dashboard".to_string()),
         };
 
         let json = serde_json::to_string(&user).unwrap();

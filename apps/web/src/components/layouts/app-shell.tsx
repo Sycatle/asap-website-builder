@@ -43,6 +43,7 @@ interface AppShellProps {
   isStudioPage?: boolean
   websiteId: string | null
   showSidebar?: boolean
+  currentPage?: string
 }
 
 // Keyboard shortcuts help dialog content
@@ -70,6 +71,7 @@ export function AppShell({
   isStudioPage = false,
   websiteId,
   showSidebar = true,
+  currentPage,
 }: AppShellProps) {
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
 
@@ -86,6 +88,7 @@ export function AppShell({
           isStudioPage={isStudioPage}
           showSidebar={showSidebar}
           websiteId={websiteId}
+          currentPage={currentPage}
         >
           {children}
         </AppShellContent>
@@ -104,6 +107,7 @@ interface AppShellContentProps {
   isStudioPage?: boolean
   showSidebar?: boolean
   websiteId: string | null
+  currentPage?: string
 }
 
 function AppShellContent({ 
@@ -115,6 +119,7 @@ function AppShellContent({
   isStudioPage = false,
   showSidebar = true,
   websiteId,
+  currentPage,
 }: AppShellContentProps) {
   const { toggleSidebar, setOpen, open } = useSidebar()
   const [pendingGoTo, setPendingGoTo] = useState(false)
@@ -247,7 +252,7 @@ function AppShellContent({
       )}
       <SidebarInset>
         <SkipLink targetId="main-content" />
-        <header className="sticky top-0 z-40 flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 sm:px-4" role="banner">
+        <header className="sticky top-0 z-40 flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b bg-background px-3 sm:px-4" role="banner">
           {showSidebar && (
             <>
               <SidebarTrigger className="-ml-1" />
@@ -312,6 +317,7 @@ function AppShellContent({
           {currentWebsiteId && (
             <PresenceAvatars 
               websiteId={currentWebsiteId} 
+              currentPage={currentPage}
               maxAvatars={3}
               size="sm"
               className="mr-2"

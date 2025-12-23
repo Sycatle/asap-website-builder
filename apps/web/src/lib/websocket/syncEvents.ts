@@ -44,7 +44,8 @@ export type SyncEventType =
   // Website Presence events
   | 'presence:website:users'
   | 'presence:website:user-joined'
-  | 'presence:website:user-left';
+  | 'presence:website:user-left'
+  | 'presence:website:user-page-updated';
 
 // ============================================
 // Common Types
@@ -359,6 +360,17 @@ export interface WebsiteUserLeftEvent {
   };
 }
 
+/** Event sent when a user's current page is updated */
+export interface WebsiteUserPageUpdatedEvent {
+  type: 'presence:website:user-page-updated';
+  data: {
+    website_id: string;
+    user_id: string;
+    current_page: string;
+    user: WebsitePresenceUser;
+  };
+}
+
 // ============================================
 // Union Types
 // ============================================
@@ -398,7 +410,8 @@ export type FileSyncEvent =
 export type WebsitePresenceEvent =
   | WebsiteUsersEvent
   | WebsiteUserJoinedEvent
-  | WebsiteUserLeftEvent;
+  | WebsiteUserLeftEvent
+  | WebsiteUserPageUpdatedEvent;
 
 export type SyncEvent =
   // Website

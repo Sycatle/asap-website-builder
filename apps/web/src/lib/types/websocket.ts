@@ -18,6 +18,7 @@ export interface WebsitePresenceUser {
   name?: string;
   avatar?: string;
   joined_at?: string;
+  current_page?: string;
 }
 
 /**

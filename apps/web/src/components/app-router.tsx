@@ -375,6 +375,7 @@ export default function AppRouter() {
               isStudioPage={isStudioPage}
               websiteId={websiteId}
               showSidebar={true}
+              currentPage={route.page}
             >
               <ErrorBoundary level="section" title={title}>
                 <Suspense fallback={<PageLoader />}>
