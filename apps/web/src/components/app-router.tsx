@@ -38,7 +38,7 @@ const ExtensionPage = lazyWithRetry(() => import("@/components/features/extensio
 const CloudPage = lazyWithRetry(() => import("@/components/features/cloud/CloudManager"))
 const SettingsPage = lazyWithRetry(() => import("@/components/features/settings/SettingsPage"))
 const StudioPage = lazyWithRetry(() => import("@/components/studio/StudioPage"))
-const PagesPage = lazyWithRetry(() => import("@/components/PagesList"))
+const PagesPage = lazyWithRetry(() => import("@/components/features/pages/PagesPage"))
 const AdministratorsPage = lazyWithRetry(() => import("@/components/features/settings/AdministratorsPage"))
 const ThemePage = lazyWithRetry(() => import("@/components/features/settings/ThemePage"))
 const WebsiteSelector = lazyWithRetry(() => import("@/components/pages/WebsiteSelector"))
@@ -319,7 +319,7 @@ export default function AppRouter() {
         return <StudioPage />
       
       case "pages":
-        return <PagesPage websiteId={route.websiteId} />
+        return <PagesPage />
       
       case "administrators":
         return <AdministratorsPage />
