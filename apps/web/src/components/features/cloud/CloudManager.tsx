@@ -315,8 +315,8 @@ export default function CloudManager() {
         badge={quota ? {
           label: `${formatBytes(quota.used)} / ${formatBytes(quota.total)}`,
           variant: 'outline',
-        } : undef{currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
-        backHref="/app"
+        } : undefined}
+        backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
         actions={[
           {
             label: isUploading ? (uploadProgress.total > 1 ? `${uploadProgress.completed}/${uploadProgress.total}` : 'Upload...') : 'Upload',
