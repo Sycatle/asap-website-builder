@@ -19,6 +19,12 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { 
   BookOpen, 
   Mail, 
@@ -304,7 +310,16 @@ export default function ExtensionsManager() {
                             {getExtensionIcon(catalogExtension.category)}
                       </div>
                       <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-xs transition-transform duration-200 hover:scale-105">
-                        Actif
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help">Actif</span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Extension activée et fonctionnelle</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </Badge>
                     </div>
                     <CardTitle className="text-sm sm:text-base mt-2 sm:mt-3">{catalogExtension.name}</CardTitle>
@@ -333,11 +348,22 @@ export default function ExtensionsManager() {
                         disabled={activatingExtension === websiteExtension.id}
                         className="text-destructive hover:text-destructive h-8 sm:h-9 w-8 sm:w-9 p-0"
                       >
-                        {activatingExtension === websiteExtension.id ? (
-                          <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
-                        ) : (
-                          <Power className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        )}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div>
+                                {activatingExtension === websiteExtension.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
+                                ) : (
+                                  <Power className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Désactiver l'extension</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </Button>
                     </div>
                   </CardContent>

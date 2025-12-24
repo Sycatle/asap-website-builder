@@ -35,6 +35,12 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api';
 
@@ -203,15 +209,33 @@ export default function ThemePage() {
             </div>
             <div className="flex items-center gap-2">
               {hasChanges && (
-                <Button variant="outline" size="sm" onClick={handleRevert} className="h-8">
-                  <RotateCcw className="h-4 w-4 mr-1.5" />
-                  <span className="hidden sm:inline">Annuler</span>
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" onClick={handleRevert} className="h-8">
+                        <RotateCcw className="h-4 w-4 mr-1.5" />
+                        <span className="hidden sm:inline">Annuler</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Annuler les modifications non enregistrées</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
-              <Button size="sm" onClick={handleSave} disabled={!hasChanges || isSaving} className="h-8">
-                {isSaving ? <RefreshCw className="h-4 w-4 animate-spin mr-1.5" /> : <Save className="h-4 w-4 mr-1.5" />}
-                <span className="hidden sm:inline">Enregistrer</span>
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button size="sm" onClick={handleSave} disabled={!hasChanges || isSaving} className="h-8">
+                      {isSaving ? <RefreshCw className="h-4 w-4 animate-spin mr-1.5" /> : <Save className="h-4 w-4 mr-1.5" />}
+                      <span className="hidden sm:inline">Enregistrer</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Sauvegarder les paramètres du thème</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         }
