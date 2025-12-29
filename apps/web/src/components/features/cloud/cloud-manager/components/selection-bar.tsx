@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -20,6 +21,8 @@ export function SelectionBar({
   onDeleteSelected,
   onClearSelection,
 }: SelectionBarProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 animate-fade-in-up">
       <Card className="shadow-2xl border-primary bg-background/95 backdrop-blur-sm">
@@ -28,7 +31,7 @@ export function SelectionBar({
           <div className="flex items-center gap-2 px-2 sm:px-3 py-1 bg-primary/10 rounded-lg">
             <CheckCircle2 className="h-4 w-4 text-primary" />
             <span className="text-xs sm:text-sm font-medium">
-              {selectedCount} <span className="hidden sm:inline">fichier{selectedCount > 1 ? 's' : ''}</span>
+              {selectedCount} <span className="hidden sm:inline">{t('dashboard:cloud.selection.count', { count: selectedCount })}</span>
             </span>
           </div>
           
@@ -41,10 +44,10 @@ export function SelectionBar({
               size="sm"
               className="h-8 px-2 sm:px-3 text-xs gap-1"
               onClick={onSelectAll}
-              title="Tout sélectionner"
+              title={t('dashboard:cloud.selection.selectAll')}
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Tout</span>
+              <span className="hidden sm:inline">{t('dashboard:cloud.selection.all')}</span>
             </Button>
             
             <Button
@@ -52,10 +55,10 @@ export function SelectionBar({
               size="sm"
               className="h-8 px-2 sm:px-3 text-xs gap-1"
               onClick={onDownloadSelected}
-              title="Télécharger la sélection"
+              title={t('dashboard:cloud.selection.downloadSelection')}
             >
               <Download className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Télécharger</span>
+              <span className="hidden sm:inline">{t('dashboard:cloud.contextMenu.download')}</span>
             </Button>
             
             <Button
@@ -63,10 +66,10 @@ export function SelectionBar({
               size="sm"
               className="h-8 px-2 sm:px-3 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
               onClick={onDeleteSelected}
-              title="Supprimer la sélection"
+              title={t('dashboard:cloud.selection.deleteSelection')}
             >
               <Trash2 className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Supprimer</span>
+              <span className="hidden sm:inline">{t('common:actions.delete')}</span>
             </Button>
           </div>
           
@@ -78,7 +81,7 @@ export function SelectionBar({
             size="sm"
             className="h-8 w-8 p-0"
             onClick={onClearSelection}
-            title="Annuler la sélection"
+            title={t('dashboard:cloud.selection.clearSelection')}
           >
             <X className="h-4 w-4" />
           </Button>

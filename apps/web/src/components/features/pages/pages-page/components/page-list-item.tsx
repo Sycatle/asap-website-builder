@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,6 +51,8 @@ export function PageListItem({
   onToggleVisibility,
   onDelete,
 }: PageListItemProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+
   return (
     <div
       draggable
@@ -70,7 +73,7 @@ export function PageListItem({
             <GripVertical className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab flex-shrink-0" />
           </TooltipTrigger>
           <TooltipContent>
-            <p>Glisser pour réorganiser</p>
+            <p>{t('dashboard:pages.item.dragTooltip')}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -91,11 +94,11 @@ export function PageListItem({
                 <TooltipTrigger asChild>
                   <Badge variant="secondary" className="text-xs cursor-help">
                     <Home className="h-3 w-3 mr-1" />
-                    Accueil
+                    {t('dashboard:pages.item.home')}
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Cette page est la page d'accueil du site</p>
+                  <p>{t('dashboard:pages.item.homepageTooltip')}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -106,11 +109,11 @@ export function PageListItem({
                 <TooltipTrigger asChild>
                   <Badge variant="outline" className="text-xs text-amber-600 border-amber-300 cursor-help">
                     <EyeOff className="h-3 w-3 mr-1" />
-                    Masquée
+                    {t('dashboard:pages.item.hidden')}
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Cette page n'est pas visible publiquement</p>
+                  <p>{t('dashboard:pages.item.hiddenTooltip')}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -149,7 +152,7 @@ export function PageListItem({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Voir la page sur le site</p>
+                <p>{t('dashboard:pages.item.viewTooltip')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -167,22 +170,22 @@ export function PageListItem({
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem onClick={() => onEdit(page)}>
                     <Pencil className="h-4 w-4 mr-2" />
-                    Modifier
+                    {t('dashboard:pages.actions.edit')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onDuplicate(page)}>
                     <Copy className="h-4 w-4 mr-2" />
-                    Dupliquer
+                    {t('dashboard:pages.actions.duplicate')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onToggleVisibility(page)}>
                     {page.visible ? (
                       <>
                         <EyeOff className="h-4 w-4 mr-2" />
-                        Masquer
+                        {t('dashboard:pages.actions.hide')}
                       </>
                     ) : (
                       <>
                         <Eye className="h-4 w-4 mr-2" />
-                        Afficher
+                        {t('dashboard:pages.actions.show')}
                       </>
                     )}
                   </DropdownMenuItem>
@@ -194,7 +197,7 @@ export function PageListItem({
                         rel="noopener noreferrer"
                       >
                         <ExternalLink className="h-4 w-4 mr-2" />
-                        Voir la page
+                        {t('dashboard:pages.actions.view')}
                       </a>
                     </DropdownMenuItem>
                   )}
@@ -209,13 +212,13 @@ export function PageListItem({
                             disabled={page.is_homepage}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Supprimer
+                            {t('dashboard:pages.actions.delete')}
                           </DropdownMenuItem>
                         </div>
                       </TooltipTrigger>
                       {page.is_homepage && (
                         <TooltipContent>
-                          <p>La page d'accueil ne peut pas être supprimée</p>
+                          <p>{t('dashboard:pages.actions.deleteDisabled')}</p>
                         </TooltipContent>
                       )}
                     </Tooltip>
@@ -224,7 +227,7 @@ export function PageListItem({
               </DropdownMenu>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Actions de la page</p>
+              <p>{t('dashboard:pages.item.actionsTooltip')}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

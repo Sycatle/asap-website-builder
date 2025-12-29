@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,8 @@ export function PageList({
   onCreateNew,
   onSearchChange,
 }: PageListComponentProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+
   return (
     <Card>
       <CardHeader>
@@ -39,10 +42,10 @@ export function PageList({
           <div>
             <CardTitle className="text-base flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
-              Liste des pages
+              {t('dashboard:pages.list.title')}
             </CardTitle>
             <CardDescription className="mt-1">
-              Organisez et gérez les pages de votre site
+              {t('dashboard:pages.list.description')}
             </CardDescription>
           </div>
         </div>
@@ -50,7 +53,7 @@ export function PageList({
         <div className="relative mt-4">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Rechercher une page..."
+            placeholder={t('dashboard:pages.list.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="pl-9"
@@ -63,21 +66,21 @@ export function PageList({
             {searchQuery ? (
               <>
                 <Search className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-muted-foreground">Aucune page trouvée</p>
+                <p className="text-muted-foreground">{t('dashboard:pages.list.noResults')}</p>
                 <p className="text-sm text-muted-foreground">
-                  Essayez avec un autre terme de recherche
+                  {t('dashboard:pages.list.noResultsDescription')}
                 </p>
               </>
             ) : (
               <>
                 <FileText className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                <p className="font-medium mb-2">Aucune page</p>
+                <p className="font-medium mb-2">{t('dashboard:pages.list.empty')}</p>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Commencez par créer votre première page
+                  {t('dashboard:pages.list.emptyDescription')}
                 </p>
                 <Button onClick={onCreateNew}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Créer une page
+                  {t('dashboard:pages.list.create')}
                 </Button>
               </>
             )}

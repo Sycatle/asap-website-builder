@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ export default function ResetPasswordForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
+  const { t } = useTranslation(['common']);
   const [token, setToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -66,10 +68,10 @@ export default function ResetPasswordForm({
         new_password: result.data.newPassword 
       });
       setIsSuccess(true);
-      toast.success('Mot de passe réinitialisé !');
+      toast.success(t('auth.passwordResetSuccess'));
     } catch (error: any) {
       if (error instanceof RateLimitError) {
-        toast.error(`Trop de tentatives. Réessayez dans ${error.retryAfter}s.`);
+        toast.error(t('auth.rateLimited', { time: `${error.retryAfter}s` }));
       } else {
         const message = error?.data?.error || error?.message || 'Erreur lors de la réinitialisation';
         if (message.includes('expired') || message.includes('invalid') || message.includes('already been used')) {
@@ -91,23 +93,23 @@ export default function ResetPasswordForm({
             <XCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Lien invalide ou expiré</h1>
+            <h1 className="text-xl font-bold">{t('auth.invalidOrExpiredLink')}</h1>
             <p className="text-sm text-muted-foreground mt-2">
-              Ce lien de réinitialisation est invalide ou a expiré. Les liens sont valables 1 heure et ne peuvent être utilisés qu'une seule fois.
+              {t('auth.invalidLinkDesc')}
             </p>
           </div>
         </div>
         <div className="flex flex-col gap-3">
           <Button asChild className="w-full">
             <a href="/forgot-password">
-              Demander un nouveau lien
+              {t('auth.requestNewLink')}
             </a>
           </Button>
           <a 
             href="/login" 
             className="text-center text-sm text-muted-foreground hover:text-primary"
           >
-            Retour à la connexion
+            {t('auth.backToLogin')}
           </a>
         </div>
       </div>
@@ -123,15 +125,15 @@ export default function ResetPasswordForm({
             <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Mot de passe réinitialisé !</h1>
+            <h1 className="text-xl font-bold">{t('auth.passwordResetSuccess')}</h1>
             <p className="text-sm text-muted-foreground mt-2">
-              Votre mot de passe a été mis à jour avec succès. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.
+              {t('auth.passwordResetSuccessDesc')}
             </p>
           </div>
         </div>
         <Button asChild className="w-full">
           <a href="/login">
-            Se connecter
+            {t('auth.signIn')}
           </a>
         </Button>
       </div>
@@ -152,9 +154,9 @@ export default function ResetPasswordForm({
               </div>
               <span className="sr-only">ASAP</span>
             </a>
-            <h1 className="text-xl font-bold">Nouveau mot de passe</h1>
+            <h1 className="text-xl font-bold">{t('auth.newPasswordTitle')}</h1>
             <p className="text-center text-sm text-muted-foreground">
-              Choisissez un nouveau mot de passe sécurisé pour votre compte.
+              {t('auth.newPasswordDesc')}
             </p>
           </div>
 
@@ -166,7 +168,7 @@ export default function ResetPasswordForm({
                   type={showPassword ? "text" : "password"}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Nouveau mot de passe"
+                  placeholder={t('auth.newPasswordPlaceholder')}
                   required
                   minLength={8}
                   disabled={isLoading}
@@ -201,7 +203,7 @@ export default function ResetPasswordForm({
                     ))}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Force: {passwordStrength.label}
+                    {t('auth.passwordStrength')}: {passwordStrength.label}
                   </p>
                 </div>
               )}
@@ -211,7 +213,7 @@ export default function ResetPasswordForm({
               )}
               
               <p id="password-requirements" className="text-xs text-muted-foreground">
-                Min. 8 caractères avec majuscule, minuscule et chiffre
+                {t('auth.passwordRequirements')}
               </p>
             </div>
             
@@ -221,7 +223,7 @@ export default function ResetPasswordForm({
                 type={showPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirmer le mot de passe"
+                placeholder={t('auth.confirmPasswordPlaceholder')}
                 required
                 disabled={isLoading}
                 aria-invalid={!!errors.confirmPassword}
@@ -235,12 +237,12 @@ export default function ResetPasswordForm({
               {isLoading ? (
                 <>
                   <Spinner className="mr-2 h-4 w-4" />
-                  Réinitialisation...
+                  {t('auth.resetting')}
                 </>
               ) : (
                 <>
                   <KeyRound className="mr-2 h-4 w-4" />
-                  Réinitialiser le mot de passe
+                  {t('auth.resetPasswordBtn')}
                 </>
               )}
             </Button>
@@ -252,7 +254,7 @@ export default function ResetPasswordForm({
           href="/login" 
           className="hover:text-primary"
         >
-          Retour à la connexion
+          {t('auth.backToLogin')}
         </a>
       </div>
     </div>

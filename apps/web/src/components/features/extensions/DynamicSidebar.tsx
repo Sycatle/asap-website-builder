@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { WebsiteExtension } from '@/lib/api';
 import { useWebsitesQuery, useWebsiteExtensionsQuery } from '@/lib/query';
 
@@ -49,6 +50,8 @@ function getExtensionIcon(extensionSlug: string): React.ReactNode {
 }
 
 export default function DynamicSidebar() {
+  const { t } = useTranslation(['dashboard']);
+  
   // Use React Query hooks for real-time updates - when extensions change elsewhere, sidebar updates automatically
   const { data: websites = [], isLoading: websitesLoading } = useWebsitesQuery();
   const currentWebsiteId = websites.length > 0 ? websites[0].id : null;
@@ -70,7 +73,7 @@ export default function DynamicSidebar() {
   return (
     <div className="mt-4">
       <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        Extensions
+        {t('dashboard:extensions.title')}
       </div>
       <nav className="space-y-1">
         {extensions.map((extension) => (

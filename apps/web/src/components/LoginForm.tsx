@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../lib/store/authStore';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ export default function LoginForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
+  const { t } = useTranslation(['common']);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -95,22 +97,22 @@ export default function LoginForm({
     };
 
     toast.promise(loginPromise(), {
-      loading: 'Connexion en cours...',
+      loading: t('auth.loggingIn'),
       success: () => {
         // Redirect on success
         const redirectUrl = getRedirectUrl();
         setTimeout(() => {
           window.location.href = redirectUrl;
         }, 500);
-        return 'Connexion réussie !';
+        return t('auth.loginSuccess');
       },
       error: (err) => {
         // Handle rate limiting with countdown
         if (err instanceof RateLimitError) {
           setRateLimitCountdown(err.retryAfter);
-          return `Trop de tentatives. Réessayez dans ${formatCountdown(err.retryAfter)}.`;
+          return t('auth.rateLimitWithTime', { time: formatCountdown(err.retryAfter) });
         }
-        return err.message || 'Échec de la connexion';
+        return err.message || t('auth.loginFailed');
       },
     });
   };
@@ -131,28 +133,28 @@ export default function LoginForm({
               </div>
               <span className="sr-only">ASAP</span>
             </a>
-            <h1 className="text-xl font-bold">Bienvenue sur ASAP</h1>
+            <h1 className="text-xl font-bold">{t('auth.welcomeBack')}</h1>
             <p className="text-center text-sm text-muted-foreground">
-              Connectez-vous pour accéder à votre espace
+              {t('auth.loginDescription')}
             </p>
           </div>
 
           <FieldGroup className="gap-4">
             <Field data-invalid={!!errors.email}>
-              <FieldLabel htmlFor="email">Email</FieldLabel>
+              <FieldLabel htmlFor="email">{t('auth.email')}</FieldLabel>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="vous@exemple.com"
+                placeholder={t('auth.emailPlaceholder')}
                 required
                 aria-invalid={!!errors.email}
               />
               {errors.email && <FieldError>{errors.email}</FieldError>}
             </Field>
             <Field data-invalid={!!errors.password}>
-              <FieldLabel htmlFor="password">Mot de passe</FieldLabel>
+              <FieldLabel htmlFor="password">{t('auth.password')}</FieldLabel>
               <Input
                 id="password"
                 type="password"
@@ -176,45 +178,45 @@ export default function LoginForm({
                     htmlFor="remember-me"
                     className="font-normal text-muted-foreground cursor-pointer"
                   >
-                    Se souvenir de moi
+                    {t('auth.rememberMe')}
                   </FieldLabel>
                 </Field>
                 <a 
                   href="/forgot-password" 
                   className="text-sm text-muted-foreground hover:text-primary underline underline-offset-4"
                 >
-                  Mot de passe oublié ?
+                  {t('auth.forgotPassword')}
                 </a>
               </div>
             </Field>
             {isRateLimited && (
               <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
                 <Clock className="h-4 w-4 shrink-0" />
-                <span>Trop de tentatives. Réessayez dans {formatCountdown(rateLimitCountdown!)}</span>
+                <span>{t('auth.rateLimitWithTime', { time: formatCountdown(rateLimitCountdown!) })}</span>
               </div>
             )}
             <Button type="submit" className="w-full" disabled={isLoading || isRateLimited}>
               {isLoading ? (
                 <>
                   <Spinner className="mr-2 h-4 w-4" />
-                  Connexion...
+                  {t('auth.loggingIn')}
                 </>
               ) : isRateLimited ? (
                 <>
                   <Clock className="mr-2 h-4 w-4" />
-                  Patientez {formatCountdown(rateLimitCountdown!)}
+                  {t('auth.waitTime', { time: formatCountdown(rateLimitCountdown!) })}
                 </>
               ) : (
-                'Se connecter'
+                t('auth.signIn')
               )}
             </Button>
           </FieldGroup>
         </div>
       </form>
       <div className="text-center text-sm text-muted-foreground">
-        Pas encore de compte?{' '}
+        {t('auth.noAccount')}{' '}
         <a href={`/signup${searchParams}`} className="underline underline-offset-4 hover:text-primary font-medium">
-          Créer un compte
+          {t('auth.createAccount')}
         </a>
       </div>
     </div>

@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react";
+import { useTranslation } from 'react-i18next';
 import { useWebsiteContext } from "@/contexts/WebsiteContext";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,7 @@ import { BacklinksTab } from "./tabs/backlinks-tab";
  * - Backlinks monitoring
  */
 export function SeoPage() {
+  const { t } = useTranslation(['dashboard', 'common']);
   const { currentWebsite, currentWebsiteId, isLoading: isWebsiteLoading } = useWebsiteContext();
   const [timeRange, setTimeRange] = useState<TimeRange>("28d");
   const [activeTab, setActiveTab] = useState("performance");
@@ -72,9 +74,9 @@ export function SeoPage() {
       <div className="flex items-center justify-center h-[50vh]">
         <div className="text-center space-y-2">
           <Search className="h-12 w-12 mx-auto text-muted-foreground" />
-          <h3 className="font-medium">Sélectionnez un site</h3>
+          <h3 className="font-medium">{t('dashboard:seo.selectSite')}</h3>
           <p className="text-sm text-muted-foreground">
-            Choisissez un site web pour voir ses statistiques SEO
+            {t('dashboard:seo.selectSiteDescription')}
           </p>
         </div>
       </div>
@@ -85,8 +87,8 @@ export function SeoPage() {
     <div className="flex flex-col gap-6 sm:gap-8 animate-fade-in">
       {/* Page Header */}
       <PageHeader
-        title="SEO & Référencement"
-        subtitle="Performances de recherche et optimisation du référencement"
+        title={t('dashboard:seo.title')}
+        subtitle={t('dashboard:seo.subtitle')}
         icon={
           <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg">
             <Search className="h-5 w-5 text-white" />
@@ -101,7 +103,7 @@ export function SeoPage() {
         backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
         actions={[
           {
-            label: 'Exporter',
+            label: t('dashboard:seo.export'),
             icon: <Download className="h-4 w-4" />,
             variant: 'outline',
           }
@@ -128,9 +130,9 @@ export function SeoPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="7d">7 derniers jours</SelectItem>
-                  <SelectItem value="28d">28 derniers jours</SelectItem>
-                  <SelectItem value="90d">3 derniers mois</SelectItem>
+                  <SelectItem value="7d">{t('dashboard:seo.timeRange.7d')}</SelectItem>
+                  <SelectItem value="28d">{t('dashboard:seo.timeRange.28d')}</SelectItem>
+                  <SelectItem value="90d">{t('dashboard:seo.timeRange.90d')}</SelectItem>
                 </SelectContent>
               </Select>
               <TooltipProvider>
@@ -141,7 +143,7 @@ export function SeoPage() {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Exporter les données SEO</p>
+                    <p>{t('dashboard:seo.exportTooltip')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -157,9 +159,9 @@ export function SeoPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7d">7 derniers jours</SelectItem>
-              <SelectItem value="28d">28 derniers jours</SelectItem>
-              <SelectItem value="90d">3 derniers mois</SelectItem>
+              <SelectItem value="7d">{t('dashboard:seo.timeRange.7d')}</SelectItem>
+              <SelectItem value="28d">{t('dashboard:seo.timeRange.28d')}</SelectItem>
+              <SelectItem value="90d">{t('dashboard:seo.timeRange.90d')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -179,23 +181,23 @@ export function SeoPage() {
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="performance" className="flex items-center gap-2">
             <Globe className="h-4 w-4" />
-            <span className="hidden sm:inline">Performance</span>
+            <span className="hidden sm:inline">{t('dashboard:seo.tabs.performance')}</span>
           </TabsTrigger>
           <TabsTrigger value="queries" className="flex items-center gap-2">
             <Search className="h-4 w-4" />
-            <span className="hidden sm:inline">Requêtes</span>
+            <span className="hidden sm:inline">{t('dashboard:seo.tabs.queries')}</span>
           </TabsTrigger>
           <TabsTrigger value="pages" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Pages</span>
+            <span className="hidden sm:inline">{t('dashboard:seo.tabs.pages')}</span>
           </TabsTrigger>
           <TabsTrigger value="health" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
-            <span className="hidden sm:inline">Santé</span>
+            <span className="hidden sm:inline">{t('dashboard:seo.tabs.health')}</span>
           </TabsTrigger>
           <TabsTrigger value="backlinks" className="flex items-center gap-2">
             <LinkIcon className="h-4 w-4" />
-            <span className="hidden sm:inline">Backlinks</span>
+            <span className="hidden sm:inline">{t('dashboard:seo.tabs.backlinks')}</span>
           </TabsTrigger>
         </TabsList>
 

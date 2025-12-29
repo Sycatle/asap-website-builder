@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText } from "lucide-react";
 import { formatDuration } from "../utils";
@@ -9,12 +10,14 @@ import type { TopPagesTableProps } from "../types";
  * Top pages table showing most viewed content
  */
 export function TopPagesTable({ pages }: TopPagesTableProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+  
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <FileText className="h-5 w-5 text-primary" />
-          Pages les plus consultées
+          {t('dashboard:analytics.topPages.title')}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -22,11 +25,11 @@ export function TopPagesTable({ pages }: TopPagesTableProps) {
           <table className="w-full">
             <thead>
               <tr className="border-b">
-                <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">Page</th>
-                <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">Vues</th>
-                <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">Vues uniques</th>
-                <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">Temps moyen</th>
-                <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">Rebond</th>
+                <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">{t('dashboard:analytics.topPages.page')}</th>
+                <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">{t('dashboard:analytics.topPages.views')}</th>
+                <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">{t('dashboard:analytics.topPages.uniqueViews')}</th>
+                <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">{t('dashboard:analytics.topPages.avgTime')}</th>
+                <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">{t('dashboard:analytics.topPages.bounce')}</th>
               </tr>
             </thead>
             <tbody>

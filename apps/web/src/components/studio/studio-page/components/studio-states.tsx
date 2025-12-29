@@ -1,6 +1,7 @@
 "use client"
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Layers, ArrowLeft } from "lucide-react";
 
@@ -8,12 +9,13 @@ import { RefreshCw, Layers, ArrowLeft } from "lucide-react";
  * LoadingState - Shown while website data is loading
  */
 export function LoadingState() {
+  const { t } = useTranslation(['common', 'editor']);
   return (
     <div className="h-full flex items-center justify-center" role="status" aria-live="polite">
       <div className="text-center space-y-4">
         <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground" aria-hidden="true" />
-        <p className="text-muted-foreground">Chargement...</p>
-        <span className="sr-only">Chargement du site en cours</span>
+        <p className="text-muted-foreground">{t('common:status.loading')}</p>
+        <span className="sr-only">{t('editor:states.loadingSite')}</span>
       </div>
     </div>
   );
@@ -23,16 +25,17 @@ export function LoadingState() {
  * NoWebsiteState - Shown when no website is selected
  */
 export function NoWebsiteState({ onBack }: { onBack?: () => void }) {
+  const { t } = useTranslation(['common', 'editor']);
   return (
     <div className="h-full flex items-center justify-center p-4" role="alert">
       <div className="text-center space-y-4">
         <Layers className="h-12 w-12 mx-auto text-muted-foreground" aria-hidden="true" />
-        <h2 className="text-xl font-semibold">Aucun site sélectionné</h2>
-        <p className="text-muted-foreground text-sm">Sélectionnez un site pour voir l'aperçu</p>
+        <h2 className="text-xl font-semibold">{t('editor:states.noWebsite')}</h2>
+        <p className="text-muted-foreground text-sm">{t('editor:states.selectToPreview')}</p>
         {onBack && (
-          <Button onClick={onBack} variant="outline" aria-label="Retourner au tableau de bord">
+          <Button onClick={onBack} variant="outline" aria-label={t('editor:states.backToDashboard')}>
             <ArrowLeft className="h-4 w-4 mr-2" aria-hidden="true" />
-            Retour au dashboard
+            {t('editor:states.backToDashboard')}
           </Button>
         )}
       </div>

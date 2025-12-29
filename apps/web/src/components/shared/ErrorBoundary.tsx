@@ -1,4 +1,5 @@
 import React, { Component, type ReactNode, type ErrorInfo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -132,6 +133,7 @@ interface PageErrorProps {
 }
 
 function PageError({ error, onReload, onGoHome }: PageErrorProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex min-h-[60vh] items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -139,9 +141,9 @@ function PageError({ error, onReload, onGoHome }: PageErrorProps) {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
             <AlertTriangle className="h-8 w-8 text-destructive" />
           </div>
-          <CardTitle className="text-xl">Une erreur est survenue</CardTitle>
+          <CardTitle className="text-xl">{t('errors:generic.title')}</CardTitle>
           <CardDescription>
-            La page n'a pas pu être chargée correctement.
+            {t('errors:generic.pageLoadFailed')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -155,11 +157,11 @@ function PageError({ error, onReload, onGoHome }: PageErrorProps) {
           <div className="flex gap-3">
             <Button onClick={onReload} className="flex-1" variant="outline">
               <RefreshCw className="mr-2 h-4 w-4" />
-              Recharger
+              {t('common:actions.refresh')}
             </Button>
             <Button onClick={onGoHome} className="flex-1">
               <Home className="mr-2 h-4 w-4" />
-              Accueil
+              {t('common:navigation.home')}
             </Button>
           </div>
         </CardContent>
@@ -176,6 +178,7 @@ interface SectionErrorProps {
 }
 
 function SectionError({ error, title, onRetry }: SectionErrorProps) {
+  const { t } = useTranslation();
   // Check if it's a dynamic import error
   const isDynamicImportError = error?.message?.includes('dynamically imported module');
   
@@ -196,12 +199,12 @@ function SectionError({ error, title, onRetry }: SectionErrorProps) {
             <AlertTriangle className="h-6 w-6 text-destructive" />
           </div>
           <h3 className="mb-2 font-semibold">
-            {title ? `Erreur dans ${title}` : 'Erreur de chargement'}
+            {title ? t('errors:section.errorIn', { section: title }) : t('errors:section.loadingError')}
           </h3>
           <p className="mb-4 text-sm text-muted-foreground">
             {isDynamicImportError 
-              ? "Le module n'a pas pu être chargé. Cliquez sur Recharger."
-              : "Ce contenu n'a pas pu être affiché."}
+              ? t('errors:section.moduleLoadFailed')
+              : t('errors:section.contentDisplayFailed')}
           </p>
           {error && import.meta.env.DEV && !isDynamicImportError && (
             <p className="mb-4 font-mono text-xs text-muted-foreground max-w-md break-all">
@@ -210,7 +213,7 @@ function SectionError({ error, title, onRetry }: SectionErrorProps) {
           )}
           <Button onClick={handleRetry} variant="outline" size="sm">
             <RefreshCw className="mr-2 h-4 w-4" />
-            {isDynamicImportError ? 'Recharger' : 'Réessayer'}
+            {isDynamicImportError ? t('common:actions.refresh') : t('common:actions.retry')}
           </Button>
         </div>
       </CardContent>
@@ -224,10 +227,11 @@ interface ComponentErrorProps {
 }
 
 function ComponentError({ onRetry }: ComponentErrorProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground">
       <AlertTriangle className="h-4 w-4 text-destructive" />
-      <span>Erreur</span>
+      <span>{t('errors:generic.title')}</span>
       <Button onClick={onRetry} variant="ghost" size="sm" className="h-6 px-2">
         <RefreshCw className="h-3 w-3" />
       </Button>

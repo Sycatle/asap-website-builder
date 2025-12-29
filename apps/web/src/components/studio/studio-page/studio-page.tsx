@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useCallback, useEffect, useMemo } from "react"
+import { useTranslation } from 'react-i18next'
 import { useWebsiteContext } from "@/contexts/WebsiteContext"
 import { 
   useElementsQuery,
@@ -36,6 +37,7 @@ import { LoadingState, NoWebsiteState } from "./components/studio-states"
  * - Real-time element editing
  */
 export function StudioPage({ onBack }: StudioPageProps) {
+  const { t } = useTranslation(['common', 'editor'])
   const isMobile = useIsMobile()
   
   // Data hooks
@@ -145,12 +147,12 @@ export function StudioPage({ onBack }: StudioPageProps) {
     try {
       await createElement(data)
       setShowAddModal(false)
-      toast.success('Élément ajouté')
+      toast.success(t('editor:messages.elementAdded'))
     } catch (error) {
-      toast.error('Erreur lors de l\'ajout de l\'élément')
+      toast.error(t('common:errors.addElement'))
       throw error
     }
-  }, [createElement])
+  }, [createElement, t])
 
   // Handle drag and drop (desktop only)
   const handleDragStart = useCallback((e: React.DragEvent, elementId: string) => {
@@ -186,11 +188,11 @@ export function StudioPage({ onBack }: StudioPageProps) {
     
     try {
       await reorderElements(newOrder.map(el => el.id))
-      toast.success('Éléments réorganisés')
+      toast.success(t('editor:messages.elementsReordered'))
     } catch {
-      toast.error('Erreur lors de la réorganisation')
+      toast.error(t('common:errors.reorder'))
     }
-  }, [isMobile, elements, reorderElements])
+  }, [isMobile, elements, reorderElements, t])
 
   // Loading state
   if (isLoadingWebsite) {
@@ -251,7 +253,7 @@ export function StudioPage({ onBack }: StudioPageProps) {
             "hidden md:flex flex-col border-r bg-background transition-all duration-200 relative",
             leftPanelOpen ? "w-72" : "w-0 border-r-0 overflow-hidden"
           )}
-          aria-label="Panneau des éléments"
+          aria-label={t('editor:panels.elements')}
           aria-hidden={!leftPanelOpen}
         >
           {leftPanelOpen && <ElementList {...elementListProps} />}
@@ -277,7 +279,7 @@ export function StudioPage({ onBack }: StudioPageProps) {
             "hidden md:flex flex-col border-l bg-background transition-all duration-200 relative",
             rightPanelOpen ? "w-80" : "w-0 border-l-0 overflow-hidden"
           )}
-          aria-label="Panneau des propriétés"
+          aria-label={t('editor:panels.properties')}
           aria-hidden={!rightPanelOpen}
         >
           {rightPanelOpen && <PropertyEditorPanel {...propertyEditorProps} />}

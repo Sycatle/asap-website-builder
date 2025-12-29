@@ -1,6 +1,7 @@
 "use client"
 
 import React, { Fragment } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,24 +34,25 @@ export function ElementList({
   onDrop,
   onAddClick,
 }: ElementListProps) {
+  const { t } = useTranslation(['common', 'editor']);
   // Sort elements and filter out any invalid ones
   const sortedElements = [...elements]
     .filter(e => e && e.id)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   return (
-    <div className="flex flex-col h-full" role="region" aria-label="Liste des éléments">
+    <div className="flex flex-col h-full" role="region" aria-label={t('editor:elementList.title')}>
       {/* Header */}
       <div className="sticky top-0 z-10 p-3 sm:p-4 border-b bg-background flex items-center justify-between">
         <div>
           <h3 className="font-semibold text-sm flex items-center gap-2" id="elements-title">
             <Layers className="h-4 w-4" aria-hidden="true" />
-            Éléments
+            {t('editor:sidebar.elements')}
           </h3>
           {currentPage && (
             <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
               {currentPage.is_homepage && <Home className="h-3 w-3" aria-hidden="true" />}
-              {currentPage.title || (currentPage.slug === '' ? 'Accueil' : `/${currentPage.slug}`)}
+              {currentPage.title || (currentPage.slug === '' ? t('editor:pages.home') : `/${currentPage.slug}`)}
             </p>
           )}
         </div>
@@ -59,10 +61,10 @@ export function ElementList({
           size="sm"
           onClick={onAddClick}
           className="h-8"
-          aria-label="Ajouter un nouvel élément"
+          aria-label={t('editor:elementList.addNew')}
         >
           <Plus className="h-4 w-4 mr-1" aria-hidden="true" />
-          <span className="hidden sm:inline">Ajouter</span>
+          <span className="hidden sm:inline">{t('common:actions.add')}</span>
         </Button>
       </div>
       
@@ -94,12 +96,13 @@ export function ElementList({
  * ElementListSkeleton - Loading state for element list
  */
 function ElementListSkeleton() {
+  const { t } = useTranslation(['common', 'editor']);
   return (
-    <div className="space-y-2" role="status" aria-label="Chargement des éléments">
+    <div className="space-y-2" role="status" aria-label={t('editor:elementList.loading')}>
       {[1, 2, 3].map(i => (
         <Skeleton key={i} className="h-14 w-full rounded-lg" />
       ))}
-      <span className="sr-only">Chargement des éléments...</span>
+      <span className="sr-only">{t('editor:elementList.loadingElements')}</span>
     </div>
   );
 }
@@ -108,19 +111,20 @@ function ElementListSkeleton() {
  * EmptyElementList - Empty state when no elements exist
  */
 function EmptyElementList({ onAddClick }: { onAddClick: () => void }) {
+  const { t } = useTranslation(['common', 'editor']);
   return (
     <div className="text-center py-12 text-muted-foreground" role="status">
       <Layers className="h-10 w-10 mx-auto mb-3 opacity-50" aria-hidden="true" />
-      <p className="text-sm font-medium">Aucun élément</p>
-      <p className="text-xs mt-1 mb-4">Commencez par ajouter votre premier élément</p>
+      <p className="text-sm font-medium">{t('editor:elementList.empty')}</p>
+      <p className="text-xs mt-1 mb-4">{t('editor:elementList.emptyHint')}</p>
       <Button
         variant="outline"
         size="sm"
         onClick={onAddClick}
-        aria-label="Ajouter votre premier élément"
+        aria-label={t('editor:elementList.addFirst')}
       >
         <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
-        Ajouter un élément
+        {t('editor:elementList.addElement')}
       </Button>
     </div>
   );
@@ -150,6 +154,7 @@ function ElementItems({
   onDragLeave: ElementListProps['onDragLeave'];
   onDrop: ElementListProps['onDrop'];
 }) {
+  const { t } = useTranslation(['common', 'editor']);
   return (
     <div className="space-y-1" role="listbox" aria-labelledby="elements-title" aria-activedescendant={selectedElementId || undefined}>
       {elements.map((element, index) => {
@@ -164,7 +169,7 @@ function ElementItems({
               id={element.id}
               role="option"
               aria-selected={isSelected}
-              aria-label={`${elementLabel}${!element.visible ? ' (masqué)' : ''}, ${getElementLabel(element.element_type)}`}
+              aria-label={`${elementLabel}${!element.visible ? ` (${t('editor:elementList.hidden')})` : ''}, ${getElementLabel(element.element_type)}`}
               draggable={!isMobile}
               onDragStart={(e) => onDragStart(e, element.id)}
               onDragOver={(e) => onDragOver(e, index)}
@@ -198,7 +203,7 @@ function ElementItems({
                 </p>
               </div>
               {!element.visible && (
-                <EyeOff className="h-4 w-4 text-muted-foreground shrink-0" aria-label="Élément masqué" />
+                <EyeOff className="h-4 w-4 text-muted-foreground shrink-0" aria-label={t('editor:elementList.hiddenElement')} />
               )}
             </button>
           </Fragment>
@@ -209,7 +214,7 @@ function ElementItems({
       {!isMobile && elements.length > 1 && (
         <p key="drag-hint" className="text-[10px] text-muted-foreground text-center mt-3 px-2">
           <GripVertical className="h-3 w-3 inline mr-1" aria-hidden="true" />
-          Glissez pour réorganiser
+          {t('editor:elementList.dragHint')}
         </p>
       )}
     </div>

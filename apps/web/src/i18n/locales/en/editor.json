@@ -16,7 +16,8 @@
     "assets": "Assets",
     "settings": "Settings",
     "layers": "Layers",
-    "history": "History"
+    "history": "History",
+    "elements": "Elements"
   },
   "pages": {
     "title": "Pages",
@@ -54,6 +55,12 @@
     "zoom": "Zoom",
     "fitToScreen": "Fit to screen",
     "actualSize": "Actual size",
+    "sitePreview": "Site preview",
+    "livePreview": "Live preview",
+    "hideElements": "Hide elements",
+    "showElements": "Show elements",
+    "hideProperties": "Hide properties",
+    "showProperties": "Show properties",
     "responsive": {
       "desktop": "Desktop",
       "tablet": "Tablet",
@@ -61,12 +68,17 @@
     },
     "emptyState": {
       "title": "Empty page",
-      "description": "Drag components here to get started"
+      "description": "Drag components here to get started",
+      "noElements": "No visible elements",
+      "addToStart": "Add elements to get started"
     }
   },
   "properties": {
     "title": "Properties",
     "noSelection": "Select an element",
+    "selectToEdit": "to edit its properties",
+    "elementTitle": "Element title",
+    "visible": "Visible",
     "tabs": {
       "content": "Content",
       "style": "Style",
@@ -90,7 +102,56 @@
       "fontSize": "Font size",
       "fontWeight": "Font weight",
       "lineHeight": "Line height",
-      "letterSpacing": "Letter spacing"
+      "letterSpacing": "Letter spacing",
+      "layout": "Layout"
+    },
+    "layout": {
+      "default": "Default"
+    },
+    "hero": {
+      "name": "Name / Main title",
+      "namePlaceholder": "Your Name",
+      "title": "Title / Role",
+      "titlePlaceholder": "Full Stack Developer",
+      "subtitle": "Subtitle",
+      "subtitlePlaceholder": "A short description...",
+      "ctaButton": "Action button",
+      "ctaTextPlaceholder": "Button text",
+      "backgroundImage": "Background image (URL)"
+    },
+    "about": {
+      "description": "Description",
+      "descriptionPlaceholder": "Your description...",
+      "photo": "Photo (URL)",
+      "highlights": "Highlights",
+      "highlightPlaceholder": "Point {{number}}"
+    },
+    "skills": {
+      "categories": "Categories",
+      "category": "Category",
+      "newCategory": "New category",
+      "categoryName": "Category name",
+      "skill": "Skill"
+    },
+    "services": {
+      "title": "Services",
+      "service": "Service",
+      "newService": "New service",
+      "serviceName": "Service name",
+      "serviceDescription": "Service description"
+    },
+    "contact": {
+      "info": "Information",
+      "email": "Email",
+      "phone": "Phone",
+      "location": "Location",
+      "socials": "Social networks",
+      "type": "Type",
+      "website": "Website"
+    },
+    "generic": {
+      "advancedSoon": "Advanced editor coming soon",
+      "basicEditable": "Basic properties are editable above"
     }
   },
   "assets": {
@@ -125,6 +186,129 @@
     "published": "Site published successfully",
     "deleted": "Element deleted",
     "duplicated": "Element duplicated",
-    "unsavedChanges": "You have unsaved changes"
+    "unsavedChanges": "You have unsaved changes",
+    "elementAdded": "Element added",
+    "elementsReordered": "Elements reordered"
+  },
+  "header": {
+    "backToDashboard": "Back to dashboard",
+    "online": "Online",
+    "draft": "Draft",
+    "selectPage": "Select a page to edit",
+    "page": "Page",
+    "refresh": "Refresh elements",
+    "viewSite": "View site in new tab",
+    "openSite": "Open site",
+    "closeMenu": "Close menu",
+    "openMenu": "Open menu",
+    "previewSize": "Preview size",
+    "displayOptions": "Display options"
+  },
+  "elementList": {
+    "title": "Element list",
+    "addNew": "Add new element",
+    "loading": "Loading elements",
+    "loadingElements": "Loading elements...",
+    "empty": "No elements",
+    "emptyHint": "Start by adding your first element",
+    "addFirst": "Add your first element",
+    "addElement": "Add element",
+    "hidden": "hidden",
+    "hiddenElement": "Hidden element",
+    "dragHint": "Drag to reorder"
+  },
+  "panels": {
+    "elements": "Elements panel",
+    "properties": "Properties panel"
+  },
+  "propertyPanel": {
+    "title": "Property editor",
+    "elementProperties": "Element properties"
+  },
+  "mobileToolbar": {
+    "actions": "Studio actions",
+    "closeElements": "Close elements",
+    "openElements": "Open elements",
+    "closeProperties": "Close properties",
+    "openProperties": "Open properties",
+    "selectFirst": "Select an element first"
+  },
+  "mobileSheets": {
+    "manageElements": "Manage your page elements",
+    "editProperties": "Edit selected element properties"
+  },
+  "states": {
+    "loadingSite": "Loading site",
+    "noWebsite": "No website selected",
+    "selectToPreview": "Select a website to preview",
+    "backToDashboard": "Back to dashboard"
+  },
+  "previews": {
+    "hidden": "Hidden",
+    "hero": {
+      "defaultName": "Your Name",
+      "defaultTitle": "Full-Stack Developer",
+      "defaultTagline": "Turn your ideas into reality",
+      "contactMe": "Contact me",
+      "viewProjects": "View projects",
+      "availability": {
+        "available": "Available",
+        "busy": "Busy",
+        "unavailable": "Unavailable"
+      }
+    },
+    "services": {
+      "defaults": {
+        "webApps": {
+          "title": "Web Applications",
+          "description": "Custom development"
+        },
+        "apis": {
+          "title": "APIs & Backend",
+          "description": "Robust architecture"
+        },
+        "consulting": {
+          "title": "Consulting",
+          "description": "Technical support"
+        }
+      }
+    },
+    "process": {
+      "defaults": {
+        "discovery": {
+          "title": "Discovery",
+          "description": "Discuss your needs"
+        },
+        "proposal": {
+          "title": "Proposal",
+          "description": "Detailed quote"
+        },
+        "development": {
+          "title": "Development",
+          "description": "Iterative implementation"
+        },
+        "delivery": {
+          "title": "Delivery",
+          "description": "Production deployment"
+        }
+      }
+    },
+    "proof": {
+      "defaults": {
+        "projects": "Projects delivered",
+        "clients": "Satisfied clients",
+        "experience": "Years of experience"
+      }
+    },
+    "about": {
+      "defaultBio": "Passionate about web development for several years, I specialize in creating modern applications...",
+      "years": "years"
+    },
+    "contact": {
+      "contactButton": "Contact"
+    },
+    "generic": {
+      "elementType": "Element of type \"{{type}}\""
+    }
   }
 }

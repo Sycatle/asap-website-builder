@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { 
   Users, 
   ChevronRight, 
@@ -15,13 +16,6 @@ import { useAdministratorsQuery } from "@/lib/query";
 import { getAvatarUrl, getInitials } from "./utils";
 import type { TeamCardProps } from "./types";
 
-const roleLabels: Record<string, string> = {
-  owner: 'Propriétaire',
-  admin: 'Admin',
-  editor: 'Éditeur',
-  viewer: 'Lecteur',
-};
-
 const roleColors: Record<string, string> = {
   owner: 'bg-amber-500',
   admin: 'bg-blue-500',
@@ -33,7 +27,15 @@ const roleColors: Record<string, string> = {
  * Team card showing active administrators
  */
 export function TeamCard({ websiteId }: TeamCardProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
   const { data: administrators = [], isLoading } = useAdministratorsQuery(websiteId);
+
+  const roleLabels: Record<string, string> = {
+    owner: t('dashboard:dashboard.roles.owner'),
+    admin: t('dashboard:dashboard.roles.admin'),
+    editor: t('dashboard:dashboard.roles.editor'),
+    viewer: t('dashboard:dashboard.roles.viewer'),
+  };
 
   if (isLoading) {
     return (
@@ -41,7 +43,7 @@ export function TeamCard({ websiteId }: TeamCardProps) {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" />
-            Équipe
+            {t('dashboard:dashboard.team.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -71,7 +73,7 @@ export function TeamCard({ websiteId }: TeamCardProps) {
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" />
-            Équipe
+            {t('dashboard:dashboard.team.title')}
             {activeAdmins.length > 0 && (
               <Badge variant="secondary" className="text-[10px]">
                 {activeAdmins.length}
@@ -80,7 +82,7 @@ export function TeamCard({ websiteId }: TeamCardProps) {
           </CardTitle>
           <Link href={`/app/${websiteId}/administrators`}>
             <Button variant="ghost" size="sm" className="text-xs h-7">
-              Gérer
+              {t('dashboard:dashboard.team.manage')}
               <ChevronRight className="h-3 w-3 ml-1" />
             </Button>
           </Link>
@@ -90,7 +92,7 @@ export function TeamCard({ websiteId }: TeamCardProps) {
         {activeAdmins.length === 0 ? (
           <div className="text-center py-4 text-muted-foreground">
             <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Aucun collaborateur</p>
+            <p className="text-sm">{t('dashboard:dashboard.team.noCollaborators')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -116,7 +118,7 @@ export function TeamCard({ websiteId }: TeamCardProps) {
             ))}
             {activeAdmins.length > 4 && (
               <p className="text-xs text-muted-foreground text-center">
-                +{activeAdmins.length - 4} autre{activeAdmins.length - 4 > 1 ? 's' : ''}
+                {t('dashboard:dashboard.team.otherMembers', { count: activeAdmins.length - 4 })}{activeAdmins.length - 4 > 1 ? 's' : ''}
               </p>
             )}
           </div>
@@ -126,7 +128,7 @@ export function TeamCard({ websiteId }: TeamCardProps) {
           className="mt-4 flex items-center justify-center gap-2 p-2 rounded-lg border border-dashed hover:bg-accent transition-colors"
         >
           <Users className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">Inviter un collaborateur</span>
+          <span className="text-sm text-muted-foreground">{t('dashboard:dashboard.team.inviteCollaborator')}</span>
         </Link>
       </CardContent>
     </Card>

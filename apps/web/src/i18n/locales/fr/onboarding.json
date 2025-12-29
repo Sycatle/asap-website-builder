@@ -1,0 +1,357 @@
+{
+  "modal": {
+    "title": "Créer un nouveau site"
+  },
+  "header": {
+    "title": "Création de portfolio",
+    "subtitle": "Dev Freelance — Classic"
+  },
+  "steps": {
+    "identity": "Identité",
+    "professional": "Profil",
+    "services": "Services",
+    "projects": "Projets",
+    "contact": "Contact",
+    "preview": "Publication"
+  },
+  "identity": {
+    "title": "Commençons par vous",
+    "description": "Ces informations seront visibles sur votre portfolio",
+    "nameLabel": "Votre nom complet",
+    "namePlaceholder": "Jean Dupont",
+    "slugLabel": "Adresse de votre portfolio",
+    "slugPlaceholder": "jean-dupont",
+    "slugDescription": "Votre portfolio sera accessible à",
+    "avatarLabel": "Photo de profil (URL)",
+    "avatarPlaceholder": "https://example.com/photo.jpg"
+  },
+  "professional": {
+    "title": "Votre profil professionnel",
+    "description": "Décrivez votre activité en quelques mots",
+    "titleLabel": "Titre professionnel",
+    "titlePlaceholder": "Développeur Full-Stack Freelance",
+    "taglineLabel": "Phrase d'accroche",
+    "taglinePlaceholder": "Je transforme vos idées en applications web performantes et modernes.",
+    "locationLabel": "Localisation",
+    "locationPlaceholder": "Paris, France",
+    "experienceLabel": "Années d'expérience",
+    "experiencePlaceholder": "5",
+    "availabilityLabel": "Disponibilité",
+    "availability": {
+      "available": "Disponible",
+      "busy": "Occupé",
+      "notAvailable": "Indisponible"
+    }
+  },
+  "services": {
+    "title": "Vos services",
+    "description": "Décrivez ce que vous proposez à vos clients (3 recommandé)",
+    "empty": "Ajoutez vos services",
+    "useExamples": "Utiliser les exemples",
+    "addManually": "Ajouter manuellement",
+    "addService": "Ajouter un service",
+    "serviceNumber": "Service {{number}}",
+    "titlePlaceholder": "Titre du service",
+    "descriptionPlaceholder": "Description courte",
+    "defaults": {
+      "webApps": {
+        "title": "Applications Web",
+        "description": "Développement d'applications web modernes et performantes"
+      },
+      "apis": {
+        "title": "APIs & Backend",
+        "description": "Conception d'APIs robustes et scalables"
+      },
+      "consulting": {
+        "title": "Consulting Tech",
+        "description": "Audit de code et accompagnement technique"
+      }
+    }
+  },
+  "projects": {
+    "title": "Vos projets",
+    "description": "Montrez vos meilleures réalisations (min. 3 recommandé)",
+    "empty": "Ajoutez vos projets",
+    "addProject": "Ajouter un projet",
+    "projectNumber": "Projet {{number}}",
+    "namePlaceholder": "Nom du projet",
+    "descriptionPlaceholder": "Description courte",
+    "technologiesPlaceholder": "Technologies (séparées par des virgules)",
+    "liveUrlPlaceholder": "URL du projet (optionnel)",
+    "githubUrlPlaceholder": "GitHub (optionnel)"
+  },
+  "contactStep": {
+    "title": "Contact & Réseaux",
+    "description": "Comment vos clients peuvent vous joindre",
+    "emailLabel": "Email",
+    "emailPlaceholder": "contact@example.com",
+    "phoneLabel": "Téléphone",
+    "phonePlaceholder": "+33 6 12 34 56 78",
+    "socialsLabel": "Réseaux sociaux",
+    "githubPlaceholder": "https://github.com/username",
+    "linkedinPlaceholder": "https://linkedin.com/in/username",
+    "twitterPlaceholder": "https://twitter.com/username",
+    "bookingLabel": "Lien de prise de rendez-vous",
+    "bookingPlaceholder": "https://calendly.com/username"
+  },
+  "previewStep": {
+    "title": "Prêt à publier !",
+    "description": "Votre portfolio est prêt. Publiez-le maintenant ou continuez plus tard.",
+    "stats": {
+      "services": "Services",
+      "projects": "Projets",
+      "yearsExp": "Ans d'exp."
+    },
+    "publishButton": "Publier mon portfolio",
+    "publishing": "Publication...",
+    "saveDraft": "Enregistrer comme brouillon"
+  },
+  "publish": {
+    "chooseUrl": "Choisissez votre URL",
+    "urlDescription": "Cette adresse sera celle de votre portfolio public",
+    "urlPlaceholder": "votre-nom",
+    "domainNote": "Vous pourrez ajouter un domaine personnalisé plus tard depuis votre dashboard.",
+    "summary": "Récapitulatif",
+    "summaryDescription": "Vérifiez les informations avant de publier",
+    "summaryLabels": {
+      "name": "Nom",
+      "title": "Titre",
+      "services": "Services",
+      "projects": "Projets",
+      "contact": "Contact"
+    },
+    "servicesCount": "{{count}} service(s)",
+    "projectsCount": "{{count}} projet(s)",
+    "readyTitle": "Prêt à publier ?",
+    "readyDescription": "Votre portfolio sera accessible publiquement. Vous pourrez le modifier à tout moment depuis votre dashboard.",
+    "button": "Publier mon portfolio",
+    "publishing": "Publication..."
+  },
+  "success": {
+    "title": "Félicitations {{name}} !",
+    "description": "Votre portfolio est maintenant en ligne et accessible au monde entier.",
+    "share": {
+      "title": "Partagez votre portfolio",
+      "description": "Faites connaître votre nouveau portfolio à votre réseau",
+      "twitter": "Partager sur Twitter",
+      "linkedin": "Partager sur LinkedIn",
+      "copyLink": "Copier le lien",
+      "copied": "Copié !",
+      "twitterText": "🚀 Je viens de créer mon portfolio de développeur freelance avec @asap_cool ! Découvrez-le ici 👇"
+    },
+    "nextSteps": {
+      "title": "Et maintenant ?",
+      "customize": {
+        "title": "Personnalisez davantage",
+        "description": "Accédez à votre dashboard pour affiner les détails de votre portfolio."
+      },
+      "domain": {
+        "title": "Ajoutez votre domaine personnalisé",
+        "description": "Connectez votre propre domaine pour une identité professionnelle unique."
+      },
+      "analytics": {
+        "title": "Suivez vos statistiques",
+        "description": "Consultez les analytics pour voir qui visite votre portfolio."
+      }
+    },
+    "viewPortfolio": "Voir mon portfolio",
+    "goToDashboard": "Accéder au dashboard"
+  },
+  "navigation": {
+    "back": "Retour",
+    "continue": "Continuer",
+    "creating": "Création...",
+    "saving": "Enregistrement..."
+  },
+  "toasts": {
+    "success": {
+      "created": "Parfait ! Continuons avec votre profil.",
+      "portfolioPublished": "🎉 Votre portfolio est en ligne !",
+      "savedAsDraft": "Portfolio enregistré comme brouillon",
+      "profileSaved": "Profil enregistré !",
+      "projectsSaved": "Projets enregistrés !"
+    },
+    "errors": {
+      "fillAllFields": "Veuillez remplir tous les champs",
+      "slugTaken": "Cette URL est déjà prise. Essayez une autre adresse.",
+      "creationError": "Erreur lors de la création. Réessayez.",
+      "savingError": "Erreur lors de la sauvegarde",
+      "publishError": "Erreur lors de la publication"
+    }
+  },
+  "github": {
+    "title": "Connectez votre GitHub",
+    "description": "Importez automatiquement vos meilleurs projets pour créer un portfolio impressionnant en quelques clics.",
+    "benefits": {
+      "quickImport": {
+        "title": "Import rapide",
+        "description": "Vos repos deviennent des projets en 1 clic"
+      },
+      "autoDetect": {
+        "title": "Auto-détection",
+        "description": "Technologies et descriptions extraites"
+      },
+      "secure": {
+        "title": "Sécurisé",
+        "description": "Lecture seule, aucun accès en écriture"
+      }
+    },
+    "connectButton": "Connecter GitHub",
+    "connecting": "Connexion...",
+    "skipButton": "Je préfère ajouter manuellement",
+    "readOnlyNote": "Nous utilisons l'API GitHub en lecture seule.",
+    "learnMore": "En savoir plus",
+    "socialProof": "Déjà utilisé par <strong>{{count}}+</strong> développeurs freelance"
+  },
+  "import": {
+    "title": "Sélectionnez vos projets",
+    "description": "Choisissez les repositories à afficher dans votre portfolio",
+    "selectedCount": "{{selected}} / {{total}} sélectionnés",
+    "searchPlaceholder": "Rechercher un repository...",
+    "recommended": "Recommandés",
+    "all": "Tout",
+    "none": "Aucun",
+    "noRepos": "Aucun repository trouvé",
+    "tip": "💡 Conseil :",
+    "tipDescription": "Sélectionnez 3 à 6 projets représentatifs de vos compétences. Privilégiez la qualité sur la quantité.",
+    "importButton": "Importer {{count}} projet(s)",
+    "importing": "Import en cours...",
+    "loading": "Chargement de vos repositories..."
+  },
+  "review": {
+    "completionTitle": "Profil {{status}}",
+    "completionComplete": "complet",
+    "completionInProgress": "en cours",
+    "sectionsCompleted": "{{completed}} / {{total}} sections remplies",
+    "tabs": {
+      "identity": "Identité",
+      "services": "Services",
+      "projects": "Projets",
+      "contact": "Contact"
+    },
+    "identity": {
+      "title": "Votre identité",
+      "description": "Les informations de base qui apparaîtront sur votre portfolio",
+      "nameLabel": "Nom complet",
+      "namePlaceholder": "Marie Dupont",
+      "titleLabel": "Titre professionnel",
+      "titlePlaceholder": "Développeuse Full-Stack Freelance",
+      "taglineLabel": "Phrase d'accroche",
+      "taglinePlaceholder": "Je transforme vos idées en applications web performantes...",
+      "taglineDescription": "Une phrase courte qui résume votre proposition de valeur",
+      "locationLabel": "Localisation",
+      "locationPlaceholder": "Paris, France",
+      "availabilityLabel": "Disponibilité",
+      "availability": {
+        "available": "Disponible",
+        "busy": "Occupé (missions en cours)",
+        "notAvailable": "Non disponible"
+      },
+      "suggestion": "💡 Suggestion",
+      "suggestionText": "Un titre professionnel clair et une phrase d'accroche impactante augmentent de 3x vos chances d'être contacté."
+    },
+    "servicesTab": {
+      "title": "Vos services",
+      "description": "Définissez les services que vous proposez à vos clients"
+    },
+    "projectsTab": {
+      "title": "Vos projets",
+      "description": "Les projets qui seront mis en avant sur votre portfolio"
+    },
+    "contactTab": {
+      "title": "Contact & réseaux",
+      "description": "Comment vos prospects peuvent vous contacter",
+      "emailLabel": "Email",
+      "emailPlaceholder": "contact@example.com",
+      "phoneLabel": "Téléphone",
+      "phonePlaceholder": "+33 6 12 34 56 78",
+      "githubLabel": "GitHub",
+      "githubPlaceholder": "https://github.com/username",
+      "linkedinLabel": "LinkedIn",
+      "linkedinPlaceholder": "https://linkedin.com/in/username",
+      "bookingLabel": "Lien de prise de rendez-vous",
+      "bookingPlaceholder": "https://calendly.com/username",
+      "bookingDescription": "Calendly, Cal.com, ou tout autre outil de prise de rendez-vous"
+    },
+    "completionItems": {
+      "nameTitle": "Nom & titre",
+      "photo": "Photo",
+      "services": "Services",
+      "projects": "Projets",
+      "stack": "Stack technique",
+      "contact": "Contact"
+    }
+  },
+  "flow": {
+    "progressLabel": "Création de votre portfolio",
+    "welcome": {
+      "title": "Bienvenue sur ASAP !",
+      "description": "Créez votre portfolio de développeur freelance en quelques minutes.",
+      "nameLabel": "Votre nom",
+      "namePlaceholder": "Jean Dupont",
+      "urlLabel": "Adresse de votre portfolio",
+      "urlPlaceholder": "jean-dupont",
+      "startButton": "Commencer",
+      "creating": "Création...",
+      "githubNote": "L'intégration GitHub arrive bientôt pour importer vos projets automatiquement !"
+    },
+    "profile": {
+      "title": "Votre profil",
+      "description": "Présentez-vous aux visiteurs de votre portfolio",
+      "nameLabel": "Nom complet",
+      "namePlaceholder": "Jean Dupont",
+      "titleLabel": "Titre professionnel",
+      "titlePlaceholder": "Développeur Full-Stack Freelance",
+      "bioLabel": "Biographie",
+      "bioPlaceholder": "Décrivez votre parcours, vos compétences et ce qui vous passionne...",
+      "emailLabel": "Email de contact",
+      "emailPlaceholder": "jean@example.com"
+    },
+    "projects": {
+      "title": "Vos projets",
+      "description": "Ajoutez vos meilleurs projets pour impressionner vos visiteurs",
+      "projectNameLabel": "Nom du projet",
+      "projectNamePlaceholder": "Mon super projet",
+      "projectDescriptionLabel": "Description",
+      "projectDescriptionPlaceholder": "Décrivez ce projet...",
+      "technologiesLabel": "Technologies (séparées par des virgules)",
+      "technologiesPlaceholder": "React, TypeScript, Node.js",
+      "addProject": "Ajouter un projet",
+      "addMoreNote": "Vous pourrez ajouter plus de projets depuis le dashboard"
+    },
+    "publishStep": {
+      "title": "Prêt à publier !",
+      "description": "Votre portfolio est prêt. Publiez-le pour le rendre visible au monde entier.",
+      "urlPreview": "Votre portfolio sera accessible à",
+      "publishButton": "Publier mon portfolio",
+      "publishing": "Publication...",
+      "publishLater": "Je publierai plus tard"
+    },
+    "completed": {
+      "title": "🎉 Félicitations !",
+      "description": "Votre portfolio est maintenant en ligne !",
+      "visitLabel": "Visitez votre portfolio",
+      "dashboardButton": "Aller au dashboard"
+    }
+  },
+  "wizard": {
+    "errors": {
+      "githubSoon": "L'intégration GitHub sera disponible prochainement. Vous pouvez ajouter vos projets manuellement.",
+      "demoMode": "Mode démo: ajoutez vos projets manuellement",
+      "githubError": "Erreur lors de la connexion GitHub",
+      "addManually": "Vous pourrez ajouter des projets manuellement",
+      "genericError": "Une erreur est survenue",
+      "selectOneRepo": "Sélectionnez au moins un repository",
+      "importError": "Erreur lors de l'import des projets",
+      "loadReposError": "Erreur lors du chargement des repositories",
+      "enterName": "Veuillez entrer votre nom",
+      "enterEmail": "Veuillez entrer votre email de contact",
+      "chooseSubdomain": "Veuillez choisir un sous-domaine",
+      "publishError": "Erreur lors de la publication"
+    },
+    "success": {
+      "projectsImported": "{{count}} projet(s) importé(s) !",
+      "published": "Portfolio publié avec succès !"
+    }
+  }
+}

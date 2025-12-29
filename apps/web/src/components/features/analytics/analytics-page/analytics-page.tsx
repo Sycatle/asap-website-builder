@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { PageHeader } from '@/components/shared/page-header';
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ import { ConversionsCards, ConversionFunnel } from "./components/conversions-com
  * - Conversion metrics and funnel
  */
 export function AnalyticsPage() {
+  const { t } = useTranslation(['common', 'dashboard']);
   const { currentWebsiteId, isLoading } = useWebsiteContext();
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const [activeTab, setActiveTab] = useState('overview');
@@ -60,8 +62,8 @@ export function AnalyticsPage() {
     <div className="flex flex-col gap-6 sm:gap-8 animate-fade-in">
       {/* Page Header */}
       <PageHeader
-        title="Analytics"
-        subtitle="Analyse détaillée des performances de votre site"
+        title={t('dashboard:analytics.title')}
+        subtitle={t('dashboard:analytics.subtitle')}
         icon={
           <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center shadow-lg">
             <BarChart3 className="h-5 w-5 text-white" />
@@ -70,7 +72,7 @@ export function AnalyticsPage() {
         backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
         actions={[
           {
-            label: 'Exporter',
+            label: t('dashboard:analytics.export'),
             icon: <Download className="h-4 w-4" />,
             variant: 'outline',
           }
@@ -82,13 +84,13 @@ export function AnalyticsPage() {
                 <BarChart3 className="h-4 w-4 text-white" />
               </div>
               <div className="hidden sm:flex items-center gap-3">
-                <p className="text-sm font-semibold">Analytics</p>
+                <p className="text-sm font-semibold">{t('dashboard:analytics.title')}</p>
                 <div className="flex items-center gap-1.5 text-green-600">
                   <div className="relative">
                     <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                     <div className="absolute inset-0 h-2 w-2 rounded-full bg-green-500 animate-ping opacity-75" />
                   </div>
-                  <span className="text-xs font-medium">{data.realtime.activeUsers} en ligne</span>
+                  <span className="text-xs font-medium">{data.realtime.activeUsers} {t('dashboard:analytics.online')}</span>
                 </div>
               </div>
             </div>
@@ -99,9 +101,9 @@ export function AnalyticsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="7d">7 derniers jours</SelectItem>
-                  <SelectItem value="30d">30 derniers jours</SelectItem>
-                  <SelectItem value="90d">90 derniers jours</SelectItem>
+                  <SelectItem value="7d">{t('dashboard:analytics.timeRange.7d')}</SelectItem>
+                  <SelectItem value="30d">{t('dashboard:analytics.timeRange.30d')}</SelectItem>
+                  <SelectItem value="90d">{t('dashboard:analytics.timeRange.90d')}</SelectItem>
                 </SelectContent>
               </Select>
               <TooltipProvider>
@@ -112,7 +114,7 @@ export function AnalyticsPage() {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Exporter les données analytics</p>
+                    <p>{t('dashboard:analytics.exportTooltip')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -128,9 +130,9 @@ export function AnalyticsPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7d">7 derniers jours</SelectItem>
-              <SelectItem value="30d">30 derniers jours</SelectItem>
-              <SelectItem value="90d">90 derniers jours</SelectItem>
+              <SelectItem value="7d">{t('dashboard:analytics.timeRange.7d')}</SelectItem>
+              <SelectItem value="30d">{t('dashboard:analytics.timeRange.30d')}</SelectItem>
+              <SelectItem value="90d">{t('dashboard:analytics.timeRange.90d')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -145,10 +147,10 @@ export function AnalyticsPage() {
       {/* Tabs for different views */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
-          <TabsTrigger value="traffic">Trafic</TabsTrigger>
-          <TabsTrigger value="content">Contenu</TabsTrigger>
-          <TabsTrigger value="conversions">Conversions</TabsTrigger>
+          <TabsTrigger value="overview">{t('dashboard:analytics.tabs.overview')}</TabsTrigger>
+          <TabsTrigger value="traffic">{t('dashboard:analytics.tabs.traffic')}</TabsTrigger>
+          <TabsTrigger value="content">{t('dashboard:analytics.tabs.content')}</TabsTrigger>
+          <TabsTrigger value="conversions">{t('dashboard:analytics.tabs.conversions')}</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}

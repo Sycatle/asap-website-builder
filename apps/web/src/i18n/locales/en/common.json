@@ -73,7 +73,8 @@
     "updatedAt": "Updated at",
     "language": "Language",
     "optional": "Optional",
-    "required": "Required"
+    "required": "Required",
+    "on": "of"
   },
   "status": {
     "loading": "Loading...",
@@ -146,7 +147,34 @@
     "help": "Help",
     "logout": "Logout",
     "login": "Login",
-    "register": "Register"
+    "register": "Register",
+    "creation": "Create",
+    "pages": "Pages",
+    "media": "Media",
+    "analytics": "Analytics",
+    "configuration": "Configuration",
+    "administrators": "Administrators",
+    "theme": "Theme",
+    "extensions": "Extensions",
+    "billing": "Billing",
+    "keyboardShortcuts": "Keyboard shortcuts",
+    "searchPlaceholder": "Search...",
+    "goTo": "Go to..."
+  },
+  "shortcuts": {
+    "navigation": "Navigation",
+    "actions": "Actions",
+    "interface": "Interface",
+    "goToDashboard": "Go to Dashboard",
+    "goToExtensions": "Go to Extensions",
+    "goToCloud": "Go to Cloud",
+    "save": "Save",
+    "cancelClose": "Cancel / Close",
+    "refreshData": "Refresh data",
+    "openCommandPalette": "Open command palette",
+    "toggleSidebar": "Toggle sidebar",
+    "showShortcutsHelp": "Show shortcuts help",
+    "pressEscToClose": "Press"
   },
   "validation": {
     "required": "This field is required",
@@ -159,5 +187,292 @@
     "invalidDate": "Invalid date",
     "passwordMismatch": "Passwords do not match",
     "alreadyExists": "This value already exists"
+  },
+  "errors": {
+    "update": "Error updating",
+    "addElement": "Error adding element",
+    "reorder": "Error reordering"
+  },
+  "auth": {
+    "login": "Login",
+    "signup": "Sign up",
+    "logout": "Logout",
+    "forgotPassword": "Forgot password?",
+    "resetPassword": "Reset password",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "newPassword": "New password",
+    "name": "Name",
+    "signIn": "Sign in",
+    "signUp": "Create account",
+    "sendResetLink": "Send reset link",
+    "resetPasswordBtn": "Reset password",
+    "createAccount": "Create your account",
+    "accessSpace": "Access your space in seconds",
+    "welcomeBack": "Welcome back!",
+    "accountCreated": "Welcome! Your account has been created.",
+    "passwordResetSuccess": "Password reset!",
+    "passwordResetSuccessDesc": "Your password has been updated successfully. You can now sign in with your new password.",
+    "emailSent": "Email sent!",
+    "emailSentDesc": "If an account exists with the address <strong>{{email}}</strong>, you will receive an email with instructions to reset your password.",
+    "checkSpam": "Also check your spam folder if you don't receive the email.",
+    "tryDifferentEmail": "Try with a different address",
+    "backToLogin": "Back to login",
+    "forgotPasswordTitle": "Forgot password?",
+    "forgotPasswordDesc": "Enter your email address and we'll send you a link to reset your password.",
+    "emailPlaceholder": "you@example.com",
+    "passwordPlaceholder": "••••••••",
+    "confirmPasswordPlaceholder": "Confirm password",
+    "newPasswordPlaceholder": "New password",
+    "sending": "Sending...",
+    "resetting": "Resetting...",
+    "creating": "Creating...",
+    "invalidOrExpiredLink": "Invalid or expired link",
+    "invalidLinkDesc": "This reset link is invalid or has expired. Links are valid for 1 hour and can only be used once.",
+    "requestNewLink": "Request a new link",
+    "newPasswordTitle": "New password",
+    "newPasswordDesc": "Choose a new secure password for your account.",
+    "passwordRequirements": "Min. 8 characters with uppercase, lowercase and number",
+    "passwordRequirementsShort": "Min. 8 characters, uppercase, lowercase and number",
+    "passwordStrength": "Strength",
+    "alreadyHaveAccount": "Already have an account?",
+    "noAccount": "Don't have an account?",
+    "rateLimited": "Too many attempts. Try again in {{time}}.",
+    "waitTime": "Wait {{time}}"
+  },
+  "pwa": {
+    "connectionRestored": "Connection restored",
+    "backOnline": "You are back online",
+    "offline": "Offline",
+    "installAsap": "Install ASAP",
+    "installDesc": "Access ASAP directly from your home screen for an optimal experience.",
+    "howToInstall": "How to install",
+    "install": "Install",
+    "later": "Later",
+    "features": "Works offline • Push notifications • Quick access",
+    "installOnIos": "Install on iOS",
+    "iosInstructions": "To install ASAP on your iOS device:",
+    "iosStep1": "Tap the Share button at the bottom of Safari",
+    "iosStep2": "Scroll and tap \"Add to Home Screen\"",
+    "iosStep3": "Tap \"Add\" in the top right",
+    "understood": "Got it",
+    "updateAvailable": "Update available",
+    "updating": "Updating...",
+    "appWillReload": "The app will reload",
+    "update": "Update",
+    "pwaStatus": "PWA Status",
+    "installed": "Installed",
+    "notInstalled": "Not installed",
+    "online": "Online",
+    "platform": "Platform",
+    "browser": "Browser",
+    "cachedItems": "{{count}} cached items",
+    "pushSupported": "Push supported",
+    "pushLimited": "Push limited",
+    "swVersion": "Service Worker Version",
+    "clearCache": "Clear cache",
+    "cacheCleared": "Cache cleared",
+    "cacheClearedDesc": "The app cache has been cleared",
+    "cacheError": "Unable to clear cache",
+    "appInstalled": "App installed!",
+    "appInstalledDesc": "ASAP has been added to your home screen",
+    "syncing": "Syncing...",
+    "pendingActions": "{{count}} pending action(s)",
+    "actionsSynced": "{{count}} action(s) synced"
+  },
+  "website": {
+    "welcomeToAsap": "Welcome to ASAP",
+    "createFirstSite": "Create your first site to get started",
+    "createMyFirstSite": "Create my first site",
+    "selectSite": "Select a site",
+    "selectSiteDesc": "Choose the site to work on",
+    "createNewSite": "Create a new site",
+    "or": "Or",
+    "sitesAvailable": "{{count}} site available",
+    "sitesAvailable_plural": "{{count}} sites available",
+    "statusOnline": "Online",
+    "statusDraft": "Draft"
+  },
+  "landing": {
+    "nav": {
+      "features": "Features",
+      "pricing": "Pricing",
+      "testimonials": "Testimonials",
+      "login": "Log in",
+      "startFree": "Start for free"
+    },
+    "hero": {
+      "badge": "New: AI Portfolio Generation",
+      "titleLine1": "Your professional website",
+      "titleLine2": "in 5 minutes flat",
+      "subtitle": "Import your GitHub projects, customize your presentation, publish.",
+      "subtitleBold": "Replace 10 tools with one dashboard.",
+      "ctaStart": "Start for free",
+      "ctaDemo": "Watch demo",
+      "socialProofCreators": "+500 creators",
+      "socialProofRating": "4.9/5 satisfaction",
+      "dashboardPreview": "Preview of your centralized dashboard",
+      "statSites": "Sites",
+      "statStorage": "Storage",
+      "statTokens": "AI Tokens"
+    },
+    "features": {
+      "badge": "Features",
+      "titleLine1": "Everything you need,",
+      "titleLine2": "nothing superfluous",
+      "subtitle": "A platform designed for creators who want to focus on what matters: their work.",
+      "github": {
+        "title": "Automatic GitHub Import",
+        "description": "Connect GitHub and import your projects in one click. Descriptions, technologies, stats: it's all there.",
+        "badge": "Popular"
+      },
+      "multiSites": {
+        "title": "Unlimited Multi-sites",
+        "description": "Create as many sites as you want. Portfolio, blog, landing page: manage everything from one place."
+      },
+      "cloud": {
+        "title": "Built-in Cloud Storage",
+        "description": "1 GB free to host your files, images and documents. Upload, organize, share."
+      },
+      "ai": {
+        "title": "AI Generation",
+        "description": "Let AI generate your descriptions, bio and content. Free tokens every month.",
+        "badge": "New"
+      },
+      "extensions": {
+        "title": "Modular Extensions",
+        "description": "Analytics, premium themes, projections: enable only what you need."
+      },
+      "analytics": {
+        "title": "Real-time Analytics",
+        "description": "Track your visitors, page views and performance. Clear data, no complexity."
+      }
+    },
+    "howItWorks": {
+      "badge": "How it works",
+      "titleLine1": "4 steps,",
+      "titleLine2": "5 minutes",
+      "subtitle": "From zero to a professional site in less time than it takes to make a coffee.",
+      "step1": {
+        "title": "Create your account",
+        "description": "Free signup in 30 seconds. No credit card required."
+      },
+      "step2": {
+        "title": "Connect GitHub",
+        "description": "Authorize access and select projects to import."
+      },
+      "step3": {
+        "title": "Customize",
+        "description": "Choose a theme, adjust colors and content."
+      },
+      "step4": {
+        "title": "Publish!",
+        "description": "One click and your site is live on your ASAP subdomain."
+      }
+    },
+    "pricing": {
+      "badge": "Pricing",
+      "titleLine1": "Simple pricing,",
+      "titleLine2": "no surprises",
+      "subtitle": "Start for free. Scale when you're ready.",
+      "mostPopular": "Most popular",
+      "perMonth": "/ month",
+      "forever": "forever",
+      "free": {
+        "name": "Free",
+        "description": "To discover ASAP",
+        "cta": "Start for free",
+        "features": {
+          "sites": "1 published site",
+          "storage": "1 GB cloud storage",
+          "tokens": "1,000 AI tokens / month",
+          "subdomain": "asap.cool subdomain",
+          "analytics": "Basic analytics",
+          "support": "Community support"
+        }
+      },
+      "pro": {
+        "name": "Pro",
+        "description": "For serious creators",
+        "cta": "Free 14-day trial",
+        "features": {
+          "sites": "5 published sites",
+          "storage": "10 GB cloud storage",
+          "tokens": "10,000 AI tokens / month",
+          "domains": "Custom domains",
+          "analytics": "Advanced analytics",
+          "themes": "Premium themes",
+          "support": "Priority support",
+          "noAds": "No ASAP branding"
+        }
+      },
+      "team": {
+        "name": "Team",
+        "description": "For agencies and teams",
+        "cta": "Contact sales",
+        "features": {
+          "sites": "Unlimited sites",
+          "storage": "50 GB cloud storage",
+          "tokens": "50,000 AI tokens / month",
+          "multiUsers": "Multi-users",
+          "api": "Full API",
+          "whiteLabel": "White label",
+          "accountManager": "Dedicated account manager",
+          "sla": "99.9% SLA"
+        }
+      }
+    },
+    "testimonials": {
+      "badge": "Testimonials",
+      "titleLine1": "They chose",
+      "titleLine2": "ASAP",
+      "subtitle": "Join hundreds of creators simplifying their online presence.",
+      "quote1": {
+        "text": "I replaced my WordPress portfolio + Dropbox storage + Google Analytics. Everything is centralized and 10x faster.",
+        "author": "Marie L.",
+        "role": "Freelance Designer"
+      },
+      "quote2": {
+        "text": "As an agency, we manage 15 clients' sites from a single dashboard. The time savings are huge.",
+        "author": "Thomas R.",
+        "role": "Agency Director"
+      },
+      "quote3": {
+        "text": "The automatic GitHub import saved me hours. My portfolio was live in 10 minutes flat.",
+        "author": "Kevin M.",
+        "role": "Full Stack Developer"
+      }
+    },
+    "cta": {
+      "title": "Ready to create your site?",
+      "subtitleLine1": "Join +500 creators using ASAP to manage their online presence.",
+      "subtitleLine2": "Free to start, no credit card required.",
+      "startFree": "Start for free",
+      "seePricing": "See pricing"
+    },
+    "footer": {
+      "tagline": "The all-in-one platform for creators and entrepreneurs.",
+      "madeInFrance": "Made in France",
+      "product": "Product",
+      "documentation": "Documentation",
+      "changelog": "Changelog",
+      "company": "Company",
+      "about": "About",
+      "blog": "Blog",
+      "contact": "Contact",
+      "partners": "Partners",
+      "legal": "Legal",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
+      "legalNotice": "Legal Notice",
+      "cookies": "Cookies",
+      "copyright": "© 2024 ASAP. All rights reserved."
+    }
+  },
+  "user": {
+    "settings": "Settings",
+    "billing": "Billing",
+    "logout": "Logout"
   }
 }

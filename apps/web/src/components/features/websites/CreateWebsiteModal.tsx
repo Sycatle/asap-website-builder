@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { usePresets, useCreateWebsiteFromPreset } from '@/hooks/usePresets';
 import { queryKeys } from '@/lib/query';
 import { useQueryClient } from '@tanstack/react-query';
@@ -49,16 +50,6 @@ const categoryIcons: Record<string, React.ElementType> = {
   personal: PenTool,
 };
 
-// Category labels in French
-const categoryLabels: Record<string, string> = {
-  professional: 'Professionnel',
-  creative: 'Créatif',
-  blog: 'Blog',
-  business: 'Business',
-  developer: 'Développeur',
-  personal: 'Personnel',
-};
-
 interface CreateWebsiteModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -68,6 +59,7 @@ interface CreateWebsiteModalProps {
 type Step = 'preset' | 'details';
 
 export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsiteModalProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
   const [step, setStep] = useState<Step>('preset');
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
   const [slug, setSlug] = useState('');
@@ -127,12 +119,12 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
     
     // Validate required fields
     if (!selectedPresetId) {
-      toast.error('Veuillez sélectionner un template');
+      toast.error(t('dashboard:createSite.selectTemplate'));
       return;
     }
     
     if (!title.trim()) {
-      toast.error('Veuillez entrer un nom pour votre site');
+      toast.error(t('dashboard:createSite.enterName'));
       return;
     }
     
@@ -155,8 +147,8 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
       
       const displayUrl = getWebsiteDisplayUrl(slug.trim());
       
-      toast.success('Site créé avec succès !', {
-        description: `Votre site est prêt à l'adresse ${displayUrl}`,
+      toast.success(t('dashboard:websites.toast.created'), {
+        description: t('dashboard:websites.toast.createdDescription', { url: displayUrl }),
       });
       
       // Reset form
@@ -171,14 +163,14 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
         onSuccess(response.website.id);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Une erreur est survenue';
+      const message = err instanceof Error ? err.message : t('common:errors.generic');
       // Check for specific error messages from the API
       if (message.includes('slug') || message.includes('URL')) {
-        toast.error('Cette URL est déjà utilisée', {
-          description: 'Veuillez choisir une autre URL pour votre site.',
+        toast.error(t('dashboard:createSite.urlTaken'), {
+          description: t('dashboard:createSite.urlTakenDescription'),
         });
       } else {
-        toast.error('Erreur lors de la création du site', {
+        toast.error(t('dashboard:createSite.error'), {
           description: message,
         });
       }
@@ -205,12 +197,12 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            {step === 'preset' ? 'Choisir un template' : 'Configurer votre site'}
+            {step === 'preset' ? t('dashboard:websites.modal.chooseTemplate') : t('dashboard:websites.modal.configureYourSite')}
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription>
             {step === 'preset' 
-              ? 'Sélectionnez un template pour démarrer rapidement'
-              : "Personnalisez les informations de base de votre site"
+              ? t('dashboard:websites.modal.selectTemplateToStart')
+              : t('dashboard:websites.modal.customizeBasicInfo')
             }
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
@@ -233,7 +225,7 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
             ) : presets.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Aucun template disponible</p>
+                <p>{t('dashboard:websites.modal.noTemplates')}</p>
               </div>
             ) : (
               Object.entries(presetsByCategory).map(([category, categoryPresets]) => (
@@ -241,7 +233,7 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
                   <div className="flex items-center gap-2">
                     {getCategoryIcon(category)}
                     <h3 className="font-medium text-sm">
-                      {categoryLabels[category] || category}
+                      {t(`dashboard:websites.categories.${category}`, { defaultValue: category })}
                     </h3>
                     <Badge variant="secondary" className="text-xs">
                       {categoryPresets.length}
@@ -286,28 +278,28 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto py-4 space-y-6">
             {selectedPreset && (
               <div className="p-3 rounded-lg bg-muted/50 border">
-                <p className="text-sm text-muted-foreground">Template sélectionné</p>
+                <p className="text-sm text-muted-foreground">{t('dashboard:websites.modal.selectedTemplate')}</p>
                 <p className="font-medium">{selectedPreset.name}</p>
               </div>
             )}
             
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="title">Nom de votre site</FieldLabel>
+                <FieldLabel htmlFor="title">{t('dashboard:websites.modal.siteName')}</FieldLabel>
                 <Input
                   id="title"
                   value={title}
                   onChange={(e) => handleTitleChange(e.target.value)}
-                  placeholder="Mon super site"
+                  placeholder={t('dashboard:websites.modal.siteNamePlaceholder')}
                   autoFocus
                 />
                 <FieldDescription>
-                  Le nom qui apparaîtra sur votre site
+                  {t('dashboard:websites.modal.siteNameDescription')}
                 </FieldDescription>
               </Field>
               
               <Field>
-                <FieldLabel htmlFor="slug">URL du site</FieldLabel>
+                <FieldLabel htmlFor="slug">{t('dashboard:websites.modal.siteUrl')}</FieldLabel>
                 <div className="flex items-center">
                   <span className="flex h-10 items-center rounded-l-md border border-r-0 bg-muted px-3 text-sm text-muted-foreground">
                     asap.cool/
@@ -321,11 +313,11 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
                       setSlug(value.replace(/[^a-z0-9-]/g, ''));
                     }}
                     className="rounded-l-none"
-                    placeholder="mon-site"
+                    placeholder={t('dashboard:websites.modal.siteUrlPlaceholder')}
                   />
                 </div>
                 <FieldDescription>
-                  L'URL ne pourra pas être modifiée après la création
+                  {t('dashboard:websites.modal.siteUrlDescription')}
                 </FieldDescription>
               </Field>
             </FieldGroup>
@@ -336,14 +328,14 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
           {step === 'preset' ? (
             <>
               <Button variant="ghost" onClick={handleClose}>
-                Annuler
+                {t('common:actions.cancel')}
               </Button>
               <Button 
                 onClick={handleNext} 
                 disabled={!selectedPresetId}
                 className="gap-2"
               >
-                Suivant
+                {t('common:actions.next')}
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </>
@@ -351,7 +343,7 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
             <>
               <Button variant="ghost" onClick={handleBack} className="gap-2">
                 <ArrowLeft className="h-4 w-4" />
-                Retour
+                {t('common:actions.back')}
               </Button>
               <Button 
                 onClick={handleSubmit}
@@ -361,12 +353,12 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
                 {isCreating ? (
                   <>
                     <Spinner className="h-4 w-4" />
-                    Création...
+                    {t('dashboard:websites.modal.creating')}
                   </>
                 ) : (
                   <>
                     <Check className="h-4 w-4" />
-                    Créer le site
+                    {t('dashboard:websites.modal.createSite')}
                   </>
                 )}
               </Button>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Website } from '@/lib/api';
 import { websitesAPI } from '@/lib/api';
 import { queryKeys } from '@/lib/query';
@@ -55,6 +56,7 @@ interface WebsiteCardProps {
 }
 
 export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -71,19 +73,19 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
         if (!old) return [];
         return old.filter(w => w.id !== website.id);
       });
-      toast.success('Site supprimé avec succès', {
-        description: `Le site "${website.title}" a été supprimé définitivement.`,
+      toast.success(t('dashboard:websites.toast.deleted'), {
+        description: t('dashboard:websites.toast.deletedDescription', { title: website.title }),
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Une erreur est survenue';
-      toast.error('Erreur lors de la suppression du site', {
+      const message = error instanceof Error ? error.message : t('common:errors.generic');
+      toast.error(t('dashboard:websites.toast.deleteError'), {
         description: message,
       });
     } finally {
       setIsDeleting(false);
       setShowDeleteDialog(false);
     }
-  }, [website.id, website.title, queryClient]);
+  }, [website.id, website.title, queryClient, t]);
 
   const handlePublish = useCallback(async () => {
     setIsPublishing(true);
@@ -98,30 +100,30 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
         if (!old) return [];
         return old.map(w => w.id === website.id ? { ...w, status: 'published' } : w);
       });
-      toast.success('Site publié avec succès !', {
-        description: `Votre site est maintenant accessible à l'adresse ${displayUrl}`,
+      toast.success(t('dashboard:websites.toast.published'), {
+        description: t('dashboard:websites.toast.publishedDescription', { url: displayUrl }),
         action: {
-          label: 'Voir le site',
+          label: t('dashboard:websites.card.view'),
           onClick: () => openExternalUrl(fullUrl),
         },
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Une erreur est survenue';
-      toast.error('Erreur lors de la publication', {
+      const message = error instanceof Error ? error.message : t('common:errors.generic');
+      toast.error(t('dashboard:websites.toast.publishError'), {
         description: message,
       });
     } finally {
       setIsPublishing(false);
     }
-  }, [website, queryClient]);
+  }, [website, queryClient, t]);
 
   const handleCopyUrl = useCallback(() => {
     const url = getWebsiteUrl(website.slug);
     navigator.clipboard.writeText(url);
-    toast.success('URL copiée !', {
+    toast.success(t('dashboard:websites.toast.urlCopied'), {
       description: url,
     });
-  }, [website.slug]);
+  }, [website.slug, t]);
 
   const isPublished = website.status === 'published';
   const createdAt = website.created_at ? new Date(website.created_at) : new Date();
@@ -152,11 +154,11 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
                   <TooltipTrigger asChild>
                     <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20 cursor-default">
                       <CheckCircle2 className="w-3 h-3 mr-1" />
-                      En ligne
+                      {t('dashboard:websites.status.online')}
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent side="top">
-                    <p>Ce site est accessible publiquement</p>
+                    <p>{t('dashboard:websites.card.publicTooltip')}</p>
                   </TooltipContent>
                 </Tooltip>
               ) : (
@@ -164,11 +166,11 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
                   <TooltipTrigger asChild>
                     <Badge variant="secondary" className="cursor-default">
                       <Clock className="w-3 h-3 mr-1" />
-                      Brouillon
+                      {t('dashboard:websites.status.draft')}
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent side="top">
-                    <p>Ce site n'est pas encore publié</p>
+                    <p>{t('dashboard:websites.card.draftTooltip')}</p>
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -180,7 +182,7 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
                   variant="ghost" 
                   size="icon" 
                   className="h-8 w-8 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-                  aria-label="Actions du site"
+                  aria-label={t('common:actions.actions')}
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
@@ -188,17 +190,17 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={() => onSelect?.(website)}>
                   <Edit className="h-4 w-4 mr-2" />
-                  Modifier
+                  {t('common:actions.edit')}
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <a href={fullUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-4 w-4 mr-2" />
-                    Voir le site
+                    {t('dashboard:websites.card.view')}
                   </a>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleCopyUrl}>
                   <Copy className="h-4 w-4 mr-2" />
-                  Copier l'URL
+                  {t('dashboard:websites.card.copyUrl')}
                 </DropdownMenuItem>
                 {!isPublished && (
                   <DropdownMenuItem onClick={handlePublish} disabled={isPublishing}>
@@ -207,7 +209,7 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
                     ) : (
                       <Rocket className="h-4 w-4 mr-2" />
                     )}
-                    Publier
+                    {t('dashboard:websites.card.publish')}
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
@@ -216,14 +218,14 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
                   onClick={() => setShowDeleteDialog(true)}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Supprimer
+                  {t('common:actions.delete')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
           
           <div className="mt-3">
-            <CardTitle className="text-lg line-clamp-1">{website.title || 'Sans titre'}</CardTitle>
+            <CardTitle className="text-lg line-clamp-1">{website.title || t('dashboard:websites.card.untitled')}</CardTitle>
             <CardDescription className="mt-1 line-clamp-1">
               <span className="font-mono text-xs">{displayUrl}</span>
             </CardDescription>
@@ -250,7 +252,7 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
                 onClick={() => onSelect?.(website)}
               >
                 <Eye className="h-3.5 w-3.5 mr-1.5" />
-                Éditer
+                {t('dashboard:websites.card.edit')}
               </Button>
               {!isPublished && (
                 <Button 
@@ -264,7 +266,7 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
                   ) : (
                     <>
                       <Rocket className="h-3.5 w-3.5 mr-1.5" />
-                      Publier
+                      {t('dashboard:websites.card.publish')}
                     </>
                   )}
                 </Button>
@@ -278,13 +280,13 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer le site ?</AlertDialogTitle>
+            <AlertDialogTitle>{t('dashboard:websites.card.confirmDelete')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Le site <strong>{website.title}</strong> et toutes ses données seront définitivement supprimés.
+              <span dangerouslySetInnerHTML={{ __html: t('dashboard:websites.card.confirmDeleteDescription', { title: website.title }) }} />
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t('common:actions.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
@@ -293,12 +295,12 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
               {isDeleting ? (
                 <>
                   <Spinner className="h-4 w-4 mr-2" />
-                  Suppression...
+                  {t('dashboard:websites.card.deleting')}
                 </>
               ) : (
                 <>
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Supprimer
+                  {t('common:actions.delete')}
                 </>
               )}
             </AlertDialogAction>

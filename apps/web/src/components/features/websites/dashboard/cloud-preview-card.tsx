@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react";
+import { useTranslation } from 'react-i18next';
 import { 
   HardDrive, 
   ChevronRight,
@@ -32,6 +33,7 @@ export function CloudPreviewCard({
   storageLimit, 
   storagePercentage 
 }: CloudPreviewCardProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
   const { data: files = [], isLoading } = useFilesQuery();
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
 
@@ -44,7 +46,7 @@ export function CloudPreviewCard({
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <HardDrive className="h-4 w-4 text-primary" />
-            Cloud & Stockage
+            {t('dashboard:dashboard.cloud.title')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -65,16 +67,16 @@ export function CloudPreviewCard({
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <HardDrive className="h-4 w-4 text-primary" />
-            Cloud & Stockage
+            {t('dashboard:dashboard.cloud.title')}
             {files.length > 0 && (
               <Badge variant="secondary" className="text-[10px]">
-                {files.length} fichier{files.length > 1 ? 's' : ''}
+                {files.length} {t('dashboard:dashboard.cloud.files', { count: files.length }).split(' ')[1]}{files.length > 1 ? 's' : ''}
               </Badge>
             )}
           </CardTitle>
           <Link href={`/app/${websiteId}/cloud`}>
             <Button variant="ghost" size="sm" className="text-xs h-7">
-              Gérer les fichiers
+              {t('dashboard:dashboard.cloud.manageFiles')}
               <ChevronRight className="h-3 w-3 ml-1" />
             </Button>
           </Link>
@@ -82,7 +84,7 @@ export function CloudPreviewCard({
         {/* Storage Progress Bar */}
         <div className="mt-3">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs text-muted-foreground">Espace utilisé</span>
+            <span className="text-xs text-muted-foreground">{t('dashboard:dashboard.cloud.spaceUsed')}</span>
             <span className="text-xs font-medium">{formatBytes(storageUsed)} / {formatBytes(storageLimit)}</span>
           </div>
           <Progress 
@@ -92,7 +94,7 @@ export function CloudPreviewCard({
           {storagePercentage > 80 && (
             <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
               <AlertTriangle className="h-3 w-3" />
-              Espace presque plein
+              {t('dashboard:dashboard.cloud.spaceAlmostFull')}
             </p>
           )}
         </div>
@@ -101,12 +103,12 @@ export function CloudPreviewCard({
         {recentFiles.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Upload className="h-10 w-10 mx-auto mb-3 opacity-50" />
-            <p className="text-sm font-medium">Aucun fichier</p>
-            <p className="text-xs mt-1">Uploadez vos premiers médias</p>
+            <p className="text-sm font-medium">{t('dashboard:dashboard.cloud.noFiles')}</p>
+            <p className="text-xs mt-1">{t('dashboard:dashboard.cloud.uploadFirst')}</p>
             <Link href={`/app/${websiteId}/cloud`}>
               <Button variant="outline" size="sm" className="mt-3">
                 <Upload className="h-3.5 w-3.5 mr-1.5" />
-                Ajouter des fichiers
+                {t('dashboard:dashboard.cloud.addFiles')}
               </Button>
             </Link>
           </div>
@@ -140,7 +142,7 @@ export function CloudPreviewCard({
             </div>
             {files.length > 8 && (
               <p className="text-xs text-muted-foreground text-center mt-3">
-                +{files.length - 8} autre{files.length - 8 > 1 ? 's' : ''} fichier{files.length - 8 > 1 ? 's' : ''}
+                {t('dashboard:dashboard.cloud.otherFiles', { count: files.length - 8 })}{files.length - 8 > 1 ? 's' : ''}
               </p>
             )}
           </>

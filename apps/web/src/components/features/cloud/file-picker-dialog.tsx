@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useTranslation } from 'react-i18next'
 import { Image as ImageIcon, File as FileIcon, Check } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 
@@ -32,12 +33,16 @@ export function FilePickerDialog({
   onOpenChange,
   onSelect,
   accept = "*/*",
-  title = "Sélectionner un fichier",
-  description = "Choisissez un fichier depuis votre stockage cloud.",
+  title,
+  description,
 }: FilePickerDialogProps) {
+  const { t } = useTranslation(['common', 'dashboard'])
   const [files, setFiles] = useState<FileMetadata[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null)
+
+  const dialogTitle = title || t('dashboard:cloud.selectFile')
+  const dialogDescription = description || t('dashboard:cloud.selectFileDescription')
 
   useEffect(() => {
     if (open) {
@@ -95,8 +100,8 @@ export function FilePickerDialog({
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
       <ResponsiveDialogContent className="w-[calc(100%-2rem)] max-w-2xl">
         <ResponsiveDialogHeader>
-          <ResponsiveDialogTitle className="text-base sm:text-lg">{title}</ResponsiveDialogTitle>
-          <ResponsiveDialogDescription className="text-xs sm:text-sm">{description}</ResponsiveDialogDescription>
+          <ResponsiveDialogTitle className="text-base sm:text-lg">{dialogTitle}</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className="text-xs sm:text-sm">{dialogDescription}</ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 
         <div className="space-y-3 sm:space-y-4">
@@ -106,7 +111,7 @@ export function FilePickerDialog({
             </div>
           ) : files.length === 0 ? (
             <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-muted-foreground">
-              Aucun fichier trouvé
+              {t('dashboard:cloud.noFiles')}
             </div>
           ) : (
             <ScrollArea className="h-[280px] xs:h-[320px] sm:h-[400px] pr-3 sm:pr-4">
@@ -156,10 +161,10 @@ export function FilePickerDialog({
 
           <ResponsiveDialogFooter className="flex-col-reverse xs:flex-row justify-end gap-2 pt-3 sm:pt-4 border-t">
             <Button variant="outline" onClick={() => onOpenChange(false)} className="h-9 sm:h-10 text-sm">
-              Annuler
+              {t('common:actions.cancel')}
             </Button>
             <Button onClick={handleSelect} disabled={!selectedFileId} className="h-9 sm:h-10 text-sm">
-              Sélectionner
+              {t('common:actions.select')}
             </Button>
           </ResponsiveDialogFooter>
         </div>

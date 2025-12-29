@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useWebsitesQuery } from '@/lib/query';
 import type { Website } from '@/lib/api';
 import { WebsiteCard } from './WebsiteCard';
@@ -22,6 +23,7 @@ interface WebsitesListProps {
 }
 
 export function WebsitesList({ onSelectWebsite }: WebsitesListProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
   const { data: websites = [], isLoading, refetch } = useWebsitesQuery();
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -84,9 +86,9 @@ export function WebsitesList({ onSelectWebsite }: WebsitesListProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold tracking-tight">Mes sites</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t('dashboard:websites.title')}</h2>
           <Badge variant="outline" className="text-xs">
-            {websites.length} site{websites.length !== 1 ? 's' : ''}
+            {websites.length} {t('dashboard:websites.count', { count: websites.length }).split(' ')[1]}
           </Badge>
         </div>
         <div className="flex items-center gap-2">
@@ -100,7 +102,7 @@ export function WebsitesList({ onSelectWebsite }: WebsitesListProps) {
           </Button>
           <Button onClick={() => setShowCreateModal(true)} className="gap-2">
             <Plus className="h-4 w-4" />
-            Créer un site
+            {t('dashboard:websites.create')}
           </Button>
         </div>
       </div>
@@ -109,12 +111,12 @@ export function WebsitesList({ onSelectWebsite }: WebsitesListProps) {
       {websites.length === 0 ? (
         <EmptyState
           icon={<Globe className="h-12 w-12" />}
-          title="Aucun site web"
-          description="Créez votre premier site en quelques clics à partir d'un template professionnel."
+          title={t('dashboard:websites.noWebsites')}
+          description={t('dashboard:websites.noWebsitesDescription')}
           action={
             <Button onClick={() => setShowCreateModal(true)} className="gap-2">
               <Sparkles className="h-4 w-4" />
-              Créer mon premier site
+              {t('dashboard:websites.createFirst')}
             </Button>
           }
         />
@@ -144,8 +146,8 @@ export function WebsitesList({ onSelectWebsite }: WebsitesListProps) {
                 <Plus className="h-6 w-6 text-primary" />
               </div>
               <div className="text-center">
-                <p className="font-medium">Créer un nouveau site</p>
-                <p className="text-sm text-muted-foreground">À partir d'un template</p>
+                <p className="font-medium">{t('dashboard:websites.createNew')}</p>
+                <p className="text-sm text-muted-foreground">{t('dashboard:websites.fromTemplate')}</p>
               </div>
             </CardContent>
           </Card>

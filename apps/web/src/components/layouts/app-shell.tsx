@@ -1,5 +1,6 @@
 import * as React from "react"
 import { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { AsapSidebar } from "@/components/layouts/asap-sidebar"
 import { SidebarProvider, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -40,24 +41,24 @@ interface AppShellProps {
   currentPage?: string
 }
 
-// Keyboard shortcuts help dialog content
-const shortcuts = [
-  { category: "Navigation", items: [
-    { keys: ["g", "d"], description: "Aller au Dashboard" },
-    { keys: ["g", "e"], description: "Aller aux Extensions" },
-    { keys: ["g", "c"], description: "Aller au Cloud" },
-  ]},
-  { category: "Actions", items: [
-    { keys: [getModifierKey(), "s"], description: "Sauvegarder" },
-    { keys: ["Esc"], description: "Annuler / Fermer" },
-    { keys: [getModifierKey(), "Shift", "r"], description: "Rafraîchir les données" },
-  ]},
-  { category: "Interface", items: [
-    { keys: [getModifierKey(), "k"], description: "Ouvrir la palette de commandes" },
-    { keys: ["["], description: "Ouvrir/Fermer la sidebar" },
-    { keys: ["?"], description: "Afficher l'aide des raccourcis" },
-  ]},
-]
+// Keyboard shortcuts categories (keys only, descriptions added dynamically with i18n)
+const shortcutKeys = {
+  navigation: [
+    { keys: ["g", "d"], descKey: "goToDashboard" },
+    { keys: ["g", "e"], descKey: "goToExtensions" },
+    { keys: ["g", "c"], descKey: "goToCloud" },
+  ],
+  actions: [
+    { keys: [getModifierKey(), "s"], descKey: "save" },
+    { keys: ["Esc"], descKey: "cancelClose" },
+    { keys: [getModifierKey(), "Shift", "r"], descKey: "refreshData" },
+  ],
+  interface: [
+    { keys: [getModifierKey(), "k"], descKey: "openCommandPalette" },
+    { keys: ["["], descKey: "toggleSidebar" },
+    { keys: ["?"], descKey: "showShortcutsHelp" },
+  ],
+}
 
 export function AppShell({ 
   children, 
@@ -116,9 +117,26 @@ function AppShellContent({
   websiteId,
   currentPage,
 }: AppShellContentProps) {
+  const { t } = useTranslation('common')
   const { toggleSidebar, setOpen, open } = useSidebar()
   const [pendingGoTo, setPendingGoTo] = useState(false)
   const previousSidebarStateRef = React.useRef<boolean | null>(null)
+  
+  // Build shortcuts with translated descriptions
+  const shortcuts = [
+    { category: t('shortcuts.navigation'), items: shortcutKeys.navigation.map(s => ({
+      keys: s.keys,
+      description: t(`shortcuts.${s.descKey}`)
+    }))},
+    { category: t('shortcuts.actions'), items: shortcutKeys.actions.map(s => ({
+      keys: s.keys,
+      description: t(`shortcuts.${s.descKey}`)
+    }))},
+    { category: t('shortcuts.interface'), items: shortcutKeys.interface.map(s => ({
+      keys: s.keys,
+      description: t(`shortcuts.${s.descKey}`)
+    }))},
+  ]
   
   // Command palette state
   const { open: commandOpen, setOpen: setCommandOpen } = useCommandPalette()
@@ -267,7 +285,7 @@ function AppShellContent({
             >
               <div className="flex items-center gap-2 w-full bg-muted/50 hover:bg-muted/70 rounded-md px-3 h-9 text-sm text-muted-foreground transition-colors cursor-pointer">
                 <Search className="h-4 w-4 shrink-0" />
-                <span className="flex-1 text-left truncate">Rechercher...</span>
+                <span className="flex-1 text-left truncate">{t('navigation.searchPlaceholder')}</span>
                 <Kbd className="hidden sm:inline-flex">
                   <span className="text-xs">⌘</span>K
                 </Kbd>
@@ -287,11 +305,11 @@ function AppShellContent({
                   onClick={() => setShowShortcutsHelp(true)}
                 >
                   <Keyboard className="h-4 w-4" />
-                  <span className="sr-only">Raccourcis clavier</span>
+                  <span className="sr-only">{t('navigation.keyboardShortcuts')}</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom">
-                <p>Raccourcis clavier <Kbd className="ml-1">?</Kbd></p>
+                <p>{t('navigation.keyboardShortcuts')} <Kbd className="ml-1">?</Kbd></p>
               </TooltipContent>
             </Tooltip>
             
@@ -332,7 +350,7 @@ function AppShellContent({
           <ResponsiveDialogHeader>
             <ResponsiveDialogTitle className="flex items-center gap-2">
               <Keyboard className="h-5 w-5" />
-              Raccourcis clavier
+              {t('navigation.keyboardShortcuts')}
             </ResponsiveDialogTitle>
           </ResponsiveDialogHeader>
           <div className="space-y-4 py-2">
@@ -358,7 +376,7 @@ function AppShellContent({
             ))}
           </div>
           <div className="text-xs text-muted-foreground text-center pt-2 border-t">
-            Appuyez sur <Kbd>Esc</Kbd> pour fermer
+            {t('shortcuts.pressEscToClose', { defaultValue: 'Press' })} <Kbd>Esc</Kbd> {t('actions.close').toLowerCase()}
           </div>
         </ResponsiveDialogContent>
       </ResponsiveDialog>

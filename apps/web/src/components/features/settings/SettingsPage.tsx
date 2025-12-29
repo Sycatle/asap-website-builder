@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { websitesAPI, type Website, type UpdateWebsiteRequest } from '@/lib/api';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { useQueryClient } from '@tanstack/react-query';
@@ -61,6 +62,7 @@ import {
 } from "lucide-react";
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const { currentWebsite: website, currentWebsiteId, isLoading: contextLoading, refetch: refetchAll } = useWebsiteContext();
   const queryClient = useQueryClient();
   
@@ -142,9 +144,9 @@ export default function SettingsPage() {
         isIndexable,
       });
       
-      toast.success('Paramètres enregistrés');
+      toast.success(t('settings:toast.saved'));
     } catch (error) {
-      toast.error('Erreur lors de la sauvegarde');
+      toast.error(t('settings:toast.saveError'));
     } finally {
       setIsSaving(false);
     }
@@ -167,9 +169,9 @@ export default function SettingsPage() {
       await websitesAPI.update(currentWebsiteId, { status: 'published' } as UpdateWebsiteRequest);
       await queryClient.invalidateQueries({ queryKey: queryKeys.websites.all });
       refetchAll();
-      toast.success('Site publié avec succès !');
+      toast.success(t('settings:toast.published'));
     } catch (error) {
-      toast.error('Erreur lors de la publication');
+      toast.error(t('settings:toast.publishError'));
     } finally {
       setIsSaving(false);
     }
@@ -183,9 +185,9 @@ export default function SettingsPage() {
       await websitesAPI.update(currentWebsiteId, { status: 'draft' } as UpdateWebsiteRequest);
       await queryClient.invalidateQueries({ queryKey: queryKeys.websites.all });
       refetchAll();
-      toast.success('Site mis en brouillon');
+      toast.success(t('settings:toast.unpublished'));
     } catch (error) {
-      toast.error('Erreur lors de la mise en brouillon');
+      toast.error(t('settings:toast.unpublishError'));
     } finally {
       setIsSaving(false);
     }
@@ -198,10 +200,10 @@ export default function SettingsPage() {
     try {
       await websitesAPI.delete(currentWebsiteId);
       await queryClient.invalidateQueries({ queryKey: queryKeys.websites.all });
-      toast.success('Site supprimé');
+      toast.success(t('settings:toast.deleted'));
       window.location.href = '/app';
     } catch (error) {
-      toast.error('Erreur lors de la suppression');
+      toast.error(t('settings:toast.deleteError'));
     } finally {
       setIsDeleting(false);
     }
@@ -227,8 +229,8 @@ export default function SettingsPage() {
     <div className="flex flex-col gap-6 sm:gap-8 max-w-4xl animate-fade-in">
       {/* Page Header */}
       <PageHeader
-        title="Paramètres du site"
-        subtitle="Configurez les informations et le comportement de votre site"
+        title={t('settings:website.title')}
+        subtitle={t('settings:website.subtitle')}
         icon={
           <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center shadow-lg">
             <Settings className="h-5 w-5 text-white" />
@@ -241,16 +243,16 @@ export default function SettingsPage() {
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center">
                 <Settings className="h-4 w-4 text-white" />
               </div>
-              <p className="text-sm font-semibold hidden sm:block">Paramètres</p>
+              <p className="text-sm font-semibold hidden sm:block">{t('settings:title')}</p>
             </div>
             {isFormDirty && (
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handleCancel} className="h-8">
-                  Annuler
+                  {t('common:actions.cancel')}
                 </Button>
                 <Button size="sm" onClick={handleSave} disabled={isSaving} className="h-8">
                   {isSaving ? <Spinner className="h-4 w-4 mr-1.5" /> : <CheckCircle2 className="h-4 w-4 mr-1.5" />}
-                  Enregistrer
+                  {t('common:actions.save')}
                 </Button>
               </div>
             )}
@@ -264,10 +266,10 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Globe className="h-5 w-5 text-primary" />
-              Informations générales
+              {t('settings:website.general.title')}
             </CardTitle>
             <CardDescription>
-              Les informations de base de votre site
+              {t('settings:website.general.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -275,7 +277,7 @@ export default function SettingsPage() {
               <Field>
                 <FieldLabel htmlFor="slug" className="flex items-center gap-2">
                   <Link2 className="h-4 w-4 text-muted-foreground" />
-                  URL du site
+                  {t('settings:website.general.url')}
                 </FieldLabel>
                 <div className="flex items-center">
                   <span className="flex h-10 items-center rounded-l-md border border-r-0 bg-muted px-3 text-sm text-muted-foreground">
@@ -288,13 +290,13 @@ export default function SettingsPage() {
                     className="rounded-l-none bg-muted"
                   />
                 </div>
-                <FieldDescription>L'URL ne peut pas être modifiée après création</FieldDescription>
+                <FieldDescription>{t('settings:website.general.urlDescription')}</FieldDescription>
               </Field>
 
               <Field>
                 <FieldLabel htmlFor="title" className="flex items-center gap-2">
                   <Type className="h-4 w-4 text-muted-foreground" />
-                  Titre du site
+                  {t('settings:website.general.siteTitle')}
                 </FieldLabel>
                 <Input
                   id="title"
@@ -307,30 +309,30 @@ export default function SettingsPage() {
               <Field>
                 <FieldLabel htmlFor="tagline" className="flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  Tagline
+                  {t('settings:website.general.tagline')}
                 </FieldLabel>
                 <Input
                   id="tagline"
                   value={tagline}
                   onChange={(e) => setTagline(e.target.value)}
-                  placeholder="Une courte description accrocheuse"
+                  placeholder={t('settings:website.general.taglinePlaceholder')}
                 />
               </Field>
 
               <Field>
                 <FieldLabel htmlFor="description" className="flex items-center gap-2">
                   <FileText className="h-4 w-4 text-muted-foreground" />
-                  Description
+                  {t('settings:website.general.descriptionLabel')}
                 </FieldLabel>
                 <Textarea
                   id="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Description détaillée de votre site pour le SEO..."
+                  placeholder={t('settings:website.general.descriptionPlaceholder')}
                   rows={3}
                 />
                 <FieldDescription>
-                  Utilisée pour les moteurs de recherche (meta description)
+                  {t('settings:website.general.descriptionHelp')}
                 </FieldDescription>
               </Field>
             </FieldGroup>
@@ -342,10 +344,10 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Search className="h-5 w-5 text-primary" />
-              SEO & Réseaux sociaux
+              {t('settings:website.seo.title')}
             </CardTitle>
             <CardDescription>
-              Optimisez la visibilité de votre site
+              {t('settings:website.seo.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -353,7 +355,7 @@ export default function SettingsPage() {
               <Field>
                 <FieldLabel htmlFor="favicon" className="flex items-center gap-2">
                   <Image className="h-4 w-4 text-muted-foreground" />
-                  Favicon (URL)
+                  {t('settings:website.seo.favicon')}
                 </FieldLabel>
                 <Input
                   id="favicon"
@@ -362,14 +364,14 @@ export default function SettingsPage() {
                   placeholder="https://example.com/favicon.ico"
                 />
                 <FieldDescription>
-                  L'icône affichée dans l'onglet du navigateur
+                  {t('settings:website.seo.faviconDescription')}
                 </FieldDescription>
               </Field>
 
               <Field>
                 <FieldLabel htmlFor="ogImage" className="flex items-center gap-2">
                   <Share2 className="h-4 w-4 text-muted-foreground" />
-                  Image de partage (OG Image)
+                  {t('settings:website.seo.ogImage')}
                 </FieldLabel>
                 <Input
                   id="ogImage"
@@ -378,7 +380,7 @@ export default function SettingsPage() {
                   placeholder="https://example.com/og-image.jpg"
                 />
                 <FieldDescription>
-                  Image affichée lors du partage sur les réseaux sociaux (1200x630px recommandé)
+                  {t('settings:website.seo.ogImageDescription')}
                 </FieldDescription>
               </Field>
             </FieldGroup>
@@ -389,10 +391,10 @@ export default function SettingsPage() {
               <FieldContent>
                 <FieldLabel className="flex items-center gap-2">
                   <Search className="h-4 w-4 text-muted-foreground" />
-                  Indexation par les moteurs de recherche
+                  {t('settings:website.seo.indexing')}
                 </FieldLabel>
                 <FieldDescription>
-                  Autoriser Google et autres à indexer votre site
+                  {t('settings:website.seo.indexingDescription')}
                 </FieldDescription>
               </FieldContent>
               <TooltipProvider>
@@ -406,7 +408,7 @@ export default function SettingsPage() {
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Active/désactive l'indexation par les moteurs de recherche</p>
+                    <p>{t('settings:website.seo.indexingTooltip')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -414,7 +416,7 @@ export default function SettingsPage() {
             {!isIndexable && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 text-amber-600 text-sm">
                 <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                <span>Votre site ne sera pas visible dans les résultats de recherche</span>
+                <span>{t('settings:website.seo.notIndexedWarning')}</span>
               </div>
             )}
           </CardContent>
@@ -430,10 +432,10 @@ export default function SettingsPage() {
             ) : (
               <Clock className="h-5 w-5 text-amber-500" />
             )}
-            Statut de publication
+            {t('settings:website.publication.title')}
           </CardTitle>
           <CardDescription>
-            Gérez la visibilité de votre site
+            {t('settings:website.publication.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -453,19 +455,19 @@ export default function SettingsPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-medium">
-                    {website?.status === 'published' ? 'Site en ligne' : 'Site en brouillon'}
+                    {website?.status === 'published' ? t('settings:website.publication.online') : t('settings:website.publication.draft')}
                   </span>
                   <Badge className={website?.status === 'published' 
                     ? 'bg-green-500/10 text-green-600 border-green-500/20' 
                     : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
                   }>
-                    {website?.status === 'published' ? 'Public' : 'Privé'}
+                    {website?.status === 'published' ? t('settings:website.publication.public') : t('settings:website.publication.private')}
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground mt-0.5">
                   {website?.status === 'published' 
-                    ? `Accessible à ${website?.slug}.asap.cool`
-                    : 'Seul vous pouvez voir votre site'
+                    ? t('settings:website.publication.accessibleAt', { url: `${website?.slug}.asap.cool` })
+                    : t('settings:website.publication.onlyYou')
                   }
                 </p>
               </div>
@@ -485,11 +487,11 @@ export default function SettingsPage() {
                       ) : (
                         <EyeOff className="h-4 w-4 mr-2" />
                       )}
-                      Mettre en brouillon
+                      {t('settings:website.publication.unpublish')}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Rendre le site privé et non accessible publiquement</p>
+                    <p>{t('settings:website.publication.unpublishTooltip')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -507,11 +509,11 @@ export default function SettingsPage() {
                       ) : (
                         <Rocket className="h-4 w-4 mr-2" />
                       )}
-                      Publier le site
+                      {t('settings:website.publication.publish')}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Rendre le site public et accessible à tous</p>
+                    <p>{t('settings:website.publication.publishTooltip')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -525,18 +527,18 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg text-destructive">
             <AlertTriangle className="h-5 w-5" />
-            Zone de danger
+            {t('settings:website.danger.title')}
           </CardTitle>
           <CardDescription>
-            Actions irréversibles sur votre site
+            {t('settings:website.danger.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <p className="font-medium">Supprimer le site</p>
+              <p className="font-medium">{t('settings:website.danger.deleteTitle')}</p>
               <p className="text-sm text-muted-foreground">
-                Supprimer définitivement ce site et toutes ses données
+                {t('settings:website.danger.deleteDescription')}
               </p>
             </div>
             <AlertDialog>
@@ -550,30 +552,29 @@ export default function SettingsPage() {
                         ) : (
                           <Trash2 className="h-4 w-4 mr-2" />
                         )}
-                        Supprimer
+                        {t('settings:website.danger.deleteButton')}
                       </Button>
                     </AlertDialogTrigger>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Attention : cette action est irréversible</p>
+                    <p>{t('settings:website.danger.deleteWarning')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Supprimer le site ?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('settings:website.danger.deleteConfirmTitle')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Cette action est irréversible. Toutes les données de ce site seront définitivement supprimées :
-                    pages, sections, médias, extensions et configurations.
+                    {t('settings:website.danger.deleteConfirmDescription')}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogCancel>{t('common:actions.cancel')}</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleDeleteWebsite}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
-                    Supprimer définitivement
+                    {t('settings:website.danger.deleteConfirmButton')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

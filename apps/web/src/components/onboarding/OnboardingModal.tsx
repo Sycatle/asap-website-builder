@@ -8,6 +8,7 @@
 "use client"
 
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -23,6 +24,8 @@ interface OnboardingModalProps {
 }
 
 export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalProps) {
+  const { t } = useTranslation(['onboarding']);
+  
   const handleComplete = (websiteId: string) => {
     onSuccess?.(websiteId);
     onClose();
@@ -36,7 +39,7 @@ export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalP
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <VisuallyHidden>
-          <ResponsiveDialogTitle>Créer un nouveau site</ResponsiveDialogTitle>
+          <ResponsiveDialogTitle>{t('modal.title')}</ResponsiveDialogTitle>
         </VisuallyHidden>
         <div className="h-full overflow-y-auto">
           <PresetOnboardingRouter onComplete={handleComplete} />

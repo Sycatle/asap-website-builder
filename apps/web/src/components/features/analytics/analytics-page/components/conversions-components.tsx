@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Mail, MessageSquare, MousePointerClick, Download, Target } from "lucide-react";
@@ -10,13 +11,15 @@ import type { ConversionsCardsProps, ConversionFunnelProps } from "../types";
  * Conversion metric cards
  */
 export function ConversionsCards({ conversions }: ConversionsCardsProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+  
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card className="border-green-500/20 bg-gradient-to-br from-green-500/5 to-transparent">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <Mail className="h-4 w-4" />
-            Inscriptions newsletter
+            {t('dashboard:analytics.conversions.newsletterSignups')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -24,7 +27,7 @@ export function ConversionsCards({ conversions }: ConversionsCardsProps) {
           <div className="flex items-center justify-between mt-2">
             <ChangeIndicator value={conversions.newsletterSignups.change} />
             <Badge variant="secondary" className="text-xs">
-              {conversions.newsletterSignups.rate}% taux
+              {conversions.newsletterSignups.rate}% {t('dashboard:analytics.conversions.rate')}
             </Badge>
           </div>
         </CardContent>
@@ -34,7 +37,7 @@ export function ConversionsCards({ conversions }: ConversionsCardsProps) {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
-            Formulaires de contact
+            {t('dashboard:analytics.conversions.contactForms')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -42,7 +45,7 @@ export function ConversionsCards({ conversions }: ConversionsCardsProps) {
           <div className="flex items-center justify-between mt-2">
             <ChangeIndicator value={conversions.contactForms.change} />
             <Badge variant="secondary" className="text-xs">
-              {conversions.contactForms.rate}% taux
+              {conversions.contactForms.rate}% {t('dashboard:analytics.conversions.rate')}
             </Badge>
           </div>
         </CardContent>
@@ -52,7 +55,7 @@ export function ConversionsCards({ conversions }: ConversionsCardsProps) {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <MousePointerClick className="h-4 w-4" />
-            Clics CTA
+            {t('dashboard:analytics.conversions.ctaClicks')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -60,7 +63,7 @@ export function ConversionsCards({ conversions }: ConversionsCardsProps) {
           <div className="flex items-center justify-between mt-2">
             <ChangeIndicator value={conversions.ctaClicks.change} />
             <Badge variant="secondary" className="text-xs">
-              {conversions.ctaClicks.rate}% taux
+              {conversions.ctaClicks.rate}% {t('dashboard:analytics.conversions.rate')}
             </Badge>
           </div>
         </CardContent>
@@ -70,7 +73,7 @@ export function ConversionsCards({ conversions }: ConversionsCardsProps) {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <Download className="h-4 w-4" />
-            Téléchargements
+            {t('dashboard:analytics.conversions.downloads')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -78,7 +81,7 @@ export function ConversionsCards({ conversions }: ConversionsCardsProps) {
           <div className="flex items-center justify-between mt-2">
             <ChangeIndicator value={conversions.downloads.change} />
             <Badge variant="secondary" className="text-xs">
-              {conversions.downloads.rate}% taux
+              {conversions.downloads.rate}% {t('dashboard:analytics.conversions.rate')}
             </Badge>
           </div>
         </CardContent>
@@ -91,12 +94,14 @@ export function ConversionsCards({ conversions }: ConversionsCardsProps) {
  * Conversion funnel visualization
  */
 export function ConversionFunnel({ totalVisits, totalPageViews, conversions }: ConversionFunnelProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+  
   const funnelSteps = [
-    { label: 'Visiteurs totaux', value: totalVisits, percent: 100 },
-    { label: 'Pages vues', value: totalPageViews, percent: Math.min(100, Math.round((totalPageViews / totalVisits) * 40)) },
-    { label: 'Engagés (>30s)', value: Math.round(totalVisits * 0.45), percent: 45 },
-    { label: 'Clics CTA', value: conversions.ctaClicks.total, percent: Math.round((conversions.ctaClicks.total / totalVisits) * 100) },
-    { label: 'Conversions', value: conversions.newsletterSignups.total + conversions.contactForms.total, percent: Math.round(((conversions.newsletterSignups.total + conversions.contactForms.total) / totalVisits) * 100) },
+    { label: t('dashboard:analytics.conversions.funnel.totalVisitors'), value: totalVisits, percent: 100 },
+    { label: t('dashboard:analytics.conversions.funnel.pageViews'), value: totalPageViews, percent: Math.min(100, Math.round((totalPageViews / totalVisits) * 40)) },
+    { label: t('dashboard:analytics.conversions.funnel.engaged'), value: Math.round(totalVisits * 0.45), percent: 45 },
+    { label: t('dashboard:analytics.conversions.funnel.ctaClicks'), value: conversions.ctaClicks.total, percent: Math.round((conversions.ctaClicks.total / totalVisits) * 100) },
+    { label: t('dashboard:analytics.conversions.funnel.conversions'), value: conversions.newsletterSignups.total + conversions.contactForms.total, percent: Math.round(((conversions.newsletterSignups.total + conversions.contactForms.total) / totalVisits) * 100) },
   ];
 
   return (
@@ -104,10 +109,10 @@ export function ConversionFunnel({ totalVisits, totalPageViews, conversions }: C
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <Target className="h-5 w-5 text-primary" />
-          Entonnoir de conversion
+          {t('dashboard:analytics.conversions.funnel.title')}
         </CardTitle>
         <CardDescription>
-          Parcours des visiteurs vers les objectifs
+          {t('dashboard:analytics.conversions.funnel.description')}
         </CardDescription>
       </CardHeader>
       <CardContent>

@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
 import {
   ResponsiveDialog,
@@ -31,6 +32,8 @@ export function FilePreviewDialog({
   getFileUrl,
   copiedId,
 }: FilePreviewDialogProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+
   return (
     <ResponsiveDialog open={isOpen} onOpenChange={onClose}>
       <ResponsiveDialogContent className="max-w-[95vw] sm:max-w-3xl p-4 sm:p-6">
@@ -71,7 +74,7 @@ export function FilePreviewDialog({
             {!isImage(file.mime_type) && !isVideo(file.mime_type) && !isAudio(file.mime_type) && (
               <div className="flex flex-col items-center justify-center py-8 sm:py-12 bg-muted rounded-lg">
                 {getFileIcon(file.mime_type, "h-12 w-12 sm:h-16 sm:w-16")}
-                <p className="mt-3 sm:mt-4 text-sm text-muted-foreground">Aperçu non disponible</p>
+                <p className="mt-3 sm:mt-4 text-sm text-muted-foreground">{t('dashboard:cloud.preview.notAvailable')}</p>
               </div>
             )}
           </div>
@@ -86,12 +89,12 @@ export function FilePreviewDialog({
             {copiedId === file?.id ? (
               <>
                 <CheckCircle2 className="h-4 w-4 mr-1.5 text-green-600" />
-                Copié !
+                {t('dashboard:cloud.preview.copied')}
               </>
             ) : (
               <>
                 <Copy className="h-4 w-4 mr-1.5" />
-                Copier l'URL
+                {t('dashboard:cloud.preview.copyUrl')}
               </>
             )}
           </Button>
@@ -102,7 +105,7 @@ export function FilePreviewDialog({
           >
             <a href={file ? getFileUrl(file.id) : '#'} download>
               <Download className="h-4 w-4 mr-1.5" />
-              Télécharger
+              {t('dashboard:cloud.contextMenu.download')}
             </a>
           </Button>
           <Button
@@ -111,7 +114,7 @@ export function FilePreviewDialog({
             className="w-full sm:w-auto h-9 text-sm"
           >
             <Trash2 className="h-4 w-4 mr-1.5" />
-            Supprimer
+            {t('common:actions.delete')}
           </Button>
         </ResponsiveDialogFooter>
       </ResponsiveDialogContent>

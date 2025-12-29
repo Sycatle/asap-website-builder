@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { BarChart3, ChevronRight } from "lucide-react";
 import { Link } from "@/components/app-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,24 +20,26 @@ import {
 } from "recharts";
 import type { TrendChartProps } from "./types";
 
-const trendChartConfig = {
-  visits: {
-    label: "Visites",
-    color: "hsl(var(--primary))",
-  },
-} satisfies ChartConfig;
-
 /**
  * 7-day traffic trend chart
  */
 export function TrendChart({ websiteId, trendData }: TrendChartProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+
+  const trendChartConfig = {
+    visits: {
+      label: t('dashboard:dashboard.chart.visits'),
+      color: "hsl(var(--primary))",
+    },
+  } satisfies ChartConfig;
+
   return (
     <Card className="lg:col-span-7 shadow-sm">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-primary" />
-            Tendance des 7 derniers jours
+            {t('dashboard:dashboard.chart.trendTitle')}
           </CardTitle>
           <Link href={`/app/${websiteId}/analytics`}>
             <Button variant="ghost" size="sm" className="text-xs h-7">

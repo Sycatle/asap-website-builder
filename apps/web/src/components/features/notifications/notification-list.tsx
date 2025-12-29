@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { BellOff, Check } from "lucide-react"
 
 import { Skeleton } from "@/components/ui/skeleton"
@@ -56,6 +57,8 @@ interface NotificationEmptyStateProps {
 }
 
 function NotificationEmptyState({ variant }: NotificationEmptyStateProps) {
+  const { t } = useTranslation(['dashboard']);
+  
   if (variant === 'unread') {
     return (
       <Empty className="py-16 border-0">
@@ -63,9 +66,9 @@ function NotificationEmptyState({ variant }: NotificationEmptyStateProps) {
           <EmptyMedia className="text-green-500/50">
             <Check className="h-16 w-16" />
           </EmptyMedia>
-          <EmptyTitle>Tout est lu !</EmptyTitle>
+          <EmptyTitle>{t('dashboard:notifications.allRead')}</EmptyTitle>
           <EmptyDescription>
-            Vous avez lu toutes vos notifications
+            {t('dashboard:notifications.allReadDescription')}
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
@@ -78,9 +81,9 @@ function NotificationEmptyState({ variant }: NotificationEmptyStateProps) {
         <EmptyMedia className="text-muted-foreground/30">
           <BellOff className="h-16 w-16" />
         </EmptyMedia>
-        <EmptyTitle>Aucune notification</EmptyTitle>
+        <EmptyTitle>{t('dashboard:notifications.empty')}</EmptyTitle>
         <EmptyDescription>
-          Vous n'avez pas de notifications pour le moment
+          {t('dashboard:notifications.emptyDescription')}
         </EmptyDescription>
       </EmptyHeader>
     </Empty>
@@ -101,6 +104,8 @@ export function NotificationList({
   onClick,
   emptyState = 'all',
 }: NotificationListProps) {
+  const { t } = useTranslation(['dashboard']);
+
   if (isLoading) {
     return (
       <Card>
@@ -136,7 +141,7 @@ export function NotificationList({
         {hasMore && onLoadMore && (
           <div className="p-4 text-center">
             <Button variant="outline" onClick={onLoadMore}>
-              Charger plus
+              {t('dashboard:notifications.loadMore')}
             </Button>
           </div>
         )}

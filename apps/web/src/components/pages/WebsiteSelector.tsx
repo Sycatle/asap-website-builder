@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useTranslation } from 'react-i18next'
 import { useWebsitesQuery, queryKeys } from "@/lib/query"
 import { useQueryClient } from "@tanstack/react-query"
 import { navigate } from "@/components/app-router"
@@ -11,6 +12,7 @@ import { getWebsiteDisplayUrl } from "@/lib/utils/formatters"
 import { cn } from "@/lib/utils"
 
 export default function WebsiteSelector() {
+  const { t } = useTranslation(['common'])
   const { data: websites = [], isLoading } = useWebsitesQuery()
   const queryClient = useQueryClient()
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -34,9 +36,9 @@ export default function WebsiteSelector() {
 
   const getStatusInfo = (status: string) => {
     if (status === 'published') {
-      return { icon: CheckCircle2, label: 'En ligne', className: 'text-green-500' }
+      return { icon: CheckCircle2, label: t('website.statusOnline'), className: 'text-green-500' }
     }
-    return { icon: Clock, label: 'Brouillon', className: 'text-muted-foreground' }
+    return { icon: Clock, label: t('website.statusDraft'), className: 'text-muted-foreground' }
   }
 
   if (isLoading) {
@@ -63,22 +65,22 @@ export default function WebsiteSelector() {
               <div className="flex flex-col gap-6 text-center">
                 <div className="flex flex-col items-center gap-2">
                   <Globe className="h-12 w-12 text-muted-foreground" />
-                  <h1 className="text-2xl font-bold">Bienvenue sur ASAP</h1>
+                  <h1 className="text-2xl font-bold">{t('website.welcomeToAsap')}</h1>
                   <p className="text-sm text-muted-foreground">
-                    Créez votre premier site pour commencer
+                    {t('website.createFirstSite')}
                   </p>
                 </div>
                 <Button onClick={() => setShowCreateModal(true)} className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
-                  Créer mon premier site
+                  {t('website.createMyFirstSite')}
                 </Button>
               </div>
             ) : (
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col items-center gap-1 text-center">
-                  <h1 className="text-xl font-bold">Sélectionner un site</h1>
+                  <h1 className="text-xl font-bold">{t('website.selectSite')}</h1>
                   <p className="text-sm text-muted-foreground">
-                    Choisissez le site sur lequel travailler
+                    {t('website.selectSiteDesc')}
                   </p>
                 </div>
 
@@ -110,7 +112,7 @@ export default function WebsiteSelector() {
 
                 <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
                   <span className="relative z-10 bg-card px-2 text-muted-foreground">
-                    Ou
+                    {t('website.or')}
                   </span>
                 </div>
 
@@ -120,7 +122,7 @@ export default function WebsiteSelector() {
                   className="w-full"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Créer un nouveau site
+                  {t('website.createNewSite')}
                 </Button>
               </div>
             )}
@@ -128,7 +130,7 @@ export default function WebsiteSelector() {
         </Card>
 
         <div className="text-center text-xs text-muted-foreground">
-          {websites.length} site{websites.length !== 1 ? 's' : ''} disponible{websites.length !== 1 ? 's' : ''}
+          {t('website.sitesAvailable', { count: websites.length })}
         </div>
       </div>
 

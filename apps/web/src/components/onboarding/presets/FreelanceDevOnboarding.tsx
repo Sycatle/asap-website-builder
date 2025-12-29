@@ -13,6 +13,7 @@
  */
 
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { websitesAPI, presetsAPI } from '@/lib/api';
 import { trackEvent } from '@/lib/api/metrics';
 import type { FreelanceProject, FreelanceService } from '@asap/shared';
@@ -96,22 +97,23 @@ const serviceIcons = {
   consulting: MessageSquare,
 };
 
-// Default services templates
-const defaultServices: FreelanceService[] = [
-  { title: 'Applications Web', description: 'Développement d\'applications web modernes et performantes', icon: 'globe' },
-  { title: 'APIs & Backend', description: 'Conception d\'APIs robustes et scalables', icon: 'server' },
-  { title: 'Consulting Tech', description: 'Audit de code et accompagnement technique', icon: 'consulting' },
-];
-
 // ============================================
 // Main Component
 // ============================================
 
 export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingProps) {
+  const { t } = useTranslation(['onboarding', 'common']);
   const [currentStep, setCurrentStep] = React.useState<OnboardingStep>('identity');
   const [isLoading, setIsLoading] = React.useState(false);
   const [websiteId, setWebsiteId] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState(false);
+  
+  // Default services templates (using translations)
+  const getDefaultServices = (): FreelanceService[] => [
+    { title: t('services.defaults.webApps.title'), description: t('services.defaults.webApps.description'), icon: 'globe' },
+    { title: t('services.defaults.apis.title'), description: t('services.defaults.apis.description'), icon: 'server' },
+    { title: t('services.defaults.consulting.title'), description: t('services.defaults.consulting.description'), icon: 'consulting' },
+  ];
   
   // Identity
   const [name, setName] = React.useState('');
@@ -143,6 +145,16 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
   const steps: OnboardingStep[] = ['identity', 'professional', 'services', 'projects', 'contact', 'preview'];
   const currentStepIndex = steps.indexOf(currentStep);
   const progress = Math.round(((currentStepIndex + 1) / steps.length) * 100);
+
+  // Step labels using translations
+  const stepLabels: Record<OnboardingStep, string> = {
+    identity: t('steps.identity'),
+    professional: t('steps.professional'),
+    services: t('steps.services'),
+    projects: t('steps.projects'),
+    contact: t('steps.contact'),
+    preview: t('steps.preview'),
+  };
 
   // Track step changes
   React.useEffect(() => {
@@ -192,7 +204,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
   // Create website on first step completion
   const handleIdentityComplete = async () => {
     if (!name.trim() || !slug.trim()) {
-      toast.error('Veuillez remplir tous les champs');
+      toast.error(t('toasts.errors.fillAllFields'));
       return;
     }
 
@@ -207,16 +219,16 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
       setWebsiteId(response.website.id);
       trackEvent('onboarding_started', response.website.id, { preset: 'dev-freelance-classic' });
       goToNextStep();
-      toast.success('Parfait ! Continuons avec votre profil.');
+      toast.success(t('toasts.success.created'));
     } catch (error: any) {
       console.error('Failed to create website:', error);
       // Check for slug_taken error from backend
       if (error?.status === 409 || error?.data?.error === 'slug_taken') {
-        toast.error('Cette URL est déjà prise. Essayez une autre adresse.');
+        toast.error(t('toasts.errors.slugTaken'));
       } else if (error?.message?.includes('slug')) {
-        toast.error('Cette URL est déjà prise. Essayez une autre.');
+        toast.error(t('toasts.errors.slugTaken'));
       } else {
-        toast.error('Erreur lors de la création. Réessayez.');
+        toast.error(t('toasts.errors.creationError'));
       }
     } finally {
       setIsLoading(false);
@@ -305,7 +317,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
       
       goToNextStep();
     } catch (error) {
-      toast.error('Erreur lors de la sauvegarde');
+      toast.error(t('toasts.errors.savingError'));
     } finally {
       setIsLoading(false);
     }
@@ -321,11 +333,11 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
       await websitesAPI.publish(websiteId);
       trackEvent('site_published', websiteId, { preset: 'dev-freelance-classic' });
       trackEvent('onboarding_completed', websiteId);
-      toast.success('🎉 Votre portfolio est en ligne !');
+      toast.success(t('toasts.success.portfolioPublished'));
       onComplete(websiteId);
     } catch (error) {
       console.error('Failed to publish:', error);
-      toast.error('Erreur lors de la publication');
+      toast.error(t('toasts.errors.publishError'));
     } finally {
       setIsLoading(false);
     }
@@ -339,10 +351,10 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
     try {
       await saveProfileData();
       trackEvent('onboarding_completed', websiteId, { draft: true });
-      toast.success('Portfolio enregistré comme brouillon');
+      toast.success(t('toasts.success.savedAsDraft'));
       onComplete(websiteId);
     } catch (error) {
-      toast.error('Erreur lors de la sauvegarde');
+      toast.error(t('toasts.errors.savingError'));
     } finally {
       setIsLoading(false);
     }
@@ -403,17 +415,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
 
   // Add default services
   const addDefaultServices = () => {
-    setServices(defaultServices);
-  };
-
-  // Step indicator
-  const stepLabels: Record<OnboardingStep, string> = {
-    identity: 'Identité',
-    professional: 'Profil',
-    services: 'Services',
-    projects: 'Projets',
-    contact: 'Contact',
-    preview: 'Publication',
+    setServices(getDefaultServices());
   };
 
   return (
@@ -427,8 +429,8 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                 <Sparkles className="h-5 w-5 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold">Création de portfolio</h1>
-                <p className="text-sm text-muted-foreground">Dev Freelance — Classic</p>
+                <h1 className="text-xl font-semibold">{t('header.title')}</h1>
+                <p className="text-sm text-muted-foreground">{t('header.subtitle')}</p>
               </div>
             </div>
             <Badge variant="outline" className="gap-1">
@@ -469,18 +471,18 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                   <div className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
                     <User className="h-8 w-8 text-primary" />
                   </div>
-                  <CardTitle className="text-2xl">Commençons par vous</CardTitle>
+                  <CardTitle className="text-2xl">{t('identity.title')}</CardTitle>
                   <CardDescription className="text-base">
-                    Ces informations seront visibles sur votre portfolio
+                    {t('identity.description')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6 pt-4">
                   <FieldGroup>
                     <Field>
-                      <FieldLabel htmlFor="name">Votre nom complet *</FieldLabel>
+                      <FieldLabel htmlFor="name">{t('identity.nameLabel')} *</FieldLabel>
                       <Input
                         id="name"
-                        placeholder="Jean Dupont"
+                        placeholder={t('identity.namePlaceholder')}
                         value={name}
                         onChange={(e) => handleNameChange(e.target.value)}
                         className="h-12 text-lg"
@@ -488,14 +490,14 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                     </Field>
                     
                     <Field>
-                      <FieldLabel htmlFor="slug">Adresse de votre portfolio *</FieldLabel>
+                      <FieldLabel htmlFor="slug">{t('identity.slugLabel')} *</FieldLabel>
                       <div className="flex items-center gap-0">
                         <div className="h-12 px-4 bg-muted rounded-l-lg border border-r-0 flex items-center text-muted-foreground">
                           https://
                         </div>
                         <Input
                           id="slug"
-                          placeholder="jean-dupont"
+                          placeholder={t('identity.slugPlaceholder')}
                           value={slug}
                           onChange={(e) => setSlug(slugify(e.target.value))}
                           className="h-12 rounded-none border-x-0 font-mono"
@@ -506,17 +508,17 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                       </div>
                       {slug && (
                         <FieldDescription>
-                          Votre portfolio sera accessible à <span className="font-mono text-primary">https://{slug}.asap.cool</span>
+                          {t('identity.slugDescription')} <span className="font-mono text-primary">https://{slug}.asap.cool</span>
                         </FieldDescription>
                       )}
                     </Field>
 
                     <Field>
-                      <FieldLabel htmlFor="avatar">Photo de profil (URL)</FieldLabel>
+                      <FieldLabel htmlFor="avatar">{t('identity.avatarLabel')}</FieldLabel>
                       <Input
                         id="avatar"
                         type="url"
-                        placeholder="https://example.com/photo.jpg"
+                        placeholder={t('identity.avatarPlaceholder')}
                         value={avatar}
                         onChange={(e) => setAvatar(e.target.value)}
                       />
@@ -541,18 +543,18 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                   <div className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-indigo-500/5 flex items-center justify-center">
                     <Briefcase className="h-8 w-8 text-indigo-500" />
                   </div>
-                  <CardTitle className="text-2xl">Votre profil professionnel</CardTitle>
+                  <CardTitle className="text-2xl">{t('professional.title')}</CardTitle>
                   <CardDescription className="text-base">
-                    Décrivez votre activité en quelques mots
+                    {t('professional.description')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6 pt-4">
                   <FieldGroup>
                     <Field>
-                      <FieldLabel htmlFor="title">Titre professionnel *</FieldLabel>
+                      <FieldLabel htmlFor="title">{t('professional.titleLabel')} *</FieldLabel>
                       <Input
                         id="title"
-                        placeholder="Développeur Full-Stack Freelance"
+                        placeholder={t('professional.titlePlaceholder')}
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         className="h-12"
@@ -560,10 +562,10 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                     </Field>
                     
                     <Field>
-                      <FieldLabel htmlFor="tagline">Phrase d'accroche</FieldLabel>
+                      <FieldLabel htmlFor="tagline">{t('professional.taglineLabel')}</FieldLabel>
                       <Textarea
                         id="tagline"
-                        placeholder="Je transforme vos idées en applications web performantes et modernes."
+                        placeholder={t('professional.taglinePlaceholder')}
                         value={tagline}
                         onChange={(e) => setTagline(e.target.value)}
                         rows={2}
@@ -572,12 +574,12 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
 
                     <div className="grid grid-cols-2 gap-4">
                       <Field>
-                        <FieldLabel htmlFor="location">Localisation</FieldLabel>
+                        <FieldLabel htmlFor="location">{t('professional.locationLabel')}</FieldLabel>
                         <div className="relative">
                           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input
                             id="location"
-                            placeholder="Paris, France"
+                            placeholder={t('professional.locationPlaceholder')}
                             value={location}
                             onChange={(e) => setLocation(e.target.value)}
                             className="pl-10"
@@ -585,13 +587,13 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                         </div>
                       </Field>
                       <Field>
-                        <FieldLabel htmlFor="experience">Années d'expérience</FieldLabel>
+                        <FieldLabel htmlFor="experience">{t('professional.experienceLabel')}</FieldLabel>
                         <div className="relative">
                           <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input
                             id="experience"
                             type="number"
-                            placeholder="5"
+                            placeholder={t('professional.experiencePlaceholder')}
                             value={yearsOfExperience}
                             onChange={(e) => setYearsOfExperience(e.target.value)}
                             className="pl-10"
@@ -601,12 +603,12 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                     </div>
 
                     <Field>
-                      <FieldLabel>Disponibilité</FieldLabel>
+                      <FieldLabel>{t('professional.availabilityLabel')}</FieldLabel>
                       <div className="grid grid-cols-3 gap-2">
                         {[
-                          { value: 'available', label: 'Disponible', color: 'bg-green-500' },
-                          { value: 'busy', label: 'Occupé', color: 'bg-yellow-500' },
-                          { value: 'not-available', label: 'Indisponible', color: 'bg-red-500' },
+                          { value: 'available', label: t('professional.availability.available'), color: 'bg-green-500' },
+                          { value: 'busy', label: t('professional.availability.busy'), color: 'bg-yellow-500' },
+                          { value: 'not-available', label: t('professional.availability.notAvailable'), color: 'bg-red-500' },
                         ].map((option) => (
                           <button
                             key={option.value}
@@ -636,24 +638,24 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                   <div className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-gradient-to-br from-violet-500/20 to-violet-500/5 flex items-center justify-center">
                     <Zap className="h-8 w-8 text-violet-500" />
                   </div>
-                  <CardTitle className="text-2xl">Vos services</CardTitle>
+                  <CardTitle className="text-2xl">{t('services.title')}</CardTitle>
                   <CardDescription className="text-base">
-                    Décrivez ce que vous proposez à vos clients (3 recommandé)
+                    {t('services.description')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 pt-4">
                   {services.length === 0 ? (
                     <div className="text-center py-8">
                       <Zap className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                      <p className="text-muted-foreground mb-4">Ajoutez vos services</p>
+                      <p className="text-muted-foreground mb-4">{t('services.empty')}</p>
                       <div className="flex flex-col sm:flex-row gap-2 justify-center">
                         <Button variant="outline" onClick={addDefaultServices}>
                           <Sparkles className="h-4 w-4 mr-2" />
-                          Utiliser les exemples
+                          {t('services.useExamples')}
                         </Button>
                         <Button variant="outline" onClick={addService}>
                           <Plus className="h-4 w-4 mr-2" />
-                          Ajouter manuellement
+                          {t('services.addManually')}
                         </Button>
                       </div>
                     </div>
@@ -662,7 +664,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                       {services.map((service, index) => (
                         <div key={index} className="p-4 rounded-lg border bg-card space-y-3">
                           <div className="flex items-start justify-between">
-                            <Badge variant="outline">Service {index + 1}</Badge>
+                            <Badge variant="outline">{t('services.serviceNumber', { number: index + 1 })}</Badge>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -673,12 +675,12 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                             </Button>
                           </div>
                           <Input
-                            placeholder="Titre du service"
+                            placeholder={t('services.titlePlaceholder')}
                             value={service.title}
                             onChange={(e) => updateService(index, 'title', e.target.value)}
                           />
                           <Input
-                            placeholder="Description courte"
+                            placeholder={t('services.descriptionPlaceholder')}
                             value={service.description}
                             onChange={(e) => updateService(index, 'description', e.target.value)}
                           />
@@ -687,7 +689,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                       {services.length < 6 && (
                         <Button variant="outline" className="w-full" onClick={addService}>
                           <Plus className="h-4 w-4 mr-2" />
-                          Ajouter un service
+                          {t('services.addService')}
                         </Button>
                       )}
                     </>
@@ -703,19 +705,19 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                   <div className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 flex items-center justify-center">
                     <Code className="h-8 w-8 text-emerald-500" />
                   </div>
-                  <CardTitle className="text-2xl">Vos projets</CardTitle>
+                  <CardTitle className="text-2xl">{t('projects.title')}</CardTitle>
                   <CardDescription className="text-base">
-                    Montrez vos meilleures réalisations (min. 3 recommandé)
+                    {t('projects.description')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 pt-4">
                   {projects.length === 0 ? (
                     <div className="text-center py-8">
                       <Code className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                      <p className="text-muted-foreground mb-4">Ajoutez vos projets</p>
+                      <p className="text-muted-foreground mb-4">{t('projects.empty')}</p>
                       <Button variant="outline" onClick={addProject}>
                         <Plus className="h-4 w-4 mr-2" />
-                        Ajouter un projet
+                        {t('projects.addProject')}
                       </Button>
                     </div>
                   ) : (
@@ -723,7 +725,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                       {projects.map((project, index) => (
                         <div key={project.id} className="p-4 rounded-lg border bg-card space-y-3">
                           <div className="flex items-start justify-between">
-                            <Badge variant="outline">Projet {index + 1}</Badge>
+                            <Badge variant="outline">{t('projects.projectNumber', { number: index + 1 })}</Badge>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -734,30 +736,30 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                             </Button>
                           </div>
                           <Input
-                            placeholder="Nom du projet"
+                            placeholder={t('projects.namePlaceholder')}
                             value={project.title || ''}
                             onChange={(e) => updateProject(index, 'title', e.target.value)}
                           />
                           <Textarea
-                            placeholder="Description courte"
+                            placeholder={t('projects.descriptionPlaceholder')}
                             value={project.description || ''}
                             onChange={(e) => updateProject(index, 'description', e.target.value)}
                             rows={2}
                           />
                           <Input
-                            placeholder="Technologies (séparées par des virgules)"
+                            placeholder={t('projects.technologiesPlaceholder')}
                             value={project.technologies?.join(', ') || ''}
                             onChange={(e) => updateProject(index, 'technologies', e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
                           />
                           <div className="flex gap-2">
                             <Input
-                              placeholder="URL du projet (optionnel)"
+                              placeholder={t('projects.liveUrlPlaceholder')}
                               value={project.liveUrl || ''}
                               onChange={(e) => updateProject(index, 'liveUrl', e.target.value)}
                               className="flex-1"
                             />
                             <Input
-                              placeholder="GitHub (optionnel)"
+                              placeholder={t('projects.githubUrlPlaceholder')}
                               value={project.githubUrl || ''}
                               onChange={(e) => updateProject(index, 'githubUrl', e.target.value)}
                               className="flex-1"
@@ -768,7 +770,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                       {projects.length < 10 && (
                         <Button variant="outline" className="w-full" onClick={addProject}>
                           <Plus className="h-4 w-4 mr-2" />
-                          Ajouter un projet
+                          {t('projects.addProject')}
                         </Button>
                       )}
                     </>
@@ -784,21 +786,21 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                   <div className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-gradient-to-br from-sky-500/20 to-sky-500/5 flex items-center justify-center">
                     <Mail className="h-8 w-8 text-sky-500" />
                   </div>
-                  <CardTitle className="text-2xl">Contact & Réseaux</CardTitle>
+                  <CardTitle className="text-2xl">{t('contactStep.title')}</CardTitle>
                   <CardDescription className="text-base">
-                    Comment vos clients peuvent vous joindre
+                    {t('contactStep.description')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6 pt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <Field>
-                      <FieldLabel htmlFor="email">Email *</FieldLabel>
+                      <FieldLabel htmlFor="email">{t('contactStep.emailLabel')} *</FieldLabel>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="email"
                           type="email"
-                          placeholder="contact@example.com"
+                          placeholder={t('contactStep.emailPlaceholder')}
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           className="pl-10"
@@ -806,11 +808,11 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                       </div>
                     </Field>
                     <Field>
-                      <FieldLabel htmlFor="phone">Téléphone</FieldLabel>
+                      <FieldLabel htmlFor="phone">{t('contactStep.phoneLabel')}</FieldLabel>
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="+33 6 12 34 56 78"
+                        placeholder={t('contactStep.phonePlaceholder')}
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                       />
@@ -820,12 +822,12 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                   <Separator />
 
                   <FieldGroup className="gap-4">
-                    <FieldLabel>Réseaux sociaux</FieldLabel>
+                    <FieldLabel>{t('contactStep.socialsLabel')}</FieldLabel>
                     <div className="space-y-3">
                       <div className="relative">
                         <Github className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                          placeholder="https://github.com/username"
+                          placeholder={t('contactStep.githubPlaceholder')}
                           value={github}
                           onChange={(e) => setGithub(e.target.value)}
                           className="pl-10"
@@ -834,7 +836,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                       <div className="relative">
                         <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                          placeholder="https://linkedin.com/in/username"
+                          placeholder={t('contactStep.linkedinPlaceholder')}
                           value={linkedin}
                           onChange={(e) => setLinkedin(e.target.value)}
                           className="pl-10"
@@ -843,7 +845,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                       <div className="relative">
                         <Twitter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                          placeholder="https://twitter.com/username"
+                          placeholder={t('contactStep.twitterPlaceholder')}
                           value={twitter}
                           onChange={(e) => setTwitter(e.target.value)}
                           className="pl-10"
@@ -853,12 +855,12 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                   </FieldGroup>
 
                   <Field>
-                    <FieldLabel htmlFor="booking">Lien de prise de rendez-vous</FieldLabel>
+                    <FieldLabel htmlFor="booking">{t('contactStep.bookingLabel')}</FieldLabel>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="booking"
-                        placeholder="https://calendly.com/username"
+                        placeholder={t('contactStep.bookingPlaceholder')}
                         value={bookingUrl}
                         onChange={(e) => setBookingUrl(e.target.value)}
                         className="pl-10"
@@ -876,9 +878,9 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                   <div className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
                     <Rocket className="h-8 w-8 text-primary-foreground" />
                   </div>
-                  <CardTitle className="text-2xl">Prêt à publier !</CardTitle>
+                  <CardTitle className="text-2xl">{t('previewStep.title')}</CardTitle>
                   <CardDescription className="text-base">
-                    Votre portfolio est prêt. Publiez-le maintenant ou continuez plus tard.
+                    {t('previewStep.description')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6 pt-4">
@@ -890,16 +892,16 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                         <AvatarFallback className="text-lg">{name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-xl font-semibold truncate">{name || 'Votre nom'}</h3>
-                        <p className="text-muted-foreground">{title || 'Votre titre'}</p>
+                        <h3 className="text-xl font-semibold truncate">{name || t('identity.namePlaceholder')}</h3>
+                        <p className="text-muted-foreground">{title || t('professional.titlePlaceholder')}</p>
                         <div className="flex items-center gap-2 mt-2">
                           <Badge variant="secondary" className="gap-1">
                             <span className={`h-2 w-2 rounded-full ${
                               availability === 'available' ? 'bg-green-500' :
                               availability === 'busy' ? 'bg-yellow-500' : 'bg-red-500'
                             }`} />
-                            {availability === 'available' ? 'Disponible' :
-                             availability === 'busy' ? 'Occupé' : 'Indisponible'}
+                            {availability === 'available' ? t('professional.availability.available') :
+                             availability === 'busy' ? t('professional.availability.busy') : t('professional.availability.notAvailable')}
                           </Badge>
                           {location && (
                             <Badge variant="outline" className="gap-1">
@@ -914,15 +916,15 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div>
                         <p className="text-2xl font-bold">{services.length}</p>
-                        <p className="text-xs text-muted-foreground">Services</p>
+                        <p className="text-xs text-muted-foreground">{t('previewStep.stats.services')}</p>
                       </div>
                       <div>
                         <p className="text-2xl font-bold">{projects.filter(p => p.title).length}</p>
-                        <p className="text-xs text-muted-foreground">Projets</p>
+                        <p className="text-xs text-muted-foreground">{t('previewStep.stats.projects')}</p>
                       </div>
                       <div>
                         <p className="text-2xl font-bold">{yearsOfExperience || '—'}</p>
-                        <p className="text-xs text-muted-foreground">Ans d'exp.</p>
+                        <p className="text-xs text-muted-foreground">{t('previewStep.stats.yearsExp')}</p>
                       </div>
                     </div>
                   </div>
@@ -949,12 +951,12 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                       {isLoading ? (
                         <>
                           <Spinner className="h-4 w-4 mr-2" />
-                          Publication...
+                          {t('previewStep.publishing')}
                         </>
                       ) : (
                         <>
                           <Rocket className="h-4 w-4 mr-2" />
-                          Publier mon portfolio
+                          {t('previewStep.publishButton')}
                         </>
                       )}
                     </Button>
@@ -964,7 +966,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                       onClick={handleSaveAsDraft}
                       disabled={isLoading}
                     >
-                      Enregistrer comme brouillon
+                      {t('previewStep.saveDraft')}
                     </Button>
                   </div>
                 </CardContent>
@@ -983,7 +985,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
               className="gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
-              Retour
+              {t('navigation.back')}
             </Button>
             <Button
               onClick={handleStepComplete}
@@ -993,11 +995,11 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
               {isLoading ? (
                 <>
                   <Spinner className="h-4 w-4" />
-                  {currentStep === 'identity' ? 'Création...' : 'Enregistrement...'}
+                  {currentStep === 'identity' ? t('navigation.creating') : t('navigation.saving')}
                 </>
               ) : (
                 <>
-                  Continuer
+                  {t('navigation.continue')}
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
@@ -1014,7 +1016,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
               className="gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
-              Retour
+              {t('navigation.back')}
             </Button>
           </div>
         )}

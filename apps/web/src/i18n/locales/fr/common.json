@@ -73,7 +73,8 @@
     "updatedAt": "Modifié le",
     "language": "Langue",
     "optional": "Optionnel",
-    "required": "Requis"
+    "required": "Requis",
+    "on": "sur"
   },
   "status": {
     "loading": "Chargement...",
@@ -146,7 +147,34 @@
     "help": "Aide",
     "logout": "Déconnexion",
     "login": "Connexion",
-    "register": "Inscription"
+    "register": "Inscription",
+    "creation": "Création",
+    "pages": "Pages",
+    "media": "Médias",
+    "analytics": "Analyse",
+    "configuration": "Configuration",
+    "administrators": "Administrateurs",
+    "theme": "Thème",
+    "extensions": "Extensions",
+    "billing": "Facturation",
+    "keyboardShortcuts": "Raccourcis clavier",
+    "searchPlaceholder": "Rechercher...",
+    "goTo": "Aller à..."
+  },
+  "shortcuts": {
+    "navigation": "Navigation",
+    "actions": "Actions",
+    "interface": "Interface",
+    "goToDashboard": "Aller au Dashboard",
+    "goToExtensions": "Aller aux Extensions",
+    "goToCloud": "Aller au Cloud",
+    "save": "Sauvegarder",
+    "cancelClose": "Annuler / Fermer",
+    "refreshData": "Rafraîchir les données",
+    "openCommandPalette": "Ouvrir la palette de commandes",
+    "toggleSidebar": "Ouvrir/Fermer la sidebar",
+    "showShortcutsHelp": "Afficher l'aide des raccourcis",
+    "pressEscToClose": "Appuyez sur"
   },
   "validation": {
     "required": "Ce champ est requis",
@@ -159,5 +187,292 @@
     "invalidDate": "Date invalide",
     "passwordMismatch": "Les mots de passe ne correspondent pas",
     "alreadyExists": "Cette valeur existe déjà"
+  },
+  "errors": {
+    "update": "Erreur lors de la mise à jour",
+    "addElement": "Erreur lors de l'ajout de l'élément",
+    "reorder": "Erreur lors de la réorganisation"
+  },
+  "auth": {
+    "login": "Connexion",
+    "signup": "Inscription",
+    "logout": "Déconnexion",
+    "forgotPassword": "Mot de passe oublié ?",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "email": "Email",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "newPassword": "Nouveau mot de passe",
+    "name": "Nom",
+    "signIn": "Se connecter",
+    "signUp": "Créer mon compte",
+    "sendResetLink": "Envoyer le lien",
+    "resetPasswordBtn": "Réinitialiser le mot de passe",
+    "createAccount": "Créer votre compte",
+    "accessSpace": "Accédez à votre espace en quelques secondes",
+    "welcomeBack": "Content de vous revoir !",
+    "accountCreated": "Bienvenue ! Votre compte a été créé.",
+    "passwordResetSuccess": "Mot de passe réinitialisé !",
+    "passwordResetSuccessDesc": "Votre mot de passe a été mis à jour avec succès. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
+    "emailSent": "Email envoyé !",
+    "emailSentDesc": "Si un compte existe avec l'adresse <strong>{{email}}</strong>, vous recevrez un email avec les instructions pour réinitialiser votre mot de passe.",
+    "checkSpam": "Vérifiez également votre dossier spam si vous ne recevez pas l'email.",
+    "tryDifferentEmail": "Réessayer avec une autre adresse",
+    "backToLogin": "Retour à la connexion",
+    "forgotPasswordTitle": "Mot de passe oublié ?",
+    "forgotPasswordDesc": "Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.",
+    "emailPlaceholder": "vous@exemple.com",
+    "passwordPlaceholder": "••••••••",
+    "confirmPasswordPlaceholder": "Confirmer le mot de passe",
+    "newPasswordPlaceholder": "Nouveau mot de passe",
+    "sending": "Envoi en cours...",
+    "resetting": "Réinitialisation...",
+    "creating": "Création...",
+    "invalidOrExpiredLink": "Lien invalide ou expiré",
+    "invalidLinkDesc": "Ce lien de réinitialisation est invalide ou a expiré. Les liens sont valables 1 heure et ne peuvent être utilisés qu'une seule fois.",
+    "requestNewLink": "Demander un nouveau lien",
+    "newPasswordTitle": "Nouveau mot de passe",
+    "newPasswordDesc": "Choisissez un nouveau mot de passe sécurisé pour votre compte.",
+    "passwordRequirements": "Min. 8 caractères avec majuscule, minuscule et chiffre",
+    "passwordRequirementsShort": "Min. 8 caractères, majuscule, minuscule et chiffre",
+    "passwordStrength": "Force",
+    "alreadyHaveAccount": "Déjà un compte?",
+    "noAccount": "Pas de compte?",
+    "rateLimited": "Trop de tentatives. Réessayez dans {{time}}.",
+    "waitTime": "Patientez {{time}}"
+  },
+  "pwa": {
+    "connectionRestored": "Connexion rétablie",
+    "backOnline": "Vous êtes de nouveau en ligne",
+    "offline": "Hors ligne",
+    "installAsap": "Installer ASAP",
+    "installDesc": "Accédez à ASAP directement depuis votre écran d'accueil pour une expérience optimale.",
+    "howToInstall": "Comment installer",
+    "install": "Installer",
+    "later": "Plus tard",
+    "features": "Fonctionne hors ligne • Notifications push • Accès rapide",
+    "installOnIos": "Installer sur iOS",
+    "iosInstructions": "Pour installer ASAP sur votre appareil iOS :",
+    "iosStep1": "Appuyez sur le bouton Partager en bas de Safari",
+    "iosStep2": "Faites défiler et appuyez sur \"Sur l'écran d'accueil\"",
+    "iosStep3": "Appuyez sur \"Ajouter\" en haut à droite",
+    "understood": "Compris",
+    "updateAvailable": "Mise à jour disponible",
+    "updating": "Mise à jour en cours...",
+    "appWillReload": "L'application va se recharger",
+    "update": "Mettre à jour",
+    "pwaStatus": "État PWA",
+    "installed": "Installée",
+    "notInstalled": "Non installée",
+    "online": "En ligne",
+    "platform": "Plateforme",
+    "browser": "Navigateur",
+    "cachedItems": "{{count}} éléments en cache",
+    "pushSupported": "Push supporté",
+    "pushLimited": "Push limité",
+    "swVersion": "Version Service Worker",
+    "clearCache": "Vider le cache",
+    "cacheCleared": "Cache vidé",
+    "cacheClearedDesc": "Le cache de l'application a été vidé",
+    "cacheError": "Impossible de vider le cache",
+    "appInstalled": "Application installée !",
+    "appInstalledDesc": "ASAP a été ajouté à votre écran d'accueil",
+    "syncing": "Synchronisation en cours...",
+    "pendingActions": "{{count}} action(s) en attente",
+    "actionsSynced": "{{count}} action(s) synchronisée(s)"
+  },
+  "website": {
+    "welcomeToAsap": "Bienvenue sur ASAP",
+    "createFirstSite": "Créez votre premier site pour commencer",
+    "createMyFirstSite": "Créer mon premier site",
+    "selectSite": "Sélectionner un site",
+    "selectSiteDesc": "Choisissez le site sur lequel travailler",
+    "createNewSite": "Créer un nouveau site",
+    "or": "Ou",
+    "sitesAvailable": "{{count}} site disponible",
+    "sitesAvailable_plural": "{{count}} sites disponibles",
+    "statusOnline": "En ligne",
+    "statusDraft": "Brouillon"
+  },
+  "landing": {
+    "nav": {
+      "features": "Fonctionnalités",
+      "pricing": "Tarifs",
+      "testimonials": "Témoignages",
+      "login": "Se connecter",
+      "startFree": "Commencer gratuitement"
+    },
+    "hero": {
+      "badge": "Nouveau : Génération IA de portfolio",
+      "titleLine1": "Votre site professionnel",
+      "titleLine2": "en 5 minutes chrono",
+      "subtitle": "Importez vos projets GitHub, personnalisez votre présentation, publiez.",
+      "subtitleBold": "Remplacez 10 outils par un seul dashboard.",
+      "ctaStart": "Commencer gratuitement",
+      "ctaDemo": "Voir la démo",
+      "socialProofCreators": "+500 créateurs",
+      "socialProofRating": "4.9/5 de satisfaction",
+      "dashboardPreview": "Aperçu de votre dashboard centralisé",
+      "statSites": "Sites",
+      "statStorage": "Stockage",
+      "statTokens": "Tokens IA"
+    },
+    "features": {
+      "badge": "Fonctionnalités",
+      "titleLine1": "Tout ce qu'il vous faut,",
+      "titleLine2": "rien de superflu",
+      "subtitle": "Une plateforme pensée pour les créateurs qui veulent se concentrer sur l'essentiel : leur travail.",
+      "github": {
+        "title": "Import GitHub automatique",
+        "description": "Connectez GitHub et importez vos projets en un clic. Descriptions, technologies, stats : tout est là.",
+        "badge": "Populaire"
+      },
+      "multiSites": {
+        "title": "Multi-sites illimités",
+        "description": "Créez autant de sites que vous voulez. Portfolio, blog, landing page : gérez tout depuis un seul endroit."
+      },
+      "cloud": {
+        "title": "Stockage cloud intégré",
+        "description": "1 GB gratuit pour héberger vos fichiers, images et documents. Uploadez, organisez, partagez."
+      },
+      "ai": {
+        "title": "Génération IA",
+        "description": "Laissez l'IA générer vos descriptions, bio et contenus. Tokens offerts chaque mois.",
+        "badge": "Nouveau"
+      },
+      "extensions": {
+        "title": "Extensions modulaires",
+        "description": "Analytics, thèmes premium, projections : activez uniquement ce dont vous avez besoin."
+      },
+      "analytics": {
+        "title": "Analytics en temps réel",
+        "description": "Suivez vos visiteurs, pages vues et performances. Données claires, sans complexité."
+      }
+    },
+    "howItWorks": {
+      "badge": "Comment ça marche",
+      "titleLine1": "4 étapes,",
+      "titleLine2": "5 minutes",
+      "subtitle": "De zéro à un site professionnel en moins de temps qu'il n'en faut pour faire un café.",
+      "step1": {
+        "title": "Créez votre compte",
+        "description": "Inscription gratuite en 30 secondes. Pas de carte bancaire requise."
+      },
+      "step2": {
+        "title": "Connectez GitHub",
+        "description": "Autorisez l'accès et sélectionnez les projets à importer."
+      },
+      "step3": {
+        "title": "Personnalisez",
+        "description": "Choisissez un thème, ajustez les couleurs et le contenu."
+      },
+      "step4": {
+        "title": "Publiez !",
+        "description": "Un clic et votre site est en ligne sur votre sous-domaine ASAP."
+      }
+    },
+    "pricing": {
+      "badge": "Tarifs",
+      "titleLine1": "Un prix simple,",
+      "titleLine2": "sans surprise",
+      "subtitle": "Commencez gratuitement. Évoluez quand vous êtes prêt.",
+      "mostPopular": "Le plus populaire",
+      "perMonth": "/ mois",
+      "forever": "pour toujours",
+      "free": {
+        "name": "Gratuit",
+        "description": "Pour découvrir ASAP",
+        "cta": "Commencer gratuitement",
+        "features": {
+          "sites": "1 site publié",
+          "storage": "1 GB de stockage cloud",
+          "tokens": "1 000 tokens IA / mois",
+          "subdomain": "Sous-domaine asap.cool",
+          "analytics": "Analytics de base",
+          "support": "Support communautaire"
+        }
+      },
+      "pro": {
+        "name": "Pro",
+        "description": "Pour les créateurs sérieux",
+        "cta": "Essai gratuit 14 jours",
+        "features": {
+          "sites": "5 sites publiés",
+          "storage": "10 GB de stockage cloud",
+          "tokens": "10 000 tokens IA / mois",
+          "domains": "Domaines personnalisés",
+          "analytics": "Analytics avancés",
+          "themes": "Thèmes premium",
+          "support": "Support prioritaire",
+          "noAds": "Pas de pub ASAP"
+        }
+      },
+      "team": {
+        "name": "Team",
+        "description": "Pour les agences et équipes",
+        "cta": "Contacter les ventes",
+        "features": {
+          "sites": "Sites illimités",
+          "storage": "50 GB de stockage cloud",
+          "tokens": "50 000 tokens IA / mois",
+          "multiUsers": "Multi-utilisateurs",
+          "api": "API complète",
+          "whiteLabel": "Marque blanche",
+          "accountManager": "Account manager dédié",
+          "sla": "SLA 99.9%"
+        }
+      }
+    },
+    "testimonials": {
+      "badge": "Témoignages",
+      "titleLine1": "Ils ont choisi",
+      "titleLine2": "ASAP",
+      "subtitle": "Rejoignez des centaines de créateurs qui simplifient leur présence en ligne.",
+      "quote1": {
+        "text": "J'ai remplacé mon portfolio WordPress + mon stockage Dropbox + mes analytics Google. Tout est centralisé et 10x plus rapide.",
+        "author": "Marie L.",
+        "role": "Designer Freelance"
+      },
+      "quote2": {
+        "text": "En tant qu'agence, on gère les sites de 15 clients depuis un seul dashboard. Le gain de temps est énorme.",
+        "author": "Thomas R.",
+        "role": "Directeur d'agence"
+      },
+      "quote3": {
+        "text": "L'import GitHub automatique m'a fait gagner des heures. Mon portfolio était en ligne en 10 minutes chrono.",
+        "author": "Kevin M.",
+        "role": "Développeur Full Stack"
+      }
+    },
+    "cta": {
+      "title": "Prêt à créer votre site ?",
+      "subtitleLine1": "Rejoignez +500 créateurs qui utilisent ASAP pour gérer leur présence en ligne.",
+      "subtitleLine2": "Gratuit pour commencer, aucune carte bancaire requise.",
+      "startFree": "Commencer gratuitement",
+      "seePricing": "Voir les tarifs"
+    },
+    "footer": {
+      "tagline": "La plateforme tout-en-un pour créateurs et entrepreneurs.",
+      "madeInFrance": "Made in France",
+      "product": "Produit",
+      "documentation": "Documentation",
+      "changelog": "Changelog",
+      "company": "Entreprise",
+      "about": "À propos",
+      "blog": "Blog",
+      "contact": "Contact",
+      "partners": "Partenaires",
+      "legal": "Légal",
+      "privacy": "Politique de confidentialité",
+      "terms": "CGU",
+      "legalNotice": "Mentions légales",
+      "cookies": "Cookies",
+      "copyright": "© 2024 ASAP. Tous droits réservés."
+    }
+  },
+  "user": {
+    "settings": "Paramètres",
+    "billing": "Facturation",
+    "logout": "Déconnexion"
   }
 }

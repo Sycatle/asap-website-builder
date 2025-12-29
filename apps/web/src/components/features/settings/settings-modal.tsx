@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect } from "react"
+import { useTranslation } from "react-i18next"
 import {
   User,
   Shield,
@@ -55,13 +56,13 @@ export interface SettingsModalProps {
 // ============================================================================
 
 const SETTINGS_TABS = [
-  { id: 'account' as const, label: 'Compte', icon: User },
-  { id: 'security' as const, label: 'Sécurité', icon: Shield },
-  { id: 'billing' as const, label: 'Facturation', icon: CreditCard },
-  { id: 'cloud' as const, label: 'Stockage', icon: Cloud },
-  { id: 'plan' as const, label: 'Abonnement', icon: Sparkles },
-  { id: 'notifications' as const, label: 'Notifications', icon: Bell },
-  { id: 'appearance' as const, label: 'Apparence', icon: Palette },
+  { id: 'account' as const, labelKey: 'settings:sections.account', icon: User },
+  { id: 'security' as const, labelKey: 'settings:sections.security', icon: Shield },
+  { id: 'billing' as const, labelKey: 'settings:sections.billing', icon: CreditCard },
+  { id: 'cloud' as const, labelKey: 'settings:sections.cloud', icon: Cloud },
+  { id: 'plan' as const, labelKey: 'settings:sections.plan', icon: Sparkles },
+  { id: 'notifications' as const, labelKey: 'settings:sections.notifications', icon: Bell },
+  { id: 'appearance' as const, labelKey: 'settings:sections.appearance', icon: Palette },
 ] as const
 
 // ============================================================================
@@ -88,6 +89,8 @@ interface TabNavigationProps {
 }
 
 function TabNavigation({ activeTab, onTabChange, variant }: TabNavigationProps) {
+  const { t } = useTranslation()
+  
   if (variant === 'mobile') {
     return (
       <div className="sm:hidden border-b bg-muted/30 p-2 shrink-0 overflow-x-auto">
@@ -104,7 +107,7 @@ function TabNavigation({ activeTab, onTabChange, variant }: TabNavigationProps) 
               )}
             >
               <tab.icon className="h-3.5 w-3.5" />
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -115,7 +118,7 @@ function TabNavigation({ activeTab, onTabChange, variant }: TabNavigationProps) 
   return (
     <div className="hidden sm:flex w-56 border-r bg-muted/30 p-4 flex-col shrink-0">
       <ResponsiveDialogHeader className="pb-4">
-        <ResponsiveDialogTitle className="text-lg">Paramètres</ResponsiveDialogTitle>
+        <ResponsiveDialogTitle className="text-lg">{t('settings:title')}</ResponsiveDialogTitle>
       </ResponsiveDialogHeader>
       <nav className="flex-1 space-y-1 overflow-y-auto">
         {SETTINGS_TABS.map((tab) => (
@@ -130,7 +133,7 @@ function TabNavigation({ activeTab, onTabChange, variant }: TabNavigationProps) 
             )}
           >
             <tab.icon className="h-4 w-4" />
-            {tab.label}
+            {t(tab.labelKey)}
           </button>
         ))}
       </nav>
@@ -149,6 +152,7 @@ export function SettingsModal({
   onUserUpdate, 
   defaultTab = 'account' 
 }: SettingsModalProps) {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<SettingsTab>(defaultTab)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -221,9 +225,9 @@ export function SettingsModal({
     }
 
     toast.promise(savePromise(), {
-      loading: 'Enregistrement...',
-      success: 'Profil mis à jour',
-      error: 'Erreur lors de la sauvegarde',
+      loading: t('settings:toast.saving'),
+      success: t('settings:toast.profileUpdated'),
+      error: t('settings:toast.saveError'),
     })
 
     try {
@@ -308,11 +312,11 @@ export function SettingsModal({
             {activeTab === 'account' && (
               <div className="border-t p-3 sm:p-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 bg-background">
                 <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
-                  Annuler
+                  {t('common:actions.cancel')}
                 </Button>
                 <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
                   {isSaving && <Spinner className="mr-2 h-4 w-4" />}
-                  Enregistrer
+                  {t('common:actions.save')}
                 </Button>
               </div>
             )}

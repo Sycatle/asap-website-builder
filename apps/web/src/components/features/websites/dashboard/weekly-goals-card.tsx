@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { 
   Target, 
   Activity, 
@@ -23,10 +24,12 @@ export function WeeklyGoalsCard({
   currentSubscribers, 
   currentContacts 
 }: WeeklyGoalsCardProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+
   const goals = [
     { 
       id: 'visits', 
-      label: 'Visites cette semaine', 
+      label: t('dashboard:dashboard.goals.weeklyVisits'), 
       current: currentVisits, 
       target: 1000, 
       icon: Activity,
@@ -35,7 +38,7 @@ export function WeeklyGoalsCard({
     },
     { 
       id: 'subscribers', 
-      label: 'Nouveaux abonnés', 
+      label: t('dashboard:dashboard.goals.newSubscribers'), 
       current: Math.min(currentSubscribers, 50), 
       target: 50, 
       icon: Mail,
@@ -44,7 +47,7 @@ export function WeeklyGoalsCard({
     },
     { 
       id: 'contacts', 
-      label: 'Demandes de contact', 
+      label: t('dashboard:dashboard.goals.contactRequests'), 
       current: Math.min(currentContacts, 10), 
       target: 10, 
       icon: MessageSquare,
@@ -59,11 +62,11 @@ export function WeeklyGoalsCard({
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Target className="h-4 w-4 text-violet-500" />
-            Objectifs de la semaine
+            {t('dashboard:dashboard.goals.title')}
           </CardTitle>
           <Link href={`/app/${websiteId}/analytics`}>
             <Button variant="ghost" size="sm" className="text-xs h-7">
-              Détails
+              {t('dashboard:dashboard.goals.details')}
               <ChevronRight className="h-3 w-3 ml-1" />
             </Button>
           </Link>

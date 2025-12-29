@@ -1,6 +1,7 @@
 "use client"
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,7 @@ export function PreviewCanvas({
   onElementClick,
   onAddClick,
 }: PreviewCanvasProps) {
+  const { t } = useTranslation(['common', 'editor']);
   // Get visible elements sorted by order
   const visibleElements = elements
     .filter(e => e && e.id && e.visible)
@@ -41,7 +43,7 @@ export function PreviewCanvas({
     <main 
       className="flex-1 flex flex-col bg-muted/30 min-w-0"
       role="region"
-      aria-label="Aperçu du site"
+      aria-label={t('editor:canvas.sitePreview')}
     >
       {/* Preview indicator with panel toggles */}
       <PreviewToolbar
@@ -101,6 +103,7 @@ function PreviewToolbar({
   setLeftPanelOpen: (open: boolean) => void;
   setRightPanelOpen: (open: boolean) => void;
 }) {
+  const { t } = useTranslation(['common', 'editor']);
   return (
     <div className="sticky top-0 z-10 p-2 sm:p-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 flex items-center justify-between gap-2">
       {/* Left toggle - Elements */}
@@ -109,22 +112,22 @@ function PreviewToolbar({
         size="sm"
         onClick={() => setLeftPanelOpen(!leftPanelOpen)}
         className="hidden md:flex h-8 gap-2 focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label={leftPanelOpen ? "Masquer les éléments" : "Afficher les éléments"}
+        aria-label={leftPanelOpen ? t('editor:canvas.hideElements') : t('editor:canvas.showElements')}
         aria-pressed={leftPanelOpen}
       >
         {leftPanelOpen ? <ChevronLeft className="h-4 w-4" aria-hidden="true" /> : <Layers className="h-4 w-4" aria-hidden="true" />}
-        <span className="text-xs">Éléments</span>
+        <span className="text-xs">{t('editor:sidebar.elements')}</span>
       </Button>
       <div className="md:hidden w-8" /> {/* Spacer for mobile */}
       
       {/* Center - Preview status */}
       <div className="flex items-center gap-2 px-3 py-1 bg-muted rounded-full text-xs text-muted-foreground" role="status">
         <Eye className="h-3 w-3" aria-hidden="true" />
-        <span className="hidden sm:inline">Aperçu en direct</span>
-        <span className="sm:hidden">Aperçu</span>
+        <span className="hidden sm:inline">{t('editor:canvas.livePreview')}</span>
+        <span className="sm:hidden">{t('editor:toolbar.preview')}</span>
         {devicePreview !== 'desktop' && (
           <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
-            {devicePreview === 'tablet' ? 'Tablette' : 'Mobile'}
+            {devicePreview === 'tablet' ? t('editor:canvas.responsive.tablet') : t('editor:canvas.responsive.mobile')}
           </Badge>
         )}
       </div>
@@ -135,10 +138,10 @@ function PreviewToolbar({
         size="sm"
         onClick={() => setRightPanelOpen(!rightPanelOpen)}
         className="hidden md:flex h-8 gap-2 focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label={rightPanelOpen ? "Masquer les propriétés" : "Afficher les propriétés"}
+        aria-label={rightPanelOpen ? t('editor:canvas.hideProperties') : t('editor:canvas.showProperties')}
         aria-pressed={rightPanelOpen}
       >
-        <span className="text-xs">Propriétés</span>
+        <span className="text-xs">{t('editor:properties.title')}</span>
         {rightPanelOpen ? <ChevronRight className="h-4 w-4" aria-hidden="true" /> : <Settings2 className="h-4 w-4" aria-hidden="true" />}
       </Button>
       <div className="md:hidden w-8" /> {/* Spacer for mobile */}
@@ -158,21 +161,22 @@ function EmptyPreviewState({
   onAddClick: () => void;
   setLeftPanelOpen: (open: boolean) => void;
 }) {
+  const { t } = useTranslation(['common', 'editor']);
   return (
     <div className="min-h-[60vh] flex items-center justify-center text-muted-foreground p-6" role="status">
       <div className="text-center">
         <Layers className="h-12 w-12 mx-auto mb-4 opacity-50" aria-hidden="true" />
-        <p className="font-medium">Aucun élément visible</p>
-        <p className="text-sm mt-1">Ajoutez des éléments pour commencer</p>
+        <p className="font-medium">{t('editor:canvas.emptyState.noElements')}</p>
+        <p className="text-sm mt-1">{t('editor:canvas.emptyState.addToStart')}</p>
         <Button
           variant="outline"
           size="sm"
           onClick={() => isMobile ? setLeftPanelOpen(true) : onAddClick()}
           className="mt-4"
-          aria-label="Ajouter votre premier élément"
+          aria-label={t('editor:elementList.addFirst')}
         >
           <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
-          Ajouter un élément
+          {t('editor:elementList.addElement')}
         </Button>
       </div>
     </div>

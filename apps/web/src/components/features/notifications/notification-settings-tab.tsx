@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { Bell } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -53,34 +54,36 @@ function PushNotificationsCard({
   pushLoading,
   onToggle,
 }: PushNotificationsCardProps) {
+  const { t } = useTranslation(['dashboard']);
+  
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Bell className="h-5 w-5" />
-          Notifications Push
+          {t('dashboard:notifications.push.title')}
         </CardTitle>
         <CardDescription>
-          Recevez des notifications sur votre appareil même quand l'app est fermée
+          {t('dashboard:notifications.push.description')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {!pushSupported ? (
           <p className="text-sm text-muted-foreground">
-            Les notifications push ne sont pas supportées sur ce navigateur.
+            {t('dashboard:notifications.push.notSupported')}
           </p>
         ) : pushPermission === 'denied' ? (
           <p className="text-sm text-destructive">
-            Les notifications sont bloquées. Veuillez les autoriser dans les paramètres de votre navigateur.
+            {t('dashboard:notifications.push.blocked')}
           </p>
         ) : (
           <Field orientation="horizontal">
             <div className="space-y-0.5">
-              <FieldLabel>Activer les notifications push</FieldLabel>
+              <FieldLabel>{t('dashboard:notifications.push.enable')}</FieldLabel>
               <FieldDescription>
                 {pushSubscribed 
-                  ? 'Vous recevrez des notifications sur cet appareil'
-                  : 'Activez pour recevoir des notifications'}
+                  ? t('dashboard:notifications.push.enabledDescription')
+                  : t('dashboard:notifications.push.disabledDescription')}
               </FieldDescription>
             </div>
             <Switch
@@ -102,14 +105,14 @@ interface CategoryToggleProps {
 }
 
 function CategoryToggle({ category, isEnabled, onToggle }: CategoryToggleProps) {
+  const { t } = useTranslation(['dashboard']);
   const Icon = categoryIcons[category]
-  const label = categoryLabels[category]
 
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
         <Icon className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm">{label}</span>
+        <span className="text-sm">{t(`dashboard:notifications.categories.${category}`)}</span>
       </div>
       <Switch checked={isEnabled} onCheckedChange={onToggle} />
     </div>
@@ -125,15 +128,17 @@ interface QuietHoursProps {
 }
 
 function QuietHours({ startTime, endTime, onStartChange, onEndChange, onClear }: QuietHoursProps) {
+  const { t } = useTranslation(['dashboard']);
+  
   return (
     <FieldGroup className="gap-4">
-      <FieldLabel className="text-base">Heures calmes</FieldLabel>
+      <FieldLabel className="text-base">{t('dashboard:notifications.quietHours.title')}</FieldLabel>
       <FieldDescription>
-        Désactivez les notifications pendant certaines heures
+        {t('dashboard:notifications.quietHours.description')}
       </FieldDescription>
       <div className="flex items-center gap-4">
         <Field>
-          <FieldLabel className="text-xs">Début</FieldLabel>
+          <FieldLabel className="text-xs">{t('dashboard:notifications.quietHours.start')}</FieldLabel>
           <input
             type="time"
             value={startTime || ''}
@@ -142,7 +147,7 @@ function QuietHours({ startTime, endTime, onStartChange, onEndChange, onClear }:
           />
         </Field>
         <Field>
-          <FieldLabel className="text-xs">Fin</FieldLabel>
+          <FieldLabel className="text-xs">{t('dashboard:notifications.quietHours.end')}</FieldLabel>
           <input
             type="time"
             value={endTime || ''}
@@ -152,7 +157,7 @@ function QuietHours({ startTime, endTime, onStartChange, onEndChange, onClear }:
         </Field>
         {(startTime || endTime) && (
           <Button variant="ghost" size="sm" onClick={onClear}>
-            Effacer
+            {t('dashboard:notifications.quietHours.clear')}
           </Button>
         )}
       </div>
@@ -187,6 +192,8 @@ export function NotificationSettingsTab({
   settingsLoading,
   onSettingsUpdate,
 }: NotificationSettingsTabProps) {
+  const { t } = useTranslation(['dashboard']);
+  
   const handleCategoryToggle = (category: NotificationCategory, checked: boolean) => {
     if (!settings) return
     const newCategories = checked
@@ -212,9 +219,9 @@ export function NotificationSettingsTab({
 
       <Card>
         <CardHeader>
-          <CardTitle>Préférences de notification</CardTitle>
+          <CardTitle>{t('dashboard:notifications.preferences.title')}</CardTitle>
           <CardDescription>
-            Choisissez quels types de notifications vous souhaitez recevoir
+            {t('dashboard:notifications.preferences.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -223,7 +230,7 @@ export function NotificationSettingsTab({
           ) : settings ? (
             <>
               <FieldGroup className="gap-4">
-                <FieldLabel className="text-base">Catégories activées</FieldLabel>
+                <FieldLabel className="text-base">{t('dashboard:notifications.preferences.categories')}</FieldLabel>
                 {(Object.keys(categoryLabels) as NotificationCategory[]).map((category) => (
                   <CategoryToggle
                     key={category}

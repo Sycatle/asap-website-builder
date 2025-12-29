@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
@@ -38,6 +39,7 @@ export function FileListItem({
   getFileUrl,
   copiedId,
 }: FileListItemProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
   const itemProps = getItemProps(file, index);
   
   return (
@@ -130,24 +132,24 @@ export function FileListItem({
       <ContextMenuContent className="w-52">
         <ContextMenuItem onClick={onPreview}>
           <Eye className="mr-2 h-4 w-4" />
-          Aperçu
+          {t('dashboard:cloud.contextMenu.preview')}
           <ContextMenuShortcut>Entrée</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuItem onClick={onCopyLink}>
           <Link2 className="mr-2 h-4 w-4" />
-          Copier le lien
+          {t('dashboard:cloud.contextMenu.copyLink')}
           <ContextMenuShortcut>⌘C</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuItem asChild>
           <a href={getFileUrl(file.id)} download className="flex items-center">
             <Download className="mr-2 h-4 w-4" />
-            Télécharger
+            {t('dashboard:cloud.contextMenu.download')}
           </a>
         </ContextMenuItem>
         <ContextMenuItem asChild>
           <a href={getFileUrl(file.id)} target="_blank" rel="noopener noreferrer" className="flex items-center">
             <ExternalLink className="mr-2 h-4 w-4" />
-            Ouvrir dans un nouvel onglet
+            {t('dashboard:cloud.contextMenu.openNewTab')}
           </a>
         </ContextMenuItem>
         <ContextMenuSeparator />
@@ -156,7 +158,7 @@ export function FileListItem({
           onClick={onDelete}
         >
           <Trash2 className="mr-2 h-4 w-4" />
-          Supprimer
+          {t('common:actions.delete')}
           <ContextMenuShortcut>⌫</ContextMenuShortcut>
         </ContextMenuItem>
       </ContextMenuContent>

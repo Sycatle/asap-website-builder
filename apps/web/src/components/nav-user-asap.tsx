@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect } from "react"
+import { useTranslation } from 'react-i18next'
 import {
   ChevronsUpDown,
   LogOut,
@@ -46,6 +47,7 @@ interface NavUserAsapProps {
 }
 
 export function NavUserAsap({ user: initialUser }: NavUserAsapProps) {
+  const { t } = useTranslation(['common'])
   const { isMobile } = useSidebar()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'account' | 'billing'>('account')
@@ -204,16 +206,16 @@ export function NavUserAsap({ user: initialUser }: NavUserAsapProps) {
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => openSettings('account')}>
                 <Settings className="mr-2 h-4 w-4" />
-                Paramètres
+                {t('user.settings')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => openSettings('billing')}>
                 <CreditCard className="mr-2 h-4 w-4" />
-                Facturation
+                {t('user.billing')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />
-                Déconnexion
+                {t('user.logout')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -8,6 +8,7 @@
  */
 
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { websitesAPI } from '@/lib/api';
 import { trackEvent } from '@/lib/api/metrics';
 import { DEFAULT_FREELANCE_PROFILE, type FreelanceDevProfile, type FreelanceProject } from '@asap/shared';
@@ -46,6 +47,7 @@ interface OnboardingFlowProps {
 }
 
 export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
+  const { t } = useTranslation(['onboarding', 'common']);
   const [currentStep, setCurrentStep] = React.useState<OnboardingStep>('welcome');
   const [isLoading, setIsLoading] = React.useState(false);
   const [websiteId, setWebsiteId] = React.useState<string | null>(null);
@@ -84,13 +86,13 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       setWebsiteId(website.id);
       trackEvent('onboarding_started', website.id);
       setCurrentStep('profile');
-      toast.success('Portfolio créé ! Personnalisez-le maintenant.');
+      toast.success(t('flow.toasts.portfolioCreated'));
     } catch (error: any) {
       console.error('Failed to create website:', error);
       if (error?.response?.data?.error?.includes('slug')) {
-        toast.error('Ce nom de domaine est déjà pris. Essayez un autre.');
+        toast.error(t('flow.toasts.slugTaken'));
       } else {
-        toast.error('Erreur lors de la création du portfolio');
+        toast.error(t('flow.toasts.createError'));
       }
     } finally {
       setIsLoading(false);
@@ -119,10 +121,10 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       
       trackEvent('profile_completed', websiteId);
       setCurrentStep('projects');
-      toast.success('Profil enregistré !');
+      toast.success(t('flow.toasts.profileSaved'));
     } catch (error) {
       console.error('Failed to save profile:', error);
-      toast.error('Erreur lors de la sauvegarde');
+      toast.error(t('flow.toasts.saveError'));
     } finally {
       setIsLoading(false);
     }
@@ -170,10 +172,10 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       
       trackEvent('projects_imported', websiteId, { count: projects.length });
       setCurrentStep('publish');
-      toast.success('Projets enregistrés !');
+      toast.success(t('flow.toasts.projectsSaved'));
     } catch (error) {
       console.error('Failed to save projects:', error);
-      toast.error('Erreur lors de la sauvegarde');
+      toast.error(t('flow.toasts.saveError'));
     } finally {
       setIsLoading(false);
     }
@@ -189,10 +191,10 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       trackEvent('site_published', websiteId);
       trackEvent('onboarding_completed', websiteId);
       setCurrentStep('completed');
-      toast.success('🎉 Votre portfolio est en ligne !');
+      toast.success(t('flow.toasts.portfolioOnline'));
     } catch (error) {
       console.error('Failed to publish:', error);
-      toast.error('Erreur lors de la publication');
+      toast.error(t('flow.toasts.publishError'));
     } finally {
       setIsLoading(false);
     }
@@ -227,7 +229,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       {/* Progress */}
       <div className="space-y-2">
         <div className="flex justify-between text-sm text-muted-foreground">
-          <span>Création de votre portfolio</span>
+          <span>{t('flow.progress.title')}</span>
           <span>{stepProgress[currentStep]}%</span>
         </div>
         <Progress value={stepProgress[currentStep]} className="h-2" />
@@ -240,28 +242,28 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
               <Sparkles className="h-8 w-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl">Bienvenue sur ASAP !</CardTitle>
+            <CardTitle className="text-2xl">{t('flow.welcome.title')}</CardTitle>
             <CardDescription className="text-base">
-              Créez votre portfolio de développeur freelance en quelques minutes.
+              {t('flow.welcome.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="name">Votre nom</FieldLabel>
+                <FieldLabel htmlFor="name">{t('flow.welcome.nameLabel')}</FieldLabel>
                 <Input
                   id="name"
-                  placeholder="Jean Dupont"
+                  placeholder={t('flow.welcome.namePlaceholder')}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="slug">Adresse de votre portfolio</FieldLabel>
+                <FieldLabel htmlFor="slug">{t('flow.welcome.urlLabel')}</FieldLabel>
                 <div className="flex items-center gap-2">
                   <Input
                     id="slug"
-                    placeholder="jean-dupont"
+                    placeholder={t('flow.welcome.urlPlaceholder')}
                     value={slug}
                     onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
                     className="font-mono"
@@ -280,18 +282,18 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               {isLoading ? (
                 <>
                   <Spinner className="h-4 w-4 mr-2" />
-                  Création...
+                  {t('flow.welcome.creating')}
                 </>
               ) : (
                 <>
-                  Commencer
+                  {t('flow.welcome.startButton')}
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </>
               )}
             </Button>
 
             <p className="text-xs text-center text-muted-foreground">
-              L'intégration GitHub arrive bientôt pour importer vos projets automatiquement !
+              {t('flow.welcome.githubNote')}
             </p>
           </CardContent>
         </Card>
@@ -303,48 +305,48 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           <CardHeader>
             <div className="flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />
-              <CardTitle>Votre profil</CardTitle>
+              <CardTitle>{t('flow.profile.title')}</CardTitle>
             </div>
             <CardDescription>
-              Présentez-vous aux visiteurs de votre portfolio
+              {t('flow.profile.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="profile-name">Nom complet</FieldLabel>
+                <FieldLabel htmlFor="profile-name">{t('flow.profile.fullName')}</FieldLabel>
                 <Input
                   id="profile-name"
-                  placeholder="Jean Dupont"
+                  placeholder={t('flow.welcome.namePlaceholder')}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="profile-title">Titre professionnel</FieldLabel>
+                <FieldLabel htmlFor="profile-title">{t('flow.profile.professionalTitle')}</FieldLabel>
                 <Input
                   id="profile-title"
-                  placeholder="Développeur Full-Stack Freelance"
+                  placeholder={t('flow.profile.titlePlaceholder')}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="profile-bio">Biographie</FieldLabel>
+                <FieldLabel htmlFor="profile-bio">{t('flow.profile.biography')}</FieldLabel>
                 <Textarea
                   id="profile-bio"
-                  placeholder="Décrivez votre parcours, vos compétences et ce qui vous passionne..."
+                  placeholder={t('flow.profile.bioPlaceholder')}
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   rows={4}
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="profile-email">Email de contact</FieldLabel>
+                <FieldLabel htmlFor="profile-email">{t('flow.profile.contactEmail')}</FieldLabel>
                 <Input
                   id="profile-email"
                   type="email"
-                  placeholder="jean@example.com"
+                  placeholder={t('flow.profile.emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -360,7 +362,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 {isLoading ? (
                   <Spinner className="h-4 w-4 mr-2" />
                 ) : null}
-                Continuer
+                {t('common:actions.continue')}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
@@ -374,10 +376,10 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Briefcase className="h-5 w-5 text-primary" />
-              <CardTitle>Vos projets</CardTitle>
+              <CardTitle>{t('flow.projects.title')}</CardTitle>
             </div>
             <CardDescription>
-              Ajoutez vos meilleurs projets pour impressionner vos visiteurs
+              {t('flow.projects.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -393,26 +395,26 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 </Button>
                 <FieldGroup>
                   <Field>
-                    <FieldLabel>Nom du projet</FieldLabel>
+                    <FieldLabel>{t('flow.projects.projectName')}</FieldLabel>
                     <Input
-                      placeholder="Mon super projet"
+                      placeholder={t('flow.projects.projectNamePlaceholder')}
                       value={project.title || ''}
                       onChange={(e) => handleUpdateProject(index, 'title', e.target.value)}
                     />
                   </Field>
                   <Field>
-                    <FieldLabel>Description</FieldLabel>
+                    <FieldLabel>{t('flow.projects.projectDescription')}</FieldLabel>
                     <Textarea
-                      placeholder="Décrivez ce projet..."
+                      placeholder={t('flow.projects.descriptionPlaceholder')}
                       value={project.description || ''}
                       onChange={(e) => handleUpdateProject(index, 'description', e.target.value)}
                       rows={2}
                     />
                   </Field>
                   <Field>
-                    <FieldLabel>Technologies (séparées par des virgules)</FieldLabel>
+                    <FieldLabel>{t('flow.projects.technologies')}</FieldLabel>
                     <Input
-                      placeholder="React, TypeScript, Node.js"
+                      placeholder={t('flow.projects.techPlaceholder')}
                       value={project.technologies?.join(', ') || ''}
                       onChange={(e) => handleUpdateProject(index, 'technologies', e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
                     />
@@ -427,7 +429,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               onClick={handleAddProject}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Ajouter un projet
+              {t('flow.projects.addProject')}
             </Button>
 
             <div className="flex gap-2 pt-4">
@@ -435,7 +437,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 variant="outline"
                 onClick={() => setCurrentStep('profile')}
               >
-                Retour
+                {t('common:actions.back')}
               </Button>
               <Button 
                 className="flex-1" 
@@ -445,13 +447,13 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 {isLoading ? (
                   <Spinner className="h-4 w-4 mr-2" />
                 ) : null}
-                Continuer
+                {t('common:actions.continue')}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
 
             <p className="text-xs text-center text-muted-foreground">
-              Vous pourrez ajouter plus de projets depuis le dashboard
+              {t('flow.projects.note')}
             </p>
           </CardContent>
         </Card>
@@ -464,15 +466,15 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-500/10 flex items-center justify-center">
               <Rocket className="h-8 w-8 text-green-600" />
             </div>
-            <CardTitle className="text-2xl">Prêt à publier !</CardTitle>
+            <CardTitle className="text-2xl">{t('flow.publish.title')}</CardTitle>
             <CardDescription className="text-base">
-              Votre portfolio est prêt. Publiez-le pour le rendre visible au monde entier.
+              {t('flow.publish.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="p-4 rounded-lg bg-muted/50 text-center">
-              <p className="text-sm text-muted-foreground mb-1">Votre portfolio sera accessible à</p>
-              <p className="font-mono font-semibold">{slug || 'votre-portfolio'}.asap.cool</p>
+              <p className="text-sm text-muted-foreground mb-1">{t('flow.publish.accessibleAt')}</p>
+              <p className="font-mono font-semibold">{slug || t('flow.publish.defaultSlug')}.asap.cool</p>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -485,12 +487,12 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 {isLoading ? (
                   <>
                     <Spinner className="h-4 w-4 mr-2" />
-                    Publication...
+                    {t('flow.publish.publishing')}
                   </>
                 ) : (
                   <>
                     <Rocket className="h-4 w-4 mr-2" />
-                    Publier mon portfolio
+                    {t('flow.publish.publishButton')}
                   </>
                 )}
               </Button>
@@ -499,7 +501,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 onClick={handleSkipPublish}
                 disabled={isLoading}
               >
-                Je publierai plus tard
+                {t('flow.publish.publishLater')}
               </Button>
             </div>
           </CardContent>
@@ -513,21 +515,21 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-500/10 flex items-center justify-center">
               <CheckCircle2 className="h-8 w-8 text-green-600" />
             </div>
-            <CardTitle className="text-2xl">🎉 Félicitations !</CardTitle>
+            <CardTitle className="text-2xl">{t('flow.completed.title')}</CardTitle>
             <CardDescription className="text-base">
-              Votre portfolio est maintenant en ligne !
+              {t('flow.completed.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="p-4 rounded-lg bg-green-500/10 text-center">
-              <p className="text-sm text-muted-foreground mb-2">Visitez votre portfolio</p>
+              <p className="text-sm text-muted-foreground mb-2">{t('flow.completed.visitPortfolio')}</p>
               <a 
-                href={`https://${slug || 'votre-portfolio'}.asap.cool`}
+                href={`https://${slug || t('flow.publish.defaultSlug')}.asap.cool`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-mono font-semibold text-green-600 hover:underline flex items-center justify-center gap-1"
               >
-                {slug || 'votre-portfolio'}.asap.cool
+                {slug || t('flow.publish.defaultSlug')}.asap.cool
                 <ExternalLink className="h-4 w-4" />
               </a>
             </div>
@@ -537,7 +539,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               size="lg"
               onClick={handleGoToDashboard}
             >
-              Aller au dashboard
+              {t('flow.completed.goToDashboard')}
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </CardContent>

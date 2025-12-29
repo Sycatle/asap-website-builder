@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { 
   Trophy, 
   FileText, 
@@ -27,11 +28,13 @@ export function AchievementsCard({
   totalVisits, 
   newsletterSubs 
 }: AchievementsCardProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+
   const achievements = [
     { 
       id: 'first-page', 
-      label: 'Première page', 
-      description: 'Créer votre première page',
+      label: t('dashboard:dashboard.achievements.firstPage'), 
+      description: t('dashboard:dashboard.achievements.firstPageDescription'),
       icon: FileText, 
       unlocked: pagesCount > 0,
       color: 'text-blue-500',
@@ -39,8 +42,8 @@ export function AchievementsCard({
     },
     { 
       id: 'builder', 
-      label: 'Constructeur', 
-      description: 'Ajouter 5 sections',
+      label: t('dashboard:dashboard.achievements.builder'), 
+      description: t('dashboard:dashboard.achievements.builderDescription'),
       icon: Layers, 
       unlocked: sectionsCount >= 5,
       color: 'text-violet-500',
@@ -48,8 +51,8 @@ export function AchievementsCard({
     },
     { 
       id: 'live', 
-      label: 'En ligne !', 
-      description: 'Publier votre site',
+      label: t('dashboard:dashboard.achievements.live'), 
+      description: t('dashboard:dashboard.achievements.liveDescription'),
       icon: Rocket, 
       unlocked: isPublished,
       color: 'text-green-500',
@@ -57,8 +60,8 @@ export function AchievementsCard({
     },
     { 
       id: 'power-user', 
-      label: 'Power User', 
-      description: 'Activer 3 extensions',
+      label: t('dashboard:dashboard.achievements.powerUser'), 
+      description: t('dashboard:dashboard.achievements.powerUserDescription'),
       icon: Puzzle, 
       unlocked: extensionsCount >= 3,
       color: 'text-amber-500',
@@ -66,8 +69,8 @@ export function AchievementsCard({
     },
     { 
       id: 'popular', 
-      label: 'Populaire', 
-      description: 'Atteindre 1000 visites',
+      label: t('dashboard:dashboard.achievements.popular'), 
+      description: t('dashboard:dashboard.achievements.popularDescription'),
       icon: TrendingUp, 
       unlocked: totalVisits >= 1000,
       color: 'text-pink-500',
@@ -75,8 +78,8 @@ export function AchievementsCard({
     },
     { 
       id: 'influencer', 
-      label: 'Influenceur', 
-      description: '100 abonnés newsletter',
+      label: t('dashboard:dashboard.achievements.influencer'), 
+      description: t('dashboard:dashboard.achievements.influencerDescription'),
       icon: Star, 
       unlocked: newsletterSubs >= 100,
       color: 'text-yellow-500',
@@ -92,7 +95,7 @@ export function AchievementsCard({
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Trophy className="h-4 w-4 text-yellow-500" />
-            Récompenses
+            {t('dashboard:dashboard.achievements.title')}
           </CardTitle>
           <Badge variant="outline">
             {unlockedCount}/{achievements.length}

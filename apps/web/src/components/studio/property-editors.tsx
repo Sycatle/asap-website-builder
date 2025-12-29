@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
+import { useTranslation } from 'react-i18next'
 import type { WebsiteElement, UpdateElementRequest } from "@/lib/api"
 import { getElementLabel } from "@/lib/constants/elements"
 import { ELEMENT_LAYOUTS } from "@asap/shared"
@@ -57,23 +58,24 @@ function getString(data: ContentData, key: string): string {
 // Base Property Editor - Common fields
 // ============================================
 function BasePropertyEditor({ element, onUpdate, isUpdating, children }: PropertyEditorProps & { children?: React.ReactNode }) {
+  const { t } = useTranslation(['common', 'editor'])
   const [title, setTitle] = useState(element.title)
   const [layout, setLayout] = useState(element.layout)
   const [visible, setVisible] = useState(element.visible)
   const [isDirty, setIsDirty] = useState(false)
 
-  const layouts = ELEMENT_LAYOUTS[element.element_type as ElementType] || [{ value: 'default', label: 'Par défaut' }]
+  const layouts = ELEMENT_LAYOUTS[element.element_type as ElementType] || [{ value: 'default', label: t('editor:properties.layout.default') }]
 
   const handleSave = useCallback(async () => {
     if (!isDirty) return
     try {
       await onUpdate(element.id, { title, layout, visible })
       setIsDirty(false)
-      toast.success('Élément mis à jour')
+      toast.success(t('editor:messages.saved'))
     } catch {
-      toast.error('Erreur lors de la mise à jour')
+      toast.error(t('common:errors.update'))
     }
-  }, [element.id, title, layout, visible, isDirty, onUpdate])
+  }, [element.id, title, layout, visible, isDirty, onUpdate, t])
 
   const handleTitleChange = (value: string) => {
     setTitle(value)
@@ -106,7 +108,7 @@ function BasePropertyEditor({ element, onUpdate, isUpdating, children }: Propert
             ) : (
               <>
                 <Save className="h-4 w-4 mr-1" />
-                Sauver
+                {t('common:actions.save')}
               </>
             )}
           </Button>
@@ -115,12 +117,12 @@ function BasePropertyEditor({ element, onUpdate, isUpdating, children }: Propert
         <div className="space-y-3">
           <Field>
             <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
-              <Type className="h-3 w-3" /> Titre de l'élément
+              <Type className="h-3 w-3" /> {t('editor:properties.elementTitle')}
             </FieldLabel>
             <Input 
               value={title}
               onChange={(e) => handleTitleChange(e.target.value)}
-              placeholder="Titre de l'élément"
+              placeholder={t('editor:properties.elementTitle')}
               className="h-9"
             />
           </Field>
@@ -128,7 +130,7 @@ function BasePropertyEditor({ element, onUpdate, isUpdating, children }: Propert
           {layouts.length > 1 && (
             <Field>
               <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
-                <Palette className="h-3 w-3" /> Mise en page
+                <Palette className="h-3 w-3" /> {t('editor:properties.style.layout')}
               </FieldLabel>
               <Select value={layout} onValueChange={handleLayoutChange}>
                 <SelectTrigger className="h-9">
@@ -146,7 +148,7 @@ function BasePropertyEditor({ element, onUpdate, isUpdating, children }: Propert
           )}
           
           <Field orientation="horizontal" className="py-2">
-            <FieldLabel className="text-sm">Visible</FieldLabel>
+            <FieldLabel className="text-sm">{t('editor:properties.visible')}</FieldLabel>
             <Switch checked={visible} onCheckedChange={handleVisibleChange} />
           </Field>
         </div>
@@ -164,6 +166,7 @@ function BasePropertyEditor({ element, onUpdate, isUpdating, children }: Propert
 // Hero Element Editor
 // ============================================
 export function HeroPropertyEditor({ element, onUpdate, isUpdating }: PropertyEditorProps) {
+  const { t } = useTranslation(['common', 'editor'])
   const [data, setData] = useState<ContentData>(element.content || element.data || {})
   const [isDirty, setIsDirty] = useState(false)
 
@@ -176,9 +179,9 @@ export function HeroPropertyEditor({ element, onUpdate, isUpdating }: PropertyEd
     try {
       await onUpdate(element.id, { data })
       setIsDirty(false)
-      toast.success('Contenu mis à jour')
+      toast.success(t('editor:messages.saved'))
     } catch {
-      toast.error('Erreur lors de la mise à jour')
+      toast.error(t('common:errors.update'))
     }
   }
 
@@ -186,44 +189,44 @@ export function HeroPropertyEditor({ element, onUpdate, isUpdating }: PropertyEd
     <BasePropertyEditor element={element} onUpdate={onUpdate} isUpdating={isUpdating}>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">Contenu</h4>
+          <h4 className="text-sm font-medium">{t('editor:properties.tabs.content')}</h4>
           <Button 
             size="sm" 
             variant="outline"
             onClick={handleSaveData}
             disabled={!isDirty || isUpdating}
           >
-            {isUpdating ? <Spinner className="h-3 w-3" /> : 'Appliquer'}
+            {isUpdating ? <Spinner className="h-3 w-3" /> : t('common:actions.apply')}
           </Button>
         </div>
         
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <FieldLabel className="text-xs text-muted-foreground">Nom / Titre principal</FieldLabel>
+            <FieldLabel className="text-xs text-muted-foreground">{t('editor:properties.hero.name')}</FieldLabel>
             <Input 
               value={getString(data, 'name')}
               onChange={(e) => updateField('name', e.target.value)}
-              placeholder="Votre Nom"
+              placeholder={t('editor:properties.hero.namePlaceholder')}
               className="h-9"
             />
           </div>
           
           <div className="space-y-1.5">
-            <FieldLabel className="text-xs text-muted-foreground">Titre / Rôle</FieldLabel>
+            <FieldLabel className="text-xs text-muted-foreground">{t('editor:properties.hero.title')}</FieldLabel>
             <Input 
               value={getString(data, 'title')}
               onChange={(e) => updateField('title', e.target.value)}
-              placeholder="Développeur Full Stack"
+              placeholder={t('editor:properties.hero.titlePlaceholder')}
               className="h-9"
             />
           </div>
           
           <div className="space-y-1.5">
-            <FieldLabel className="text-xs text-muted-foreground">Sous-titre</FieldLabel>
+            <FieldLabel className="text-xs text-muted-foreground">{t('editor:properties.hero.subtitle')}</FieldLabel>
             <Textarea 
               value={getString(data, 'subtitle')}
               onChange={(e) => updateField('subtitle', e.target.value)}
-              placeholder="Une courte description..."
+              placeholder={t('editor:properties.hero.subtitlePlaceholder')}
               className="resize-none"
               rows={2}
             />
@@ -233,13 +236,13 @@ export function HeroPropertyEditor({ element, onUpdate, isUpdating }: PropertyEd
           
           <div className="space-y-1.5">
             <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
-              <Link2 className="h-3 w-3" /> Bouton d'action
+              <Link2 className="h-3 w-3" /> {t('editor:properties.hero.ctaButton')}
             </FieldLabel>
             <div className="grid grid-cols-2 gap-2">
               <Input 
                 value={getString(data, 'cta_text')}
                 onChange={(e) => updateField('cta_text', e.target.value)}
-                placeholder="Texte du bouton"
+                placeholder={t('editor:properties.hero.ctaTextPlaceholder')}
                 className="h-9"
               />
               <Input 
@@ -253,7 +256,7 @@ export function HeroPropertyEditor({ element, onUpdate, isUpdating }: PropertyEd
           
           <div className="space-y-1.5">
             <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
-              <Image className="h-3 w-3" /> Image de fond (URL)
+              <Image className="h-3 w-3" /> {t('editor:properties.hero.backgroundImage')}
             </FieldLabel>
             <Input 
               value={getString(data, 'background_image')}
@@ -272,6 +275,7 @@ export function HeroPropertyEditor({ element, onUpdate, isUpdating }: PropertyEd
 // About Element Editor
 // ============================================
 export function AboutPropertyEditor({ element, onUpdate, isUpdating }: PropertyEditorProps) {
+  const { t } = useTranslation(['common', 'editor'])
   const [data, setData] = useState<ContentData>(element.content || element.data || {})
   const [isDirty, setIsDirty] = useState(false)
 
@@ -284,9 +288,9 @@ export function AboutPropertyEditor({ element, onUpdate, isUpdating }: PropertyE
     try {
       await onUpdate(element.id, { data })
       setIsDirty(false)
-      toast.success('Contenu mis à jour')
+      toast.success(t('editor:messages.saved'))
     } catch {
-      toast.error('Erreur lors de la mise à jour')
+      toast.error(t('common:errors.update'))
     }
   }
 
@@ -310,26 +314,26 @@ export function AboutPropertyEditor({ element, onUpdate, isUpdating }: PropertyE
     <BasePropertyEditor element={element} onUpdate={onUpdate} isUpdating={isUpdating}>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">Contenu</h4>
+          <h4 className="text-sm font-medium">{t('editor:properties.tabs.content')}</h4>
           <Button 
             size="sm" 
             variant="outline"
             onClick={handleSaveData}
             disabled={!isDirty || isUpdating}
           >
-            {isUpdating ? <Spinner className="h-3 w-3" /> : 'Appliquer'}
+            {isUpdating ? <Spinner className="h-3 w-3" /> : t('common:actions.apply')}
           </Button>
         </div>
         
         <div className="space-y-3">
           <div className="space-y-1.5">
             <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
-              <AlignLeft className="h-3 w-3" /> Description
+              <AlignLeft className="h-3 w-3" /> {t('editor:properties.about.description')}
             </FieldLabel>
             <Textarea 
               value={getString(data, 'description')}
               onChange={(e) => updateField('description', e.target.value)}
-              placeholder="Votre description..."
+              placeholder={t('editor:properties.about.descriptionPlaceholder')}
               className="resize-none"
               rows={4}
             />
@@ -337,7 +341,7 @@ export function AboutPropertyEditor({ element, onUpdate, isUpdating }: PropertyE
           
           <div className="space-y-1.5">
             <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
-              <Image className="h-3 w-3" /> Photo (URL)
+              <Image className="h-3 w-3" /> {t('editor:properties.about.photo')}
             </FieldLabel>
             <Input 
               value={getString(data, 'image')}
@@ -351,9 +355,9 @@ export function AboutPropertyEditor({ element, onUpdate, isUpdating }: PropertyE
           
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <FieldLabel className="text-xs text-muted-foreground">Points forts</FieldLabel>
+              <FieldLabel className="text-xs text-muted-foreground">{t('editor:properties.about.highlights')}</FieldLabel>
               <Button size="sm" variant="ghost" onClick={addHighlight} className="h-7 px-2">
-                <Plus className="h-3 w-3 mr-1" /> Ajouter
+                <Plus className="h-3 w-3 mr-1" /> {t('common:actions.add')}
               </Button>
             </div>
             
@@ -364,7 +368,7 @@ export function AboutPropertyEditor({ element, onUpdate, isUpdating }: PropertyE
                   <Input 
                     value={highlight}
                     onChange={(e) => updateHighlight(index, e.target.value)}
-                    placeholder={`Point ${index + 1}`}
+                    placeholder={t('editor:properties.about.highlightPlaceholder', { number: index + 1 })}
                     className="h-8 flex-1"
                   />
                   <Button 
@@ -394,6 +398,7 @@ interface SkillCategory {
 }
 
 export function SkillsPropertyEditor({ element, onUpdate, isUpdating }: PropertyEditorProps) {
+  const { t } = useTranslation(['common', 'editor'])
   const [data, setData] = useState<ContentData>(element.content || element.data || {})
   const [isDirty, setIsDirty] = useState(false)
 
@@ -408,14 +413,14 @@ export function SkillsPropertyEditor({ element, onUpdate, isUpdating }: Property
     try {
       await onUpdate(element.id, { data })
       setIsDirty(false)
-      toast.success('Contenu mis à jour')
+      toast.success(t('editor:messages.saved'))
     } catch {
-      toast.error('Erreur lors de la mise à jour')
+      toast.error(t('common:errors.update'))
     }
   }
 
   const addCategory = () => {
-    updateCategories([...categories, { name: 'Nouvelle catégorie', skills: [] }])
+    updateCategories([...categories, { name: t('editor:properties.skills.newCategory'), skills: [] }])
   }
 
   const updateCategory = (index: number, field: 'name' | 'skills', value: string | string[]) => {
@@ -450,7 +455,7 @@ export function SkillsPropertyEditor({ element, onUpdate, isUpdating }: Property
     <BasePropertyEditor element={element} onUpdate={onUpdate} isUpdating={isUpdating}>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">Catégories</h4>
+          <h4 className="text-sm font-medium">{t('editor:properties.skills.categories')}</h4>
           <div className="flex gap-2">
             <Button 
               size="sm" 
@@ -458,10 +463,10 @@ export function SkillsPropertyEditor({ element, onUpdate, isUpdating }: Property
               onClick={handleSaveData}
               disabled={!isDirty || isUpdating}
             >
-              {isUpdating ? <Spinner className="h-3 w-3" /> : 'Appliquer'}
+              {isUpdating ? <Spinner className="h-3 w-3" /> : t('common:actions.apply')}
             </Button>
             <Button size="sm" variant="ghost" onClick={addCategory} className="h-8">
-              <Plus className="h-3 w-3 mr-1" /> Catégorie
+              <Plus className="h-3 w-3 mr-1" /> {t('editor:properties.skills.category')}
             </Button>
           </div>
         </div>
@@ -474,7 +479,7 @@ export function SkillsPropertyEditor({ element, onUpdate, isUpdating }: Property
                   <Input 
                     value={category.name}
                     onChange={(e) => updateCategory(catIndex, 'name', e.target.value)}
-                    placeholder="Nom de la catégorie"
+                    placeholder={t('editor:properties.skills.categoryName')}
                     className="h-8 font-medium"
                   />
                   <Button 
@@ -493,7 +498,7 @@ export function SkillsPropertyEditor({ element, onUpdate, isUpdating }: Property
                       <Input 
                         value={skill}
                         onChange={(e) => updateSkill(catIndex, skillIndex, e.target.value)}
-                        placeholder="Compétence"
+                        placeholder={t('editor:properties.skills.skill')}
                         className="h-7 text-sm"
                       />
                       <Button 
@@ -512,7 +517,7 @@ export function SkillsPropertyEditor({ element, onUpdate, isUpdating }: Property
                     onClick={() => addSkill(catIndex)}
                     className="h-7 text-xs"
                   >
-                    <Plus className="h-3 w-3 mr-1" /> Compétence
+                    <Plus className="h-3 w-3 mr-1" /> {t('editor:properties.skills.skill')}
                   </Button>
                 </div>
               </div>
@@ -534,6 +539,7 @@ interface Service {
 }
 
 export function ServicesPropertyEditor({ element, onUpdate, isUpdating }: PropertyEditorProps) {
+  const { t } = useTranslation(['common', 'editor'])
   const [data, setData] = useState<ContentData>(element.content || element.data || {})
   const [isDirty, setIsDirty] = useState(false)
 
@@ -548,14 +554,14 @@ export function ServicesPropertyEditor({ element, onUpdate, isUpdating }: Proper
     try {
       await onUpdate(element.id, { data })
       setIsDirty(false)
-      toast.success('Contenu mis à jour')
+      toast.success(t('editor:messages.saved'))
     } catch {
-      toast.error('Erreur lors de la mise à jour')
+      toast.error(t('common:errors.update'))
     }
   }
 
   const addService = () => {
-    updateServices([...services, { title: 'Nouveau service', description: '' }])
+    updateServices([...services, { title: t('editor:properties.services.newService'), description: '' }])
   }
 
   const updateService = (index: number, field: keyof Service, value: string) => {
@@ -572,7 +578,7 @@ export function ServicesPropertyEditor({ element, onUpdate, isUpdating }: Proper
     <BasePropertyEditor element={element} onUpdate={onUpdate} isUpdating={isUpdating}>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">Services</h4>
+          <h4 className="text-sm font-medium">{t('editor:properties.services.title')}</h4>
           <div className="flex gap-2">
             <Button 
               size="sm" 
@@ -580,10 +586,10 @@ export function ServicesPropertyEditor({ element, onUpdate, isUpdating }: Proper
               onClick={handleSaveData}
               disabled={!isDirty || isUpdating}
             >
-              {isUpdating ? <Spinner className="h-3 w-3" /> : 'Appliquer'}
+              {isUpdating ? <Spinner className="h-3 w-3" /> : t('common:actions.apply')}
             </Button>
             <Button size="sm" variant="ghost" onClick={addService} className="h-8">
-              <Plus className="h-3 w-3 mr-1" /> Service
+              <Plus className="h-3 w-3 mr-1" /> {t('editor:properties.services.service')}
             </Button>
           </div>
         </div>
@@ -596,7 +602,7 @@ export function ServicesPropertyEditor({ element, onUpdate, isUpdating }: Proper
                   <Input 
                     value={service.title}
                     onChange={(e) => updateService(index, 'title', e.target.value)}
-                    placeholder="Nom du service"
+                    placeholder={t('editor:properties.services.serviceName')}
                     className="h-8 font-medium flex-1"
                   />
                   <Button 
@@ -611,7 +617,7 @@ export function ServicesPropertyEditor({ element, onUpdate, isUpdating }: Proper
                 <Textarea 
                   value={service.description}
                   onChange={(e) => updateService(index, 'description', e.target.value)}
-                  placeholder="Description du service"
+                  placeholder={t('editor:properties.services.serviceDescription')}
                   className="resize-none text-sm"
                   rows={2}
                 />
@@ -628,6 +634,7 @@ export function ServicesPropertyEditor({ element, onUpdate, isUpdating }: Proper
 // Contact Element Editor
 // ============================================
 export function ContactPropertyEditor({ element, onUpdate, isUpdating }: PropertyEditorProps) {
+  const { t } = useTranslation(['common', 'editor'])
   const [data, setData] = useState<ContentData>(element.content || element.data || {})
   const [isDirty, setIsDirty] = useState(false)
 
@@ -640,9 +647,9 @@ export function ContactPropertyEditor({ element, onUpdate, isUpdating }: Propert
     try {
       await onUpdate(element.id, { data })
       setIsDirty(false)
-      toast.success('Contenu mis à jour')
+      toast.success(t('editor:messages.saved'))
     } catch {
-      toast.error('Erreur lors de la mise à jour')
+      toast.error(t('common:errors.update'))
     }
   }
 
@@ -666,20 +673,20 @@ export function ContactPropertyEditor({ element, onUpdate, isUpdating }: Propert
     <BasePropertyEditor element={element} onUpdate={onUpdate} isUpdating={isUpdating}>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">Informations</h4>
+          <h4 className="text-sm font-medium">{t('editor:properties.contact.info')}</h4>
           <Button 
             size="sm" 
             variant="outline"
             onClick={handleSaveData}
             disabled={!isDirty || isUpdating}
           >
-            {isUpdating ? <Spinner className="h-3 w-3" /> : 'Appliquer'}
+            {isUpdating ? <Spinner className="h-3 w-3" /> : t('common:actions.apply')}
           </Button>
         </div>
         
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <FieldLabel className="text-xs text-muted-foreground">Email</FieldLabel>
+            <FieldLabel className="text-xs text-muted-foreground">{t('editor:properties.contact.email')}</FieldLabel>
             <Input 
               type="email"
               value={getString(data, 'email')}
@@ -690,7 +697,7 @@ export function ContactPropertyEditor({ element, onUpdate, isUpdating }: Propert
           </div>
           
           <div className="space-y-1.5">
-            <FieldLabel className="text-xs text-muted-foreground">Téléphone</FieldLabel>
+            <FieldLabel className="text-xs text-muted-foreground">{t('editor:properties.contact.phone')}</FieldLabel>
             <Input 
               value={getString(data, 'phone')}
               onChange={(e) => updateField('phone', e.target.value)}
@@ -700,7 +707,7 @@ export function ContactPropertyEditor({ element, onUpdate, isUpdating }: Propert
           </div>
           
           <div className="space-y-1.5">
-            <FieldLabel className="text-xs text-muted-foreground">Localisation</FieldLabel>
+            <FieldLabel className="text-xs text-muted-foreground">{t('editor:properties.contact.location')}</FieldLabel>
             <Input 
               value={getString(data, 'location')}
               onChange={(e) => updateField('location', e.target.value)}
@@ -713,9 +720,9 @@ export function ContactPropertyEditor({ element, onUpdate, isUpdating }: Propert
           
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <FieldLabel className="text-xs text-muted-foreground">Réseaux sociaux</FieldLabel>
+              <FieldLabel className="text-xs text-muted-foreground">{t('editor:properties.contact.socials')}</FieldLabel>
               <Button size="sm" variant="ghost" onClick={addSocial} className="h-7 px-2">
-                <Plus className="h-3 w-3 mr-1" /> Ajouter
+                <Plus className="h-3 w-3 mr-1" /> {t('common:actions.add')}
               </Button>
             </div>
             
@@ -727,13 +734,13 @@ export function ContactPropertyEditor({ element, onUpdate, isUpdating }: Propert
                     onValueChange={(value) => updateSocial(index, 'platform', value)}
                   >
                     <SelectTrigger className="h-8 w-24">
-                      <SelectValue placeholder="Type" />
+                      <SelectValue placeholder={t('editor:properties.contact.type')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="github">GitHub</SelectItem>
                       <SelectItem value="linkedin">LinkedIn</SelectItem>
                       <SelectItem value="twitter">Twitter</SelectItem>
-                      <SelectItem value="website">Site web</SelectItem>
+                      <SelectItem value="website">{t('editor:properties.contact.website')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <Input 
@@ -764,11 +771,12 @@ export function ContactPropertyEditor({ element, onUpdate, isUpdating }: Propert
 // Generic Property Editor for other elements
 // ============================================
 export function GenericPropertyEditor({ element, onUpdate, isUpdating }: PropertyEditorProps) {
+  const { t } = useTranslation(['common', 'editor'])
   return (
     <BasePropertyEditor element={element} onUpdate={onUpdate} isUpdating={isUpdating}>
       <div className="text-center py-8 text-muted-foreground">
-        <p className="text-sm">Éditeur avancé bientôt disponible</p>
-        <p className="text-xs mt-1">Les propriétés de base sont modifiables ci-dessus</p>
+        <p className="text-sm">{t('editor:properties.generic.advancedSoon')}</p>
+        <p className="text-xs mt-1">{t('editor:properties.generic.basicEditable')}</p>
       </div>
     </BasePropertyEditor>
   )

@@ -1,6 +1,7 @@
 "use client"
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock, AlertCircle, XCircle, Wifi, WifiOff, Globe, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -126,11 +127,29 @@ export function StatusBadge({
   size = 'md',
   className,
 }: StatusBadgeProps) {
+  const { t } = useTranslation();
   const config = statusConfig[status];
   if (!config) return null;
   
   const Icon = config.icon;
-  const displayLabel = label ?? config.label;
+  
+  // Map status to translation keys
+  const statusTranslations: Record<string, string> = {
+    published: t('common:status.online'),
+    online: t('common:status.online'),
+    draft: t('common:status.draft'),
+    offline: t('common:status.offline'),
+    good: t('common:status.good'),
+    'needs-improvement': t('common:status.needsImprovement'),
+    poor: t('common:status.poor'),
+    success: t('common:status.success'),
+    warning: t('common:status.warning'),
+    error: t('errors:generic.title'),
+    info: t('common:status.info'),
+    neutral: t('common:status.neutral'),
+  };
+  
+  const displayLabel = label ?? statusTranslations[status] ?? config.label;
   
   return (
     <Badge 

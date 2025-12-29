@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { websitesAPI, type UpdateWebsiteRequest } from '@/lib/api';
 import { queryKeys } from '@/lib/query';
 import { useQueryClient } from '@tanstack/react-query';
@@ -43,6 +44,7 @@ import type { RealtimeData } from './types';
  * Orchestrates all dashboard sub-components and manages real-time data
  */
 export default function Dashboard() {
+  const { t } = useTranslation(['common', 'dashboard']);
   const { 
     currentWebsite: website, 
     currentWebsiteId, 
@@ -148,9 +150,9 @@ export default function Dashboard() {
       await websitesAPI.update(currentWebsiteId, { status: 'published' } as UpdateWebsiteRequest);
       await queryClient.invalidateQueries({ queryKey: queryKeys.websites.all });
       refetchAll();
-      toast.success('Site publié avec succès !');
+      toast.success(t('dashboard:websites.toast.published'));
     } catch (error) {
-      toast.error('Erreur lors de la publication');
+      toast.error(t('dashboard:websites.toast.publishError'));
     } finally {
       setIsSaving(false);
     }
@@ -198,7 +200,7 @@ export default function Dashboard() {
     <div className="flex flex-col gap-6 sm:gap-8 animate-fade-in">
       {/* Page Header with sticky behavior */}
       <PageHeader
-        title={website?.title || 'Mon site'}
+        title={website?.title || t('dashboard:dashboard.mySite')}
         subtitle={website?.slug ? `${website.slug}.asap.cool` : undefined}
         icon={
           <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center shadow-lg">
@@ -206,31 +208,31 @@ export default function Dashboard() {
           </div>
         }
         badge={website?.status === 'published' ? {
-          label: 'En ligne',
+          label: t('dashboard:websites.status.online'),
           className: 'bg-green-500/10 text-green-600 border-green-500/20',
           icon: <CheckCircle2 className="w-3 h-3 mr-1" />,
         } : {
-          label: 'Brouillon',
+          label: t('dashboard:websites.status.draft'),
           variant: 'secondary',
           icon: <Clock className="w-3 h-3 mr-1" />,
         }}
         isMainPage={true}
         actions={[
           ...(website?.status === 'draft' ? [{
-            label: 'Publier',
+            label: t('dashboard:dashboard.publish'),
             icon: isSaving ? <Spinner className="h-4 w-4" /> : <Rocket className="h-4 w-4" />,
             onClick: handlePublish,
             disabled: isSaving,
             className: 'bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20',
           }] : []),
           {
-            label: 'Studio',
+            label: t('dashboard:dashboard.studio'),
             icon: <Edit className="h-4 w-4" />,
             href: `/app/${currentWebsiteId}/studio`,
             className: 'shadow-md',
           },
           ...(website ? [{
-            label: 'Voir',
+            label: t('dashboard:dashboard.view'),
             icon: <ExternalLink className="h-4 w-4" />,
             href: `/${website.slug}`,
             variant: 'outline' as const,
@@ -336,6 +338,8 @@ function StickyHeaderContent({
   isSaving: boolean;
   onPublish: () => void;
 }) {
+  const { t } = useTranslation(['common', 'dashboard']);
+
   return (
     <div className="flex items-center justify-between h-12">
       {/* Left - Site info */}
@@ -345,19 +349,19 @@ function StickyHeaderContent({
             <Globe className="h-4 w-4 text-white" />
           </div>
           <div className="hidden sm:block">
-            <p className="text-sm font-semibold leading-none">{website?.title || 'Mon site'}</p>
+            <p className="text-sm font-semibold leading-none">{website?.title || t('dashboard:dashboard.mySite')}</p>
             <p className="text-[11px] text-muted-foreground font-mono">{website?.slug}.asap.cool</p>
           </div>
         </div>
         {website?.status === 'published' ? (
           <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] h-5">
             <div className="h-1.5 w-1.5 rounded-full bg-green-500 mr-1 animate-pulse" />
-            En ligne
+            {t('dashboard:websites.status.online')}
           </Badge>
         ) : (
           <Badge variant="secondary" className="text-[10px] h-5">
             <Clock className="w-2.5 h-2.5 mr-1" />
-            Brouillon
+            {t('dashboard:websites.status.draft')}
           </Badge>
         )}
       </div>
@@ -370,13 +374,13 @@ function StickyHeaderContent({
             <div className="absolute inset-0 h-1.5 w-1.5 rounded-full bg-green-500 animate-ping" />
           </div>
           <span className="text-green-600 font-semibold tabular-nums">{realtimeData.activeVisitors}</span>
-          <span className="text-muted-foreground text-xs">en ligne</span>
+          <span className="text-muted-foreground text-xs">{t('dashboard:dashboard.liveVisitors', { count: realtimeData.activeVisitors }).replace(`${realtimeData.activeVisitors} `, '')}</span>
         </div>
         <div className="h-4 w-px bg-border" />
         <div className="flex items-center gap-1.5 text-sm">
           <Activity className="h-3.5 w-3.5 text-primary" />
           <span className="font-semibold tabular-nums">{realtimeData.todayVisits.toLocaleString()}</span>
-          <span className="text-muted-foreground text-xs">visites</span>
+          <span className="text-muted-foreground text-xs">{t('dashboard:dashboard.visits')}</span>
         </div>
         <div className="h-4 w-px bg-border" />
         <div className="flex items-center gap-1.5 text-sm">
@@ -390,13 +394,13 @@ function StickyHeaderContent({
         {website?.status === 'draft' && (
           <Button onClick={onPublish} disabled={isSaving} size="sm" className="bg-green-600 hover:bg-green-700 h-8">
             {isSaving ? <Spinner className="h-3.5 w-3.5" /> : <Rocket className="h-3.5 w-3.5" />}
-            <span className="hidden sm:inline ml-1.5">Publier</span>
+            <span className="hidden sm:inline ml-1.5">{t('dashboard:dashboard.publish')}</span>
           </Button>
         )}
         <Button variant="default" size="sm" className="h-8" asChild>
           <Link href={`/app/${currentWebsiteId}/studio`}>
             <Edit className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline ml-1.5">Studio</span>
+            <span className="hidden sm:inline ml-1.5">{t('dashboard:dashboard.studio')}</span>
           </Link>
         </Button>
         {website && (

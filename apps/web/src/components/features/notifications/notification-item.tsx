@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslation } from 'react-i18next';
 import {
   Check,
   Trash2,
@@ -52,6 +53,7 @@ export function NotificationItem({
   onDelete, 
   onClick 
 }: NotificationItemProps) {
+  const { t } = useTranslation(['dashboard', 'common']);
   const Icon = getNotificationIcon(notification)
   
   const handleClick = () => {
@@ -121,7 +123,7 @@ export function NotificationItem({
           )}
           {notification.action_url && (
             <span className="text-xs text-primary flex items-center gap-1 ml-auto">
-              Voir <ExternalLink className="h-3 w-3" />
+              {t('dashboard:notifications.view')} <ExternalLink className="h-3 w-3" />
             </span>
           )}
         </div>
@@ -135,7 +137,7 @@ export function NotificationItem({
             size="icon"
             className="h-8 w-8"
             onClick={handleMarkAsRead}
-            title="Marquer comme lu"
+            title={t('dashboard:notifications.markAsRead')}
           >
             <Check className="h-4 w-4" />
           </Button>
@@ -145,7 +147,7 @@ export function NotificationItem({
           size="icon"
           className="h-8 w-8 text-destructive hover:text-destructive"
           onClick={handleDelete}
-          title="Supprimer"
+          title={t('common:actions.delete')}
         >
           <Trash2 className="h-4 w-4" />
         </Button>

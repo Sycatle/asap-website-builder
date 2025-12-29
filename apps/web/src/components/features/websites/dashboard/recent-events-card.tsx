@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Bell, 
   ChevronRight, 
@@ -29,17 +30,18 @@ interface Event {
  * Recent events card showing live activity
  */
 export function RecentEventsCard({ websiteId }: RecentEventsCardProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
   const [events, setEvents] = useState<Event[]>([]);
 
   useEffect(() => {
     const generateEvents = () => {
       const now = new Date();
       const eventTypes = [
-        { type: 'visit', title: 'Nouvelle visite', icon: Eye, color: 'text-blue-500' },
-        { type: 'subscriber', title: 'Nouvel abonné newsletter', icon: Mail, color: 'text-green-500' },
-        { type: 'contact', title: 'Nouvelle demande de contact', icon: MessageSquare, color: 'text-amber-500' },
-        { type: 'page_view', title: 'Page consultée: Accueil', icon: FileText, color: 'text-violet-500' },
-        { type: 'visit', title: 'Visiteur depuis Google', icon: Globe, color: 'text-blue-500' },
+        { type: 'visit', title: t('dashboard:dashboard.activity.newVisit'), icon: Eye, color: 'text-blue-500' },
+        { type: 'subscriber', title: t('dashboard:dashboard.activity.newSubscriber'), icon: Mail, color: 'text-green-500' },
+        { type: 'contact', title: t('dashboard:dashboard.activity.newContact'), icon: MessageSquare, color: 'text-amber-500' },
+        { type: 'page_view', title: t('dashboard:dashboard.activity.pageViewed'), icon: FileText, color: 'text-violet-500' },
+        { type: 'visit', title: t('dashboard:dashboard.activity.visitorFromGoogle'), icon: Globe, color: 'text-blue-500' },
       ];
 
       const newEvents: Event[] = [];
@@ -58,7 +60,7 @@ export function RecentEventsCard({ websiteId }: RecentEventsCardProps) {
     generateEvents();
     const interval = setInterval(generateEvents, 30000); // Update every 30 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [t]);
 
   return (
     <Card className="lg:col-span-7">
@@ -66,11 +68,11 @@ export function RecentEventsCard({ websiteId }: RecentEventsCardProps) {
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Bell className="h-4 w-4 text-primary" />
-            Activité récente
+            {t('dashboard:dashboard.activity.title')}
           </CardTitle>
           <Link href={`/app/${websiteId}/analytics`}>
             <Button variant="ghost" size="sm" className="text-xs h-7">
-              Voir tout
+              {t('dashboard:dashboard.activity.viewAll')}
               <ChevronRight className="h-3 w-3 ml-1" />
             </Button>
           </Link>

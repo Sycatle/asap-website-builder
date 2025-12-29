@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { FileMetadata } from '@/lib/api';
 import { formatBytes } from '@/lib/utils/formatters';
 import { PageHeader } from '@/components/shared/page-header';
@@ -50,6 +51,7 @@ const filesLogger = loggers.files;
  * - Storage quota display
  */
 export function CloudManager() {
+  const { t } = useTranslation(['common', 'dashboard']);
   const { currentWebsiteId } = useWebsiteContext();
   
   // React Query hooks
@@ -140,18 +142,18 @@ export function CloudManager() {
     if (results.success.length > 0 && results.failed.length === 0) {
       toast.success(
         results.success.length === 1
-          ? `${results.success[0]} uploadé avec succès !`
-          : `${results.success.length} fichiers uploadés avec succès !`
+          ? t('dashboard:cloud.upload.success', { filename: results.success[0] })
+          : t('dashboard:cloud.upload.successMultiple', { count: results.success.length })
       );
     } else if (results.failed.length > 0 && results.success.length === 0) {
       toast.error(
         results.failed.length === 1
-          ? `Échec de l'upload de ${results.failed[0]}`
-          : `Échec de l'upload de ${results.failed.length} fichiers`
+          ? t('dashboard:cloud.upload.error', { filename: results.failed[0] })
+          : t('dashboard:cloud.upload.errorMultiple', { count: results.failed.length })
       );
     } else if (results.success.length > 0 && results.failed.length > 0) {
       toast.warning(
-        `${results.success.length} fichier(s) uploadé(s), ${results.failed.length} échec(s)`
+        t('dashboard:cloud.upload.partial', { success: results.success.length, failed: results.failed.length })
       );
     }
 
@@ -175,10 +177,10 @@ export function CloudManager() {
     try {
       await deleteFileMutation.mutateAsync(file.id);
       setPreviewFile(null);
-      toast.success('Fichier supprimé');
+      toast.success(t('dashboard:cloud.delete.success'));
     } catch (error) {
       filesLogger.error('Failed to delete file:', error);
-      toast.error('Erreur lors de la suppression');
+      toast.error(t('dashboard:cloud.delete.error'));
     } finally {
       setIsDeleting(false);
       setDeleteConfirm(null);
@@ -193,11 +195,11 @@ export function CloudManager() {
     
     try {
       await deleteFilesMutation.mutateAsync(selectedFileIds);
-      toast.success(`${selectedFileIds.length} fichier${selectedFileIds.length > 1 ? 's' : ''} supprimé${selectedFileIds.length > 1 ? 's' : ''}`);
+      toast.success(t('dashboard:cloud.delete.successMultiple', { count: selectedFileIds.length }));
       clearSelection();
     } catch (error) {
       filesLogger.error('Failed to delete files:', error);
-      toast.error('Erreur lors de la suppression');
+      toast.error(t('dashboard:cloud.delete.error'));
     } finally {
       setIsDeleting(false);
       setBulkDeleteConfirm(false);
@@ -208,7 +210,7 @@ export function CloudManager() {
     const url = getFileUrl(fileId);
     await navigator.clipboard.writeText(url);
     setCopiedId(fileId);
-    toast.success('Lien copié !');
+    toast.success(t('dashboard:cloud.copy.success'));
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -220,7 +222,7 @@ export function CloudManager() {
       link.download = file.filename;
       link.click();
     });
-    toast.success(`${selectedFiles.length} téléchargement${selectedFiles.length > 1 ? 's' : ''} lancé${selectedFiles.length > 1 ? 's' : ''}`);
+    toast.success(t('dashboard:cloud.download.started', { count: selectedFiles.length }));
   };
 
   if (isLoading) {
@@ -231,8 +233,8 @@ export function CloudManager() {
     <div className="flex flex-col gap-6 sm:gap-8 animate-fade-in">
       {/* Page Header */}
       <PageHeader
-        title="Fichiers"
-        subtitle="Gérez vos fichiers et médias"
+        title={t('dashboard:cloud.title')}
+        subtitle={t('dashboard:cloud.subtitle')}
         icon={
           <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
             <HardDrive className="h-5 w-5 text-white" />
@@ -245,7 +247,7 @@ export function CloudManager() {
         backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
         actions={[
           {
-            label: isUploading ? (uploadProgress.total > 1 ? `${uploadProgress.completed}/${uploadProgress.total}` : 'Upload...') : 'Upload',
+            label: isUploading ? (uploadProgress.total > 1 ? `${uploadProgress.completed}/${uploadProgress.total}` : t('dashboard:cloud.upload.uploading')) : t('dashboard:cloud.upload.button'),
             icon: isUploading ? <Spinner className="h-4 w-4" /> : <Upload className="h-4 w-4" />,
             onClick: () => fileInputRef.current?.click(),
             disabled: isUploading,
@@ -258,7 +260,7 @@ export function CloudManager() {
                 <HardDrive className="h-4 w-4 text-white" />
               </div>
               <div className="hidden sm:block">
-                <p className="text-sm font-semibold">Fichiers</p>
+                <p className="text-sm font-semibold">{t('dashboard:cloud.filesLabel')}</p>
                 {quota && <p className="text-[11px] text-muted-foreground">{formatBytes(quota.total_size_used)} / {formatBytes(quota.quota_limit)}</p>}
               </div>
             </div>
@@ -277,7 +279,7 @@ export function CloudManager() {
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Affichage en grille</p>
+                      <p>{t('dashboard:cloud.view.grid')}</p>
                     </TooltipContent>
                   </Tooltip>
                   <Tooltip>
@@ -292,7 +294,7 @@ export function CloudManager() {
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Affichage en liste</p>
+                      <p>{t('dashboard:cloud.view.list')}</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -302,11 +304,11 @@ export function CloudManager() {
                   <TooltipTrigger asChild>
                     <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="h-8">
                       {isUploading ? <Spinner className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
-                      <span className="hidden sm:inline ml-1.5">Upload</span>
+                      <span className="hidden sm:inline ml-1.5">{t('dashboard:cloud.upload.button')}</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Téléverser des fichiers</p>
+                    <p>{t('dashboard:cloud.uploadTooltip')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -330,7 +332,7 @@ export function CloudManager() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Affichage en grille</p>
+                  <p>{t('dashboard:cloud.view.grid')}</p>
                 </TooltipContent>
               </Tooltip>
               <Tooltip>
@@ -345,7 +347,7 @@ export function CloudManager() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Affichage en liste</p>
+                  <p>{t('dashboard:cloud.view.list')}</p>
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -374,7 +376,7 @@ export function CloudManager() {
           ref={containerRef as React.RefObject<HTMLDivElement>}
           className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4"
           role="grid"
-          aria-label="Fichiers"
+          aria-label={t('dashboard:cloud.filesLabel')}
         >
           {files.map((file, index) => (
             <FileCard
@@ -401,7 +403,7 @@ export function CloudManager() {
               ref={containerRef as React.RefObject<HTMLDivElement>}
               className="divide-y"
               role="list"
-              aria-label="Fichiers"
+              aria-label={t('dashboard:cloud.filesLabel')}
             >
               {files.map((file, index) => (
                 <FileListItem

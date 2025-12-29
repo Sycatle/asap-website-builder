@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { PageHeader } from '@/components/shared/page-header';
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ import { PagesPageSkeleton } from "./components/pages-page-skeleton";
  * Allows creating, editing, deleting, and reordering website pages
  */
 export function PagesPage() {
+  const { t } = useTranslation(['common', 'dashboard']);
   const { currentWebsite: website, currentWebsiteId, isLoading: contextLoading } = useWebsiteContext();
   
   // Data & state hooks
@@ -106,8 +108,8 @@ export function PagesPage() {
     <div className="flex flex-col gap-6 sm:gap-8 animate-fade-in">
       {/* Page Header */}
       <PageHeader
-        title="Pages"
-        subtitle="Gérez les pages de votre site web"
+        title={t('dashboard:pages.title')}
+        subtitle={t('dashboard:pages.subtitle')}
         icon={
           <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-lg">
             <FileText className="h-5 w-5 text-white" />
@@ -116,7 +118,7 @@ export function PagesPage() {
         backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
         actions={[
           {
-            label: 'Nouvelle page',
+            label: t('dashboard:pages.new'),
             icon: <Plus className="h-4 w-4" />,
             onClick: handleOpenCreateDialog,
           }
@@ -128,9 +130,9 @@ export function PagesPage() {
                 <FileText className="h-4 w-4 text-white" />
               </div>
               <div className="hidden sm:flex items-center gap-3">
-                <p className="text-sm font-semibold">Pages</p>
+                <p className="text-sm font-semibold">{t('dashboard:pages.title')}</p>
                 <Badge variant="secondary" className="text-[10px] h-5">
-                  {stats.total} {stats.total > 1 ? 'pages' : 'page'}
+                  {t('dashboard:pages.count', { count: stats.total })}
                 </Badge>
               </div>
             </div>
@@ -140,7 +142,7 @@ export function PagesPage() {
               onClick={handleOpenCreateDialog}
             >
               <Plus className="h-4 w-4 mr-1.5" />
-              Nouvelle page
+              {t('dashboard:pages.new')}
             </Button>
           </div>
         }

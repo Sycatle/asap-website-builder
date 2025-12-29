@@ -8,6 +8,8 @@
     "notifications": "Notifications",
     "security": "Security",
     "billing": "Billing",
+    "cloud": "Storage",
+    "plan": "Subscription",
     "team": "Team",
     "integrations": "Integrations",
     "advanced": "Advanced",
@@ -44,7 +46,7 @@
     "density": {
       "title": "Density",
       "description": "Adjust interface spacing",
-      "compact": "Compact",
+      "compact": "Compact interface",
       "comfortable": "Comfortable",
       "spacious": "Spacious"
     },
@@ -64,7 +66,7 @@
   "language": {
     "title": "Language",
     "subtitle": "Choose your preferred language",
-    "current": "Current language",
+    "current": "Current",
     "select": "Select a language",
     "autoDetect": "Auto-detect",
     "available": "Available languages"
@@ -144,6 +146,71 @@
       "download": "Download",
       "noInvoices": "No invoices"
     }
+  },
+  "website": {
+    "title": "Site settings",
+    "subtitle": "Configure your site's information and behavior",
+    "general": {
+      "title": "General information",
+      "description": "Basic information about your site",
+      "url": "Site URL",
+      "urlDescription": "The URL cannot be changed after creation",
+      "siteTitle": "Site title",
+      "tagline": "Tagline",
+      "taglinePlaceholder": "A catchy short description",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Detailed description of your site for SEO...",
+      "descriptionHelp": "Used for search engines (meta description)"
+    },
+    "seo": {
+      "title": "SEO & Social media",
+      "description": "Optimize your site's visibility",
+      "favicon": "Favicon (URL)",
+      "faviconDescription": "The icon displayed in the browser tab",
+      "ogImage": "Share image (OG Image)",
+      "ogImageDescription": "Image displayed when sharing on social media (1200x630px recommended)",
+      "indexing": "Search engine indexing",
+      "indexingDescription": "Allow Google and others to index your site",
+      "indexingTooltip": "Enable/disable search engine indexing",
+      "notIndexedWarning": "Your site will not appear in search results"
+    },
+    "publication": {
+      "title": "Publication status",
+      "description": "Manage your site's visibility",
+      "online": "Site online",
+      "draft": "Site draft",
+      "public": "Public",
+      "private": "Private",
+      "accessibleAt": "Accessible at {{url}}",
+      "onlyYou": "Only you can see your site",
+      "publish": "Publish site",
+      "unpublish": "Set as draft",
+      "publishTooltip": "Make the site public and accessible to everyone",
+      "unpublishTooltip": "Make the site private and not publicly accessible"
+    },
+    "danger": {
+      "title": "Danger zone",
+      "description": "Irreversible actions on your site",
+      "deleteTitle": "Delete site",
+      "deleteDescription": "Permanently delete this site and all its data",
+      "deleteWarning": "Warning: this action is irreversible",
+      "deleteConfirmTitle": "Delete site?",
+      "deleteConfirmDescription": "This action is irreversible. All data for this site will be permanently deleted: pages, sections, media, extensions and configurations.",
+      "deleteButton": "Delete",
+      "deleteConfirmButton": "Delete permanently"
+    }
+  },
+  "toast": {
+    "saved": "Settings saved",
+    "saveError": "Error saving",
+    "published": "Site published successfully!",
+    "publishError": "Error publishing",
+    "unpublished": "Site set to draft",
+    "unpublishError": "Error setting to draft",
+    "deleted": "Site deleted",
+    "deleteError": "Error deleting",
+    "saving": "Saving...",
+    "profileUpdated": "Profile updated"
   },
   "saved": "Settings saved"
 }

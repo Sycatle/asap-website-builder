@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -36,6 +37,8 @@ export function CreatePageDialog({
   onFormDataChange,
   onSubmit,
 }: CreatePageDialogProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+  
   const handleFormChange = (updates: Partial<PageFormData>) => {
     onFormDataChange({ ...formData, ...updates });
   };
@@ -44,14 +47,14 @@ export function CreatePageDialog({
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
       <ResponsiveDialogContent>
         <ResponsiveDialogHeader>
-          <ResponsiveDialogTitle>Nouvelle page</ResponsiveDialogTitle>
+          <ResponsiveDialogTitle>{t('dashboard:pages.dialogs.create.title')}</ResponsiveDialogTitle>
           <ResponsiveDialogDescription>
-            Créez une nouvelle page pour votre site web
+            {t('dashboard:pages.dialogs.create.description')}
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
         <FieldGroup className="gap-4 py-4">
           <Field>
-            <FieldLabel htmlFor="title">Titre</FieldLabel>
+            <FieldLabel htmlFor="title">{t('dashboard:pages.form.title')}</FieldLabel>
             <Input
               id="title"
               value={formData.title}
@@ -59,11 +62,11 @@ export function CreatePageDialog({
                 title: e.target.value,
                 slug: formData.slug || slugify(e.target.value)
               })}
-              placeholder="Contact"
+              placeholder={t('dashboard:pages.form.titlePlaceholder')}
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="slug">URL (slug)</FieldLabel>
+            <FieldLabel htmlFor="slug">{t('dashboard:pages.form.slug')}</FieldLabel>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">/</span>
               <Input
@@ -72,28 +75,28 @@ export function CreatePageDialog({
                 onChange={(e) => handleFormChange({ 
                   slug: slugify(e.target.value)
                 })}
-                placeholder="contact"
+                placeholder={t('dashboard:pages.form.slugPlaceholder')}
               />
             </div>
             <FieldDescription>
-              Laissez vide pour la page d'accueil
+              {t('dashboard:pages.form.slugDescription')}
             </FieldDescription>
           </Field>
           <Field>
-            <FieldLabel htmlFor="description">Description</FieldLabel>
+            <FieldLabel htmlFor="description">{t('dashboard:pages.form.description')}</FieldLabel>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => handleFormChange({ description: e.target.value })}
-              placeholder="Description de la page (optionnel)"
+              placeholder={t('dashboard:pages.form.descriptionPlaceholder')}
               rows={2}
             />
           </Field>
           <Field orientation="horizontal">
             <FieldContent>
-              <FieldLabel>Page d'accueil</FieldLabel>
+              <FieldLabel>{t('dashboard:pages.form.homepage')}</FieldLabel>
               <FieldDescription>
-                Définir comme page principale
+                {t('dashboard:pages.form.homepageDescription')}
               </FieldDescription>
             </FieldContent>
             <Switch
@@ -107,10 +110,10 @@ export function CreatePageDialog({
         </FieldGroup>
         <ResponsiveDialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Annuler
+            {t('common:actions.cancel')}
           </Button>
           <Button onClick={onSubmit}>
-            Créer la page
+            {t('dashboard:pages.list.create')}
           </Button>
         </ResponsiveDialogFooter>
       </ResponsiveDialogContent>
@@ -128,6 +131,8 @@ export function EditPageDialog({
   onFormDataChange,
   onSubmit,
 }: EditPageDialogProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+  
   const handleFormChange = (updates: Partial<PageFormData>) => {
     onFormDataChange({ ...formData, ...updates });
   };
@@ -136,14 +141,14 @@ export function EditPageDialog({
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
       <ResponsiveDialogContent>
         <ResponsiveDialogHeader>
-          <ResponsiveDialogTitle>Modifier la page</ResponsiveDialogTitle>
+          <ResponsiveDialogTitle>{t('dashboard:pages.dialogs.edit.title')}</ResponsiveDialogTitle>
           <ResponsiveDialogDescription>
-            Modifiez les informations de la page
+            {t('dashboard:pages.dialogs.edit.description')}
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
         <FieldGroup className="gap-4 py-4">
           <Field>
-            <FieldLabel htmlFor="edit-title">Titre</FieldLabel>
+            <FieldLabel htmlFor="edit-title">{t('dashboard:pages.form.title')}</FieldLabel>
             <Input
               id="edit-title"
               value={formData.title}
@@ -151,7 +156,7 @@ export function EditPageDialog({
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="edit-slug">URL (slug)</FieldLabel>
+            <FieldLabel htmlFor="edit-slug">{t('dashboard:pages.form.slug')}</FieldLabel>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">/</span>
               <Input
@@ -165,12 +170,12 @@ export function EditPageDialog({
             </div>
             {formData.is_homepage && (
               <FieldDescription>
-                Le slug ne peut pas être modifié pour la page d'accueil
+                {t('dashboard:pages.form.slugDisabled')}
               </FieldDescription>
             )}
           </Field>
           <Field>
-            <FieldLabel htmlFor="edit-description">Description</FieldLabel>
+            <FieldLabel htmlFor="edit-description">{t('dashboard:pages.form.description')}</FieldLabel>
             <Textarea
               id="edit-description"
               value={formData.description}
@@ -180,9 +185,9 @@ export function EditPageDialog({
           </Field>
           <Field orientation="horizontal">
             <FieldContent>
-              <FieldLabel>Page d'accueil</FieldLabel>
+              <FieldLabel>{t('dashboard:pages.form.homepage')}</FieldLabel>
               <FieldDescription>
-                Définir comme page principale
+                {t('dashboard:pages.form.homepageDescription')}
               </FieldDescription>
             </FieldContent>
             <Switch
@@ -195,9 +200,9 @@ export function EditPageDialog({
           </Field>
           <Field orientation="horizontal">
             <FieldContent>
-              <FieldLabel>Visible</FieldLabel>
+              <FieldLabel>{t('dashboard:pages.form.visible')}</FieldLabel>
               <FieldDescription>
-                Afficher la page sur le site
+                {t('dashboard:pages.form.visibleDescription')}
               </FieldDescription>
             </FieldContent>
             <Switch
@@ -208,10 +213,10 @@ export function EditPageDialog({
         </FieldGroup>
         <ResponsiveDialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Annuler
+            {t('common:actions.cancel')}
           </Button>
           <Button onClick={onSubmit}>
-            Enregistrer
+            {t('common:actions.save')}
           </Button>
         </ResponsiveDialogFooter>
       </ResponsiveDialogContent>
@@ -228,23 +233,24 @@ export function DeletePageDialog({
   selectedPage,
   onConfirm,
 }: DeletePageDialogProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+  
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Supprimer la page ?</AlertDialogTitle>
+          <AlertDialogTitle>{t('dashboard:pages.dialogs.delete.title')}</AlertDialogTitle>
           <AlertDialogDescription>
-            Êtes-vous sûr de vouloir supprimer la page "{selectedPage?.title}" ?
-            Cette action est irréversible.
+            {t('dashboard:pages.dialogs.delete.description', { title: selectedPage?.title })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Annuler</AlertDialogCancel>
+          <AlertDialogCancel>{t('common:actions.cancel')}</AlertDialogCancel>
           <AlertDialogAction 
             onClick={onConfirm}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            Supprimer
+            {t('common:actions.delete')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { Target, Mail, MessageSquare } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChangeIndicator, getChange } from "./utils";
@@ -9,12 +10,14 @@ import type { ConversionsCardProps } from "./types";
  * Conversions card displaying newsletter subs and contact requests
  */
 export function ConversionsCard({ realtimeData, prevData }: ConversionsCardProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+
   return (
     <Card className="lg:col-span-5 shadow-sm">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Target className="h-4 w-4 text-violet-500" />
-          Conversions
+          {t('dashboard:dashboard.conversions.title')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -24,8 +27,8 @@ export function ConversionsCard({ realtimeData, prevData }: ConversionsCardProps
               <Mail className="h-5 w-5 text-green-600" />
             </div>
             <div>
-              <p className="text-sm font-semibold">Newsletter</p>
-              <p className="text-xs text-muted-foreground">abonnés actifs</p>
+              <p className="text-sm font-semibold">{t('dashboard:dashboard.conversions.newsletter')}</p>
+              <p className="text-xs text-muted-foreground">{t('dashboard:dashboard.conversions.activeSubscribers')}</p>
             </div>
           </div>
           <div className="text-right">
@@ -40,8 +43,8 @@ export function ConversionsCard({ realtimeData, prevData }: ConversionsCardProps
               <MessageSquare className="h-5 w-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-sm font-semibold">Contact</p>
-              <p className="text-xs text-muted-foreground">demandes reçues</p>
+              <p className="text-sm font-semibold">{t('dashboard:dashboard.conversions.contact')}</p>
+              <p className="text-xs text-muted-foreground">{t('dashboard:dashboard.conversions.requestsReceived')}</p>
             </div>
           </div>
           <div className="text-right">

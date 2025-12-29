@@ -1,6 +1,7 @@
 "use client"
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Sheet,
   SheetContent,
@@ -31,6 +32,7 @@ export function MobileSheets({
   elementListProps: ElementListProps;
   propertyEditorProps: PropertyEditorPanelProps;
 }) {
+  const { t } = useTranslation(['common', 'editor']);
   return (
     <>
       {/* Elements Sheet */}
@@ -38,10 +40,10 @@ export function MobileSheets({
         <SheetContent 
           side="left" 
           className="w-[85vw] sm:w-[400px] p-0"
-          aria-label="Liste des éléments"
+          aria-label={t('editor:elementList.title')}
         >
-          <SheetTitle className="sr-only">Éléments</SheetTitle>
-          <SheetDescription className="sr-only">Gérer les éléments de votre page</SheetDescription>
+          <SheetTitle className="sr-only">{t('editor:sidebar.elements')}</SheetTitle>
+          <SheetDescription className="sr-only">{t('editor:mobileSheets.manageElements')}</SheetDescription>
           <ElementList {...elementListProps} />
         </SheetContent>
       </Sheet>
@@ -51,10 +53,10 @@ export function MobileSheets({
         <SheetContent 
           side="right" 
           className="w-[85vw] sm:w-[400px] p-0"
-          aria-label="Propriétés de l'élément"
+          aria-label={t('editor:propertyPanel.elementProperties')}
         >
-          <SheetTitle className="sr-only">Propriétés</SheetTitle>
-          <SheetDescription className="sr-only">Modifier les propriétés de l'élément sélectionné</SheetDescription>
+          <SheetTitle className="sr-only">{t('editor:properties.title')}</SheetTitle>
+          <SheetDescription className="sr-only">{t('editor:mobileSheets.editProperties')}</SheetDescription>
           <PropertyEditorPanel {...propertyEditorProps} />
         </SheetContent>
       </Sheet>

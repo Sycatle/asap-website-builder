@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { 
   Sparkles, 
   CheckCircle2, 
@@ -23,13 +24,15 @@ export function SiteProgressionCard({
   hasTheme, 
   hasSEO 
 }: SiteProgressionCardProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+
   const steps = [
-    { id: 'pages', label: 'Ajouter une page', completed: pagesCount > 0, href: `/app/${websiteId}/pages` },
-    { id: 'sections', label: 'Créer des sections', completed: sectionsCount > 0, href: `/app/${websiteId}/studio` },
-    { id: 'theme', label: 'Personnaliser le thème', completed: hasTheme, href: `/app/${websiteId}/theme` },
-    { id: 'seo', label: 'Configurer le SEO', completed: hasSEO, href: `/app/${websiteId}/settings` },
-    { id: 'extensions', label: 'Activer une extension', completed: extensionsCount > 0, href: `/app/${websiteId}/extensions` },
-    { id: 'publish', label: 'Publier le site', completed: isPublished, href: `/app/${websiteId}/settings` },
+    { id: 'pages', label: t('dashboard:dashboard.progression.addPage'), completed: pagesCount > 0, href: `/app/${websiteId}/pages` },
+    { id: 'sections', label: t('dashboard:dashboard.progression.createSections'), completed: sectionsCount > 0, href: `/app/${websiteId}/studio` },
+    { id: 'theme', label: t('dashboard:dashboard.progression.customizeTheme'), completed: hasTheme, href: `/app/${websiteId}/theme` },
+    { id: 'seo', label: t('dashboard:dashboard.progression.configureSeo'), completed: hasSEO, href: `/app/${websiteId}/settings` },
+    { id: 'extensions', label: t('dashboard:dashboard.progression.activateExtension'), completed: extensionsCount > 0, href: `/app/${websiteId}/extensions` },
+    { id: 'publish', label: t('dashboard:dashboard.progression.publishSite'), completed: isPublished, href: `/app/${websiteId}/settings` },
   ];
 
   const completedCount = steps.filter(s => s.completed).length;
@@ -41,7 +44,7 @@ export function SiteProgressionCard({
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-amber-500" />
-            Progression du site
+            {t('dashboard:dashboard.progression.title')}
           </CardTitle>
           <Badge 
             variant="outline" 
@@ -55,7 +58,7 @@ export function SiteProgressionCard({
         <div>
           <Progress value={progressPercentage} className="h-2" />
           <p className="text-xs text-muted-foreground mt-1">
-            {completedCount}/{steps.length} étapes complétées
+            {t('dashboard:dashboard.progression.stepsCompleted', { completed: completedCount, total: steps.length })}
           </p>
         </div>
         <div className="space-y-2">

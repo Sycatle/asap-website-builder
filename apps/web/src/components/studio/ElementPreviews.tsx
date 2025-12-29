@@ -8,6 +8,7 @@
 "use client"
 
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { WebsiteElement } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -69,18 +70,19 @@ function getArray<T>(data: Record<string, unknown> | undefined, key: string): T[
 // ============================================
 
 function HeroPreview({ element, isSelected }: ElementPreviewProps) {
+  const { t } = useTranslation(['common', 'editor']);
   const data = (element.content || element.data || {}) as Record<string, unknown>;
-  const name = getString(data, 'name', 'Votre Nom');
-  const title = getString(data, 'title', 'Développeur Full-Stack');
-  const tagline = getString(data, 'tagline', 'Transformez vos idées en réalité');
+  const name = getString(data, 'name', t('editor:previews.hero.defaultName'));
+  const title = getString(data, 'title', t('editor:previews.hero.defaultTitle'));
+  const tagline = getString(data, 'tagline', t('editor:previews.hero.defaultTagline'));
   const avatar = getString(data, 'avatar');
   const availability = getString(data, 'availability', 'available');
 
   const availabilityConfig = {
-    available: { label: 'Disponible', color: 'bg-green-500', textColor: 'text-green-600' },
-    busy: { label: 'Occupé', color: 'bg-yellow-500', textColor: 'text-yellow-600' },
-    'not-available': { label: 'Indisponible', color: 'bg-red-500', textColor: 'text-red-600' },
-  }[availability] || { label: 'Disponible', color: 'bg-green-500', textColor: 'text-green-600' };
+    available: { label: t('editor:previews.hero.availability.available'), color: 'bg-green-500', textColor: 'text-green-600' },
+    busy: { label: t('editor:previews.hero.availability.busy'), color: 'bg-yellow-500', textColor: 'text-yellow-600' },
+    'not-available': { label: t('editor:previews.hero.availability.unavailable'), color: 'bg-red-500', textColor: 'text-red-600' },
+  }[availability] || { label: t('editor:previews.hero.availability.available'), color: 'bg-green-500', textColor: 'text-green-600' };
 
   return (
     <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-lg p-6 text-white relative overflow-hidden">
@@ -109,11 +111,11 @@ function HeroPreview({ element, isSelected }: ElementPreviewProps) {
         <p className="mt-4 text-sm text-slate-300 line-clamp-2">{tagline}</p>
         <div className="flex gap-2 mt-4">
           <Button size="sm" className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs">
-            Me contacter
+            {t('editor:previews.hero.contactMe')}
             <ArrowRight className="h-3 w-3 ml-1" />
           </Button>
           <Button size="sm" variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700 text-xs">
-            Voir projets
+            {t('editor:previews.hero.viewProjects')}
           </Button>
         </div>
       </div>
@@ -126,13 +128,14 @@ function HeroPreview({ element, isSelected }: ElementPreviewProps) {
 // ============================================
 
 function ServicesPreview({ element }: ElementPreviewProps) {
+  const { t } = useTranslation(['common', 'editor']);
   const data = (element.content || element.data || {}) as Record<string, unknown>;
   const services = getArray<{ title: string; description: string; icon?: string }>(data, 'services');
   
   const displayServices = services.length > 0 ? services.slice(0, 3) : [
-    { title: 'Applications Web', description: 'Développement sur mesure', icon: 'globe' },
-    { title: 'APIs & Backend', description: 'Architecture robuste', icon: 'server' },
-    { title: 'Consulting', description: 'Accompagnement technique', icon: 'consulting' },
+    { title: t('editor:previews.services.defaults.webApps.title'), description: t('editor:previews.services.defaults.webApps.description'), icon: 'globe' },
+    { title: t('editor:previews.services.defaults.apis.title'), description: t('editor:previews.services.defaults.apis.description'), icon: 'server' },
+    { title: t('editor:previews.services.defaults.consulting.title'), description: t('editor:previews.services.defaults.consulting.description'), icon: 'consulting' },
   ];
 
   return (
@@ -249,14 +252,15 @@ function SkillsPreview({ element }: ElementPreviewProps) {
 // ============================================
 
 function ProcessPreview({ element }: ElementPreviewProps) {
+  const { t } = useTranslation(['common', 'editor']);
   const data = (element.content || element.data || {}) as Record<string, unknown>;
   const steps = getArray<{ step: number; title: string; description: string }>(data, 'steps');
   
   const displaySteps = steps.length > 0 ? steps.slice(0, 4) : [
-    { step: 1, title: 'Découverte', description: 'Échange sur vos besoins' },
-    { step: 2, title: 'Proposition', description: 'Devis détaillé' },
-    { step: 3, title: 'Développement', description: 'Réalisation itérative' },
-    { step: 4, title: 'Livraison', description: 'Mise en production' },
+    { step: 1, title: t('editor:previews.process.defaults.discovery.title'), description: t('editor:previews.process.defaults.discovery.description') },
+    { step: 2, title: t('editor:previews.process.defaults.proposal.title'), description: t('editor:previews.process.defaults.proposal.description') },
+    { step: 3, title: t('editor:previews.process.defaults.development.title'), description: t('editor:previews.process.defaults.development.description') },
+    { step: 4, title: t('editor:previews.process.defaults.delivery.title'), description: t('editor:previews.process.defaults.delivery.description') },
   ];
 
   return (
@@ -284,6 +288,7 @@ function ProcessPreview({ element }: ElementPreviewProps) {
 // ============================================
 
 function ProofPreview({ element }: ElementPreviewProps) {
+  const { t } = useTranslation(['common', 'editor']);
   const data = (element.content || element.data || {}) as Record<string, unknown>;
   const items = getArray<{ type: string; value?: string; label?: string; content?: string; author?: string }>(data, 'items');
   
@@ -291,9 +296,9 @@ function ProofPreview({ element }: ElementPreviewProps) {
   const testimonials = items.filter(i => i.type === 'testimonial').slice(0, 1);
 
   const displayMetrics = metrics.length > 0 ? metrics : [
-    { type: 'metric', value: '50+', label: 'Projets livrés' },
-    { type: 'metric', value: '30+', label: 'Clients satisfaits' },
-    { type: 'metric', value: '5+', label: 'Ans d\'expérience' },
+    { type: 'metric', value: '50+', label: t('editor:previews.proof.defaults.projects') },
+    { type: 'metric', value: '30+', label: t('editor:previews.proof.defaults.clients') },
+    { type: 'metric', value: '5+', label: t('editor:previews.proof.defaults.experience') },
   ];
 
   return (
@@ -330,8 +335,9 @@ function ProofPreview({ element }: ElementPreviewProps) {
 // ============================================
 
 function AboutPreview({ element }: ElementPreviewProps) {
+  const { t } = useTranslation(['common', 'editor']);
   const data = (element.content || element.data || {}) as Record<string, unknown>;
-  const bio = getString(data, 'bio', 'Passionné par le développement web depuis plusieurs années, je me spécialise dans la création d\'applications modernes...');
+  const bio = getString(data, 'bio', t('editor:previews.about.defaultBio'));
   const location = getString(data, 'location');
   const yearsOfExperience = getNumber(data, 'yearsOfExperience');
 
@@ -352,7 +358,7 @@ function AboutPreview({ element }: ElementPreviewProps) {
         {yearsOfExperience > 0 && (
           <Badge variant="outline" className="text-xs gap-1">
             <Calendar className="h-3 w-3" />
-            {yearsOfExperience}+ ans
+            {yearsOfExperience}+ {t('editor:previews.about.years')}
           </Badge>
         )}
       </div>
@@ -365,6 +371,7 @@ function AboutPreview({ element }: ElementPreviewProps) {
 // ============================================
 
 function ContactPreview({ element }: ElementPreviewProps) {
+  const { t } = useTranslation(['common', 'editor']);
   const data = (element.content || element.data || {}) as Record<string, unknown>;
   const email = getString(data, 'email', 'contact@example.com');
   const socials = (data.socials || {}) as Record<string, string>;
@@ -379,7 +386,7 @@ function ContactPreview({ element }: ElementPreviewProps) {
         <Mail className="h-4 w-4 text-muted-foreground" />
         <span className="text-sm truncate flex-1">{email}</span>
         <Button size="sm" variant="ghost" className="h-7 text-xs">
-          Contacter
+          {t('editor:previews.contact.contactButton')}
         </Button>
       </div>
       <div className="flex gap-2">
@@ -412,6 +419,7 @@ function ContactPreview({ element }: ElementPreviewProps) {
 // ============================================
 
 function GenericPreview({ element }: ElementPreviewProps) {
+  const { t } = useTranslation(['common', 'editor']);
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
@@ -419,7 +427,7 @@ function GenericPreview({ element }: ElementPreviewProps) {
         <h4 className="font-medium text-sm">{element.title || element.element_type}</h4>
       </div>
       <p className="text-sm text-muted-foreground">
-        Élément de type "{element.element_type}"
+        {t('editor:previews.generic.elementType', { type: element.element_type })}
       </p>
     </div>
   );
@@ -430,6 +438,7 @@ function GenericPreview({ element }: ElementPreviewProps) {
 // ============================================
 
 export function ElementPreview({ element, isSelected, onClick, isDragging }: ElementPreviewProps) {
+  const { t } = useTranslation(['common', 'editor']);
   const renderPreview = () => {
     switch (element.element_type) {
       case 'hero':
@@ -475,7 +484,7 @@ export function ElementPreview({ element, isSelected, onClick, isDragging }: Ele
             {!element.visible && (
               <Badge variant="outline" className="text-xs gap-1 text-muted-foreground">
                 <EyeOff className="h-3 w-3" />
-                Masqué
+                {t('editor:previews.hidden')}
               </Badge>
             )}
           </div>

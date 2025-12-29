@@ -8,6 +8,8 @@
     "notifications": "Notifications",
     "security": "Sécurité",
     "billing": "Facturation",
+    "cloud": "Stockage",
+    "plan": "Abonnement",
     "team": "Équipe",
     "integrations": "Intégrations",
     "advanced": "Avancé",
@@ -44,7 +46,7 @@
     "density": {
       "title": "Densité",
       "description": "Ajustez l'espacement de l'interface",
-      "compact": "Compact",
+      "compact": "Interface compacte",
       "comfortable": "Confortable",
       "spacious": "Spacieux"
     },
@@ -64,7 +66,7 @@
   "language": {
     "title": "Langue",
     "subtitle": "Choisissez votre langue préférée",
-    "current": "Langue actuelle",
+    "current": "Actuel",
     "select": "Sélectionner une langue",
     "autoDetect": "Détection automatique",
     "available": "Langues disponibles"
@@ -144,6 +146,71 @@
       "download": "Télécharger",
       "noInvoices": "Aucune facture"
     }
+  },
+  "website": {
+    "title": "Paramètres du site",
+    "subtitle": "Configurez les informations et le comportement de votre site",
+    "general": {
+      "title": "Informations générales",
+      "description": "Les informations de base de votre site",
+      "url": "URL du site",
+      "urlDescription": "L'URL ne peut pas être modifiée après création",
+      "siteTitle": "Titre du site",
+      "tagline": "Tagline",
+      "taglinePlaceholder": "Une courte description accrocheuse",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Description détaillée de votre site pour le SEO...",
+      "descriptionHelp": "Utilisée pour les moteurs de recherche (meta description)"
+    },
+    "seo": {
+      "title": "SEO & Réseaux sociaux",
+      "description": "Optimisez la visibilité de votre site",
+      "favicon": "Favicon (URL)",
+      "faviconDescription": "L'icône affichée dans l'onglet du navigateur",
+      "ogImage": "Image de partage (OG Image)",
+      "ogImageDescription": "Image affichée lors du partage sur les réseaux sociaux (1200x630px recommandé)",
+      "indexing": "Indexation par les moteurs de recherche",
+      "indexingDescription": "Autoriser Google et autres à indexer votre site",
+      "indexingTooltip": "Active/désactive l'indexation par les moteurs de recherche",
+      "notIndexedWarning": "Votre site ne sera pas visible dans les résultats de recherche"
+    },
+    "publication": {
+      "title": "Statut de publication",
+      "description": "Gérez la visibilité de votre site",
+      "online": "Site en ligne",
+      "draft": "Site en brouillon",
+      "public": "Public",
+      "private": "Privé",
+      "accessibleAt": "Accessible à {{url}}",
+      "onlyYou": "Seul vous pouvez voir votre site",
+      "publish": "Publier le site",
+      "unpublish": "Mettre en brouillon",
+      "publishTooltip": "Rendre le site public et accessible à tous",
+      "unpublishTooltip": "Rendre le site privé et non accessible publiquement"
+    },
+    "danger": {
+      "title": "Zone de danger",
+      "description": "Actions irréversibles sur votre site",
+      "deleteTitle": "Supprimer le site",
+      "deleteDescription": "Supprimer définitivement ce site et toutes ses données",
+      "deleteWarning": "Attention : cette action est irréversible",
+      "deleteConfirmTitle": "Supprimer le site ?",
+      "deleteConfirmDescription": "Cette action est irréversible. Toutes les données de ce site seront définitivement supprimées : pages, sections, médias, extensions et configurations.",
+      "deleteButton": "Supprimer",
+      "deleteConfirmButton": "Supprimer définitivement"
+    }
+  },
+  "toast": {
+    "saved": "Paramètres enregistrés",
+    "saveError": "Erreur lors de la sauvegarde",
+    "published": "Site publié avec succès !",
+    "publishError": "Erreur lors de la publication",
+    "unpublished": "Site mis en brouillon",
+    "unpublishError": "Erreur lors de la mise en brouillon",
+    "deleted": "Site supprimé",
+    "deleteError": "Erreur lors de la suppression",
+    "saving": "Enregistrement...",
+    "profileUpdated": "Profil mis à jour"
   },
   "saved": "Paramètres enregistrés"
 }

@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { 
@@ -36,25 +37,27 @@ import type {
   HourlyChartProps,
 } from "../types";
 
-const trafficChartConfig = {
-  visits: { label: "Visites", color: "hsl(var(--primary))" },
-  pageViews: { label: "Pages vues", color: "#3b82f6" },
-  uniqueVisitors: { label: "Visiteurs uniques", color: "#22c55e" },
-} satisfies ChartConfig;
-
 /**
  * Traffic evolution chart
  */
 export function TrafficChart({ data }: TrafficChartProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+  
+  const trafficChartConfig = {
+    visits: { label: t('dashboard:analytics.traffic.visits'), color: "hsl(var(--primary))" },
+    pageViews: { label: t('dashboard:analytics.traffic.pageViews'), color: "#3b82f6" },
+    uniqueVisitors: { label: t('dashboard:analytics.traffic.uniqueVisitors'), color: "#22c55e" },
+  } satisfies ChartConfig;
+  
   return (
     <Card className="lg:col-span-8">
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-primary" />
-          Évolution du trafic
+          {t('dashboard:analytics.traffic.title')}
         </CardTitle>
         <CardDescription>
-          Visites et pages vues sur la période sélectionnée
+          {t('dashboard:analytics.traffic.description')}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -87,12 +90,14 @@ export function TrafficChart({ data }: TrafficChartProps) {
  * Traffic sources breakdown card
  */
 export function TrafficSourcesCard({ sources }: TrafficSourcesCardProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+  
   return (
     <Card className="lg:col-span-4">
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <Globe className="h-5 w-5 text-primary" />
-          Sources de trafic
+          {t('dashboard:analytics.sources.title')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -120,12 +125,14 @@ export function TrafficSourcesCard({ sources }: TrafficSourcesCardProps) {
  * Engagement metrics cards row
  */
 export function EngagementCards({ engagement }: EngagementCardsProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+  
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">Pages/session</span>
+            <span className="text-sm text-muted-foreground">{t('dashboard:analytics.engagement.pagesPerSession')}</span>
             <Layers className="h-4 w-4 text-muted-foreground" />
           </div>
           <p className="text-2xl font-bold">{engagement.pagesPerSession}</p>
@@ -134,7 +141,7 @@ export function EngagementCards({ engagement }: EngagementCardsProps) {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">Durée moyenne</span>
+            <span className="text-sm text-muted-foreground">{t('dashboard:analytics.engagement.avgDuration')}</span>
             <Timer className="h-4 w-4 text-muted-foreground" />
           </div>
           <p className="text-2xl font-bold">{formatDuration(engagement.avgSessionDuration)}</p>
@@ -143,7 +150,7 @@ export function EngagementCards({ engagement }: EngagementCardsProps) {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">Profondeur scroll</span>
+            <span className="text-sm text-muted-foreground">{t('dashboard:analytics.engagement.scrollDepth')}</span>
             <TrendingDown className="h-4 w-4 text-muted-foreground" />
           </div>
           <p className="text-2xl font-bold">{engagement.scrollDepth}%</p>
@@ -152,7 +159,7 @@ export function EngagementCards({ engagement }: EngagementCardsProps) {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">Visiteurs récurrents</span>
+            <span className="text-sm text-muted-foreground">{t('dashboard:analytics.engagement.returnVisitors')}</span>
             <Users className="h-4 w-4 text-muted-foreground" />
           </div>
           <p className="text-2xl font-bold">{engagement.returnVisitors}%</p>
@@ -166,12 +173,14 @@ export function EngagementCards({ engagement }: EngagementCardsProps) {
  * Device breakdown card
  */
 export function DevicesCard({ devices }: DevicesCardProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+  
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <span className="h-5 w-5 text-primary">📱</span>
-          Appareils
+          {t('dashboard:analytics.devices.title')}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -203,12 +212,14 @@ export function DevicesCard({ devices }: DevicesCardProps) {
  * Countries breakdown card
  */
 export function CountriesCard({ countries }: CountriesCardProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+  
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <MapPin className="h-5 w-5 text-primary" />
-          Pays
+          {t('dashboard:analytics.countries.title')}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -242,10 +253,18 @@ export function CountriesCard({ countries }: CountriesCardProps) {
  * Hourly traffic chart
  */
 export function HourlyChart({ data }: HourlyChartProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+  
+  const trafficChartConfig = {
+    visits: { label: t('dashboard:analytics.traffic.visits'), color: "hsl(var(--primary))" },
+    pageViews: { label: t('dashboard:analytics.traffic.pageViews'), color: "#3b82f6" },
+    uniqueVisitors: { label: t('dashboard:analytics.traffic.uniqueVisitors'), color: "#22c55e" },
+  } satisfies ChartConfig;
+  
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Trafic par heure (aujourd'hui)</CardTitle>
+        <CardTitle className="text-base">{t('dashboard:analytics.hourly.title')}</CardTitle>
       </CardHeader>
       <CardContent>
         <ChartContainer config={trafficChartConfig} className="h-[250px] w-full">
@@ -266,10 +285,12 @@ export function HourlyChart({ data }: HourlyChartProps) {
  * Traffic sources detail card
  */
 export function TrafficSourcesDetailCard({ sources }: TrafficSourcesCardProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+  
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Détail des sources</CardTitle>
+        <CardTitle className="text-base">{t('dashboard:analytics.sources.detailTitle')}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -279,7 +300,7 @@ export function TrafficSourcesDetailCard({ sources }: TrafficSourcesCardProps) {
                 <div className="h-4 w-4 rounded-full" style={{ backgroundColor: source.color }} />
                 <div>
                   <p className="font-medium">{source.name}</p>
-                  <p className="text-xs text-muted-foreground">{source.visitors.toLocaleString()} visiteurs</p>
+                  <p className="text-xs text-muted-foreground">{source.visitors.toLocaleString()} {t('dashboard:analytics.sources.visitors')}</p>
                 </div>
               </div>
               <div className="text-right">

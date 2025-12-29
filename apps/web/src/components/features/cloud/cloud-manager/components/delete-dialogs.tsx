@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
 import {
   ResponsiveDialog,
@@ -22,18 +23,20 @@ export function DeleteConfirmDialog({
   onConfirm,
   onCancel,
 }: DeleteConfirmDialogProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+
   return (
     <ResponsiveDialog open={!!deleteConfirm} onOpenChange={onCancel}>
       <ResponsiveDialogContent className="sm:max-w-md">
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="h-5 w-5" />
-            Confirmer la suppression
+            {t('dashboard:cloud.delete.title')}
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription className="pt-2">
-            Êtes-vous sûr de vouloir supprimer <span className="font-medium text-foreground">{deleteConfirm?.file.filename}</span> ?
+            <span dangerouslySetInnerHTML={{ __html: t('dashboard:cloud.delete.description', { filename: deleteConfirm?.file.filename }) }} />
             <br />
-            <span className="text-muted-foreground">Cette action est irréversible.</span>
+            <span className="text-muted-foreground">{t('dashboard:cloud.delete.irreversible')}</span>
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
         <ResponsiveDialogFooter className="gap-2 sm:gap-0">
@@ -42,7 +45,7 @@ export function DeleteConfirmDialog({
             onClick={onCancel}
             disabled={isDeleting}
           >
-            Annuler
+            {t('common:actions.cancel')}
           </Button>
           <Button
             variant="destructive"
@@ -52,12 +55,12 @@ export function DeleteConfirmDialog({
             {isDeleting ? (
               <>
                 <Spinner className="h-4 w-4 mr-2" />
-                Suppression...
+                {t('dashboard:cloud.delete.deleting')}
               </>
             ) : (
               <>
                 <Trash2 className="h-4 w-4 mr-2" />
-                Supprimer
+                {t('common:actions.delete')}
               </>
             )}
           </Button>
@@ -77,18 +80,20 @@ export function BulkDeleteDialog({
   onConfirm,
   onCancel,
 }: BulkDeleteDialogProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+
   return (
     <ResponsiveDialog open={isOpen} onOpenChange={onCancel}>
       <ResponsiveDialogContent className="sm:max-w-md">
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="h-5 w-5" />
-            Confirmer la suppression
+            {t('dashboard:cloud.delete.title')}
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription className="pt-2">
-            Êtes-vous sûr de vouloir supprimer <span className="font-medium text-foreground">{selectedCount} fichier{selectedCount > 1 ? 's' : ''}</span> ?
+            <span dangerouslySetInnerHTML={{ __html: t('dashboard:cloud.delete.descriptionBulk', { count: selectedCount }) }} />
             <br />
-            <span className="text-muted-foreground">Cette action est irréversible.</span>
+            <span className="text-muted-foreground">{t('dashboard:cloud.delete.irreversible')}</span>
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
         <ResponsiveDialogFooter className="gap-2 sm:gap-0">
@@ -97,7 +102,7 @@ export function BulkDeleteDialog({
             onClick={onCancel}
             disabled={isDeleting}
           >
-            Annuler
+            {t('common:actions.cancel')}
           </Button>
           <Button
             variant="destructive"
@@ -107,12 +112,12 @@ export function BulkDeleteDialog({
             {isDeleting ? (
               <>
                 <Spinner className="h-4 w-4 mr-2" />
-                Suppression...
+                {t('dashboard:cloud.delete.deleting')}
               </>
             ) : (
               <>
                 <Trash2 className="h-4 w-4 mr-2" />
-                Supprimer {selectedCount} fichier{selectedCount > 1 ? 's' : ''}
+                {t('common:actions.delete')} {selectedCount} {t('dashboard:cloud.selection.count', { count: selectedCount })}
               </>
             )}
           </Button>

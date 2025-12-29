@@ -5,6 +5,7 @@
  */
 
 import * as React from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Github, ArrowRight, Sparkles, Shield, Zap, BookOpen } from 'lucide-react';
@@ -16,6 +17,8 @@ interface GitHubConnectStepProps {
 }
 
 export function GitHubConnectStep({ onConnect, onSkip, isLoading = false }: GitHubConnectStepProps) {
+  const { t } = useTranslation(['onboarding']);
+
   return (
     <div className="space-y-8">
       {/* Main CTA Card */}
@@ -24,9 +27,9 @@ export function GitHubConnectStep({ onConnect, onSkip, isLoading = false }: GitH
           <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
             <Github className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Connectez votre GitHub</CardTitle>
+          <CardTitle className="text-2xl">{t('github.title')}</CardTitle>
           <CardDescription className="text-base max-w-md mx-auto">
-            Importez automatiquement vos meilleurs projets pour créer un portfolio impressionnant en quelques clics.
+            {t('github.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -37,8 +40,8 @@ export function GitHubConnectStep({ onConnect, onSkip, isLoading = false }: GitH
                 <Zap className="h-4 w-4 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="font-medium text-sm">Import rapide</p>
-                <p className="text-xs text-muted-foreground">Vos repos deviennent des projets en 1 clic</p>
+                <p className="font-medium text-sm">{t('github.benefits.quickImport.title')}</p>
+                <p className="text-xs text-muted-foreground">{t('github.benefits.quickImport.description')}</p>
               </div>
             </div>
             <div className="flex items-start gap-3 p-4 rounded-lg bg-background/50">
@@ -46,8 +49,8 @@ export function GitHubConnectStep({ onConnect, onSkip, isLoading = false }: GitH
                 <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="font-medium text-sm">Auto-détection</p>
-                <p className="text-xs text-muted-foreground">Technologies et descriptions extraites</p>
+                <p className="font-medium text-sm">{t('github.benefits.autoDetect.title')}</p>
+                <p className="text-xs text-muted-foreground">{t('github.benefits.autoDetect.description')}</p>
               </div>
             </div>
             <div className="flex items-start gap-3 p-4 rounded-lg bg-background/50">
@@ -55,8 +58,8 @@ export function GitHubConnectStep({ onConnect, onSkip, isLoading = false }: GitH
                 <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="font-medium text-sm">Sécurisé</p>
-                <p className="text-xs text-muted-foreground">Lecture seule, aucun accès en écriture</p>
+                <p className="font-medium text-sm">{t('github.benefits.secure.title')}</p>
+                <p className="text-xs text-muted-foreground">{t('github.benefits.secure.description')}</p>
               </div>
             </div>
           </div>
@@ -72,12 +75,12 @@ export function GitHubConnectStep({ onConnect, onSkip, isLoading = false }: GitH
               {isLoading ? (
                 <>
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  Connexion...
+                  {t('github.connecting')}
                 </>
               ) : (
                 <>
                   <Github className="h-5 w-5" />
-                  Connecter GitHub
+                  {t('github.connectButton')}
                 </>
               )}
             </Button>
@@ -88,7 +91,7 @@ export function GitHubConnectStep({ onConnect, onSkip, isLoading = false }: GitH
               disabled={isLoading}
               className="gap-2 text-muted-foreground"
             >
-              Je préfère ajouter manuellement
+              {t('github.skipButton')}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
@@ -98,14 +101,16 @@ export function GitHubConnectStep({ onConnect, onSkip, isLoading = false }: GitH
       {/* Additional Info */}
       <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
         <BookOpen className="h-4 w-4" />
-        <span>Nous utilisons l'API GitHub en lecture seule.</span>
-        <a href="#" className="text-primary hover:underline">En savoir plus</a>
+        <span>{t('github.readOnlyNote')}</span>
+        <a href="#" className="text-primary hover:underline">{t('github.learnMore')}</a>
       </div>
 
       {/* Social Proof */}
       <div className="text-center pt-4 border-t">
         <p className="text-sm text-muted-foreground mb-2">
-          Déjà utilisé par <span className="font-semibold text-foreground">500+</span> développeurs freelance
+          <Trans i18nKey="github.socialProof" ns="onboarding" values={{ count: 500 }}>
+            Already used by <strong>500+</strong> freelance developers
+          </Trans>
         </p>
         <div className="flex items-center justify-center -space-x-2">
           {[1, 2, 3, 4, 5].map((i) => (

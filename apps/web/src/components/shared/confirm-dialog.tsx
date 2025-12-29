@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -105,13 +106,15 @@ export function ConfirmDialog({
   title,
   description,
   confirmText,
-  cancelText = 'Annuler',
+  cancelText,
   onConfirm,
   variant = 'default',
   loading = false,
   icon,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
+  const displayCancelText = cancelText ?? t('common:actions.cancel');
   
   const config = variantConfig[variant];
   const IconComponent = config.icon;
@@ -151,7 +154,7 @@ export function ConfirmDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={showLoading}>
-            {cancelText}
+            {displayCancelText}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
