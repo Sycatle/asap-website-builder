@@ -3,7 +3,6 @@ import { useEffect, useState } from "react"
 import { AsapSidebar } from "@/components/layouts/asap-sidebar"
 import { SidebarProvider, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
-import { Toaster } from "@/components/ui/sonner"
 import { Input } from "@/components/ui/input"
 import { Kbd } from "@/components/ui/kbd"
 import { WebsiteProvider, useWebsiteContext } from "@/contexts/WebsiteContext"
@@ -323,7 +322,6 @@ function AppShellContent({
           {children}
         </main>
       </SidebarInset>
-      <Toaster />
       
       {/* Command Palette */}
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
