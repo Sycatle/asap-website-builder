@@ -1,7 +1,16 @@
 // Shared components - barrel exports
 
 // Core shared components
-export { EmptyState } from './EmptyState';
+export { 
+  EmptyState,
+  // Re-export primitives for advanced usage
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from './EmptyState';
 export { NotificationsDropdown } from './notifications-dropdown';
 export { ErrorBoundary, type ErrorBoundaryProps } from './ErrorBoundary';
 export { PageHeader } from './page-header';

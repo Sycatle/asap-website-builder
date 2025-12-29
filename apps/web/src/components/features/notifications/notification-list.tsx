@@ -5,6 +5,13 @@ import { BellOff, Check } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty"
 import type { Notification } from "@/lib/api/notifications"
 import { NotificationItem } from "./notification-item"
 
@@ -44,31 +51,39 @@ function LoadingSkeleton({ count = 5 }: { count?: number }) {
   )
 }
 
-interface EmptyStateProps {
+interface NotificationEmptyStateProps {
   variant: 'all' | 'unread'
 }
 
-function EmptyState({ variant }: EmptyStateProps) {
+function NotificationEmptyState({ variant }: NotificationEmptyStateProps) {
   if (variant === 'unread') {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <Check className="h-16 w-16 text-green-500/50 mb-4" />
-        <p className="text-lg font-medium">Tout est lu !</p>
-        <p className="text-sm text-muted-foreground mt-1">
-          Vous avez lu toutes vos notifications
-        </p>
-      </div>
+      <Empty className="py-16 border-0">
+        <EmptyHeader>
+          <EmptyMedia className="text-green-500/50">
+            <Check className="h-16 w-16" />
+          </EmptyMedia>
+          <EmptyTitle>Tout est lu !</EmptyTitle>
+          <EmptyDescription>
+            Vous avez lu toutes vos notifications
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     )
   }
 
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <BellOff className="h-16 w-16 text-muted-foreground/30 mb-4" />
-      <p className="text-lg font-medium">Aucune notification</p>
-      <p className="text-sm text-muted-foreground mt-1">
-        Vous n'avez pas de notifications pour le moment
-      </p>
-    </div>
+    <Empty className="py-16 border-0">
+      <EmptyHeader>
+        <EmptyMedia className="text-muted-foreground/30">
+          <BellOff className="h-16 w-16" />
+        </EmptyMedia>
+        <EmptyTitle>Aucune notification</EmptyTitle>
+        <EmptyDescription>
+          Vous n'avez pas de notifications pour le moment
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   )
 }
 
@@ -100,7 +115,7 @@ export function NotificationList({
     return (
       <Card>
         <CardContent className="p-0">
-          <EmptyState variant={emptyState} />
+          <NotificationEmptyState variant={emptyState} />
         </CardContent>
       </Card>
     )
