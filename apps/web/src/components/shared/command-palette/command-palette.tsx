@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useCallback, useEffect, useState } from "react"
 import {
-  CommandDialog,
+  ResponsiveCommandDialog,
   CommandEmpty,
   CommandGroup,
   CommandInput,
@@ -231,7 +231,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   }, [open])
 
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange} title="Rechercher ou exécuter une commande">
+    <ResponsiveCommandDialog open={open} onOpenChange={onOpenChange} title="Rechercher ou exécuter une commande">
       <CommandInput 
         placeholder="Rechercher une page, action ou commande..." 
         value={search}
@@ -261,6 +261,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           />
         )}
       </CommandList>
-    </CommandDialog>
+    </ResponsiveCommandDialog>
   )
 }
