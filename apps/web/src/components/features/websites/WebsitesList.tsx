@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useWebsitesQuery } from '@/lib/query';
 import type { Website } from '@/lib/api';
 import { WebsiteCard } from './WebsiteCard';
-import { OnboardingModal } from './onboarding/OnboardingModal';
+import { OnboardingModal } from '@/components/onboarding/OnboardingModal';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";

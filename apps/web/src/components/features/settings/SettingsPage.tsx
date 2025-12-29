@@ -123,7 +123,7 @@ export default function SettingsPage() {
         is_indexable: isIndexable,
       } as UpdateWebsiteRequest);
       
-      await queryClient.invalidateQueries({ queryKey: queryKeys.websites.all() });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.websites.all });
       refetchAll();
       
       // Update initial values
@@ -159,7 +159,7 @@ export default function SettingsPage() {
     setIsSaving(true);
     try {
       await websitesAPI.update(currentWebsiteId, { status: 'published' } as UpdateWebsiteRequest);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.websites.all() });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.websites.all });
       refetchAll();
       toast.success('Site publié avec succès !');
     } catch (error) {
@@ -175,7 +175,7 @@ export default function SettingsPage() {
     setIsSaving(true);
     try {
       await websitesAPI.update(currentWebsiteId, { status: 'draft' } as UpdateWebsiteRequest);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.websites.all() });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.websites.all });
       refetchAll();
       toast.success('Site mis en brouillon');
     } catch (error) {
@@ -191,7 +191,7 @@ export default function SettingsPage() {
     setIsDeleting(true);
     try {
       await websitesAPI.delete(currentWebsiteId);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.websites.all() });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.websites.all });
       toast.success('Site supprimé');
       window.location.href = '/app';
     } catch (error) {

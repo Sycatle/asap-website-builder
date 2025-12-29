@@ -444,7 +444,8 @@ export type SyncEvent =
   // Website Presence
   | WebsiteUsersEvent
   | WebsiteUserJoinedEvent
-  | WebsiteUserLeftEvent;
+  | WebsiteUserLeftEvent
+  | WebsiteUserPageUpdatedEvent;
 
 // ============================================
 // Type Guards

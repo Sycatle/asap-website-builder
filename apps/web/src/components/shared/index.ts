@@ -42,10 +42,10 @@ export {
 export { 
   ConfirmDialog, 
   DeleteConfirmDialog,
-  LogoutConfirmDialog,
   type ConfirmDialogProps,
   type ConfirmDialogVariant,
 } from './confirm-dialog';
+export { LogoutConfirmDialog } from './logout-confirm-dialog';
 
 // Command Palette (component-first)
 export { CommandPalette, useCommandPalette, type CommandPaletteProps } from './command-palette';

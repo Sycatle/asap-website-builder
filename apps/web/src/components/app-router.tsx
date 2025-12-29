@@ -8,7 +8,7 @@ import { RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 // Helper to create lazy components with error handling for HMR issues
-function lazyWithRetry<T extends ComponentType<unknown>>(
+function lazyWithRetry<T extends ComponentType<any>>(
   importFn: () => Promise<{ default: T }>,
   retries = 3,
   interval = 1000

@@ -74,7 +74,7 @@ interface LiveRegionProps {
   /** Whether to read the entire region */
   atomic?: boolean;
   /** Which changes to announce */
-  relevant?: 'additions' | 'removals' | 'text' | 'all' | string;
+  relevant?: 'additions' | 'removals' | 'text' | 'all' | 'additions text';
   /** Additional class names */
   className?: string;
 }

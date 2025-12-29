@@ -56,7 +56,7 @@ export function SiteSwitcher({
 
   const handleCreateSuccess = useCallback((websiteId: string) => {
     // Refresh websites list after creation
-    queryClient.invalidateQueries({ queryKey: queryKeys.websites })
+    queryClient.invalidateQueries({ queryKey: queryKeys.websites.all })
     setIsDropdownOpen(false)
     // Navigate to the newly created website
     navigate(`/app/${websiteId}`)

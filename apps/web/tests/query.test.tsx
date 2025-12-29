@@ -51,20 +51,20 @@ describe('React Query Hooks', () => {
     });
 
     it('should have proper query keys defined', async () => {
-      const { queryKeys } = await import('@/lib/query/queryClient');
+      const { queryKeys } = await import('@/lib/query/queryKeys');
       
-      expect(queryKeys.websites).toEqual(['websites']);
-      expect(queryKeys.website('123')).toEqual(['websites', '123']);
-      expect(queryKeys.extensionCatalog).toEqual(['extensions', 'catalog']);
-      expect(queryKeys.files).toEqual(['files']);
+      expect(queryKeys.websites.all).toEqual(['websites']);
+      expect(queryKeys.websites.detail('123')).toEqual(['websites', 'detail', '123']);
+      expect(queryKeys.extensions.catalog()).toEqual(['extensions', 'catalog']);
+      expect(queryKeys.files.all).toEqual(['files']);
     });
   });
 
   describe('useWebsitesQuery', () => {
     it('should fetch websites list', async () => {
       const mockWebsites = [
-        { id: '1', name: 'Site 1' },
-        { id: '2', name: 'Site 2' },
+        { id: '1', name: 'Site 1', account_id: 'acc-1', slug: 'site-1', title: 'Site 1', tagline: '', status: 'draft' as const, creation_mode: 'from_scratch' as const, metadata: {}, data: {} },
+        { id: '2', name: 'Site 2', account_id: 'acc-2', slug: 'site-2', title: 'Site 2', tagline: '', status: 'published' as const, creation_mode: 'from_preset' as const, metadata: {}, data: {} },
       ];
 
       const { websitesAPI } = await import('@/lib/api');
@@ -104,7 +104,7 @@ describe('React Query Hooks', () => {
 
   describe('useWebsiteQuery', () => {
     it('should fetch a single website by ID', async () => {
-      const mockWebsite = { id: 'ws-123', name: 'My Website' };
+      const mockWebsite = { id: 'ws-123', name: 'My Website', account_id: 'acc-1', slug: 'my-website', title: 'My Website', tagline: '', status: 'draft' as const, creation_mode: 'from_scratch' as const, metadata: {}, data: {} };
 
       const { websitesAPI } = await import('@/lib/api');
       vi.mocked(websitesAPI.get).mockResolvedValue(mockWebsite);

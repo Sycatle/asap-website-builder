@@ -23,7 +23,7 @@ export default function WebsiteSelector() {
   }, [isLoading, websites])
 
   const handleCreateSuccess = (websiteId: string) => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.websites })
+    queryClient.invalidateQueries({ queryKey: queryKeys.websites.all })
     setShowCreateModal(false)
     navigate(`/app/${websiteId}`)
   }
