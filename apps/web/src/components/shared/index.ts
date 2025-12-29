@@ -1,4 +1,13 @@
-// Shared components
+// Shared components - barrel exports
+
+// Core shared components
 export { EmptyState } from './EmptyState';
 export { NotificationsDropdown } from './notifications-dropdown';
 export { ErrorBoundary, type ErrorBoundaryProps } from './ErrorBoundary';
+export { PageHeader } from './page-header';
+export { PresenceAvatars } from './presence-avatars';
+export { LogoutConfirmDialog } from './logout-confirm-dialog';
+
+// Command Palette (component-first)
+export { CommandPalette, useCommandPalette, type CommandPaletteProps } from './command-palette';
+

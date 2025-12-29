@@ -29,8 +29,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { SettingsModal } from "@/components/settings-modal"
-import { LogoutConfirmDialog } from "@/components/shared/logout-confirm-dialog"
+import { SettingsModal } from "@/components/features/settings"
+import { LogoutConfirmDialog } from "@/components/shared"
 import { authAPI, websitesAPI, accountsAPI, type Website } from "@/lib/api"
 
 interface UserData {

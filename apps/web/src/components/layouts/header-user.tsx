@@ -23,9 +23,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { SettingsModal } from "@/components/settings-modal"
-import { NotificationsDropdown } from "@/components/shared/notifications-dropdown"
-import { LogoutConfirmDialog } from "@/components/shared/logout-confirm-dialog"
+import { SettingsModal } from "@/components/features/settings"
+import { NotificationsDropdown, LogoutConfirmDialog } from "@/components/shared"
 import { 
   useAuthStore, 
   useUserData, 
