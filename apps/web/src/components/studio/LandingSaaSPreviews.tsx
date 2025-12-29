@@ -2,6 +2,7 @@
  * Landing SaaS Element Previews
  * 
  * WYSIWYG previews at 1:1 scale - exact same as LandingPage.tsx
+ * Now responsive to preview context (device simulation)
  */
 
 "use client"
@@ -27,7 +28,11 @@ import {
   Check,
   Rocket,
   ChevronRight,
+  Menu,
+  X,
 } from 'lucide-react';
+import { cn } from "@/lib/utils";
+import { usePreviewContext, getResponsiveClass } from "./PreviewContext";
 
 // ============================================
 // Types
@@ -78,6 +83,9 @@ function handleInternalLink(e: React.MouseEvent<HTMLAnchorElement>, href: string
 // ============================================
 
 export function NavigationPreview({ element }: LandingPreviewProps) {
+  const { isMobile, isTablet, device } = usePreviewContext();
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  
   const settings = (element.settings || {}) as Record<string, unknown>;
   const brandName = getString(settings, 'brand_name', 'ASAP');
   const navLinks = getArray<{label: string; href: string}>(settings, 'nav_links');
@@ -90,42 +98,118 @@ export function NavigationPreview({ element }: LandingPreviewProps) {
     { label: 'Témoignages', href: '#testimonials' },
   ];
   const displayLinks = navLinks.length > 0 ? navLinks : defaultLinks;
+  
+  // Show mobile nav on mobile/tablet preview
+  const showMobileNav = isMobile || isTablet;
 
   return (
     <header 
       id="navigation"
       className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50"
     >
-      <nav className="container mx-auto flex h-16 items-center justify-between px-4">
+      <nav className={cn(
+        "container mx-auto flex items-center justify-between",
+        getResponsiveClass(device, {
+          mobile: 'h-14 px-3',
+          tablet: 'h-14 px-4',
+          desktop: 'h-16 px-4',
+        })
+      )}>
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Zap className="h-5 w-5 text-primary-foreground" />
+          <div className={cn(
+            "flex items-center justify-center rounded-lg bg-primary",
+            getResponsiveClass(device, {
+              mobile: 'h-7 w-7',
+              desktop: 'h-8 w-8',
+            })
+          )}>
+            <Zap className={cn(
+              "text-primary-foreground",
+              getResponsiveClass(device, {
+                mobile: 'h-4 w-4',
+                desktop: 'h-5 w-5',
+              })
+            )} />
           </div>
-          <span className="text-xl font-bold">{brandName}</span>
+          <span className={cn(
+            "font-bold",
+            getResponsiveClass(device, {
+              mobile: 'text-lg',
+              desktop: 'text-xl',
+            })
+          )}>{brandName}</span>
         </div>
 
-        <div className="hidden md:flex items-center gap-8">
-          {displayLinks.map((link, i) => (
-            <a 
-              key={i} 
-              href={link.href}
-              onClick={(e) => handleInternalLink(e, link.href)}
-              className="text-sm font-medium text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-            >
-              {link.label}
-            </a>
-          ))}
-        </div>
+        {/* Desktop navigation */}
+        {!showMobileNav && (
+          <div className="flex items-center gap-8">
+            {displayLinks.map((link, i) => (
+              <a 
+                key={i} 
+                href={link.href}
+                onClick={(e) => handleInternalLink(e, link.href)}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
+        )}
 
-        <div className="flex items-center gap-4">
-          <Button variant="ghost">
-            {loginText}
+        {/* Desktop buttons */}
+        {!showMobileNav && (
+          <div className="flex items-center gap-4">
+            <Button variant="ghost">
+              {loginText}
+            </Button>
+            <Button>
+              {signupText}
+            </Button>
+          </div>
+        )}
+        
+        {/* Mobile menu button */}
+        {showMobileNav && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
-          <Button>
-            {signupText}
-          </Button>
-        </div>
+        )}
       </nav>
+      
+      {/* Mobile menu dropdown */}
+      {showMobileNav && mobileMenuOpen && (
+        <div className="absolute top-full left-0 right-0 bg-background border-b shadow-lg z-50">
+          <div className="container mx-auto px-4 py-4 space-y-4">
+            {displayLinks.map((link, i) => (
+              <a 
+                key={i} 
+                href={link.href}
+                onClick={(e) => {
+                  handleInternalLink(e, link.href);
+                  setMobileMenuOpen(false);
+                }}
+                className="block text-base font-medium text-muted-foreground hover:text-foreground py-2"
+              >
+                {link.label}
+              </a>
+            ))}
+            <Separator />
+            <div className="flex flex-col gap-2">
+              <Button variant="outline" className="w-full">
+                {loginText}
+              </Button>
+              <Button className="w-full">
+                {signupText}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
@@ -135,6 +219,8 @@ export function NavigationPreview({ element }: LandingPreviewProps) {
 // ============================================
 
 export function LandingHeroPreview({ element }: LandingPreviewProps) {
+  const { isMobile, isTablet, device } = usePreviewContext();
+  
   const settings = (element.settings || {}) as Record<string, unknown>;
   const badgeText = getString(settings, 'badge_text', 'Nouvelle version disponible');
   const headline1 = getString(settings, 'headline_line1', 'Créez votre site web');
@@ -151,36 +237,115 @@ export function LandingHeroPreview({ element }: LandingPreviewProps) {
     <section id="hero" className="relative overflow-hidden bg-gradient-to-b from-background via-background to-muted/30">
       {/* Background decoration */}
       <div className="absolute inset-0 -z-10">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
+        <div className={cn(
+          "absolute top-0 left-1/4 bg-primary/5 rounded-full blur-3xl",
+          getResponsiveClass(device, {
+            mobile: 'w-48 h-48',
+            tablet: 'w-64 h-64',
+            desktop: 'w-96 h-96',
+          })
+        )} />
+        <div className={cn(
+          "absolute bottom-0 right-1/4 bg-purple-500/5 rounded-full blur-3xl",
+          getResponsiveClass(device, {
+            mobile: 'w-48 h-48',
+            tablet: 'w-64 h-64',
+            desktop: 'w-96 h-96',
+          })
+        )} />
       </div>
 
-      <div className="container mx-auto px-4 py-20 md:py-32">
+      <div className={cn(
+        "container mx-auto",
+        getResponsiveClass(device, {
+          mobile: 'px-4 py-12',
+          tablet: 'px-4 py-16',
+          desktop: 'px-4 py-20 md:py-32',
+        })
+      )}>
         <div className="mx-auto max-w-4xl text-center">
           {/* Badge */}
-          <Badge variant="secondary" className="mb-6 px-4 py-2">
-            <Sparkles className="mr-2 h-3.5 w-3.5" />
+          <Badge variant="secondary" className={cn(
+            "mb-4",
+            getResponsiveClass(device, {
+              mobile: 'px-3 py-1.5 text-xs',
+              desktop: 'mb-6 px-4 py-2',
+            })
+          )}>
+            <Sparkles className={cn(
+              "mr-2",
+              getResponsiveClass(device, {
+                mobile: 'h-3 w-3',
+                desktop: 'h-3.5 w-3.5',
+              })
+            )} />
             {badgeText}
           </Badge>
 
           {/* Headline */}
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl mb-6">
+          <h1 className={cn(
+            "font-bold tracking-tight mb-4",
+            getResponsiveClass(device, {
+              mobile: 'text-2xl',
+              tablet: 'text-3xl',
+              desktop: 'text-4xl sm:text-5xl md:text-6xl lg:text-7xl mb-6',
+            })
+          )}>
             {headline1}
-            <span className="block text-primary mt-2">{headline2}</span>
+            <span className={cn(
+              "block text-primary",
+              getResponsiveClass(device, {
+                mobile: 'mt-1',
+                desktop: 'mt-2',
+              })
+            )}>{headline2}</span>
           </h1>
 
           {/* Subheadline */}
-          <p className="mx-auto max-w-2xl text-lg md:text-xl text-muted-foreground mb-8">
+          <p className={cn(
+            "mx-auto max-w-2xl text-muted-foreground mb-6",
+            getResponsiveClass(device, {
+              mobile: 'text-sm',
+              tablet: 'text-base',
+              desktop: 'text-lg md:text-xl mb-8',
+            })
+          )}>
             {subheadline}
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-            <Button size="lg" className="w-full sm:w-auto text-base px-8">
+          <div className={cn(
+            "flex items-center justify-center gap-3",
+            getResponsiveClass(device, {
+              mobile: 'flex-col mb-8',
+              tablet: 'flex-col mb-10',
+              desktop: 'flex-row gap-4 mb-12',
+            })
+          )}>
+            <Button 
+              size={isMobile ? "default" : "lg"} 
+              className={cn(
+                getResponsiveClass(device, {
+                  mobile: 'w-full text-sm',
+                  tablet: 'w-full text-base',
+                  desktop: 'w-auto text-base px-8',
+                })
+              )}
+            >
               {ctaPrimaryText}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-            <Button size="lg" variant="outline" className="w-full sm:w-auto text-base px-8">
+            <Button 
+              size={isMobile ? "default" : "lg"} 
+              variant="outline" 
+              className={cn(
+                getResponsiveClass(device, {
+                  mobile: 'w-full text-sm',
+                  tablet: 'w-full text-base',
+                  desktop: 'w-auto text-base px-8',
+                })
+              )}
+            >
               <Play className="mr-2 h-4 w-4" />
               {ctaSecondaryText}
             </Button>
@@ -188,32 +353,57 @@ export function LandingHeroPreview({ element }: LandingPreviewProps) {
 
           {/* Social Proof */}
           {showSocialProof && (
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-muted-foreground">
+            <div className={cn(
+              "flex items-center justify-center text-sm text-muted-foreground",
+              getResponsiveClass(device, {
+                mobile: 'flex-col gap-3',
+                tablet: 'flex-col gap-4',
+                desktop: 'flex-row gap-6',
+              })
+            )}>
               <div className="flex items-center gap-2">
                 <div className="flex -space-x-2">
-                  {[1, 2, 3, 4, 5].map((i) => (
+                  {[1, 2, 3, 4, 5].slice(0, isMobile ? 3 : 5).map((i) => (
                     <div
                       key={i}
-                      className="h-8 w-8 rounded-full border-2 border-background bg-gradient-to-br from-primary/60 to-purple-500/60"
+                      className={cn(
+                        "rounded-full border-2 border-background bg-gradient-to-br from-primary/60 to-purple-500/60",
+                        getResponsiveClass(device, {
+                          mobile: 'h-6 w-6',
+                          desktop: 'h-8 w-8',
+                        })
+                      )}
                     />
                   ))}
                 </div>
-                <span>{socialProofText}</span>
+                <span className={isMobile ? 'text-xs' : 'text-sm'}>{socialProofText}</span>
               </div>
-              <Separator orientation="vertical" className="hidden sm:block h-6" />
+              {!isMobile && <Separator orientation="vertical" className="h-6" />}
               <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                  <Star key={i} className={cn(
+                    "fill-yellow-400 text-yellow-400",
+                    getResponsiveClass(device, {
+                      mobile: 'h-3 w-3',
+                      desktop: 'h-4 w-4',
+                    })
+                  )} />
                 ))}
-                <span className="ml-1">{socialProofRating}</span>
+                <span className={cn("ml-1", isMobile ? 'text-xs' : 'text-sm')}>{socialProofRating}</span>
               </div>
             </div>
           )}
         </div>
 
-        {/* Dashboard Preview */}
-        {showDashboardPreview && (
-          <div className="mt-16 mx-auto max-w-5xl">
+        {/* Dashboard Preview - hidden on mobile */}
+        {showDashboardPreview && !isMobile && (
+          <div className={cn(
+            "mx-auto",
+            getResponsiveClass(device, {
+              tablet: 'mt-10 max-w-2xl',
+              desktop: 'mt-16 max-w-5xl',
+            })
+          )}>
             <div className="relative rounded-xl border bg-background shadow-2xl overflow-hidden">
               {/* Browser chrome */}
               <div className="flex items-center gap-2 border-b bg-muted/50 px-4 py-3">
@@ -232,12 +422,18 @@ export function LandingHeroPreview({ element }: LandingPreviewProps) {
               {/* Dashboard preview */}
               <div className="aspect-[16/9] bg-gradient-to-br from-primary/5 via-background to-purple-500/5 flex items-center justify-center">
                 <div className="text-center p-8">
-                  <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className={cn(
+                    "grid gap-4 mb-6",
+                    getResponsiveClass(device, {
+                      tablet: 'grid-cols-2',
+                      desktop: 'grid-cols-3',
+                    })
+                  )}>
                     {[
                       { icon: Globe, label: 'Sites', value: '3' },
                       { icon: Cloud, label: 'Storage', value: '2.4 GB' },
                       { icon: Sparkles, label: 'Tokens', value: '8,500' },
-                    ].map((stat, i) => (
+                    ].slice(0, isTablet ? 2 : 3).map((stat, i) => (
                       <div key={i} className="p-4 rounded-lg border bg-background/80 backdrop-blur">
                         <stat.icon className="h-6 w-6 text-primary mx-auto mb-2" />
                         <div className="text-2xl font-bold">{stat.value}</div>
@@ -260,6 +456,8 @@ export function LandingHeroPreview({ element }: LandingPreviewProps) {
 // ============================================
 
 export function FeaturesPreview({ element }: LandingPreviewProps) {
+  const { isMobile, isTablet, device } = usePreviewContext();
+  
   const settings = (element.settings || {}) as Record<string, unknown>;
   const badgeText = getString(settings, 'badge_text', 'Fonctionnalités');
   const headline1 = getString(settings, 'headline_line1', 'Tout ce dont vous avez besoin');
@@ -285,20 +483,56 @@ export function FeaturesPreview({ element }: LandingPreviewProps) {
   ];
 
   const displayFeatures = features.length > 0 ? features : defaultFeatures;
+  // Limit features based on device
+  const visibleFeatures = isMobile ? displayFeatures.slice(0, 4) : displayFeatures.slice(0, 6);
 
   return (
-    <section id="features" className="py-20 md:py-32 bg-muted/30 scroll-mt-16">
-      <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-2xl text-center mb-16">
+    <section id="features" className={cn(
+      "bg-muted/30 scroll-mt-16",
+      getResponsiveClass(device, {
+        mobile: 'py-12',
+        tablet: 'py-16',
+        desktop: 'py-20 md:py-32',
+      })
+    )}>
+      <div className={cn(
+        "container mx-auto",
+        getResponsiveClass(device, {
+          mobile: 'px-4',
+          desktop: 'px-4',
+        })
+      )}>
+        <div className={cn(
+          "mx-auto max-w-2xl text-center",
+          getResponsiveClass(device, {
+            mobile: 'mb-8',
+            tablet: 'mb-12',
+            desktop: 'mb-16',
+          })
+        )}>
           <Badge variant="outline" className="mb-4">{badgeText}</Badge>
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl mb-4">
+          <h2 className={cn(
+            "font-bold tracking-tight mb-4",
+            getResponsiveClass(device, {
+              mobile: 'text-2xl',
+              tablet: 'text-3xl',
+              desktop: 'text-3xl sm:text-4xl md:text-5xl',
+            })
+          )}>
             {headline1}
             <span className="text-primary"> {headline2}</span>
           </h2>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {displayFeatures.slice(0, 6).map((feature, i) => {
+        <div className={cn(
+          "grid gap-4",
+          getResponsiveClass(device, {
+            mobile: 'grid-cols-1',
+            tablet: 'grid-cols-2 gap-6',
+            desktop: 'md:grid-cols-2 lg:grid-cols-3 gap-6',
+          })
+        )}>
+          {visibleFeatures.map((feature, i) => {
             const Icon = iconMap[feature.icon] || Sparkles;
             return (
               <Card key={i} className="relative group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
@@ -307,14 +541,36 @@ export function FeaturesPreview({ element }: LandingPreviewProps) {
                     {feature.badge}
                   </Badge>
                 )}
-                <CardHeader>
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                    <Icon className="h-6 w-6 text-primary" />
+                <CardHeader className={isMobile ? 'p-4' : undefined}>
+                  <div className={cn(
+                    "mb-3 flex items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors",
+                    getResponsiveClass(device, {
+                      mobile: 'h-10 w-10',
+                      desktop: 'mb-4 h-12 w-12',
+                    })
+                  )}>
+                    <Icon className={cn(
+                      "text-primary",
+                      getResponsiveClass(device, {
+                        mobile: 'h-5 w-5',
+                        desktop: 'h-6 w-6',
+                      })
+                    )} />
                   </div>
-                  <CardTitle className="text-xl">{feature.title}</CardTitle>
+                  <CardTitle className={cn(
+                    getResponsiveClass(device, {
+                      mobile: 'text-lg',
+                      desktop: 'text-xl',
+                    })
+                  )}>{feature.title}</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-base">
+                <CardContent className={isMobile ? 'p-4 pt-0' : undefined}>
+                  <CardDescription className={cn(
+                    getResponsiveClass(device, {
+                      mobile: 'text-sm',
+                      desktop: 'text-base',
+                    })
+                  )}>
                     {feature.description}
                   </CardDescription>
                 </CardContent>
@@ -332,6 +588,8 @@ export function FeaturesPreview({ element }: LandingPreviewProps) {
 // ============================================
 
 export function HowItWorksPreview({ element }: LandingPreviewProps) {
+  const { isMobile, isTablet, device } = usePreviewContext();
+  
   const settings = (element.settings || {}) as Record<string, unknown>;
   const badgeText = getString(settings, 'badge_text', 'Simple comme bonjour');
   const headline1 = getString(settings, 'headline_line1', 'Lancez-vous');
@@ -346,30 +604,86 @@ export function HowItWorksPreview({ element }: LandingPreviewProps) {
   ];
 
   const displaySteps = steps.length > 0 ? steps : defaultSteps;
+  const visibleSteps = isMobile ? displaySteps.slice(0, 4) : displaySteps.slice(0, 4);
 
   return (
-    <section id="how-it-works" className="py-20 md:py-32 scroll-mt-16">
+    <section id="how-it-works" className={cn(
+      "scroll-mt-16",
+      getResponsiveClass(device, {
+        mobile: 'py-12',
+        tablet: 'py-16',
+        desktop: 'py-20 md:py-32',
+      })
+    )}>
       <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-2xl text-center mb-16">
+        <div className={cn(
+          "mx-auto max-w-2xl text-center",
+          getResponsiveClass(device, {
+            mobile: 'mb-8',
+            tablet: 'mb-12',
+            desktop: 'mb-16',
+          })
+        )}>
           <Badge variant="outline" className="mb-4">{badgeText}</Badge>
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl mb-4">
+          <h2 className={cn(
+            "font-bold tracking-tight mb-4",
+            getResponsiveClass(device, {
+              mobile: 'text-2xl',
+              tablet: 'text-3xl',
+              desktop: 'text-3xl sm:text-4xl md:text-5xl',
+            })
+          )}>
             {headline1} <span className="text-primary">{headline2}</span>
           </h2>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-          {displaySteps.slice(0, 4).map((step, i) => (
+        <div className={cn(
+          "grid gap-6",
+          getResponsiveClass(device, {
+            mobile: 'grid-cols-2 gap-4',
+            tablet: 'grid-cols-2 gap-8',
+            desktop: 'md:grid-cols-2 lg:grid-cols-4 gap-8',
+          })
+        )}>
+          {visibleSteps.map((step, i) => (
             <div key={i} className="relative">
-              {/* Connector line */}
-              {i < displaySteps.length - 1 && (
+              {/* Connector line - desktop only */}
+              {!isMobile && !isTablet && i < displaySteps.length - 1 && (
                 <div className="hidden lg:block absolute top-8 left-[60%] w-full h-0.5 bg-gradient-to-r from-primary/50 to-primary/10" />
               )}
-              <div className="relative z-10 flex flex-col items-center text-center">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground text-2xl font-bold">
+              <div className={cn(
+                "relative z-10 flex flex-col items-center text-center",
+                getResponsiveClass(device, {
+                  mobile: 'gap-2',
+                  desktop: '',
+                })
+              )}>
+                <div className={cn(
+                  "flex items-center justify-center rounded-full bg-primary text-primary-foreground font-bold",
+                  getResponsiveClass(device, {
+                    mobile: 'h-12 w-12 text-lg mb-2',
+                    tablet: 'h-14 w-14 text-xl mb-3',
+                    desktop: 'mb-4 h-16 w-16 text-2xl',
+                  })
+                )}>
                   {step.number}
                 </div>
-                <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
-                <p className="text-muted-foreground">{step.description}</p>
+                <h3 className={cn(
+                  "font-semibold",
+                  getResponsiveClass(device, {
+                    mobile: 'text-sm mb-1',
+                    tablet: 'text-base mb-2',
+                    desktop: 'text-lg mb-2',
+                  })
+                )}>{step.title}</h3>
+                <p className={cn(
+                  "text-muted-foreground",
+                  getResponsiveClass(device, {
+                    mobile: 'text-xs',
+                    tablet: 'text-sm',
+                    desktop: 'text-base',
+                  })
+                )}>{step.description}</p>
               </div>
             </div>
           ))}
@@ -384,6 +698,8 @@ export function HowItWorksPreview({ element }: LandingPreviewProps) {
 // ============================================
 
 export function PricingPreview({ element }: LandingPreviewProps) {
+  const { isMobile, isTablet, device } = usePreviewContext();
+  
   const settings = (element.settings || {}) as Record<string, unknown>;
   const badgeText = getString(settings, 'badge_text', 'Tarifs');
   const headline1 = getString(settings, 'headline_line1', 'Des prix simples');
@@ -397,53 +713,125 @@ export function PricingPreview({ element }: LandingPreviewProps) {
   ];
 
   const displayPlans = plans.length > 0 ? plans : defaultPlans;
+  // On mobile, show only 2 plans (free + popular or first 2)
+  const visiblePlans = isMobile 
+    ? displayPlans.filter(p => p.popular || p.price === '0').slice(0, 2)
+    : displayPlans.slice(0, 3);
 
   return (
-    <section id="pricing" className="py-20 md:py-32 bg-muted/30 scroll-mt-16">
+    <section id="pricing" className={cn(
+      "bg-muted/30 scroll-mt-16",
+      getResponsiveClass(device, {
+        mobile: 'py-12',
+        tablet: 'py-16',
+        desktop: 'py-20 md:py-32',
+      })
+    )}>
       <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-2xl text-center mb-16">
+        <div className={cn(
+          "mx-auto max-w-2xl text-center",
+          getResponsiveClass(device, {
+            mobile: 'mb-8',
+            tablet: 'mb-12',
+            desktop: 'mb-16',
+          })
+        )}>
           <Badge variant="outline" className="mb-4">{badgeText}</Badge>
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl mb-4">
+          <h2 className={cn(
+            "font-bold tracking-tight mb-4",
+            getResponsiveClass(device, {
+              mobile: 'text-2xl',
+              tablet: 'text-3xl',
+              desktop: 'text-3xl sm:text-4xl md:text-5xl',
+            })
+          )}>
             {headline1}
             <span className="text-primary"> {headline2}</span>
           </h2>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-3 max-w-5xl mx-auto">
-          {displayPlans.slice(0, 3).map((plan, i) => (
+        <div className={cn(
+          "grid max-w-5xl mx-auto",
+          getResponsiveClass(device, {
+            mobile: 'grid-cols-1 gap-4',
+            tablet: 'grid-cols-2 gap-6',
+            desktop: 'md:grid-cols-3 gap-8',
+          })
+        )}>
+          {visiblePlans.map((plan, i) => (
             <Card
               key={i}
-              className={`relative flex flex-col ${
-                plan.popular ? 'border-primary shadow-lg scale-105' : ''
-              }`}
+              className={cn(
+                "relative flex flex-col",
+                plan.popular && !isMobile && 'border-primary shadow-lg scale-105',
+                plan.popular && isMobile && 'border-primary shadow-lg',
+              )}
             >
               {plan.popular && (
                 <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
                   Populaire
                 </Badge>
               )}
-              <CardHeader className="text-center pb-2">
-                <CardTitle className="text-xl">{plan.name}</CardTitle>
+              <CardHeader className={cn(
+                "text-center pb-2",
+                isMobile && 'p-4'
+              )}>
+                <CardTitle className={cn(
+                  getResponsiveClass(device, {
+                    mobile: 'text-lg',
+                    desktop: 'text-xl',
+                  })
+                )}>{plan.name}</CardTitle>
                 <CardDescription>{plan.description}</CardDescription>
               </CardHeader>
-              <CardContent className="flex-1">
-                <div className="text-center mb-6">
-                  <span className="text-4xl font-bold">{plan.price}€</span>
+              <CardContent className={cn(
+                "flex-1",
+                isMobile && 'p-4 pt-0'
+              )}>
+                <div className="text-center mb-4">
+                  <span className={cn(
+                    "font-bold",
+                    getResponsiveClass(device, {
+                      mobile: 'text-3xl',
+                      desktop: 'text-4xl',
+                    })
+                  )}>{plan.price}€</span>
                   <span className="text-muted-foreground"> {plan.period}</span>
                 </div>
                 {plan.features && (
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, j) => (
+                  <ul className={cn(
+                    "space-y-2",
+                    getResponsiveClass(device, {
+                      mobile: 'space-y-1.5',
+                      desktop: 'space-y-3',
+                    })
+                  )}>
+                    {plan.features.slice(0, isMobile ? 3 : 5).map((feature, j) => (
                       <li key={j} className="flex items-start gap-2">
-                        <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                        <span className="text-sm">{feature}</span>
+                        <Check className={cn(
+                          "text-primary shrink-0 mt-0.5",
+                          getResponsiveClass(device, {
+                            mobile: 'h-4 w-4',
+                            desktop: 'h-5 w-5',
+                          })
+                        )} />
+                        <span className={cn(
+                          getResponsiveClass(device, {
+                            mobile: 'text-xs',
+                            desktop: 'text-sm',
+                          })
+                        )}>{feature}</span>
                       </li>
                     ))}
                   </ul>
                 )}
               </CardContent>
-              <CardFooter>
-                <Button className="w-full" variant={plan.popular ? 'default' : 'outline'}>
+              <CardFooter className={isMobile ? 'p-4 pt-0' : undefined}>
+                <Button 
+                  className="w-full" 
+                  variant={plan.popular ? 'default' : 'outline'}
+                  size={isMobile ? 'sm' : 'default'}
+                >
                   Commencer
                 </Button>
               </CardFooter>
@@ -460,6 +848,8 @@ export function PricingPreview({ element }: LandingPreviewProps) {
 // ============================================
 
 export function TestimonialsPreview({ element }: LandingPreviewProps) {
+  const { isMobile, isTablet, device } = usePreviewContext();
+  
   const settings = (element.settings || {}) as Record<string, unknown>;
   const badgeText = getString(settings, 'badge_text', 'Témoignages');
   const headline1 = getString(settings, 'headline_line1', 'Ils nous font');
@@ -473,36 +863,107 @@ export function TestimonialsPreview({ element }: LandingPreviewProps) {
   ];
 
   const displayTestimonials = testimonials.length > 0 ? testimonials : defaultTestimonials;
+  // On mobile, show only 1-2 testimonials
+  const visibleTestimonials = isMobile 
+    ? displayTestimonials.slice(0, 1) 
+    : isTablet 
+      ? displayTestimonials.slice(0, 2)
+      : displayTestimonials.slice(0, 3);
 
   return (
-    <section id="testimonials" className="py-20 md:py-32 scroll-mt-16">
+    <section id="testimonials" className={cn(
+      "scroll-mt-16",
+      getResponsiveClass(device, {
+        mobile: 'py-12',
+        tablet: 'py-16',
+        desktop: 'py-20 md:py-32',
+      })
+    )}>
       <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-2xl text-center mb-16">
+        <div className={cn(
+          "mx-auto max-w-2xl text-center",
+          getResponsiveClass(device, {
+            mobile: 'mb-6',
+            tablet: 'mb-10',
+            desktop: 'mb-16',
+          })
+        )}>
           <Badge variant="outline" className="mb-4">{badgeText}</Badge>
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl mb-4">
+          <h2 className={cn(
+            "font-bold tracking-tight mb-4",
+            getResponsiveClass(device, {
+              mobile: 'text-2xl',
+              tablet: 'text-3xl',
+              desktop: 'text-3xl sm:text-4xl md:text-5xl',
+            })
+          )}>
             {headline1}
             <span className="text-primary"> {headline2}</span>
           </h2>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-3">
-          {displayTestimonials.slice(0, 3).map((testimonial, i) => (
+        <div className={cn(
+          "grid",
+          getResponsiveClass(device, {
+            mobile: 'grid-cols-1 gap-4',
+            tablet: 'grid-cols-2 gap-6',
+            desktop: 'md:grid-cols-3 gap-8',
+          })
+        )}>
+          {visibleTestimonials.map((testimonial, i) => (
             <Card key={i} className="relative">
-              <CardContent className="pt-6">
+              <CardContent className={cn(
+                getResponsiveClass(device, {
+                  mobile: 'p-4 pt-5',
+                  desktop: 'pt-6',
+                })
+              )}>
                 {/* Quote marks */}
-                <div className="absolute top-4 left-4 text-6xl text-primary/10 font-serif leading-none">
+                <div className={cn(
+                  "absolute left-4 text-primary/10 font-serif leading-none",
+                  getResponsiveClass(device, {
+                    mobile: 'top-3 text-4xl',
+                    desktop: 'top-4 text-6xl',
+                  })
+                )}>
                   "
                 </div>
-                <p className="relative z-10 text-muted-foreground mb-6 italic">
-                  "{testimonial.quote}"
+                <p className={cn(
+                  "relative z-10 text-muted-foreground italic",
+                  getResponsiveClass(device, {
+                    mobile: 'text-sm mb-4',
+                    desktop: 'mb-6',
+                  })
+                )}>
+                  "{isMobile && testimonial.quote.length > 100 
+                    ? testimonial.quote.slice(0, 100) + '...' 
+                    : testimonial.quote}"
                 </p>
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold">
+                  <div className={cn(
+                    "flex items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold",
+                    getResponsiveClass(device, {
+                      mobile: 'h-8 w-8 text-xs',
+                      desktop: 'h-10 w-10 text-sm',
+                    })
+                  )}>
                     {testimonial.avatar || testimonial.author.slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <div className="font-semibold">{testimonial.author}</div>
-                    <div className="text-sm text-muted-foreground">{testimonial.role}</div>
+                    <div className={cn(
+                      "font-semibold",
+                      getResponsiveClass(device, {
+                        mobile: 'text-sm',
+                        desktop: '',
+                      })
+                    )}>{testimonial.author}</div>
+                    <div className={cn(
+                      "text-muted-foreground",
+                      getResponsiveClass(device, {
+                        mobile: 'text-xs',
+                        desktop: 'text-sm',
+                      })
+                    )}>{testimonial.role}</div>
                   </div>
                 </div>
               </CardContent>
@@ -519,6 +980,8 @@ export function TestimonialsPreview({ element }: LandingPreviewProps) {
 // ============================================
 
 export function CTAPreview({ element }: LandingPreviewProps) {
+  const { isMobile, device } = usePreviewContext();
+  
   const settings = (element.settings || {}) as Record<string, unknown>;
   const headline = getString(settings, 'headline', 'Prêt à créer votre site ?');
   const subtitle1 = getString(settings, 'subtitle_line1', 'Rejoignez des milliers de créateurs.');
@@ -527,23 +990,73 @@ export function CTAPreview({ element }: LandingPreviewProps) {
   const ctaSecondaryText = getString(settings, 'cta_secondary_text', 'Voir les tarifs');
 
   return (
-    <section id="cta" className="py-20 md:py-32 bg-primary text-primary-foreground scroll-mt-16">
+    <section id="cta" className={cn(
+      "bg-primary text-primary-foreground scroll-mt-16",
+      getResponsiveClass(device, {
+        mobile: 'py-12',
+        tablet: 'py-16',
+        desktop: 'py-20 md:py-32',
+      })
+    )}>
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-3xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl mb-6">
+          <h2 className={cn(
+            "font-bold tracking-tight mb-4",
+            getResponsiveClass(device, {
+              mobile: 'text-2xl',
+              tablet: 'text-3xl',
+              desktop: 'text-3xl sm:text-4xl md:text-5xl mb-6',
+            })
+          )}>
             {headline}
           </h2>
-          <p className="text-lg opacity-90 mb-8">
+          <p className={cn(
+            "opacity-90",
+            getResponsiveClass(device, {
+              mobile: 'text-sm mb-6',
+              tablet: 'text-base mb-6',
+              desktop: 'text-lg mb-8',
+            })
+          )}>
             {subtitle1}
-            <br />
+            {!isMobile && <br />}
+            {isMobile && ' '}
             {subtitle2}
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" variant="secondary" className="text-base px-8">
+          <div className={cn(
+            "flex items-center justify-center gap-3",
+            getResponsiveClass(device, {
+              mobile: 'flex-col',
+              tablet: 'flex-col',
+              desktop: 'flex-row gap-4',
+            })
+          )}>
+            <Button 
+              size={isMobile ? "default" : "lg"} 
+              variant="secondary" 
+              className={cn(
+                getResponsiveClass(device, {
+                  mobile: 'w-full text-sm',
+                  tablet: 'w-full text-base',
+                  desktop: 'text-base px-8',
+                })
+              )}
+            >
               {ctaPrimaryText}
               <Rocket className="ml-2 h-4 w-4" />
             </Button>
-            <Button size="lg" variant="outline" className="text-base px-8 bg-transparent border-primary-foreground/30 hover:bg-primary-foreground/10">
+            <Button 
+              size={isMobile ? "default" : "lg"} 
+              variant="outline" 
+              className={cn(
+                "bg-transparent border-primary-foreground/30 hover:bg-primary-foreground/10",
+                getResponsiveClass(device, {
+                  mobile: 'w-full text-sm',
+                  tablet: 'w-full text-base',
+                  desktop: 'text-base px-8',
+                })
+              )}
+            >
               {ctaSecondaryText}
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
@@ -559,24 +1072,74 @@ export function CTAPreview({ element }: LandingPreviewProps) {
 // ============================================
 
 export function FooterPreview({ element }: LandingPreviewProps) {
+  const { isMobile, isTablet, device } = usePreviewContext();
+  
   const settings = (element.settings || {}) as Record<string, unknown>;
   const brandName = getString(settings, 'brand_name', 'ASAP');
   const tagline = getString(settings, 'tagline', 'Créez votre présence en ligne, rapidement.');
   const copyright = getString(settings, 'copyright', '© 2024 ASAP. Tous droits réservés.');
 
+  const footerColumns = ['Produit', 'Entreprise', 'Légal'];
+  const footerLinks = ['Fonctionnalités', 'Tarifs', 'Documentation', 'Changelog'];
+
   return (
-    <footer id="footer" className="border-t bg-background py-12">
+    <footer id="footer" className={cn(
+      "border-t bg-background",
+      getResponsiveClass(device, {
+        mobile: 'py-8',
+        tablet: 'py-10',
+        desktop: 'py-12',
+      })
+    )}>
       <div className="container mx-auto px-4">
-        <div className="grid gap-8 md:grid-cols-4">
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <Zap className="h-5 w-5 text-primary-foreground" />
+        <div className={cn(
+          "grid gap-8",
+          getResponsiveClass(device, {
+            mobile: 'grid-cols-1',
+            tablet: 'grid-cols-2',
+            desktop: 'md:grid-cols-4',
+          })
+        )}>
+          {/* Brand column */}
+          <div className={isMobile ? 'text-center' : ''}>
+            <div className={cn(
+              "flex items-center gap-2 mb-4",
+              isMobile && 'justify-center'
+            )}>
+              <div className={cn(
+                "flex items-center justify-center rounded-lg bg-primary",
+                getResponsiveClass(device, {
+                  mobile: 'h-7 w-7',
+                  desktop: 'h-8 w-8',
+                })
+              )}>
+                <Zap className={cn(
+                  "text-primary-foreground",
+                  getResponsiveClass(device, {
+                    mobile: 'h-4 w-4',
+                    desktop: 'h-5 w-5',
+                  })
+                )} />
               </div>
-              <span className="text-xl font-bold">{brandName}</span>
+              <span className={cn(
+                "font-bold",
+                getResponsiveClass(device, {
+                  mobile: 'text-lg',
+                  desktop: 'text-xl',
+                })
+              )}>{brandName}</span>
             </div>
-            <p className="text-sm text-muted-foreground mb-4">{tagline}</p>
-            <div className="flex items-center gap-2">
+            <p className={cn(
+              "text-muted-foreground mb-4",
+              getResponsiveClass(device, {
+                mobile: 'text-xs',
+                desktop: 'text-sm',
+              })
+            )}>{tagline}</p>
+            <div className={cn(
+              "flex items-center gap-2",
+              isMobile && 'justify-center'
+            )}>
               <Badge variant="outline" className="text-xs">
                 <Shield className="mr-1 h-3 w-3" />
                 RGPD
@@ -587,11 +1150,24 @@ export function FooterPreview({ element }: LandingPreviewProps) {
             </div>
           </div>
 
-          {['Produit', 'Entreprise', 'Légal'].map((title, i) => (
+          {/* Link columns - only on tablet/desktop */}
+          {!isMobile && footerColumns.map((title, i) => (
             <div key={i}>
-              <h4 className="font-semibold mb-4">{title}</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                {['Fonctionnalités', 'Tarifs', 'Documentation', 'Changelog'].slice(0, 4).map((link, j) => (
+              <h4 className={cn(
+                "font-semibold",
+                getResponsiveClass(device, {
+                  tablet: 'text-sm mb-3',
+                  desktop: 'mb-4',
+                })
+              )}>{title}</h4>
+              <ul className={cn(
+                "text-muted-foreground",
+                getResponsiveClass(device, {
+                  tablet: 'space-y-1.5 text-xs',
+                  desktop: 'space-y-2 text-sm',
+                })
+              )}>
+                {footerLinks.slice(0, isTablet ? 3 : 4).map((link, j) => (
                   <li key={j} className="hover:text-foreground cursor-pointer transition-colors">{link}</li>
                 ))}
               </ul>
@@ -599,13 +1175,38 @@ export function FooterPreview({ element }: LandingPreviewProps) {
           ))}
         </div>
 
-        <Separator className="my-8" />
+        <Separator className={cn(
+          "my-6",
+          getResponsiveClass(device, {
+            mobile: 'my-4',
+            desktop: 'my-8',
+          })
+        )} />
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+        <div className={cn(
+          "flex items-center gap-4 text-muted-foreground",
+          getResponsiveClass(device, {
+            mobile: 'flex-col text-center text-xs',
+            tablet: 'flex-row justify-between text-sm',
+            desktop: 'flex-row justify-between text-sm',
+          })
+        )}>
           <p>{copyright}</p>
           <div className="flex items-center gap-4">
-            <Github className="h-5 w-5 hover:text-foreground cursor-pointer transition-colors" />
-            <svg className="h-5 w-5 hover:text-foreground cursor-pointer transition-colors" fill="currentColor" viewBox="0 0 24 24">
+            <Github className={cn(
+              "hover:text-foreground cursor-pointer transition-colors",
+              getResponsiveClass(device, {
+                mobile: 'h-4 w-4',
+                desktop: 'h-5 w-5',
+              })
+            )} />
+            <svg className={cn(
+              "hover:text-foreground cursor-pointer transition-colors",
+              getResponsiveClass(device, {
+                mobile: 'h-4 w-4',
+                desktop: 'h-5 w-5',
+              })
+            )} fill="currentColor" viewBox="0 0 24 24">
               <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
             </svg>
           </div>
