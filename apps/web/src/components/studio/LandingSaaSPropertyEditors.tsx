@@ -7,7 +7,7 @@
 
 "use client"
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { WebsiteElement, UpdateElementRequest } from "@/lib/api";
 import { Input } from "@/components/ui/input";
@@ -91,6 +91,30 @@ const PropertyTypeIcons: Record<string, React.FC<{ className?: string }>> = {
 // ============================================
 // Helper Functions
 // ============================================
+
+/**
+ * Merge element settings with schema defaults
+ * Element settings take priority over defaults
+ */
+function mergeWithDefaults(
+  elementSettings: Record<string, unknown> | undefined,
+  defaults: Record<string, unknown>
+): SettingsData {
+  const result = { ...defaults };
+  
+  if (!elementSettings) return result;
+  
+  // Override defaults with element settings (element data takes priority)
+  for (const key of Object.keys(elementSettings)) {
+    const value = elementSettings[key];
+    // Only override if value is defined (not undefined)
+    if (value !== undefined) {
+      result[key] = value;
+    }
+  }
+  
+  return result;
+}
 
 function getValue<T>(data: SettingsData, key: string, defaultValue: T): T {
   if (data[key] === undefined) return defaultValue;
@@ -658,12 +682,21 @@ export function LandingSaaSPropertyEditor({
   // Get schema for this element type
   const schema = useMemo(() => getSectionSchema(element.element_type), [element.element_type]);
   
-  // Local state for settings
-  const [settings, setSettings] = useState<SettingsData>(() => ({
-    ...getDefaultSettings(element.element_type),
-    ...(element.settings || {}),
-  }));
+  // Get default settings for this element type
+  const defaults = useMemo(() => getDefaultSettings(element.element_type), [element.element_type]);
+  
+  // Local state for settings - merge element settings with defaults
+  const [settings, setSettings] = useState<SettingsData>(() => 
+    mergeWithDefaults(element.settings as Record<string, unknown>, defaults)
+  );
   const [isDirty, setIsDirty] = useState(false);
+
+  // Sync settings when element changes (e.g., selecting a different element)
+  useEffect(() => {
+    const newSettings = mergeWithDefaults(element.settings as Record<string, unknown>, defaults);
+    setSettings(newSettings);
+    setIsDirty(false);
+  }, [element.id, element.settings, defaults]);
 
   // Get property groups
   const groups = useMemo(() => {
@@ -691,8 +724,8 @@ export function LandingSaaSPropertyEditor({
 
   // Reset to defaults
   const handleReset = useCallback(() => {
-    const defaults = getDefaultSettings(element.element_type);
-    setSettings(defaults);
+    const defaultSettings = getDefaultSettings(element.element_type);
+    setSettings(defaultSettings);
     setIsDirty(true);
   }, [element.element_type]);
 
