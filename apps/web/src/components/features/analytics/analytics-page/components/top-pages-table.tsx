@@ -1,0 +1,67 @@
+"use client"
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileText } from "lucide-react";
+import { formatDuration } from "../utils";
+import type { TopPagesTableProps } from "../types";
+
+/**
+ * Top pages table showing most viewed content
+ */
+export function TopPagesTable({ pages }: TopPagesTableProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <FileText className="h-5 w-5 text-primary" />
+          Pages les plus consultées
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">Page</th>
+                <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">Vues</th>
+                <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">Vues uniques</th>
+                <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">Temps moyen</th>
+                <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">Rebond</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pages.map((page, index) => (
+                <tr key={page.path} className="border-b last:border-0 hover:bg-muted/50">
+                  <td className="py-3 px-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-bold w-5 h-5 rounded flex items-center justify-center ${
+                        index === 0 ? 'bg-amber-500/20 text-amber-600' :
+                        index === 1 ? 'bg-gray-300/30 text-gray-600' :
+                        index === 2 ? 'bg-orange-500/20 text-orange-600' :
+                        'bg-muted text-muted-foreground'
+                      }`}>
+                        {index + 1}
+                      </span>
+                      <div>
+                        <p className="font-medium">{page.name}</p>
+                        <p className="text-xs text-muted-foreground">{page.path}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="text-right py-3 px-2 font-medium">{page.views.toLocaleString()}</td>
+                  <td className="text-right py-3 px-2 text-muted-foreground">{page.uniqueViews.toLocaleString()}</td>
+                  <td className="text-right py-3 px-2 text-muted-foreground">{formatDuration(page.avgTime)}</td>
+                  <td className="text-right py-3 px-2">
+                    <span className={page.bounceRate < 40 ? 'text-green-600' : page.bounceRate < 55 ? 'text-amber-600' : 'text-red-500'}>
+                      {page.bounceRate}%
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
