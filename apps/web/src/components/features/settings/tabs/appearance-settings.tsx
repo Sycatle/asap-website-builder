@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
@@ -35,6 +35,37 @@ const THEME_OPTIONS: ThemeChoice[] = [
   { id: 'dark', label: 'Sombre', icon: '🌙' },
   { id: 'system', label: 'Système', icon: '💻' },
 ]
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+function getStoredTheme(): ThemeOption {
+  if (typeof localStorage !== 'undefined') {
+    const stored = localStorage.getItem('theme')
+    if (stored === 'dark' || stored === 'light') {
+      return stored
+    }
+  }
+  return 'system'
+}
+
+function applyTheme(theme: ThemeOption) {
+  const isDark =
+    theme === 'dark' ||
+    (theme === 'system' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches)
+  
+  document.documentElement.classList[isDark ? 'add' : 'remove']('dark')
+  
+  if (typeof localStorage !== 'undefined') {
+    if (theme === 'system') {
+      localStorage.removeItem('theme')
+    } else {
+      localStorage.setItem('theme', theme)
+    }
+  }
+}
 
 // ============================================================================
 // Sub-components
@@ -86,6 +117,27 @@ function LanguageSelector() {
 export function AppearanceSettings() {
   const [theme, setTheme] = useState<ThemeOption>('system')
 
+  // Initialize theme from localStorage on mount
+  useEffect(() => {
+    setTheme(getStoredTheme())
+  }, [])
+
+  // Listen for system theme changes when in 'system' mode
+  useEffect(() => {
+    if (theme !== 'system') return
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleChange = () => applyTheme('system')
+    
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [theme])
+
+  const handleThemeChange = (newTheme: ThemeOption) => {
+    setTheme(newTheme)
+    applyTheme(newTheme)
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -104,7 +156,7 @@ export function AppearanceSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ThemeSelector value={theme} onChange={setTheme} />
+          <ThemeSelector value={theme} onChange={handleThemeChange} />
         </CardContent>
       </Card>
 
