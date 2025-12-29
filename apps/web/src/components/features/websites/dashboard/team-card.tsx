@@ -26,7 +26,7 @@ const roleColors: Record<string, string> = {
   owner: 'bg-amber-500',
   admin: 'bg-blue-500',
   editor: 'bg-green-500',
-  viewer: 'bg-gray-500',
+  viewer: 'bg-muted0',
 };
 
 /**

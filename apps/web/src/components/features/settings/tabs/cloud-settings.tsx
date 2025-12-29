@@ -44,7 +44,7 @@ function getStorageBreakdown(files: FileMetadata[]): StorageBreakdownItem[] {
     'Images': { size: 0, color: 'bg-blue-500' },
     'Documents': { size: 0, color: 'bg-green-500' },
     'Vidéos': { size: 0, color: 'bg-purple-500' },
-    'Autres': { size: 0, color: 'bg-gray-500' },
+    'Autres': { size: 0, color: 'bg-muted0' },
   }
   
   files.forEach(file => {

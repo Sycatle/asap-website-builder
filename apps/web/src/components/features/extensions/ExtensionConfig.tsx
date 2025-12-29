@@ -97,7 +97,7 @@ const getDefaultSchema = (extension: Extension): ConfigSchema => {
 // Category helpers
 const getCategoryColor = (category: string) => {
   const colors: Record<string, string> = {
-    'integration': 'bg-gray-900',
+    'integration': 'bg-zinc-700 dark:bg-zinc-300',
     'content': 'bg-indigo-600',
     'engagement': 'bg-green-600',
     'analytics': 'bg-purple-600',
@@ -513,8 +513,8 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
         <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
           {Icons.error}
         </div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">Extension non trouvée</h3>
-        <p className="text-gray-500 mb-6">L'extension "{slug}" n'existe pas ou n'est pas disponible.</p>
+        <h3 className="text-xl font-semibold text-foreground mb-2">Extension non trouvée</h3>
+        <p className="text-muted-foreground mb-6">L'extension "{slug}" n'existe pas ou n'est pas disponible.</p>
         <Link 
           href={`/app/${websiteId}/extensions`} 
           className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-medium"
@@ -539,14 +539,14 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
       {/* Back link */}
       <Link 
         href={`/app/${websiteId}/extensions`} 
-        className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-gray-500 hover:text-gray-700 mb-4 sm:mb-6 transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground hover:text-foreground mb-4 sm:mb-6 transition-colors"
       >
         {Icons.back}
         Extensions
       </Link>
 
       {/* Header Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 sm:mb-6">
+      <div className="bg-card rounded-xl shadow-sm border border-border mb-4 sm:mb-6">
         <div className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             {/* Extension info */}
@@ -556,17 +556,17 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <h1 className="text-lg sm:text-xl font-bold text-gray-900">{extension.name}</h1>
+                  <h1 className="text-lg sm:text-xl font-bold text-foreground">{extension.name}</h1>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${
                     isExtensionEnabled 
                       ? 'bg-green-100 text-green-700' 
-                      : 'bg-gray-100 text-gray-600'
+                      : 'bg-muted text-muted-foreground'
                   }`}>
                     {isExtensionEnabled ? 'Actif' : 'Inactif'}
                   </span>
                 </div>
-                <p className="mt-1 text-xs sm:text-sm text-gray-600 line-clamp-2">{extension.description}</p>
-                <div className="mt-1.5 sm:mt-2 flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-gray-500">
+                <p className="mt-1 text-xs sm:text-sm text-muted-foreground line-clamp-2">{extension.description}</p>
+                <div className="mt-1.5 sm:mt-2 flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     {getCategoryLabel(extension.category)}
                   </span>
@@ -583,7 +583,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
                 <button
                   onClick={() => handleAction(syncAction.key)}
                   disabled={executingAction === syncAction.key}
-                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-foreground bg-card border border-input rounded-lg hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {executingAction === syncAction.key ? Icons.spinner : Icons.sync}
                   <span className="hidden xs:inline">Synchroniser</span>
@@ -617,7 +617,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setPendingConfirm(null)}
-                  className="flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium text-muted-foreground bg-card border border-input rounded-lg hover:bg-muted"
                 >
                   Annuler
                 </button>
@@ -635,7 +635,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
 
       {/* Tabs Content */}
       {isExtensionEnabled && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="bg-card rounded-xl shadow-sm border border-border">
           <div className="p-4 sm:p-6">
             <Tabs defaultValue={defaultTab}>
               <TabsList className="mb-4 flex flex-wrap gap-1">
@@ -685,8 +685,8 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
                     
                     {/* Other actions */}
                       {getOtherActions().length > 0 && (
-                        <div className="border-t border-gray-200 pt-4 sm:pt-6">
-                          <h3 className="text-xs sm:text-sm font-medium text-gray-900 mb-2 sm:mb-3">Actions</h3>
+                        <div className="border-t border-border pt-4 sm:pt-6">
+                          <h3 className="text-xs sm:text-sm font-medium text-foreground mb-2 sm:mb-3">Actions</h3>
                           <div className="flex flex-wrap gap-2">
                             {getOtherActions().map((action) => (
                               <button
@@ -697,7 +697,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
                                   action.style === 'danger'
                                     ? 'text-red-600 bg-red-50 border border-red-200 hover:bg-red-100'
                                     : action.style === 'secondary'
-                                    ? 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                                    ? 'text-foreground bg-card border border-input hover:bg-muted'
                                     : 'text-white bg-primary-600 hover:bg-primary-700'
                                 }`}
                               >
@@ -731,10 +731,10 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
                 <div>
                   {changelog.length === 0 ? (
                     <div className="text-center py-12">
-                      <div className="w-12 h-12 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                      <div className="w-12 h-12 mx-auto bg-muted rounded-full flex items-center justify-center mb-3">
                         {Icons.history}
                       </div>
-                      <p className="text-gray-500">Aucun historique disponible</p>
+                      <p className="text-muted-foreground">Aucun historique disponible</p>
                     </div>
                   ) : (
                     <div className="space-y-1">
@@ -742,15 +742,15 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
                         <div 
                           key={entry.id}
                           className={`flex items-start gap-3 py-3 ${
-                            index !== changelog.length - 1 ? 'border-b border-gray-100' : ''
+                            index !== changelog.length - 1 ? 'border-b border-border' : ''
                           }`}
                         >
-                          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 text-gray-500">
+                          <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center flex-shrink-0 text-muted-foreground">
                             {getActionIcon(entry.action)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm text-gray-900">{entry.description}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">
+                            <p className="text-sm text-foreground">{entry.description}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
                               {formatRelativeTimeFr(entry.timestamp)}
                               {entry.user && ` • ${entry.user}`}
                             </p>
@@ -768,12 +768,12 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
 
       {/* Not enabled state */}
       {!isExtensionEnabled && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8 text-center">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3 sm:mb-4 text-gray-400">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6 sm:p-8 text-center">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-muted rounded-full flex items-center justify-center mb-3 sm:mb-4 text-muted-foreground">
             {Icons.power}
           </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1.5 sm:mb-2">Extension désactivée</h3>
-          <p className="text-xs sm:text-sm text-gray-500 mb-4 sm:mb-6 max-w-md mx-auto">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-1.5 sm:mb-2">Extension désactivée</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6 max-w-md mx-auto">
             Activez cette extension pour accéder à sa configuration.
           </p>
           <button

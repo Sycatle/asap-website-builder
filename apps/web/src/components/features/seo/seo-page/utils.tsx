@@ -21,7 +21,7 @@ export function RankBadge({ rank }: { rank: number }) {
   const className = rank === 1 
     ? 'bg-amber-500/20 text-amber-600' 
     : rank === 2 
-    ? 'bg-gray-300/30 text-gray-600' 
+    ? 'bg-zinc-300/30 text-zinc-500 dark:bg-zinc-600/30 dark:text-zinc-400' 
     : rank === 3 
     ? 'bg-orange-500/20 text-orange-600' 
     : 'bg-muted text-muted-foreground';

@@ -272,7 +272,7 @@ export function PWAUpdatePrompt() {
       </Button>
       <button
         onClick={() => setShowPrompt(false)}
-        className="p-1 hover:bg-white/20 rounded"
+        className="p-1 hover:bg-card/20 rounded"
       >
         <X className="h-3 w-3" />
       </button>

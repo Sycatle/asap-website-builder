@@ -51,7 +51,7 @@ const statusConfig: Record<string, {
   offline: {
     label: 'Hors ligne',
     icon: WifiOff,
-    className: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
+    className: 'bg-muted text-foreground border-border',
   },
   // Web Vitals status
   good: {
@@ -93,7 +93,7 @@ const statusConfig: Record<string, {
   neutral: {
     label: 'Neutre',
     icon: Lock,
-    className: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
+    className: 'bg-muted text-foreground border-border',
   },
 };
 
@@ -162,7 +162,7 @@ export function StatusDot({
 }) {
   const colors: Record<string, string> = {
     online: 'bg-green-500',
-    offline: 'bg-gray-400',
+    offline: 'bg-muted-foreground',
     success: 'bg-green-500',
     warning: 'bg-amber-500',
     error: 'bg-red-500',

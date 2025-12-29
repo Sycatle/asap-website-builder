@@ -77,7 +77,7 @@ const sizeClasses = {
 const statusColors = {
   online: "bg-green-500",
   away: "bg-yellow-500",
-  offline: "bg-gray-400",
+  offline: "bg-muted-foreground",
 }
 
 // ============================================

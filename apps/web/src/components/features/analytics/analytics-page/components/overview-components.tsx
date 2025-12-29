@@ -218,7 +218,7 @@ export function CountriesCard({ countries }: CountriesCardProps) {
               <div className="flex items-center gap-3">
                 <span className={`text-sm font-bold w-6 h-6 rounded flex items-center justify-center ${
                   index === 0 ? 'bg-amber-500/20 text-amber-600' :
-                  index === 1 ? 'bg-gray-300/30 text-gray-600' :
+                  index === 1 ? 'bg-zinc-300/30 text-zinc-500 dark:bg-zinc-600/30 dark:text-zinc-400' :
                   index === 2 ? 'bg-orange-500/20 text-orange-600' :
                   'bg-muted text-muted-foreground'
                 }`}>

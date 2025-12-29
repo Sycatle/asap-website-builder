@@ -36,7 +36,7 @@ export function QuickActions({ websiteId, pagesCount, enabledExtensionsCount }: 
           >
             <FileText className="h-4 w-4" />
             <span className="text-sm font-medium">Pages</span>
-            <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 group-hover:bg-white/20 group-hover:text-white">{pagesCount}</Badge>
+            <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 group-hover:bg-card/20 group-hover:text-white">{pagesCount}</Badge>
           </Link>
           
           <Link
@@ -45,7 +45,7 @@ export function QuickActions({ websiteId, pagesCount, enabledExtensionsCount }: 
           >
             <Puzzle className="h-4 w-4" />
             <span className="text-sm font-medium">Extensions</span>
-            <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 group-hover:bg-white/20 group-hover:text-white">{enabledExtensionsCount}</Badge>
+            <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 group-hover:bg-card/20 group-hover:text-white">{enabledExtensionsCount}</Badge>
           </Link>
           
           <Link
@@ -74,7 +74,7 @@ export function QuickActions({ websiteId, pagesCount, enabledExtensionsCount }: 
           
           <Link
             href={`/app/${websiteId}/settings`}
-            className="group flex items-center gap-2.5 px-4 py-2.5 rounded-full border bg-card hover:bg-gray-600 hover:text-white hover:border-gray-600 transition-all shrink-0"
+            className="group flex items-center gap-2.5 px-4 py-2.5 rounded-full border bg-card hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all shrink-0"
           >
             <Settings className="h-4 w-4" />
             <span className="text-sm font-medium">Paramètres</span>

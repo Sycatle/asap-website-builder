@@ -50,18 +50,18 @@ export default function SchemaRenderer({
     const value = settings[field.key] ?? field.default ?? '';
     const fieldId = `field-${field.key}`;
 
-    const baseInputClass = "block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500";
+    const baseInputClass = "block w-full rounded-lg border border-input px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500";
 
     switch (field.type) {
       case 'boolean':
         return (
-          <div key={field.key} className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0">
+          <div key={field.key} className="flex items-center justify-between py-4 border-b border-border last:border-0">
             <div className="flex-1">
-              <label htmlFor={fieldId} className="text-sm font-medium text-gray-900">
+              <label htmlFor={fieldId} className="text-sm font-medium text-foreground">
                 {field.label}
               </label>
               {field.description && (
-                <p className="text-xs text-gray-500 mt-0.5">{field.description}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{field.description}</p>
               )}
             </div>
             <button
@@ -70,11 +70,11 @@ export default function SchemaRenderer({
               aria-checked={!!value}
               onClick={() => handleFieldChange(field.key, !value)}
               className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-                value ? 'bg-primary-600' : 'bg-gray-200'
+                value ? 'bg-primary-600' : 'bg-muted'
               }`}
             >
               <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-card shadow ring-0 transition duration-200 ease-in-out ${
                   value ? 'translate-x-5' : 'translate-x-0'
                 }`}
               />
@@ -84,13 +84,13 @@ export default function SchemaRenderer({
 
       case 'select':
         return (
-          <div key={field.key} className="py-4 border-b border-gray-100 last:border-0">
-            <label htmlFor={fieldId} className="block text-sm font-medium text-gray-900 mb-1">
+          <div key={field.key} className="py-4 border-b border-border last:border-0">
+            <label htmlFor={fieldId} className="block text-sm font-medium text-foreground mb-1">
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
             {field.description && (
-              <p className="text-xs text-gray-500 mb-2">{field.description}</p>
+              <p className="text-xs text-muted-foreground mb-2">{field.description}</p>
             )}
             <select
               id={fieldId}
@@ -110,13 +110,13 @@ export default function SchemaRenderer({
 
       case 'textarea':
         return (
-          <div key={field.key} className="py-4 border-b border-gray-100 last:border-0">
-            <label htmlFor={fieldId} className="block text-sm font-medium text-gray-900 mb-1">
+          <div key={field.key} className="py-4 border-b border-border last:border-0">
+            <label htmlFor={fieldId} className="block text-sm font-medium text-foreground mb-1">
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
             {field.description && (
-              <p className="text-xs text-gray-500 mb-2">{field.description}</p>
+              <p className="text-xs text-muted-foreground mb-2">{field.description}</p>
             )}
             <textarea
               id={fieldId}
@@ -131,13 +131,13 @@ export default function SchemaRenderer({
 
       case 'number':
         return (
-          <div key={field.key} className="py-4 border-b border-gray-100 last:border-0">
-            <label htmlFor={fieldId} className="block text-sm font-medium text-gray-900 mb-1">
+          <div key={field.key} className="py-4 border-b border-border last:border-0">
+            <label htmlFor={fieldId} className="block text-sm font-medium text-foreground mb-1">
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
             {field.description && (
-              <p className="text-xs text-gray-500 mb-2">{field.description}</p>
+              <p className="text-xs text-muted-foreground mb-2">{field.description}</p>
             )}
             <input
               type="number"
@@ -154,13 +154,13 @@ export default function SchemaRenderer({
 
       case 'color':
         return (
-          <div key={field.key} className="py-4 border-b border-gray-100 last:border-0">
-            <label htmlFor={fieldId} className="block text-sm font-medium text-gray-900 mb-1">
+          <div key={field.key} className="py-4 border-b border-border last:border-0">
+            <label htmlFor={fieldId} className="block text-sm font-medium text-foreground mb-1">
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
             {field.description && (
-              <p className="text-xs text-gray-500 mb-2">{field.description}</p>
+              <p className="text-xs text-muted-foreground mb-2">{field.description}</p>
             )}
             <div className="flex items-center gap-3">
               <input
@@ -168,7 +168,7 @@ export default function SchemaRenderer({
                 id={fieldId}
                 value={value || '#000000'}
                 onChange={(e) => handleFieldChange(field.key, e.target.value)}
-                className="h-10 w-14 rounded border border-gray-300 cursor-pointer"
+                className="h-10 w-14 rounded border border-input cursor-pointer"
               />
               <input
                 type="text"
@@ -184,13 +184,13 @@ export default function SchemaRenderer({
       // Default: text, email, url, password, date
       default:
         return (
-          <div key={field.key} className="py-4 border-b border-gray-100 last:border-0">
-            <label htmlFor={fieldId} className="block text-sm font-medium text-gray-900 mb-1">
+          <div key={field.key} className="py-4 border-b border-border last:border-0">
+            <label htmlFor={fieldId} className="block text-sm font-medium text-foreground mb-1">
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
             {field.description && (
-              <p className="text-xs text-gray-500 mb-2">{field.description}</p>
+              <p className="text-xs text-muted-foreground mb-2">{field.description}</p>
             )}
             <input
               type={field.type}
@@ -212,7 +212,7 @@ export default function SchemaRenderer({
 
     const styleClasses = {
       primary: 'text-white bg-primary-600 hover:bg-primary-700',
-      secondary: 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50',
+      secondary: 'text-foreground bg-card border border-input hover:bg-muted',
       danger: 'text-white bg-red-600 hover:bg-red-700',
     };
 
@@ -221,7 +221,7 @@ export default function SchemaRenderer({
     if (isPendingConfirm) {
       return (
         <div key={action.key} className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">{action.confirm}</span>
+          <span className="text-sm text-muted-foreground">{action.confirm}</span>
           <button
             onClick={() => handleAction(action)}
             className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
@@ -230,7 +230,7 @@ export default function SchemaRenderer({
           </button>
           <button
             onClick={() => setPendingConfirm(null)}
-            className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            className="px-3 py-1.5 text-sm font-medium text-muted-foreground bg-muted rounded-lg hover:bg-muted transition-colors"
           >
             Annuler
           </button>
@@ -265,15 +265,15 @@ export default function SchemaRenderer({
         return (
           <div key={display.source}>
             {display.title && (
-              <h3 className="text-base font-semibold text-gray-900 mb-4">{display.title}</h3>
+              <h3 className="text-base font-semibold text-foreground mb-4">{display.title}</h3>
             )}
-            <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50">
-              <div className="w-12 h-12 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-center py-12 border-2 border-dashed border-border rounded-xl bg-muted/50">
+              <div className="w-12 h-12 mx-auto bg-muted rounded-full flex items-center justify-center mb-3">
+                <svg className="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                 </svg>
               </div>
-              <p className="text-sm text-gray-500 max-w-sm mx-auto">{display.emptyMessage}</p>
+              <p className="text-sm text-muted-foreground max-w-sm mx-auto">{display.emptyMessage}</p>
             </div>
           </div>
         );
@@ -285,7 +285,7 @@ export default function SchemaRenderer({
       case 'profile':
         // GitHub profile display
         return (
-          <div key={display.source} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div key={display.source} className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
             <div className="p-6">
               <div className="flex items-start gap-5">
                 {/* Avatar */}
@@ -300,14 +300,14 @@ export default function SchemaRenderer({
                   {/* Name & Username */}
                   <div className="mb-3">
                     {sourceData.name && (
-                      <h3 className="text-xl font-bold text-gray-900">{sourceData.name}</h3>
+                      <h3 className="text-xl font-bold text-foreground">{sourceData.name}</h3>
                     )}
                     {sourceData.username && (
                       <a 
                         href={sourceData.url || `https://github.com/${sourceData.username}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-gray-500 hover:text-primary-600"
+                        className="text-sm text-muted-foreground hover:text-primary-600"
                       >
                         @{sourceData.username}
                       </a>
@@ -315,10 +315,10 @@ export default function SchemaRenderer({
                   </div>
                   {/* Bio */}
                   {sourceData.bio && (
-                    <p className="text-sm text-gray-600 mb-4">{sourceData.bio}</p>
+                    <p className="text-sm text-muted-foreground mb-4">{sourceData.bio}</p>
                   )}
                   {/* Meta info */}
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                     {sourceData.company && (
                       <span className="inline-flex items-center gap-1.5">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -367,18 +367,18 @@ export default function SchemaRenderer({
               </div>
             </div>
             {/* Stats bar */}
-            <div className="bg-gray-50 px-6 py-4 flex items-center justify-around border-t border-gray-100">
+            <div className="bg-muted px-6 py-4 flex items-center justify-around border-t border-border">
               <div className="text-center">
-                <div className="text-xl font-bold text-gray-900">{sourceData.public_repos ?? 0}</div>
-                <div className="text-xs text-gray-500">Repos</div>
+                <div className="text-xl font-bold text-foreground">{sourceData.public_repos ?? 0}</div>
+                <div className="text-xs text-muted-foreground">Repos</div>
               </div>
               <div className="text-center">
-                <div className="text-xl font-bold text-gray-900">{sourceData.followers ?? 0}</div>
-                <div className="text-xs text-gray-500">Followers</div>
+                <div className="text-xl font-bold text-foreground">{sourceData.followers ?? 0}</div>
+                <div className="text-xs text-muted-foreground">Followers</div>
               </div>
               <div className="text-center">
-                <div className="text-xl font-bold text-gray-900">{sourceData.following ?? 0}</div>
-                <div className="text-xs text-gray-500">Following</div>
+                <div className="text-xl font-bold text-foreground">{sourceData.following ?? 0}</div>
+                <div className="text-xs text-muted-foreground">Following</div>
               </div>
             </div>
           </div>
@@ -389,13 +389,13 @@ export default function SchemaRenderer({
         return (
           <div key={display.source}>
             {display.title && (
-              <h3 className="text-base font-semibold text-gray-900 mb-4">{display.title}</h3>
+              <h3 className="text-base font-semibold text-foreground mb-4">{display.title}</h3>
             )}
             <div className="flex flex-wrap gap-3">
               {Array.isArray(sourceData) && sourceData.map((item: any, index: number) => (
                 <div 
                   key={index}
-                  className="group flex items-center gap-3 bg-white border border-gray-200 rounded-xl p-3 hover:border-primary-300 hover:shadow-sm transition-all"
+                  className="group flex items-center gap-3 bg-card border border-border rounded-xl p-3 hover:border-primary-300 hover:shadow-sm transition-all"
                   title={item.description || item.name}
                 >
                   {item.avatar_url && (
@@ -405,7 +405,7 @@ export default function SchemaRenderer({
                       className="w-10 h-10 rounded-lg"
                     />
                   )}
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                  <span className="text-sm font-medium text-foreground group-hover:text-foreground">
                     {item.name}
                   </span>
                 </div>
@@ -416,17 +416,17 @@ export default function SchemaRenderer({
 
       case 'stats':
         return (
-          <div key={display.source} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div key={display.source} className="bg-card rounded-xl shadow-sm border border-border p-6">
             {display.title && (
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">{display.title}</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">{display.title}</h3>
             )}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {display.stats?.map((stat) => (
-                <div key={stat.key} className="text-center p-4 bg-gray-50 rounded-lg">
-                  <div className="text-2xl font-bold text-gray-900">
+                <div key={stat.key} className="text-center p-4 bg-muted rounded-lg">
+                  <div className="text-2xl font-bold text-foreground">
                     {sourceData[stat.key] ?? 0}
                   </div>
-                  <div className="text-sm text-gray-500">{stat.label}</div>
+                  <div className="text-sm text-muted-foreground">{stat.label}</div>
                 </div>
               ))}
             </div>
@@ -437,9 +437,9 @@ export default function SchemaRenderer({
         return (
           <div key={display.source}>
             {display.title && (
-              <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <h3 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
                 {display.title}
-                <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
+                <span className="px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground rounded-full">
                   {Array.isArray(sourceData) ? sourceData.length : 0}
                 </span>
               </h3>
@@ -448,12 +448,12 @@ export default function SchemaRenderer({
               {Array.isArray(sourceData) && sourceData.map((item: any, index: number) => (
                 <div 
                   key={index} 
-                  className="group flex flex-col bg-white border border-gray-200 rounded-xl p-4 hover:border-primary-300 hover:shadow-md transition-all"
+                  className="group flex flex-col bg-card border border-border rounded-xl p-4 hover:border-primary-300 hover:shadow-md transition-all"
                 >
                   {/* Header with name */}
                   <div className="flex items-start gap-3 mb-3">
                     {/* Repo icon */}
-                    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500 flex-shrink-0">
+                    <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center text-muted-foreground flex-shrink-0">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                       </svg>
@@ -469,19 +469,19 @@ export default function SchemaRenderer({
                             href={url} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="text-sm font-semibold text-gray-900 hover:text-primary-600 transition-colors line-clamp-1"
+                            className="text-sm font-semibold text-foreground hover:text-primary-600 transition-colors line-clamp-1"
                           >
                             {value}
                           </a>
                         ) : (
-                          <span key={field.key} className="text-sm font-semibold text-gray-900 line-clamp-1">{value}</span>
+                          <span key={field.key} className="text-sm font-semibold text-foreground line-clamp-1">{value}</span>
                         );
                       })}
                       {/* Language badge inline */}
                       {display.fields?.filter(f => f.type === 'badge').map((field) => {
                         const value = item[field.key];
                         if (!value) return null;
-                        const colorClass = field.colorKey ? getBadgeColor(item[field.colorKey]) : 'bg-gray-100 text-gray-700';
+                        const colorClass = field.colorKey ? getBadgeColor(item[field.colorKey]) : 'bg-muted text-foreground';
                         return (
                           <span key={field.key} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium mt-1 ${colorClass}`}>
                             <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70"></span>
@@ -497,7 +497,7 @@ export default function SchemaRenderer({
                     {display.fields?.filter(f => f.type === 'text').map((field) => {
                       const value = item[field.key];
                       return (
-                        <p key={field.key} className="text-xs text-gray-500 line-clamp-2 min-h-[2.5rem]">
+                        <p key={field.key} className="text-xs text-muted-foreground line-clamp-2 min-h-[2.5rem]">
                           {value && value !== 'No description' ? value : 'Aucune description'}
                         </p>
                       );
@@ -505,7 +505,7 @@ export default function SchemaRenderer({
                   </div>
                   
                   {/* Footer with stats */}
-                  <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100">
+                  <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border">
                     {display.fields?.filter(f => f.type === 'number').map((field) => {
                       const value = item[field.key];
                       if (value === undefined || value === null) return null;
@@ -514,12 +514,12 @@ export default function SchemaRenderer({
                           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                         </svg>
                       ) : field.key === 'forks' ? (
-                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
                         </svg>
                       ) : null;
                       return (
-                        <span key={field.key} className="inline-flex items-center gap-1 text-xs text-gray-500">
+                        <span key={field.key} className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                           {icon}
                           <span className="font-medium">{typeof value === 'number' ? value.toLocaleString() : value}</span>
                         </span>
@@ -534,7 +534,7 @@ export default function SchemaRenderer({
                           href={url} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="ml-auto text-gray-400 hover:text-primary-600 transition-colors"
+                          className="ml-auto text-muted-foreground hover:text-primary-600 transition-colors"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -551,28 +551,28 @@ export default function SchemaRenderer({
 
       case 'table':
         return (
-          <div key={display.source} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div key={display.source} className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
             {display.title && (
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">{display.title}</h3>
+              <div className="px-6 py-4 border-b border-border">
+                <h3 className="text-lg font-semibold text-foreground">{display.title}</h3>
               </div>
             )}
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-muted">
                   <tr>
                     {display.fields?.map((field) => (
-                      <th key={field.key} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th key={field.key} className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         {field.label}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-card divide-y divide-border">
                   {Array.isArray(sourceData) && sourceData.map((item: any, index: number) => (
-                    <tr key={index} className="hover:bg-gray-50">
+                    <tr key={index} className="hover:bg-muted">
                       {display.fields?.map((field) => (
-                        <td key={field.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td key={field.key} className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                           {renderDataFieldValue(field, item)}
                         </td>
                       ))}
@@ -600,7 +600,7 @@ export default function SchemaRenderer({
           href={item[field.linkKey]} 
           target="_blank" 
           rel="noopener noreferrer"
-          className="text-base font-medium text-gray-900 hover:text-primary-600"
+          className="text-base font-medium text-foreground hover:text-primary-600"
         >
           {value}
         </a>
@@ -608,7 +608,7 @@ export default function SchemaRenderer({
     }
 
     if (field.type === 'badge') {
-      const colorClass = field.colorKey ? getBadgeColor(item[field.colorKey]) : 'bg-gray-100 text-gray-700';
+      const colorClass = field.colorKey ? getBadgeColor(item[field.colorKey]) : 'bg-muted text-foreground';
       return (
         <span key={field.key} className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colorClass}`}>
           {value}
@@ -618,7 +618,7 @@ export default function SchemaRenderer({
 
     if (field.type === 'date' && value) {
       return (
-        <span key={field.key} className="text-sm text-gray-500">
+        <span key={field.key} className="text-sm text-muted-foreground">
           {formatDate(value)}
         </span>
       );
@@ -626,14 +626,14 @@ export default function SchemaRenderer({
 
     if (field.type === 'number') {
       return (
-        <span key={field.key} className="text-sm text-gray-600">
+        <span key={field.key} className="text-sm text-muted-foreground">
           {typeof value === 'number' ? value.toLocaleString() : value}
         </span>
       );
     }
 
     return (
-      <span key={field.key} className="text-sm text-gray-600">
+      <span key={field.key} className="text-sm text-muted-foreground">
         {value}
       </span>
     );
@@ -652,7 +652,7 @@ export default function SchemaRenderer({
     }
 
     if (field.type === 'badge') {
-      const colorClass = field.colorKey ? getBadgeColor(item[field.colorKey]) : 'bg-gray-100 text-gray-700';
+      const colorClass = field.colorKey ? getBadgeColor(item[field.colorKey]) : 'bg-muted text-foreground';
       return (
         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colorClass}`}>
           {value}
@@ -692,11 +692,11 @@ export default function SchemaRenderer({
       'Svelte': 'bg-orange-100 text-orange-600',
       // Status
       'active': 'bg-green-100 text-green-700',
-      'inactive': 'bg-gray-100 text-gray-700',
+      'inactive': 'bg-muted text-foreground',
       'pending': 'bg-yellow-100 text-yellow-700',
       'error': 'bg-red-100 text-red-700',
     };
-    return colors[value] || 'bg-gray-100 text-gray-600';
+    return colors[value] || 'bg-muted text-muted-foreground';
   };
 
   // Group fields by sections if defined
@@ -711,12 +711,12 @@ export default function SchemaRenderer({
         if (sectionFields.length === 0) return null;
 
         return (
-          <div key={section.key} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">{section.title}</h3>
+          <div key={section.key} className="bg-card rounded-xl shadow-sm border border-border p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-1">{section.title}</h3>
             {section.description && (
-              <p className="text-sm text-gray-500 mb-4">{section.description}</p>
+              <p className="text-sm text-muted-foreground mb-4">{section.description}</p>
             )}
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-border">
               {sectionFields.map(renderField)}
             </div>
           </div>
@@ -726,9 +726,9 @@ export default function SchemaRenderer({
 
     // No sections defined, render all fields in one card
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Configuration</h3>
-        <div className="divide-y divide-gray-100">
+      <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+        <h3 className="text-lg font-semibold text-foreground mb-4">Configuration</h3>
+        <div className="divide-y divide-border">
           {schema.fields.map(renderField)}
         </div>
       </div>
@@ -739,8 +739,8 @@ export default function SchemaRenderer({
     <div className="space-y-6">
       {/* Actions bar */}
       {schema.actions && schema.actions.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">Actions</h3>
           <div className="flex flex-wrap gap-3">
             {schema.actions.map(renderAction)}
           </div>

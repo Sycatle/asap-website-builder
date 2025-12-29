@@ -56,7 +56,7 @@ export function PreviewCanvas({
       <ScrollArea className="flex-1 p-3 sm:p-4 md:p-6">
         <div 
           className={cn(
-            "mx-auto bg-white dark:bg-slate-950 shadow-2xl rounded-lg overflow-hidden transition-all duration-300 min-h-[50vh]",
+            "mx-auto bg-card dark:bg-slate-950 shadow-2xl rounded-lg overflow-hidden transition-all duration-300 min-h-[50vh]",
             DEVICE_SIZES[devicePreview],
             isMobile && "rounded-none shadow-none"
           )}

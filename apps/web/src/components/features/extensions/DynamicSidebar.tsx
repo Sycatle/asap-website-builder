@@ -69,7 +69,7 @@ export default function DynamicSidebar() {
 
   return (
     <div className="mt-4">
-      <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+      <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
         Extensions
       </div>
       <nav className="space-y-1">
@@ -77,9 +77,9 @@ export default function DynamicSidebar() {
           <a
             key={extension.id}
             href={`/app/extensions/${extension.extension_slug}`}
-            className="flex items-center gap-3 px-4 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+            className="flex items-center gap-3 px-4 py-2 text-foreground rounded-lg hover:bg-muted transition-colors"
           >
-            <span className="text-gray-600">
+            <span className="text-muted-foreground">
               {getExtensionIcon(extension.extension_slug)}
             </span>
             <span>{extension.extension_name}</span>
