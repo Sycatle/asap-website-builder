@@ -50,6 +50,7 @@ export interface LayoutDefinition {
  * FROZEN: Do not modify until business validation.
  */
 export const ELEMENT_TYPES: ElementTypeDefinition[] = [
+  // Portfolio element types
   { value: 'hero', label: 'Hero', description: 'Présentation et appel à l\'action principal' },
   { value: 'services', label: 'Services', description: 'Ce que je fais (3-4 services max)' },
   { value: 'projects', label: 'Projets', description: 'Portfolio de réalisations' },
@@ -58,6 +59,14 @@ export const ELEMENT_TYPES: ElementTypeDefinition[] = [
   { value: 'proof', label: 'Preuves', description: 'Témoignages et métriques' },
   { value: 'about', label: 'À propos', description: 'Bio et parcours' },
   { value: 'contact', label: 'Contact', description: 'Formulaire de contact' },
+  // Landing SaaS element types
+  { value: 'navigation', label: 'Navigation', description: 'Barre de navigation avec menu et boutons' },
+  { value: 'features', label: 'Fonctionnalités', description: 'Grille de fonctionnalités du produit' },
+  { value: 'how-it-works', label: 'Comment ça marche', description: 'Étapes d\'utilisation du produit' },
+  { value: 'pricing', label: 'Tarifs', description: 'Plans et tarification' },
+  { value: 'testimonials', label: 'Témoignages', description: 'Témoignages et avis clients' },
+  { value: 'cta', label: 'Appel à l\'action', description: 'Section d\'incitation à l\'action' },
+  { value: 'footer', label: 'Pied de page', description: 'Liens et informations légales' },
 ];
 
 /**
@@ -80,6 +89,7 @@ export const LEGACY_ELEMENT_TYPES: ElementTypeDefinition[] = [
  * FROZEN: Do not customize until business validation.
  */
 export const ELEMENT_LAYOUTS: Record<ElementType, LayoutDefinition[]> = {
+  // Portfolio layouts
   hero: [{ value: 'full', label: 'Plein écran' }],
   services: [{ value: 'grid', label: 'Grille' }],
   projects: [{ value: 'grid', label: 'Grille' }],
@@ -88,6 +98,14 @@ export const ELEMENT_LAYOUTS: Record<ElementType, LayoutDefinition[]> = {
   proof: [{ value: 'cards', label: 'Cartes' }],
   about: [{ value: 'split', label: 'Divisé' }],
   contact: [{ value: 'full', label: 'Plein écran' }],
+  // Landing SaaS layouts
+  navigation: [{ value: 'sticky', label: 'Fixe' }, { value: 'static', label: 'Statique' }],
+  features: [{ value: 'grid', label: 'Grille' }, { value: 'list', label: 'Liste' }],
+  'how-it-works': [{ value: 'timeline', label: 'Timeline' }, { value: 'steps', label: 'Étapes' }],
+  pricing: [{ value: 'cards', label: 'Cartes' }, { value: 'table', label: 'Tableau' }],
+  testimonials: [{ value: 'cards', label: 'Cartes' }, { value: 'carousel', label: 'Carrousel' }],
+  cta: [{ value: 'full', label: 'Plein écran' }, { value: 'split', label: 'Divisé' }],
+  footer: [{ value: 'full', label: 'Complet' }, { value: 'minimal', label: 'Minimal' }],
 };
 
 /**
