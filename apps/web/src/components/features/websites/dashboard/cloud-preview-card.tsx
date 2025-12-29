@@ -1,14 +1,10 @@
 "use client"
 
+import { useState } from "react";
 import { 
   HardDrive, 
   ChevronRight,
   Upload,
-  Image,
-  Film,
-  Music,
-  FileText,
-  File,
   AlertTriangle,
   Eye,
 } from "lucide-react";
@@ -21,10 +17,14 @@ import { Progress } from "@/components/ui/progress";
 import { useFilesQuery } from "@/lib/query";
 import { formatBytes } from "@/lib/utils/formatters";
 import { getAuthenticatedFileUrl } from "./utils";
+import { isImage, getFileIcon } from "@/components/shared/file-utils";
+import { FilePreviewDialog } from "@/components/shared/file-preview-dialog";
 import type { CloudPreviewCardProps } from "./types";
+import type { FileMetadata } from "@/lib/types";
 
 /**
  * Cloud preview card showing recent files and storage usage
+ * Features file preview on click instead of navigation
  */
 export function CloudPreviewCard({ 
   websiteId, 
@@ -33,18 +33,7 @@ export function CloudPreviewCard({
   storagePercentage 
 }: CloudPreviewCardProps) {
   const { data: files = [], isLoading } = useFilesQuery();
-
-  const isImage = (mimeType: string) => mimeType.startsWith('image/');
-  const isVideo = (mimeType: string) => mimeType.startsWith('video/');
-  const isAudio = (mimeType: string) => mimeType.startsWith('audio/');
-
-  const getFileIcon = (mimeType: string, className = "h-5 w-5") => {
-    if (isImage(mimeType)) return <Image className={`${className} text-violet-500`} />;
-    if (isVideo(mimeType)) return <Film className={`${className} text-blue-500`} />;
-    if (isAudio(mimeType)) return <Music className={`${className} text-green-500`} />;
-    if (mimeType === 'application/pdf') return <FileText className={`${className} text-red-500`} />;
-    return <File className={`${className} text-gray-500`} />;
-  };
+  const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
 
   // Get recent files (last 8)
   const recentFiles = files.slice(0, 8);
@@ -125,10 +114,10 @@ export function CloudPreviewCard({
           <>
             <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
               {recentFiles.map((file) => (
-                <Link
+                <button
                   key={file.id}
-                  href={`/app/${websiteId}/cloud`}
-                  className="group relative aspect-square rounded-lg border bg-muted overflow-hidden hover:ring-2 hover:ring-primary/50 transition-all"
+                  onClick={() => setPreviewFile(file)}
+                  className="group relative aspect-square rounded-lg border bg-muted overflow-hidden hover:ring-2 hover:ring-primary/50 transition-all cursor-pointer"
                 >
                   {isImage(file.mime_type) ? (
                     <img
@@ -146,7 +135,7 @@ export function CloudPreviewCard({
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <Eye className="h-4 w-4 text-white" />
                   </div>
-                </Link>
+                </button>
               ))}
             </div>
             {files.length > 8 && (
@@ -157,6 +146,14 @@ export function CloudPreviewCard({
           </>
         )}
       </CardContent>
+
+      {/* File Preview Dialog */}
+      <FilePreviewDialog
+        file={previewFile}
+        isOpen={!!previewFile}
+        onClose={() => setPreviewFile(null)}
+        customGetFileUrl={getAuthenticatedFileUrl}
+      />
     </Card>
   );
 }

@@ -11,3 +11,16 @@ export { LogoutConfirmDialog } from './logout-confirm-dialog';
 // Command Palette (component-first)
 export { CommandPalette, useCommandPalette, type CommandPaletteProps } from './command-palette';
 
+// File utilities and components
+export {
+  isImage,
+  isVideo,
+  isAudio,
+  isPdf,
+  canPreview,
+  getFileIcon,
+  getFileTypeLabel,
+  getFileUrl,
+  copyFileUrl,
+} from './file-utils';
+export { FilePreviewDialog, type FilePreviewDialogProps } from './file-preview-dialog';
