@@ -3,9 +3,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { SectionRenderer } from "../../section-renderers";
+import { PreviewProvider } from "../../PreviewContext";
 import {
   Eye,
   Layers,
@@ -13,13 +13,16 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings2,
+  Smartphone,
+  Tablet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PreviewCanvasProps } from "../types";
-import { DEVICE_SIZES } from "../types";
+import { DEVICE_CONFIGS } from "../types";
 
 /**
  * PreviewCanvas - Central preview area showing the website
+ * Supports realistic device frame simulation for tablet and mobile views
  */
 export function PreviewCanvas({
   elements,
@@ -34,10 +37,14 @@ export function PreviewCanvas({
   onAddClick,
 }: PreviewCanvasProps) {
   const { t } = useTranslation(['common', 'editor']);
+  const deviceConfig = DEVICE_CONFIGS[devicePreview];
+  
   // Get visible elements sorted by order
   const visibleElements = elements
     .filter(e => e && e.id && e.visible)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  const isDeviceFrame = devicePreview !== 'desktop';
 
   return (
     <main 
@@ -54,34 +61,105 @@ export function PreviewCanvas({
         setRightPanelOpen={setRightPanelOpen}
       />
       
-      {/* Preview canvas - this is the only scrollable area */}
-      <div className="flex-1 overflow-hidden p-3 sm:p-4 md:p-6">
+      {/* Preview canvas container */}
+      <div className={cn(
+        "flex-1 overflow-hidden flex items-center justify-center relative",
+        isDeviceFrame ? "p-4 sm:p-6 md:p-8 bg-gradient-to-br from-muted/50 via-muted/30 to-muted/50" : "p-0"
+      )}>
+        {/* Device frame wrapper */}
         <div 
           className={cn(
-            "mx-auto bg-card dark:bg-slate-950 shadow-2xl transition-all duration-300 h-full flex flex-col",
-            DEVICE_SIZES[devicePreview],
-            isMobile && "rounded-none shadow-none"
+            "relative transition-all duration-500 ease-out flex flex-col",
+            deviceConfig.width,
+            deviceConfig.maxWidth,
+            deviceConfig.height,
+            // Frame styling for tablet/mobile
+            isDeviceFrame && [
+              deviceConfig.borderRadius,
+              "border-[8px] sm:border-[12px] border-gray-800 dark:border-gray-700",
+              "shadow-2xl shadow-black/20 dark:shadow-black/40",
+              "ring-1 ring-gray-700 dark:ring-gray-600",
+            ],
+            // Desktop: full width, no frame
+            !isDeviceFrame && "rounded-none border-0 h-full",
+            // Responsive scaling for very small containers
+            devicePreview === 'tablet' && "max-w-full",
           )}
+          style={{
+            // Ensure smooth width transition
+            willChange: 'width, height, border-radius',
+          }}
         >
-          {visibleElements.length === 0 ? (
-            <EmptyPreviewState 
-              isMobile={isMobile} 
-              onAddClick={onAddClick}
-              setLeftPanelOpen={setLeftPanelOpen}
-            />
-          ) : (
-            <div className="flex-1 overflow-auto relative scroll-smooth" id="preview-scroll-container">
-              {visibleElements.map((element) => (
-                <SectionRenderer
-                  key={element.id}
-                  element={element}
-                  isSelected={selectedElementId === element.id}
-                  onClick={() => onElementClick(element)}
+          {/* Device notch for mobile */}
+          {devicePreview === 'mobile' && (
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20">
+              <div className="w-24 h-6 bg-gray-800 dark:bg-gray-700 rounded-b-2xl flex items-center justify-center">
+                <div className="w-12 h-1 bg-gray-900 dark:bg-gray-600 rounded-full" />
+              </div>
+            </div>
+          )}
+          
+          {/* Device camera for tablet */}
+          {devicePreview === 'tablet' && (
+            <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-20">
+              <div className="w-2 h-2 bg-gray-900 dark:bg-gray-600 rounded-full ring-1 ring-gray-700" />
+            </div>
+          )}
+
+          {/* Main preview content */}
+          <div className={cn(
+            "flex-1 bg-card dark:bg-slate-950 flex flex-col min-h-0",
+            // Inner border radius for device frames
+            devicePreview === 'mobile' && "rounded-[1.75rem]",
+            devicePreview === 'tablet' && "rounded-xl",
+          )}>
+            {/* Preview Provider gives components access to device context */}
+            <PreviewProvider device={devicePreview}>
+              {visibleElements.length === 0 ? (
+                <EmptyPreviewState 
+                  isMobile={isMobile} 
+                  onAddClick={onAddClick}
+                  setLeftPanelOpen={setLeftPanelOpen}
                 />
-              ))}
+              ) : (
+                <div 
+                  className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth min-h-0" 
+                  id="preview-scroll-container"
+                >
+                  {visibleElements.map((element) => (
+                    <SectionRenderer
+                      key={element.id}
+                      element={element}
+                      isSelected={selectedElementId === element.id}
+                      onClick={() => onElementClick(element)}
+                    />
+                  ))}
+                </div>
+              )}
+            </PreviewProvider>
+          </div>
+
+          {/* Device home indicator for mobile */}
+          {devicePreview === 'mobile' && (
+            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-20">
+              <div className="w-24 h-1 bg-gray-600 dark:bg-gray-500 rounded-full" />
             </div>
           )}
         </div>
+
+        {/* Device label */}
+        {isDeviceFrame && (
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 text-xs text-muted-foreground/60">
+            {devicePreview === 'mobile' ? (
+              <Smartphone className="h-3 w-3" />
+            ) : (
+              <Tablet className="h-3 w-3" />
+            )}
+            <span>
+              {devicePreview === 'mobile' ? '375×812' : '768×1024'}
+            </span>
+          </div>
+        )}
       </div>
     </main>
   );
