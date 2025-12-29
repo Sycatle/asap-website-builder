@@ -2,26 +2,35 @@
  * V1 MVP: Preset Onboarding Router
  * 
  * Routes to the appropriate onboarding flow based on the selected preset.
- * For V1, only Dev Freelance Classic is available.
+ * - Portfolio/freelance presets → FreelanceDevOnboarding
+ * - Marketing/business/generic presets → GenericSiteOnboarding
  */
 
 import * as React from 'react';
 import { FreelanceDevOnboarding } from './FreelanceDevOnboarding';
-import { PRESET_IDS, type PresetId } from './index';
+import { GenericSiteOnboarding } from './GenericSiteOnboarding';
+import { PRESET_IDS } from './index';
 
 interface PresetOnboardingRouterProps {
-  presetId?: PresetId;
+  presetId?: string;
   onComplete: (websiteId: string) => void;
 }
 
 export function PresetOnboardingRouter({ presetId, onComplete }: PresetOnboardingRouterProps) {
-  // For V1, default to Dev Freelance Classic
-  const effectivePresetId = presetId || PRESET_IDS.DEV_FREELANCE_CLASSIC;
+  // Default to generic if no preset
+  if (!presetId) {
+    return <GenericSiteOnboarding presetId={PRESET_IDS.DEV_FREELANCE_CLASSIC} onComplete={onComplete} />;
+  }
 
   // Route to appropriate onboarding based on preset
-  switch (effectivePresetId) {
+  switch (presetId) {
+    // Portfolio/Freelance presets use dedicated onboarding
     case PRESET_IDS.DEV_FREELANCE_CLASSIC:
-    default:
       return <FreelanceDevOnboarding onComplete={onComplete} />;
+    
+    // All other presets use generic site onboarding
+    case PRESET_IDS.LANDING_SAAS:
+    default:
+      return <GenericSiteOnboarding presetId={presetId} onComplete={onComplete} />;
   }
 }

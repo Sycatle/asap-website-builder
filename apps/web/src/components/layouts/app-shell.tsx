@@ -266,7 +266,7 @@ function AppShellContent({
           isLoadingWebsites={isLoadingWebsites}
         />
       )}
-      <SidebarInset>
+      <SidebarInset className={isStudioPage ? "overflow-hidden" : undefined}>
         <SkipLink targetId="main-content" />
         <header className="sticky top-0 z-40 flex h-14 sm:h-16 shrink-0 items-center gap-2 sm:gap-3 border-b bg-background px-3 sm:px-4" role="banner">
           {/* Left section: Sidebar trigger */}
@@ -333,8 +333,8 @@ function AppShellContent({
           role="main"
           tabIndex={-1}
           className={cn(
-            "flex-1 overflow-auto focus:outline-none",
-            isStudioPage ? "p-0" : "p-3 sm:p-4 md:p-6"
+            "flex-1 focus:outline-none",
+            isStudioPage ? "p-0 overflow-hidden" : "p-3 sm:p-4 md:p-6 overflow-auto"
           )}
         >
           {children}
