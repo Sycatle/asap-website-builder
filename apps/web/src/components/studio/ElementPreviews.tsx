@@ -2,7 +2,7 @@
  * V1 MVP: Premium Element Previews
  * 
  * Visual previews of portfolio sections for the Studio editor.
- * Uses shadcn/ui components for a premium look.
+ * Pure WYSIWYG rendering - shows exactly what the final site looks like.
  */
 
 "use client"
@@ -10,7 +10,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { WebsiteElement } from "@/lib/api";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -30,10 +29,19 @@ import {
   ArrowRight,
   Quote,
   TrendingUp,
-  Eye,
-  EyeOff,
-  GripVertical,
 } from 'lucide-react';
+
+// Import Landing SaaS previews
+import {
+  LandingNavigationPreview,
+  LandingHeroPreview,
+  LandingFeaturesPreview,
+  LandingHowItWorksPreview,
+  LandingPricingPreview,
+  LandingTestimonialsPreview,
+  LandingCTAPreview,
+  LandingFooterPreview,
+} from './LandingSaaSPreviews';
 
 // ============================================
 // Types
@@ -439,10 +447,32 @@ function GenericPreview({ element }: ElementPreviewProps) {
 
 export function ElementPreview({ element, isSelected, onClick, isDragging }: ElementPreviewProps) {
   const { t } = useTranslation(['common', 'editor']);
+  
+  // Helper to detect if this is a Landing SaaS element based on settings
+  const isLandingSaaSElement = (el: WebsiteElement): boolean => {
+    const settings = el.settings as Record<string, unknown> | undefined;
+    // Landing SaaS elements have specific settings like headline_line1, badge_text, etc.
+    return !!(settings && (
+      settings.headline_line1 || 
+      settings.badge_text || 
+      settings.nav_links ||
+      settings.plans ||
+      settings.cta_primary_text
+    ));
+  };
+
   const renderPreview = () => {
+    const settings = element.settings as Record<string, unknown> | undefined;
+    
     switch (element.element_type) {
+      // Hero: detect context (Portfolio vs Landing SaaS)
       case 'hero':
+        if (isLandingSaaSElement(element)) {
+          return <LandingHeroPreview element={element} isSelected={isSelected} />;
+        }
         return <HeroPreview element={element} isSelected={isSelected} />;
+      
+      // Portfolio element types
       case 'services':
         return <ServicesPreview element={element} isSelected={isSelected} />;
       case 'projects':
@@ -457,48 +487,44 @@ export function ElementPreview({ element, isSelected, onClick, isDragging }: Ele
         return <AboutPreview element={element} isSelected={isSelected} />;
       case 'contact':
         return <ContactPreview element={element} isSelected={isSelected} />;
+      
+      // Landing SaaS element types (use new previews)
+      case 'navigation':
+        return <LandingNavigationPreview element={element} isSelected={isSelected} />;
+      case 'features':
+        return <LandingFeaturesPreview element={element} isSelected={isSelected} />;
+      case 'how-it-works':
+        return <LandingHowItWorksPreview element={element} isSelected={isSelected} />;
+      case 'pricing':
+        return <LandingPricingPreview element={element} isSelected={isSelected} />;
+      case 'testimonials':
+        return <LandingTestimonialsPreview element={element} isSelected={isSelected} />;
+      case 'cta':
+        return <LandingCTAPreview element={element} isSelected={isSelected} />;
+      case 'footer':
+        return <LandingFooterPreview element={element} isSelected={isSelected} />;
+      
       default:
         return <GenericPreview element={element} isSelected={isSelected} />;
     }
   };
 
+  // Pure WYSIWYG preview - no wrapper, just the visual render
   return (
-    <Card 
-      className={`transition-all duration-200 cursor-pointer group ${
-        isSelected 
-          ? 'ring-2 ring-primary shadow-lg' 
-          : 'hover:shadow-md hover:border-muted-foreground/30'
-      } ${isDragging ? 'opacity-50 scale-[0.98]' : ''} ${!element.visible ? 'opacity-60' : ''}`}
+    <div 
+      className={`transition-all duration-200 cursor-pointer ${
+        isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+      } ${isDragging ? 'opacity-50 scale-[0.98]' : ''} ${!element.visible ? 'opacity-40' : ''}`}
       onClick={onClick}
     >
-      <CardContent className="p-4">
-        {/* Header with drag handle and visibility */}
-        <div className="flex items-center justify-between mb-3 pb-3 border-b">
-          <div className="flex items-center gap-2">
-            <GripVertical className="h-4 w-4 text-muted-foreground/50 cursor-grab active:cursor-grabbing" />
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              {element.element_type}
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            {!element.visible && (
-              <Badge variant="outline" className="text-xs gap-1 text-muted-foreground">
-                <EyeOff className="h-3 w-3" />
-                {t('editor:previews.hidden')}
-              </Badge>
-            )}
-          </div>
-        </div>
-        
-        {/* Preview content */}
-        {renderPreview()}
-      </CardContent>
-    </Card>
+      {renderPreview()}
+    </div>
   );
 }
 
 // Export individual previews for direct use
 export {
+  // Portfolio previews
   HeroPreview,
   ServicesPreview,
   ProjectsPreview,
@@ -509,3 +535,15 @@ export {
   ContactPreview,
   GenericPreview,
 };
+
+// Re-export Landing SaaS previews
+export {
+  LandingNavigationPreview,
+  LandingHeroPreview,
+  LandingFeaturesPreview,
+  LandingHowItWorksPreview,
+  LandingPricingPreview,
+  LandingTestimonialsPreview,
+  LandingCTAPreview,
+  LandingFooterPreview,
+} from './LandingSaaSPreviews';

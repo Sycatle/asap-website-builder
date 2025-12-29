@@ -783,9 +783,70 @@ export function GenericPropertyEditor({ element, onUpdate, isUpdating }: Propert
 }
 
 // ============================================
+// Landing SaaS Property Editor (Schema-based)
+// ============================================
+import { LandingSaaSPropertyEditor } from "./LandingSaaSPropertyEditors"
+import { getSectionSchema } from "@asap/shared"
+
+// Landing SaaS element types that use the schema-based editor
+const LANDING_SAAS_TYPES = [
+  'navigation',
+  'features', 
+  'how-it-works',
+  'pricing',
+  'testimonials',
+  'cta',
+  'footer',
+]
+
+/**
+ * Detect if a Hero element is from Landing SaaS context
+ * Landing SaaS heroes have specific settings like headline_line1, badge_text, etc.
+ */
+function isLandingSaaSHero(element: WebsiteElement): boolean {
+  const settings = element.settings as Record<string, unknown> | undefined
+  if (!settings) return false
+  
+  // Landing SaaS Hero has these specific keys
+  return !!(
+    settings.headline_line1 !== undefined ||
+    settings.badge_text !== undefined ||
+    settings.cta_primary_text !== undefined ||
+    settings.show_dashboard_preview !== undefined
+  )
+}
+
+// ============================================
 // Property Editor Router
 // ============================================
 export function PropertyEditor({ element, onUpdate, isUpdating }: PropertyEditorProps) {
+  // Check if this is a Landing SaaS element type
+  if (LANDING_SAAS_TYPES.includes(element.element_type)) {
+    return (
+      <LandingSaaSPropertyEditor
+        element={element}
+        onUpdate={onUpdate}
+        isUpdating={isUpdating}
+      />
+    )
+  }
+  
+  // Special case for Hero: detect context (Portfolio vs Landing SaaS)
+  if (element.element_type === 'hero' && isLandingSaaSHero(element)) {
+    // Check if schema exists for this type
+    const schema = getSectionSchema('hero')
+    if (schema) {
+      return (
+        <LandingSaaSPropertyEditor
+          element={element}
+          onUpdate={onUpdate}
+          isUpdating={isUpdating}
+        />
+      )
+    }
+  }
+  
+  // Portfolio/Freelance element editors
   const editors: Record<string, React.ComponentType<PropertyEditorProps>> = {
     hero: HeroPropertyEditor,
     about: AboutPropertyEditor,
