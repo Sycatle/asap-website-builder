@@ -3,7 +3,7 @@
 import { Bell } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
+import { Field, FieldDescription, FieldLabel, FieldGroup } from "@/components/ui/field"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
@@ -74,21 +74,21 @@ function PushNotificationsCard({
             Les notifications sont bloquées. Veuillez les autoriser dans les paramètres de votre navigateur.
           </p>
         ) : (
-          <div className="flex items-center justify-between">
+          <Field orientation="horizontal">
             <div className="space-y-0.5">
-              <Label>Activer les notifications push</Label>
-              <p className="text-sm text-muted-foreground">
+              <FieldLabel>Activer les notifications push</FieldLabel>
+              <FieldDescription>
                 {pushSubscribed 
                   ? 'Vous recevrez des notifications sur cet appareil'
                   : 'Activez pour recevoir des notifications'}
-              </p>
+              </FieldDescription>
             </div>
             <Switch
               checked={pushSubscribed}
               onCheckedChange={onToggle}
               disabled={pushLoading}
             />
-          </div>
+          </Field>
         )}
       </CardContent>
     </Card>
@@ -126,37 +126,37 @@ interface QuietHoursProps {
 
 function QuietHours({ startTime, endTime, onStartChange, onEndChange, onClear }: QuietHoursProps) {
   return (
-    <div className="space-y-4">
-      <Label className="text-base">Heures calmes</Label>
-      <p className="text-sm text-muted-foreground">
+    <FieldGroup className="gap-4">
+      <FieldLabel className="text-base">Heures calmes</FieldLabel>
+      <FieldDescription>
         Désactivez les notifications pendant certaines heures
-      </p>
+      </FieldDescription>
       <div className="flex items-center gap-4">
-        <div className="space-y-1">
-          <Label className="text-xs">Début</Label>
+        <Field>
+          <FieldLabel className="text-xs">Début</FieldLabel>
           <input
             type="time"
             value={startTime || ''}
             onChange={(e) => onStartChange(e.target.value || null)}
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
           />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Fin</Label>
+        </Field>
+        <Field>
+          <FieldLabel className="text-xs">Fin</FieldLabel>
           <input
             type="time"
             value={endTime || ''}
             onChange={(e) => onEndChange(e.target.value || null)}
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
           />
-        </div>
+        </Field>
         {(startTime || endTime) && (
           <Button variant="ghost" size="sm" onClick={onClear}>
             Effacer
           </Button>
         )}
       </div>
-    </div>
+    </FieldGroup>
   )
 }
 
@@ -222,8 +222,8 @@ export function NotificationSettingsTab({
             <SettingsLoadingSkeleton />
           ) : settings ? (
             <>
-              <div className="space-y-4">
-                <Label className="text-base">Catégories activées</Label>
+              <FieldGroup className="gap-4">
+                <FieldLabel className="text-base">Catégories activées</FieldLabel>
                 {(Object.keys(categoryLabels) as NotificationCategory[]).map((category) => (
                   <CategoryToggle
                     key={category}
@@ -232,7 +232,7 @@ export function NotificationSettingsTab({
                     onToggle={(checked) => handleCategoryToggle(category, checked)}
                   />
                 ))}
-              </div>
+              </FieldGroup>
 
               <Separator />
 

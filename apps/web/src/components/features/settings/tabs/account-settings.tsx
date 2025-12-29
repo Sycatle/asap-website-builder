@@ -22,7 +22,12 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { filesAPI, accountsAPI, type FileMetadata } from "@/lib/api"
@@ -236,9 +241,9 @@ export function AccountSettings({
       </div>
 
       {/* Form fields */}
-      <div className="grid gap-3 sm:gap-4">
-        <div className="grid gap-1.5 sm:gap-2">
-          <Label htmlFor="name" className="text-sm">Nom d'affichage</Label>
+      <FieldGroup className="gap-3 sm:gap-4">
+        <Field>
+          <FieldLabel htmlFor="name" className="text-sm">Nom d'affichage</FieldLabel>
           <Input
             id="name"
             value={formData.name}
@@ -246,9 +251,9 @@ export function AccountSettings({
             placeholder="Votre nom"
             className="h-9 sm:h-10 text-sm"
           />
-        </div>
-        <div className="grid gap-1.5 sm:gap-2">
-          <Label htmlFor="email" className="text-sm">Email</Label>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="email" className="text-sm">Email</FieldLabel>
           <Input
             id="email"
             type="email"
@@ -256,11 +261,11 @@ export function AccountSettings({
             disabled
             className="bg-muted h-9 sm:h-10 text-sm"
           />
-          <p className="text-[10px] sm:text-xs text-muted-foreground">
+          <FieldDescription className="text-[10px] sm:text-xs">
             Contactez le support pour modifier votre email.
-          </p>
-        </div>
-      </div>
+          </FieldDescription>
+        </Field>
+      </FieldGroup>
 
       {/* Danger Zone */}
       <div className="pt-4 sm:pt-6">

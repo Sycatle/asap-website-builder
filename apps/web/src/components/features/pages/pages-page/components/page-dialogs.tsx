@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -49,9 +49,9 @@ export function CreatePageDialog({
             Créez une nouvelle page pour votre site web
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="title">Titre</Label>
+        <FieldGroup className="gap-4 py-4">
+          <Field>
+            <FieldLabel htmlFor="title">Titre</FieldLabel>
             <Input
               id="title"
               value={formData.title}
@@ -61,9 +61,9 @@ export function CreatePageDialog({
               })}
               placeholder="Contact"
             />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="slug">URL (slug)</Label>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="slug">URL (slug)</FieldLabel>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">/</span>
               <Input
@@ -75,12 +75,12 @@ export function CreatePageDialog({
                 placeholder="contact"
               />
             </div>
-            <p className="text-xs text-muted-foreground">
+            <FieldDescription>
               Laissez vide pour la page d'accueil
-            </p>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="description">Description</Label>
+            </FieldDescription>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="description">Description</FieldLabel>
             <Textarea
               id="description"
               value={formData.description}
@@ -88,14 +88,14 @@ export function CreatePageDialog({
               placeholder="Description de la page (optionnel)"
               rows={2}
             />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Page d'accueil</Label>
-              <p className="text-xs text-muted-foreground">
+          </Field>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>Page d'accueil</FieldLabel>
+              <FieldDescription>
                 Définir comme page principale
-              </p>
-            </div>
+              </FieldDescription>
+            </FieldContent>
             <Switch
               checked={formData.is_homepage}
               onCheckedChange={(checked) => handleFormChange({ 
@@ -103,8 +103,8 @@ export function CreatePageDialog({
                 slug: checked ? '' : formData.slug
               })}
             />
-          </div>
-        </div>
+          </Field>
+        </FieldGroup>
         <ResponsiveDialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annuler
@@ -141,17 +141,17 @@ export function EditPageDialog({
             Modifiez les informations de la page
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="edit-title">Titre</Label>
+        <FieldGroup className="gap-4 py-4">
+          <Field>
+            <FieldLabel htmlFor="edit-title">Titre</FieldLabel>
             <Input
               id="edit-title"
               value={formData.title}
               onChange={(e) => handleFormChange({ title: e.target.value })}
             />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="edit-slug">URL (slug)</Label>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="edit-slug">URL (slug)</FieldLabel>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">/</span>
               <Input
@@ -164,27 +164,27 @@ export function EditPageDialog({
               />
             </div>
             {formData.is_homepage && (
-              <p className="text-xs text-muted-foreground">
+              <FieldDescription>
                 Le slug ne peut pas être modifié pour la page d'accueil
-              </p>
+              </FieldDescription>
             )}
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="edit-description">Description</Label>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="edit-description">Description</FieldLabel>
             <Textarea
               id="edit-description"
               value={formData.description}
               onChange={(e) => handleFormChange({ description: e.target.value })}
               rows={2}
             />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Page d'accueil</Label>
-              <p className="text-xs text-muted-foreground">
+          </Field>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>Page d'accueil</FieldLabel>
+              <FieldDescription>
                 Définir comme page principale
-              </p>
-            </div>
+              </FieldDescription>
+            </FieldContent>
             <Switch
               checked={formData.is_homepage}
               onCheckedChange={(checked) => handleFormChange({ 
@@ -192,20 +192,20 @@ export function EditPageDialog({
                 slug: checked ? '' : formData.slug
               })}
             />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Visible</Label>
-              <p className="text-xs text-muted-foreground">
+          </Field>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>Visible</FieldLabel>
+              <FieldDescription>
                 Afficher la page sur le site
-              </p>
-            </div>
+              </FieldDescription>
+            </FieldContent>
             <Switch
               checked={formData.visible}
               onCheckedChange={(checked) => handleFormChange({ visible: checked })}
             />
-          </div>
-        </div>
+          </Field>
+        </FieldGroup>
         <ResponsiveDialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annuler

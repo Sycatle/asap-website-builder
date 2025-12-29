@@ -3,7 +3,7 @@ import { GalleryVerticalEnd } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Field, FieldLabel } from "@/components/ui/field"
 
 export function LoginForm({
   className,
@@ -32,15 +32,15 @@ export function LoginForm({
             </div>
           </div>
           <div className="flex flex-col gap-6">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+            <Field>
+              <FieldLabel htmlFor="email">Email</FieldLabel>
               <Input
                 id="email"
                 type="email"
                 placeholder="m@example.com"
                 required
               />
-            </div>
+            </Field>
             <Button type="submit" className="w-full">
               Login
             </Button>

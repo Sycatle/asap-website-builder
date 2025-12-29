@@ -15,7 +15,12 @@ import {
 } from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -286,42 +291,44 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
               </div>
             )}
             
-            <div className="space-y-2">
-              <Label htmlFor="title">Nom de votre site</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => handleTitleChange(e.target.value)}
-                placeholder="Mon super site"
-                autoFocus
-              />
-              <p className="text-xs text-muted-foreground">
-                Le nom qui apparaîtra sur votre site
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="slug">URL du site</Label>
-              <div className="flex items-center">
-                <span className="flex h-10 items-center rounded-l-md border border-r-0 bg-muted px-3 text-sm text-muted-foreground">
-                  asap.cool/
-                </span>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="title">Nom de votre site</FieldLabel>
                 <Input
-                  id="slug"
-                  value={slug}
-                  onChange={(e) => {
-                    const value = e.target.value.toLowerCase();
-                    // Filter to only allow valid slug characters
-                    setSlug(value.replace(/[^a-z0-9-]/g, ''));
-                  }}
-                  className="rounded-l-none"
-                  placeholder="mon-site"
+                  id="title"
+                  value={title}
+                  onChange={(e) => handleTitleChange(e.target.value)}
+                  placeholder="Mon super site"
+                  autoFocus
                 />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                L'URL ne pourra pas être modifiée après la création
-              </p>
-            </div>
+                <FieldDescription>
+                  Le nom qui apparaîtra sur votre site
+                </FieldDescription>
+              </Field>
+              
+              <Field>
+                <FieldLabel htmlFor="slug">URL du site</FieldLabel>
+                <div className="flex items-center">
+                  <span className="flex h-10 items-center rounded-l-md border border-r-0 bg-muted px-3 text-sm text-muted-foreground">
+                    asap.cool/
+                  </span>
+                  <Input
+                    id="slug"
+                    value={slug}
+                    onChange={(e) => {
+                      const value = e.target.value.toLowerCase();
+                      // Filter to only allow valid slug characters
+                      setSlug(value.replace(/[^a-z0-9-]/g, ''));
+                    }}
+                    className="rounded-l-none"
+                    placeholder="mon-site"
+                  />
+                </div>
+                <FieldDescription>
+                  L'URL ne pourra pas être modifiée après la création
+                </FieldDescription>
+              </Field>
+            </FieldGroup>
           </form>
         )}
 

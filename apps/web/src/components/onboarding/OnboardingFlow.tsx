@@ -15,7 +15,11 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -242,18 +246,18 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Votre nom</Label>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="name">Votre nom</FieldLabel>
                 <Input
                   id="name"
                   placeholder="Jean Dupont"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="slug">Adresse de votre portfolio</Label>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="slug">Adresse de votre portfolio</FieldLabel>
                 <div className="flex items-center gap-2">
                   <Input
                     id="slug"
@@ -264,8 +268,8 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   />
                   <span className="text-sm text-muted-foreground whitespace-nowrap">.asap.cool</span>
                 </div>
-              </div>
-            </div>
+              </Field>
+            </FieldGroup>
 
             <Button 
               className="w-full" 
@@ -306,44 +310,46 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="profile-name">Nom complet</Label>
-              <Input
-                id="profile-name"
-                placeholder="Jean Dupont"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="profile-title">Titre professionnel</Label>
-              <Input
-                id="profile-title"
-                placeholder="Développeur Full-Stack Freelance"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="profile-bio">Biographie</Label>
-              <Textarea
-                id="profile-bio"
-                placeholder="Décrivez votre parcours, vos compétences et ce qui vous passionne..."
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                rows={4}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="profile-email">Email de contact</Label>
-              <Input
-                id="profile-email"
-                type="email"
-                placeholder="jean@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="profile-name">Nom complet</FieldLabel>
+                <Input
+                  id="profile-name"
+                  placeholder="Jean Dupont"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="profile-title">Titre professionnel</FieldLabel>
+                <Input
+                  id="profile-title"
+                  placeholder="Développeur Full-Stack Freelance"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="profile-bio">Biographie</FieldLabel>
+                <Textarea
+                  id="profile-bio"
+                  placeholder="Décrivez votre parcours, vos compétences et ce qui vous passionne..."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  rows={4}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="profile-email">Email de contact</FieldLabel>
+                <Input
+                  id="profile-email"
+                  type="email"
+                  placeholder="jean@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </Field>
+            </FieldGroup>
 
             <div className="flex gap-2 pt-4">
               <Button 
@@ -385,31 +391,33 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 >
                   <X className="h-4 w-4" />
                 </Button>
-                <div className="space-y-2">
-                  <Label>Nom du projet</Label>
-                  <Input
-                    placeholder="Mon super projet"
-                    value={project.title || ''}
-                    onChange={(e) => handleUpdateProject(index, 'title', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Textarea
-                    placeholder="Décrivez ce projet..."
-                    value={project.description || ''}
-                    onChange={(e) => handleUpdateProject(index, 'description', e.target.value)}
-                    rows={2}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Technologies (séparées par des virgules)</Label>
-                  <Input
-                    placeholder="React, TypeScript, Node.js"
-                    value={project.technologies?.join(', ') || ''}
-                    onChange={(e) => handleUpdateProject(index, 'technologies', e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
-                  />
-                </div>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel>Nom du projet</FieldLabel>
+                    <Input
+                      placeholder="Mon super projet"
+                      value={project.title || ''}
+                      onChange={(e) => handleUpdateProject(index, 'title', e.target.value)}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel>Description</FieldLabel>
+                    <Textarea
+                      placeholder="Décrivez ce projet..."
+                      value={project.description || ''}
+                      onChange={(e) => handleUpdateProject(index, 'description', e.target.value)}
+                      rows={2}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel>Technologies (séparées par des virgules)</FieldLabel>
+                    <Input
+                      placeholder="React, TypeScript, Node.js"
+                      value={project.technologies?.join(', ') || ''}
+                      onChange={(e) => handleUpdateProject(index, 'technologies', e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
+                    />
+                  </Field>
+                </FieldGroup>
               </Card>
             ))}
 

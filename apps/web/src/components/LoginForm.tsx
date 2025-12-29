@@ -3,8 +3,15 @@ import { useAuthStore } from '../lib/store/authStore';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { Clock } from "lucide-react";
@@ -130,9 +137,9 @@ export default function LoginForm({
             </p>
           </div>
 
-          <div className="flex flex-col gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+          <FieldGroup className="gap-4">
+            <Field data-invalid={!!errors.email}>
+              <FieldLabel htmlFor="email">Email</FieldLabel>
               <Input
                 id="email"
                 type="email"
@@ -141,14 +148,11 @@ export default function LoginForm({
                 placeholder="vous@exemple.com"
                 required
                 aria-invalid={!!errors.email}
-                aria-describedby={errors.email ? "email-error" : undefined}
               />
-              {errors.email && (
-                <p id="email-error" className="text-sm text-destructive">{errors.email}</p>
-              )}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Mot de passe</Label>
+              {errors.email && <FieldError>{errors.email}</FieldError>}
+            </Field>
+            <Field data-invalid={!!errors.password}>
+              <FieldLabel htmlFor="password">Mot de passe</FieldLabel>
               <Input
                 id="password"
                 type="password"
@@ -158,26 +162,23 @@ export default function LoginForm({
                 required
                 disabled={isRateLimited}
                 aria-invalid={!!errors.password}
-                aria-describedby={errors.password ? "password-error" : undefined}
               />
-              {errors.password && (
-                <p id="password-error" className="text-sm text-destructive">{errors.password}</p>
-              )}
+              {errors.password && <FieldError>{errors.password}</FieldError>}
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
+                <Field orientation="horizontal">
                   <Checkbox
                     id="remember-me"
                     checked={rememberMe}
                     onCheckedChange={(checked) => setRememberMe(checked === true)}
                     disabled={isRateLimited}
                   />
-                  <Label
+                  <FieldLabel
                     htmlFor="remember-me"
-                    className="text-sm font-normal text-muted-foreground cursor-pointer"
+                    className="font-normal text-muted-foreground cursor-pointer"
                   >
                     Se souvenir de moi
-                  </Label>
-                </div>
+                  </FieldLabel>
+                </Field>
                 <a 
                   href="/forgot-password" 
                   className="text-sm text-muted-foreground hover:text-primary underline underline-offset-4"
@@ -185,7 +186,7 @@ export default function LoginForm({
                   Mot de passe oublié ?
                 </a>
               </div>
-            </div>
+            </Field>
             {isRateLimited && (
               <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
                 <Clock className="h-4 w-4 shrink-0" />
@@ -207,7 +208,7 @@ export default function LoginForm({
                 'Se connecter'
               )}
             </Button>
-          </div>
+          </FieldGroup>
         </div>
       </form>
       <div className="text-center text-sm text-muted-foreground">

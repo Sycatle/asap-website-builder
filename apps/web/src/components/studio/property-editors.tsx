@@ -6,7 +6,7 @@ import { getElementLabel } from "@/lib/constants/elements"
 import { ELEMENT_LAYOUTS } from "@asap/shared"
 import type { ElementType } from "@asap/shared"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Field, FieldLabel } from "@/components/ui/field"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -113,23 +113,23 @@ function BasePropertyEditor({ element, onUpdate, isUpdating, children }: Propert
         </div>
         
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground flex items-center gap-1">
+          <Field>
+            <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
               <Type className="h-3 w-3" /> Titre de l'élément
-            </Label>
+            </FieldLabel>
             <Input 
               value={title}
               onChange={(e) => handleTitleChange(e.target.value)}
               placeholder="Titre de l'élément"
               className="h-9"
             />
-          </div>
+          </Field>
           
           {layouts.length > 1 && (
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
+            <Field>
+              <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
                 <Palette className="h-3 w-3" /> Mise en page
-              </Label>
+              </FieldLabel>
               <Select value={layout} onValueChange={handleLayoutChange}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
@@ -142,13 +142,13 @@ function BasePropertyEditor({ element, onUpdate, isUpdating, children }: Propert
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+          </Field>
           )}
           
-          <div className="flex items-center justify-between py-2">
-            <Label className="text-sm">Visible</Label>
+          <Field orientation="horizontal" className="py-2">
+            <FieldLabel className="text-sm">Visible</FieldLabel>
             <Switch checked={visible} onCheckedChange={handleVisibleChange} />
-          </div>
+          </Field>
         </div>
       </div>
       
@@ -199,7 +199,7 @@ export function HeroPropertyEditor({ element, onUpdate, isUpdating }: PropertyEd
         
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Nom / Titre principal</Label>
+            <FieldLabel className="text-xs text-muted-foreground">Nom / Titre principal</FieldLabel>
             <Input 
               value={getString(data, 'name')}
               onChange={(e) => updateField('name', e.target.value)}
@@ -209,7 +209,7 @@ export function HeroPropertyEditor({ element, onUpdate, isUpdating }: PropertyEd
           </div>
           
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Titre / Rôle</Label>
+            <FieldLabel className="text-xs text-muted-foreground">Titre / Rôle</FieldLabel>
             <Input 
               value={getString(data, 'title')}
               onChange={(e) => updateField('title', e.target.value)}
@@ -219,7 +219,7 @@ export function HeroPropertyEditor({ element, onUpdate, isUpdating }: PropertyEd
           </div>
           
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Sous-titre</Label>
+            <FieldLabel className="text-xs text-muted-foreground">Sous-titre</FieldLabel>
             <Textarea 
               value={getString(data, 'subtitle')}
               onChange={(e) => updateField('subtitle', e.target.value)}
@@ -232,9 +232,9 @@ export function HeroPropertyEditor({ element, onUpdate, isUpdating }: PropertyEd
           <Separator />
           
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground flex items-center gap-1">
+            <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
               <Link2 className="h-3 w-3" /> Bouton d'action
-            </Label>
+            </FieldLabel>
             <div className="grid grid-cols-2 gap-2">
               <Input 
                 value={getString(data, 'cta_text')}
@@ -252,9 +252,9 @@ export function HeroPropertyEditor({ element, onUpdate, isUpdating }: PropertyEd
           </div>
           
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground flex items-center gap-1">
+            <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
               <Image className="h-3 w-3" /> Image de fond (URL)
-            </Label>
+            </FieldLabel>
             <Input 
               value={getString(data, 'background_image')}
               onChange={(e) => updateField('background_image', e.target.value)}
@@ -323,9 +323,9 @@ export function AboutPropertyEditor({ element, onUpdate, isUpdating }: PropertyE
         
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground flex items-center gap-1">
+            <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
               <AlignLeft className="h-3 w-3" /> Description
-            </Label>
+            </FieldLabel>
             <Textarea 
               value={getString(data, 'description')}
               onChange={(e) => updateField('description', e.target.value)}
@@ -336,9 +336,9 @@ export function AboutPropertyEditor({ element, onUpdate, isUpdating }: PropertyE
           </div>
           
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground flex items-center gap-1">
+            <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
               <Image className="h-3 w-3" /> Photo (URL)
-            </Label>
+            </FieldLabel>
             <Input 
               value={getString(data, 'image')}
               onChange={(e) => updateField('image', e.target.value)}
@@ -351,7 +351,7 @@ export function AboutPropertyEditor({ element, onUpdate, isUpdating }: PropertyE
           
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-xs text-muted-foreground">Points forts</Label>
+              <FieldLabel className="text-xs text-muted-foreground">Points forts</FieldLabel>
               <Button size="sm" variant="ghost" onClick={addHighlight} className="h-7 px-2">
                 <Plus className="h-3 w-3 mr-1" /> Ajouter
               </Button>
@@ -679,7 +679,7 @@ export function ContactPropertyEditor({ element, onUpdate, isUpdating }: Propert
         
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Email</Label>
+            <FieldLabel className="text-xs text-muted-foreground">Email</FieldLabel>
             <Input 
               type="email"
               value={getString(data, 'email')}
@@ -690,7 +690,7 @@ export function ContactPropertyEditor({ element, onUpdate, isUpdating }: Propert
           </div>
           
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Téléphone</Label>
+            <FieldLabel className="text-xs text-muted-foreground">Téléphone</FieldLabel>
             <Input 
               value={getString(data, 'phone')}
               onChange={(e) => updateField('phone', e.target.value)}
@@ -700,7 +700,7 @@ export function ContactPropertyEditor({ element, onUpdate, isUpdating }: Propert
           </div>
           
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Localisation</Label>
+            <FieldLabel className="text-xs text-muted-foreground">Localisation</FieldLabel>
             <Input 
               value={getString(data, 'location')}
               onChange={(e) => updateField('location', e.target.value)}
@@ -713,7 +713,7 @@ export function ContactPropertyEditor({ element, onUpdate, isUpdating }: Propert
           
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-xs text-muted-foreground">Réseaux sociaux</Label>
+              <FieldLabel className="text-xs text-muted-foreground">Réseaux sociaux</FieldLabel>
               <Button size="sm" variant="ghost" onClick={addSocial} className="h-7 px-2">
                 <Plus className="h-3 w-3 mr-1" /> Ajouter
               </Button>

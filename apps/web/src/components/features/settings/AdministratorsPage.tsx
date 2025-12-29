@@ -18,7 +18,10 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+  Field,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -357,8 +360,8 @@ export default function AdministratorsPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="email">Adresse email</Label>
+            <Field className="flex-1">
+              <FieldLabel htmlFor="email">Adresse email</FieldLabel>
               <Input
                 id="email"
                 type="email"
@@ -367,9 +370,9 @@ export default function AdministratorsPage() {
                 onChange={(e) => setInviteEmail(e.target.value)}
                 required
               />
-            </div>
-            <div className="sm:w-48 space-y-2">
-              <Label htmlFor="role">Rôle</Label>
+            </Field>
+            <Field className="sm:w-48">
+              <FieldLabel htmlFor="role">Rôle</FieldLabel>
               <Select value={inviteRole} onValueChange={setInviteRole}>
                 <SelectTrigger id="role">
                   <SelectValue />
@@ -395,7 +398,7 @@ export default function AdministratorsPage() {
                   </SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
             <div className="flex items-end">
               <Button type="submit" disabled={isInviting || !inviteEmail}>
                 {isInviting ? (

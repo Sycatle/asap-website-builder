@@ -9,7 +9,13 @@ import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
@@ -265,67 +271,69 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="slug" className="flex items-center gap-2">
-                <Link2 className="h-4 w-4 text-muted-foreground" />
-                URL du site
-              </Label>
-              <div className="flex items-center">
-                <span className="flex h-10 items-center rounded-l-md border border-r-0 bg-muted px-3 text-sm text-muted-foreground">
-                  asap.cool/
-                </span>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="slug" className="flex items-center gap-2">
+                  <Link2 className="h-4 w-4 text-muted-foreground" />
+                  URL du site
+                </FieldLabel>
+                <div className="flex items-center">
+                  <span className="flex h-10 items-center rounded-l-md border border-r-0 bg-muted px-3 text-sm text-muted-foreground">
+                    asap.cool/
+                  </span>
+                  <Input
+                    id="slug"
+                    value={website?.slug || ''}
+                    disabled
+                    className="rounded-l-none bg-muted"
+                  />
+                </div>
+                <FieldDescription>L'URL ne peut pas être modifiée après création</FieldDescription>
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="title" className="flex items-center gap-2">
+                  <Type className="h-4 w-4 text-muted-foreground" />
+                  Titre du site
+                </FieldLabel>
                 <Input
-                  id="slug"
-                  value={website?.slug || ''}
-                  disabled
-                  className="rounded-l-none bg-muted"
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Mon super site"
                 />
-              </div>
-              <p className="text-xs text-muted-foreground">L'URL ne peut pas être modifiée après création</p>
-            </div>
+              </Field>
 
-            <div className="space-y-2">
-              <Label htmlFor="title" className="flex items-center gap-2">
-                <Type className="h-4 w-4 text-muted-foreground" />
-                Titre du site
-              </Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Mon super site"
-              />
-            </div>
+              <Field>
+                <FieldLabel htmlFor="tagline" className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  Tagline
+                </FieldLabel>
+                <Input
+                  id="tagline"
+                  value={tagline}
+                  onChange={(e) => setTagline(e.target.value)}
+                  placeholder="Une courte description accrocheuse"
+                />
+              </Field>
 
-            <div className="space-y-2">
-              <Label htmlFor="tagline" className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                Tagline
-              </Label>
-              <Input
-                id="tagline"
-                value={tagline}
-                onChange={(e) => setTagline(e.target.value)}
-                placeholder="Une courte description accrocheuse"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description" className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                Description
-              </Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Description détaillée de votre site pour le SEO..."
-                rows={3}
-              />
-              <p className="text-xs text-muted-foreground">
-                Utilisée pour les moteurs de recherche (meta description)
-              </p>
-            </div>
+              <Field>
+                <FieldLabel htmlFor="description" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  Description
+                </FieldLabel>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Description détaillée de votre site pour le SEO..."
+                  rows={3}
+                />
+                <FieldDescription>
+                  Utilisée pour les moteurs de recherche (meta description)
+                </FieldDescription>
+              </Field>
+            </FieldGroup>
           </CardContent>
         </Card>
 
@@ -341,50 +349,52 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="favicon" className="flex items-center gap-2">
-                <Image className="h-4 w-4 text-muted-foreground" />
-                Favicon (URL)
-              </Label>
-              <Input
-                id="favicon"
-                value={favicon}
-                onChange={(e) => setFavicon(e.target.value)}
-                placeholder="https://example.com/favicon.ico"
-              />
-              <p className="text-xs text-muted-foreground">
-                L'icône affichée dans l'onglet du navigateur
-              </p>
-            </div>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="favicon" className="flex items-center gap-2">
+                  <Image className="h-4 w-4 text-muted-foreground" />
+                  Favicon (URL)
+                </FieldLabel>
+                <Input
+                  id="favicon"
+                  value={favicon}
+                  onChange={(e) => setFavicon(e.target.value)}
+                  placeholder="https://example.com/favicon.ico"
+                />
+                <FieldDescription>
+                  L'icône affichée dans l'onglet du navigateur
+                </FieldDescription>
+              </Field>
 
-            <div className="space-y-2">
-              <Label htmlFor="ogImage" className="flex items-center gap-2">
-                <Share2 className="h-4 w-4 text-muted-foreground" />
-                Image de partage (OG Image)
-              </Label>
-              <Input
-                id="ogImage"
-                value={ogImage}
-                onChange={(e) => setOgImage(e.target.value)}
-                placeholder="https://example.com/og-image.jpg"
-              />
-              <p className="text-xs text-muted-foreground">
-                Image affichée lors du partage sur les réseaux sociaux (1200x630px recommandé)
-              </p>
-            </div>
+              <Field>
+                <FieldLabel htmlFor="ogImage" className="flex items-center gap-2">
+                  <Share2 className="h-4 w-4 text-muted-foreground" />
+                  Image de partage (OG Image)
+                </FieldLabel>
+                <Input
+                  id="ogImage"
+                  value={ogImage}
+                  onChange={(e) => setOgImage(e.target.value)}
+                  placeholder="https://example.com/og-image.jpg"
+                />
+                <FieldDescription>
+                  Image affichée lors du partage sur les réseaux sociaux (1200x630px recommandé)
+                </FieldDescription>
+              </Field>
+            </FieldGroup>
 
             <Separator />
 
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="flex items-center gap-2">
+            <Field orientation="horizontal">
+              <FieldContent>
+                <FieldLabel className="flex items-center gap-2">
                   <Search className="h-4 w-4 text-muted-foreground" />
                   Indexation par les moteurs de recherche
-                </Label>
-                <p className="text-sm text-muted-foreground">
+                </FieldLabel>
+                <FieldDescription>
                   Autoriser Google et autres à indexer votre site
-                </p>
-              </div>
+                </FieldDescription>
+              </FieldContent>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -400,7 +410,7 @@ export default function SettingsPage() {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-            </div>
+            </Field>
             {!isIndexable && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 text-amber-600 text-sm">
                 <AlertTriangle className="h-4 w-4 flex-shrink-0" />

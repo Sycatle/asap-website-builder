@@ -20,7 +20,12 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -470,59 +475,61 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6 pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Votre nom complet *</Label>
-                    <Input
-                      id="name"
-                      placeholder="Jean Dupont"
-                      value={name}
-                      onChange={(e) => handleNameChange(e.target.value)}
-                      className="h-12 text-lg"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="slug">Adresse de votre portfolio *</Label>
-                    <div className="flex items-center gap-0">
-                      <div className="h-12 px-4 bg-muted rounded-l-lg border border-r-0 flex items-center text-muted-foreground">
-                        https://
-                      </div>
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="name">Votre nom complet *</FieldLabel>
                       <Input
-                        id="slug"
-                        placeholder="jean-dupont"
-                        value={slug}
-                        onChange={(e) => setSlug(slugify(e.target.value))}
-                        className="h-12 rounded-none border-x-0 font-mono"
+                        id="name"
+                        placeholder="Jean Dupont"
+                        value={name}
+                        onChange={(e) => handleNameChange(e.target.value)}
+                        className="h-12 text-lg"
                       />
-                      <div className="h-12 px-4 bg-muted rounded-r-lg border border-l-0 flex items-center text-muted-foreground">
-                        .asap.cool
+                    </Field>
+                    
+                    <Field>
+                      <FieldLabel htmlFor="slug">Adresse de votre portfolio *</FieldLabel>
+                      <div className="flex items-center gap-0">
+                        <div className="h-12 px-4 bg-muted rounded-l-lg border border-r-0 flex items-center text-muted-foreground">
+                          https://
+                        </div>
+                        <Input
+                          id="slug"
+                          placeholder="jean-dupont"
+                          value={slug}
+                          onChange={(e) => setSlug(slugify(e.target.value))}
+                          className="h-12 rounded-none border-x-0 font-mono"
+                        />
+                        <div className="h-12 px-4 bg-muted rounded-r-lg border border-l-0 flex items-center text-muted-foreground">
+                          .asap.cool
+                        </div>
                       </div>
-                    </div>
-                    {slug && (
-                      <p className="text-xs text-muted-foreground">
-                        Votre portfolio sera accessible à <span className="font-mono text-primary">https://{slug}.asap.cool</span>
-                      </p>
-                    )}
-                  </div>
+                      {slug && (
+                        <FieldDescription>
+                          Votre portfolio sera accessible à <span className="font-mono text-primary">https://{slug}.asap.cool</span>
+                        </FieldDescription>
+                      )}
+                    </Field>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="avatar">Photo de profil (URL)</Label>
-                    <Input
-                      id="avatar"
-                      type="url"
-                      placeholder="https://example.com/photo.jpg"
-                      value={avatar}
-                      onChange={(e) => setAvatar(e.target.value)}
-                    />
-                    {avatar && (
-                      <div className="flex justify-center pt-2">
-                        <Avatar className="h-20 w-20">
-                          <AvatarImage src={avatar} />
-                          <AvatarFallback>{name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                      </div>
-                    )}
-                  </div>
+                    <Field>
+                      <FieldLabel htmlFor="avatar">Photo de profil (URL)</FieldLabel>
+                      <Input
+                        id="avatar"
+                        type="url"
+                        placeholder="https://example.com/photo.jpg"
+                        value={avatar}
+                        onChange={(e) => setAvatar(e.target.value)}
+                      />
+                      {avatar && (
+                        <div className="flex justify-center pt-2">
+                          <Avatar className="h-20 w-20">
+                            <AvatarImage src={avatar} />
+                            <AvatarFallback>{name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                        </div>
+                      )}
+                    </Field>
+                  </FieldGroup>
                 </CardContent>
               </Card>
             )}
@@ -540,82 +547,84 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6 pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Titre professionnel *</Label>
-                    <Input
-                      id="title"
-                      placeholder="Développeur Full-Stack Freelance"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="h-12"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="tagline">Phrase d'accroche</Label>
-                    <Textarea
-                      id="tagline"
-                      placeholder="Je transforme vos idées en applications web performantes et modernes."
-                      value={tagline}
-                      onChange={(e) => setTagline(e.target.value)}
-                      rows={2}
-                    />
-                  </div>
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="title">Titre professionnel *</FieldLabel>
+                      <Input
+                        id="title"
+                        placeholder="Développeur Full-Stack Freelance"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="h-12"
+                      />
+                    </Field>
+                    
+                    <Field>
+                      <FieldLabel htmlFor="tagline">Phrase d'accroche</FieldLabel>
+                      <Textarea
+                        id="tagline"
+                        placeholder="Je transforme vos idées en applications web performantes et modernes."
+                        value={tagline}
+                        onChange={(e) => setTagline(e.target.value)}
+                        rows={2}
+                      />
+                    </Field>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="location">Localisation</Label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="location"
-                          placeholder="Paris, France"
-                          value={location}
-                          onChange={(e) => setLocation(e.target.value)}
-                          className="pl-10"
-                        />
-                      </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Field>
+                        <FieldLabel htmlFor="location">Localisation</FieldLabel>
+                        <div className="relative">
+                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="location"
+                            placeholder="Paris, France"
+                            value={location}
+                            onChange={(e) => setLocation(e.target.value)}
+                            className="pl-10"
+                          />
+                        </div>
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor="experience">Années d'expérience</FieldLabel>
+                        <div className="relative">
+                          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="experience"
+                            type="number"
+                            placeholder="5"
+                            value={yearsOfExperience}
+                            onChange={(e) => setYearsOfExperience(e.target.value)}
+                            className="pl-10"
+                          />
+                        </div>
+                      </Field>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="experience">Années d'expérience</Label>
-                      <div className="relative">
-                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="experience"
-                          type="number"
-                          placeholder="5"
-                          value={yearsOfExperience}
-                          onChange={(e) => setYearsOfExperience(e.target.value)}
-                          className="pl-10"
-                        />
-                      </div>
-                    </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label>Disponibilité</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { value: 'available', label: 'Disponible', color: 'bg-green-500' },
-                        { value: 'busy', label: 'Occupé', color: 'bg-yellow-500' },
-                        { value: 'not-available', label: 'Indisponible', color: 'bg-red-500' },
-                      ].map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => setAvailability(option.value as typeof availability)}
-                          className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
-                            availability === option.value
-                              ? 'border-primary bg-primary/5'
-                              : 'border-transparent bg-muted hover:border-muted-foreground/20'
-                          }`}
-                        >
-                          <span className={`h-2 w-2 rounded-full ${option.color}`} />
-                          <span className="text-sm">{option.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                    <Field>
+                      <FieldLabel>Disponibilité</FieldLabel>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { value: 'available', label: 'Disponible', color: 'bg-green-500' },
+                          { value: 'busy', label: 'Occupé', color: 'bg-yellow-500' },
+                          { value: 'not-available', label: 'Indisponible', color: 'bg-red-500' },
+                        ].map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setAvailability(option.value as typeof availability)}
+                            className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                              availability === option.value
+                                ? 'border-primary bg-primary/5'
+                                : 'border-transparent bg-muted hover:border-muted-foreground/20'
+                            }`}
+                          >
+                            <span className={`h-2 w-2 rounded-full ${option.color}`} />
+                            <span className="text-sm">{option.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </Field>
+                  </FieldGroup>
                 </CardContent>
               </Card>
             )}
@@ -782,8 +791,8 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                 </CardHeader>
                 <CardContent className="space-y-6 pt-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email *</Label>
+                    <Field>
+                      <FieldLabel htmlFor="email">Email *</FieldLabel>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -795,9 +804,9 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                           className="pl-10"
                         />
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Téléphone</Label>
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="phone">Téléphone</FieldLabel>
                       <Input
                         id="phone"
                         type="tel"
@@ -805,13 +814,13 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                       />
-                    </div>
+                    </Field>
                   </div>
 
                   <Separator />
 
-                  <div className="space-y-4">
-                    <Label>Réseaux sociaux</Label>
+                  <FieldGroup className="gap-4">
+                    <FieldLabel>Réseaux sociaux</FieldLabel>
                     <div className="space-y-3">
                       <div className="relative">
                         <Github className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -841,10 +850,10 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                         />
                       </div>
                     </div>
-                  </div>
+                  </FieldGroup>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="booking">Lien de prise de rendez-vous</Label>
+                  <Field>
+                    <FieldLabel htmlFor="booking">Lien de prise de rendez-vous</FieldLabel>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -855,7 +864,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                         className="pl-10"
                       />
                     </div>
-                  </div>
+                  </Field>
                 </CardContent>
               </Card>
             )}

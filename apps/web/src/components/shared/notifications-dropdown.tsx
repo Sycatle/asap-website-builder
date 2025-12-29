@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
+import { Field, FieldLabel } from "@/components/ui/field"
 import { formatRelativeTimeFr } from "@/lib/utils/formatters"
 import {
   DropdownMenu,
@@ -304,32 +304,28 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
                     Activer les notifications push
                   </DropdownMenuItem>
                 )}
-                <div className="px-2 py-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="sound-toggle" className="text-sm flex items-center gap-2 cursor-pointer">
-                      {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                      Son
-                    </Label>
-                    <Switch
-                      id="sound-toggle"
-                      checked={soundEnabled}
-                      onCheckedChange={toggleSound}
-                    />
-                  </div>
-                </div>
-                <div className="px-2 py-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="vibration-toggle" className="text-sm flex items-center gap-2 cursor-pointer">
-                      <Smartphone className="h-4 w-4" />
-                      Vibration
-                    </Label>
-                    <Switch
-                      id="vibration-toggle"
-                      checked={vibrationEnabled}
-                      onCheckedChange={toggleVibration}
-                    />
-                  </div>
-                </div>
+                <Field orientation="horizontal" className="px-2 py-1.5">
+                  <FieldLabel htmlFor="sound-toggle" className="text-sm flex items-center gap-2 cursor-pointer">
+                    {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                    Son
+                  </FieldLabel>
+                  <Switch
+                    id="sound-toggle"
+                    checked={soundEnabled}
+                    onCheckedChange={toggleSound}
+                  />
+                </Field>
+                <Field orientation="horizontal" className="px-2 py-1.5">
+                  <FieldLabel htmlFor="vibration-toggle" className="text-sm flex items-center gap-2 cursor-pointer">
+                    <Smartphone className="h-4 w-4" />
+                    Vibration
+                  </FieldLabel>
+                  <Switch
+                    id="vibration-toggle"
+                    checked={vibrationEnabled}
+                    onCheckedChange={toggleVibration}
+                  />
+                </Field>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => window.location.href = '/app/notifications'}>
                   <Settings className="mr-2 h-4 w-4" />

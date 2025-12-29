@@ -17,7 +17,7 @@ import { Spinner } from "@/components/ui/spinner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -94,8 +94,8 @@ function PasswordInput({ id, label, value, onChange, disabled, showStrength }: P
   const passwordStrength = showStrength ? getPasswordStrength(value) : null
 
   return (
-    <div className="grid gap-1.5 sm:gap-2">
-      <Label htmlFor={id} className="text-sm">{label}</Label>
+    <Field>
+      <FieldLabel htmlFor={id} className="text-sm">{label}</FieldLabel>
       <div className="relative">
         <Input
           id={id}
@@ -128,17 +128,17 @@ function PasswordInput({ id, label, value, onChange, disabled, showStrength }: P
               />
             ))}
           </div>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">
+          <FieldDescription className="text-[10px] sm:text-xs">
             Force: {passwordStrength.label}
-          </p>
+          </FieldDescription>
         </div>
       )}
       {showStrength && (
-        <p className="text-[10px] sm:text-xs text-muted-foreground">
+        <FieldDescription className="text-[10px] sm:text-xs">
           Min. 8 caractères, majuscule, minuscule et chiffre
-        </p>
+        </FieldDescription>
       )}
-    </div>
+    </Field>
   )
 }
 

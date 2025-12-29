@@ -53,7 +53,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -432,9 +438,9 @@ export function PagesList({
               Créez une nouvelle page pour votre site web
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="title">Titre</Label>
+          <FieldGroup className="py-4">
+            <Field>
+              <FieldLabel htmlFor="title">Titre</FieldLabel>
               <Input
                 id="title"
                 value={formData.title}
@@ -445,9 +451,9 @@ export function PagesList({
                 }))}
                 placeholder="Contact"
               />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="slug">URL (slug)</Label>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="slug">URL (slug)</FieldLabel>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">/</span>
                 <Input
@@ -460,12 +466,12 @@ export function PagesList({
                   placeholder="contact"
                 />
               </div>
-              <p className="text-xs text-muted-foreground">
+              <FieldDescription>
                 Laissez vide pour la page d'accueil
-              </p>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
+              </FieldDescription>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="description">Description</FieldLabel>
               <Textarea
                 id="description"
                 value={formData.description}
@@ -473,14 +479,14 @@ export function PagesList({
                 placeholder="Description de la page (optionnel)"
                 rows={2}
               />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Page d'accueil</Label>
-                <p className="text-xs text-muted-foreground">
+            </Field>
+            <Field orientation="horizontal">
+              <FieldContent>
+                <FieldLabel>Page d'accueil</FieldLabel>
+                <FieldDescription>
                   Définir comme page principale
-                </p>
-              </div>
+                </FieldDescription>
+              </FieldContent>
               <Switch
                 checked={formData.is_homepage}
                 onCheckedChange={(checked) => setFormData(prev => ({ 
@@ -489,8 +495,8 @@ export function PagesList({
                   slug: checked ? '' : prev.slug
                 }))}
               />
-            </div>
-          </div>
+            </Field>
+          </FieldGroup>
           <ResponsiveDialogFooter>
             <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
               Annuler
@@ -511,17 +517,17 @@ export function PagesList({
               Modifiez les informations de la page
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="edit-title">Titre</Label>
+          <FieldGroup className="py-4">
+            <Field>
+              <FieldLabel htmlFor="edit-title">Titre</FieldLabel>
               <Input
                 id="edit-title"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-slug">URL (slug)</Label>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="edit-slug">URL (slug)</FieldLabel>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">/</span>
                 <Input
@@ -534,23 +540,23 @@ export function PagesList({
                   disabled={formData.is_homepage}
                 />
               </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-description">Description</Label>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="edit-description">Description</FieldLabel>
               <Textarea
                 id="edit-description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 rows={2}
               />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Page d'accueil</Label>
-                <p className="text-xs text-muted-foreground">
+            </Field>
+            <Field orientation="horizontal">
+              <FieldContent>
+                <FieldLabel>Page d'accueil</FieldLabel>
+                <FieldDescription>
                   Définir comme page principale
-                </p>
-              </div>
+                </FieldDescription>
+              </FieldContent>
               <Switch
                 checked={formData.is_homepage}
                 onCheckedChange={(checked) => setFormData(prev => ({ 
@@ -559,20 +565,20 @@ export function PagesList({
                   slug: checked ? '' : prev.slug
                 }))}
               />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Visible</Label>
-                <p className="text-xs text-muted-foreground">
+            </Field>
+            <Field orientation="horizontal">
+              <FieldContent>
+                <FieldLabel>Visible</FieldLabel>
+                <FieldDescription>
                   Afficher la page sur le site
-                </p>
-              </div>
+                </FieldDescription>
+              </FieldContent>
               <Switch
                 checked={formData.visible}
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, visible: checked }))}
               />
-            </div>
-          </div>
+            </Field>
+          </FieldGroup>
           <ResponsiveDialogFooter>
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
               Annuler

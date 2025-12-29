@@ -15,7 +15,11 @@ import {
 } from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import {
   Select,
   SelectContent,
@@ -181,34 +185,36 @@ export function AddElementModal({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Titre</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Titre de l'élément"
-                autoFocus
-              />
-            </div>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="title">Titre</FieldLabel>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Titre de l'élément"
+                  autoFocus
+                />
+              </Field>
 
-            {availableLayouts.length > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="layout">Disposition</Label>
-                <Select value={layout} onValueChange={setLayout}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choisir une disposition" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableLayouts.map((l) => (
-                      <SelectItem key={l.value} value={l.value}>
-                        {l.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+              {availableLayouts.length > 0 && (
+                <Field>
+                  <FieldLabel htmlFor="layout">Disposition</FieldLabel>
+                  <Select value={layout} onValueChange={setLayout}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choisir une disposition" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableLayouts.map((l) => (
+                        <SelectItem key={l.value} value={l.value}>
+                          {l.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              )}
+            </FieldGroup>
 
             <ResponsiveDialogFooter className="flex-row justify-between gap-2 sm:justify-between">
               <Button type="button" variant="outline" onClick={handleBack}>
