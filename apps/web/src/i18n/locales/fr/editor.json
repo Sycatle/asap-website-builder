@@ -309,6 +309,39 @@
     },
     "generic": {
       "elementType": "Élément de type \"{{type}}\""
+    },
+    "navigation": {
+      "login": "Connexion"
+    },
+    "landingHero": {
+      "defaultHeadline1": "Créez votre site web",
+      "defaultHeadline2": "en quelques minutes",
+      "cta": "Commencer",
+      "demo": "Démo"
+    },
+    "features": {
+      "badge": "Fonctionnalités",
+      "defaultHeadline": "Tout ce dont vous avez besoin"
+    },
+    "howItWorks": {
+      "badge": "Simple",
+      "title": "Comment ça marche"
+    },
+    "pricing": {
+      "badge": "Tarifs",
+      "title": "Plans et tarification",
+      "popular": "Populaire"
+    },
+    "testimonials": {
+      "badge": "Avis",
+      "title": "Ce que disent nos clients"
+    },
+    "cta": {
+      "defaultHeadline": "Prêt à commencer ?",
+      "defaultButton": "S'inscrire gratuitement"
+    },
+    "footer": {
+      "rights": "Tous droits réservés."
     }
   }
 }

@@ -2,6 +2,38 @@
   "modal": {
     "title": "Create a new site"
   },
+  "newUser": {
+    "steps": {
+      "template": "Template",
+      "customize": "Customize"
+    },
+    "back": "Back to templates",
+    "template": {
+      "title": "Choose your template",
+      "subtitle": "Select a starting template for your site. You can fully customize it afterwards.",
+      "continue": "Continue with this template",
+      "noTemplates": "No templates available at the moment.",
+      "loadError": "Error loading templates",
+      "loading": "Loading templates..."
+    }
+  },
+  "categories": {
+    "professional": "Professional",
+    "freelance": "Freelance",
+    "creative": "Creative",
+    "business": "Business",
+    "marketing": "Marketing",
+    "portfolio": "Portfolio",
+    "blog": "Blog",
+    "ecommerce": "E-commerce",
+    "photography": "Photography",
+    "general": "General"
+  },
+  "difficulty": {
+    "beginner": "Beginner",
+    "intermediate": "Intermediate",
+    "advanced": "Advanced"
+  },
   "header": {
     "title": "Portfolio creation",
     "subtitle": "Dev Freelance — Classic"
@@ -332,6 +364,41 @@
       "description": "Your portfolio is now online!",
       "visitLabel": "Visit your portfolio",
       "dashboardButton": "Go to dashboard"
+    }
+  },
+  "generic": {
+    "steps": {
+      "basics": "Info",
+      "branding": "Style",
+      "publish": "Create"
+    },
+    "basics": {
+      "title": "Your site basics",
+      "description": "Some information to get started",
+      "nameLabel": "Site name",
+      "namePlaceholder": "My Awesome Site",
+      "slugLabel": "Site address",
+      "slugPlaceholder": "my-awesome-site",
+      "slugDescription": "Your site will be accessible at",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "A short description of your site..."
+    },
+    "branding": {
+      "title": "Your site identity",
+      "description": "Customize your site's appearance",
+      "taglineLabel": "Tagline / Slogan",
+      "taglinePlaceholder": "Your catchy tagline",
+      "taglineHint": "Will be displayed on the homepage",
+      "colorLabel": "Primary color"
+    },
+    "publish": {
+      "title": "Ready to create!",
+      "description": "Review the information and create your site",
+      "summaryTitle": "Summary",
+      "button": "Create my site",
+      "creating": "Creating...",
+      "success": "🎉 Site created successfully!",
+      "error": "Error creating site"
     }
   },
   "wizard": {

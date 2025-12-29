@@ -245,7 +245,12 @@
     "alreadyHaveAccount": "Déjà un compte?",
     "noAccount": "Pas de compte?",
     "rateLimited": "Trop de tentatives. Réessayez dans {{time}}.",
-    "waitTime": "Patientez {{time}}"
+    "waitTime": "Patientez {{time}}",
+    "logout": {
+      "title": "Déconnexion",
+      "description": "Êtes-vous sûr de vouloir vous déconnecter ?",
+      "allDevices": "Se déconnecter de tous les appareils"
+    }
   },
   "pwa": {
     "connectionRestored": "Connexion rétablie",

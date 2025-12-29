@@ -309,6 +309,39 @@
     },
     "generic": {
       "elementType": "Element of type \"{{type}}\""
+    },
+    "navigation": {
+      "login": "Login"
+    },
+    "landingHero": {
+      "defaultHeadline1": "Create your website",
+      "defaultHeadline2": "in minutes",
+      "cta": "Get started",
+      "demo": "Demo"
+    },
+    "features": {
+      "badge": "Features",
+      "defaultHeadline": "Everything you need"
+    },
+    "howItWorks": {
+      "badge": "Easy",
+      "title": "How it works"
+    },
+    "pricing": {
+      "badge": "Pricing",
+      "title": "Plans and pricing",
+      "popular": "Popular"
+    },
+    "testimonials": {
+      "badge": "Reviews",
+      "title": "What our customers say"
+    },
+    "cta": {
+      "defaultHeadline": "Ready to get started?",
+      "defaultButton": "Sign up for free"
+    },
+    "footer": {
+      "rights": "All rights reserved."
     }
   }
 }

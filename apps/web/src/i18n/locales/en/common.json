@@ -245,7 +245,12 @@
     "alreadyHaveAccount": "Already have an account?",
     "noAccount": "Don't have an account?",
     "rateLimited": "Too many attempts. Try again in {{time}}.",
-    "waitTime": "Wait {{time}}"
+    "waitTime": "Wait {{time}}",
+    "logout": {
+      "title": "Logout",
+      "description": "Are you sure you want to log out?",
+      "allDevices": "Log out from all devices"
+    }
   },
   "pwa": {
     "connectionRestored": "Connection restored",

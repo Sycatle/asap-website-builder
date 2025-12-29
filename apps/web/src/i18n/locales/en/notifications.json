@@ -1,8 +1,16 @@
 {
   "title": "Notifications",
-  "empty": "No notifications",
+  "enablePush": "Enable push notifications",
+  "empty": {
+    "title": "No notifications",
+    "description": "You're all caught up! Check back later."
+  },
   "markAllRead": "Mark all as read",
-  "settings": "Settings",
+  "settings": {
+    "title": "Settings",
+    "sound": "Sound",
+    "all": "All notifications"
+  },
   "viewAll": "View all notifications",
   "new": "New",
   "unread": "Unread",

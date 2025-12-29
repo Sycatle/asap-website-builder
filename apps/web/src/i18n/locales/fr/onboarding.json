@@ -2,6 +2,38 @@
   "modal": {
     "title": "Créer un nouveau site"
   },
+  "newUser": {
+    "steps": {
+      "template": "Template",
+      "customize": "Personnaliser"
+    },
+    "back": "Retour aux templates",
+    "template": {
+      "title": "Choisissez votre template",
+      "subtitle": "Sélectionnez un modèle de départ pour créer votre site. Vous pourrez le personnaliser entièrement par la suite.",
+      "continue": "Continuer avec ce template",
+      "noTemplates": "Aucun template disponible pour le moment.",
+      "loadError": "Erreur lors du chargement des templates",
+      "loading": "Chargement des templates..."
+    }
+  },
+  "categories": {
+    "professional": "Professionnel",
+    "freelance": "Freelance",
+    "creative": "Créatif",
+    "business": "Business",
+    "marketing": "Marketing",
+    "portfolio": "Portfolio",
+    "blog": "Blog",
+    "ecommerce": "E-commerce",
+    "photography": "Photographie",
+    "general": "Général"
+  },
+  "difficulty": {
+    "beginner": "Débutant",
+    "intermediate": "Intermédiaire",
+    "advanced": "Avancé"
+  },
   "header": {
     "title": "Création de portfolio",
     "subtitle": "Dev Freelance — Classic"
@@ -332,6 +364,41 @@
       "description": "Votre portfolio est maintenant en ligne !",
       "visitLabel": "Visitez votre portfolio",
       "dashboardButton": "Aller au dashboard"
+    }
+  },
+  "generic": {
+    "steps": {
+      "basics": "Infos",
+      "branding": "Style",
+      "publish": "Création"
+    },
+    "basics": {
+      "title": "Les bases de votre site",
+      "description": "Quelques informations pour commencer",
+      "nameLabel": "Nom du site",
+      "namePlaceholder": "Mon Super Site",
+      "slugLabel": "Adresse du site",
+      "slugPlaceholder": "mon-super-site",
+      "slugDescription": "Votre site sera accessible à",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Une courte description de votre site..."
+    },
+    "branding": {
+      "title": "L'identité de votre site",
+      "description": "Personnalisez l'apparence de votre site",
+      "taglineLabel": "Slogan / Accroche",
+      "taglinePlaceholder": "Votre phrase d'accroche",
+      "taglineHint": "Sera affichée sur la page d'accueil",
+      "colorLabel": "Couleur principale"
+    },
+    "publish": {
+      "title": "Prêt à créer !",
+      "description": "Vérifiez les informations et créez votre site",
+      "summaryTitle": "Récapitulatif",
+      "button": "Créer mon site",
+      "creating": "Création en cours...",
+      "success": "🎉 Site créé avec succès !",
+      "error": "Erreur lors de la création du site"
     }
   },
   "wizard": {

@@ -1,8 +1,16 @@
 {
   "title": "Notifications",
-  "empty": "Aucune notification",
+  "enablePush": "Activer les notifications push",
+  "empty": {
+    "title": "Aucune notification",
+    "description": "Vous êtes à jour ! Revenez plus tard."
+  },
   "markAllRead": "Tout marquer comme lu",
-  "settings": "Paramètres",
+  "settings": {
+    "title": "Paramètres",
+    "sound": "Son",
+    "all": "Toutes les notifications"
+  },
   "viewAll": "Voir toutes les notifications",
   "new": "Nouvelle",
   "unread": "Non lues",
