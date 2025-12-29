@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowRight, ArrowLeft, Star, GitFork, Calendar, Search, Loader2 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import { ArrowRight, ArrowLeft, Star, GitFork, Calendar, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import type { GitHubRepo } from '@/lib/api/onboarding';
 import { sortReposByRelevance } from '@/lib/api/onboarding';
@@ -82,7 +83,7 @@ export function ImportProjectsStep({
       <Card>
         <CardContent className="py-16">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Spinner className="h-8 w-8 text-primary" />
             <p className="text-muted-foreground">Chargement de vos repositories...</p>
           </div>
         </CardContent>
@@ -175,7 +176,7 @@ export function ImportProjectsStep({
         >
           {isImporting ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Spinner className="h-4 w-4" />
               Import en cours...
             </>
           ) : (

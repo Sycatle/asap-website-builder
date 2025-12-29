@@ -18,8 +18,8 @@ import {
   LayoutGrid,
   List,
   HardDrive,
-  Loader2,
 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { useFilesQuery, useQuotaQuery, useUploadFileMutation, useDeleteFileMutation, useDeleteFilesMutation } from '@/lib/query';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { useGridNavigation, KeyboardHint } from '@/hooks/useGridNavigation';
@@ -246,7 +246,7 @@ export function CloudManager() {
         actions={[
           {
             label: isUploading ? (uploadProgress.total > 1 ? `${uploadProgress.completed}/${uploadProgress.total}` : 'Upload...') : 'Upload',
-            icon: isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />,
+            icon: isUploading ? <Spinner className="h-4 w-4" /> : <Upload className="h-4 w-4" />,
             onClick: () => fileInputRef.current?.click(),
             disabled: isUploading,
           }
@@ -301,7 +301,7 @@ export function CloudManager() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="h-8">
-                      {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      {isUploading ? <Spinner className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
                       <span className="hidden sm:inline ml-1.5">Upload</span>
                     </Button>
                   </TooltipTrigger>

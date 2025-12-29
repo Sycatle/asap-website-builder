@@ -12,7 +12,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertTriangle, Trash2, LogOut, Info } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { AlertTriangle, Trash2, LogOut, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type ConfirmDialogVariant = 'danger' | 'warning' | 'info' | 'default';
@@ -157,7 +158,7 @@ export function ConfirmDialog({
             disabled={showLoading}
             className={cn(config.buttonClass)}
           >
-            {showLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {showLoading && <Spinner className="h-4 w-4 mr-2" />}
             {displayConfirmText}
           </AlertDialogAction>
         </AlertDialogFooter>

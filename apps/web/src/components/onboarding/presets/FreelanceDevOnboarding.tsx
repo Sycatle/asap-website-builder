@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { Spinner } from '@/components/ui/spinner';
 import { 
   ArrowRight, 
   ArrowLeft,
@@ -39,7 +40,6 @@ import {
   ExternalLink,
   Plus,
   X,
-  Loader2,
   Globe,
   Linkedin,
   Github,
@@ -939,7 +939,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                     >
                       {isLoading ? (
                         <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Spinner className="h-4 w-4 mr-2" />
                           Publication...
                         </>
                       ) : (
@@ -983,7 +983,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Spinner className="h-4 w-4" />
                   {currentStep === 'identity' ? 'Création...' : 'Enregistrement...'}
                 </>
               ) : (

@@ -4,8 +4,9 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { Loader2, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import { signupSchema, getPasswordStrength, type SignupFormData } from "@/lib/validations/auth";
 import { isValidRedirectUrl } from "@/lib/utils/security";
 import { RateLimitError } from "@/lib/api/client";
@@ -194,7 +195,7 @@ export default function SignupForm({
             <Button type="submit" className="w-full" disabled={isLoading || isRateLimited}>
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Spinner className="mr-2 h-4 w-4" />
                   Création...
                 </>
               ) : isRateLimited ? (

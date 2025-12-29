@@ -3,7 +3,9 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Loader2, Save, X } from "lucide-react"
+import { Spinner } from "@/components/ui/spinner"
+import { Kbd } from "@/components/ui/kbd"
+import { Save, X } from "lucide-react"
 
 interface FormActionsProps {
   isDirty: boolean
@@ -58,9 +60,9 @@ export function FormActions({
               >
                 <X className="h-4 w-4 mr-2 sm:mr-0 sm:hidden" />
                 <span>{cancelLabel}</span>
-                <kbd className="hidden sm:inline-flex ml-2 items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-medium text-muted-foreground bg-muted border border-border rounded shadow-sm group-hover:bg-background">
+                <Kbd className="hidden sm:inline-flex ml-2">
                   Esc
-                </kbd>
+                </Kbd>
               </Button>
               <Button
                 type="button"
@@ -69,14 +71,14 @@ export function FormActions({
                 className="flex-1 sm:flex-none group"
               >
                 {isSaving ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Spinner className="h-4 w-4 mr-2" />
                 ) : (
                   <Save className="h-4 w-4 mr-2" />
                 )}
                 {saveLabel}
-                <kbd className="hidden sm:inline-flex ml-2 items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-medium bg-primary-foreground/20 border border-primary-foreground/30 rounded shadow-sm">
+                <Kbd className="hidden sm:inline-flex ml-2 bg-primary-foreground/20">
                   {modKey}+S
-                </kbd>
+                </Kbd>
               </Button>
             </div>
           </div>

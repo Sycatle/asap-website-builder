@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
+import { Spinner } from "@/components/ui/spinner";
 import { 
   Globe, 
   Edit, 
@@ -18,7 +19,6 @@ import {
   CheckCircle2,
   Clock,
   Rocket,
-  Loader2,
   Activity,
   Target,
 } from "lucide-react";
@@ -218,7 +218,7 @@ export default function Dashboard() {
         actions={[
           ...(website?.status === 'draft' ? [{
             label: 'Publier',
-            icon: isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />,
+            icon: isSaving ? <Spinner className="h-4 w-4" /> : <Rocket className="h-4 w-4" />,
             onClick: handlePublish,
             disabled: isSaving,
             className: 'bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20',
@@ -389,7 +389,7 @@ function StickyHeaderContent({
       <div className="flex items-center gap-2">
         {website?.status === 'draft' && (
           <Button onClick={onPublish} disabled={isSaving} size="sm" className="bg-green-600 hover:bg-green-700 h-8">
-            {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}
+            {isSaving ? <Spinner className="h-3.5 w-3.5" /> : <Rocket className="h-3.5 w-3.5" />}
             <span className="hidden sm:inline ml-1.5">Publier</span>
           </Button>
         )}

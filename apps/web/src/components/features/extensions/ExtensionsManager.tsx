@@ -33,12 +33,12 @@ import {
   Puzzle,
   Link as LinkIcon,
   Star,
-  Loader2,
   Settings,
   Power,
   Play,
   Info
 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
 // Icon mapping for categories
 const categoryIcons: Record<string, React.ElementType> = {
@@ -353,7 +353,7 @@ export default function ExtensionsManager() {
                             <TooltipTrigger asChild>
                               <div>
                                 {activatingExtension === websiteExtension.id ? (
-                                  <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
+                                  <Spinner className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                 ) : (
                                   <Power className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                 )}
@@ -440,7 +440,7 @@ export default function ExtensionsManager() {
                         >
                           {activatingExtension === extension.id ? (
                             <>
-                              <Loader2 className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
+                              <Spinner className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                               Activation...
                             </>
                           ) : (

@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Spinner } from '@/components/ui/spinner';
 import { 
   Github, 
   ArrowRight, 
@@ -32,7 +33,6 @@ import {
   ExternalLink,
   Plus,
   X,
-  Loader2,
 } from 'lucide-react';
 
 type OnboardingStep = 'welcome' | 'profile' | 'projects' | 'publish' | 'completed';
@@ -275,7 +275,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Spinner className="h-4 w-4 mr-2" />
                   Création...
                 </>
               ) : (
@@ -352,7 +352,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 disabled={isLoading || !name}
               >
                 {isLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Spinner className="h-4 w-4 mr-2" />
                 ) : null}
                 Continuer
                 <ArrowRight className="h-4 w-4 ml-2" />
@@ -435,7 +435,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Spinner className="h-4 w-4 mr-2" />
                 ) : null}
                 Continuer
                 <ArrowRight className="h-4 w-4 ml-2" />
@@ -476,7 +476,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Spinner className="h-4 w-4 mr-2" />
                     Publication...
                   </>
                 ) : (

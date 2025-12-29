@@ -33,6 +33,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { Spinner } from "@/components/ui/spinner";
 import { 
   Globe, 
   ExternalLink,
@@ -43,7 +44,6 @@ import {
   Rocket,
   CheckCircle2,
   Clock,
-  Loader2,
   Copy,
 } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
@@ -203,7 +203,7 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
                 {!isPublished && (
                   <DropdownMenuItem onClick={handlePublish} disabled={isPublishing}>
                     {isPublishing ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Spinner className="h-4 w-4 mr-2" />
                     ) : (
                       <Rocket className="h-4 w-4 mr-2" />
                     )}
@@ -260,7 +260,7 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
                   disabled={isPublishing}
                 >
                   {isPublishing ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <Spinner className="h-3.5 w-3.5" />
                   ) : (
                     <>
                       <Rocket className="h-3.5 w-3.5 mr-1.5" />
@@ -292,7 +292,7 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
             >
               {isDeleting ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Spinner className="h-4 w-4 mr-2" />
                   Suppression...
                 </>
               ) : (

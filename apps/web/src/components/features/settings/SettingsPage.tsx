@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Spinner } from "@/components/ui/spinner";
 import { 
   Settings, 
   Globe,
@@ -43,7 +44,6 @@ import {
   Search,
   Share2,
   Trash2,
-  Loader2,
   CheckCircle2,
   AlertTriangle,
   Eye,
@@ -243,7 +243,7 @@ export default function SettingsPage() {
                   Annuler
                 </Button>
                 <Button size="sm" onClick={handleSave} disabled={isSaving} className="h-8">
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <CheckCircle2 className="h-4 w-4 mr-1.5" />}
+                  {isSaving ? <Spinner className="h-4 w-4 mr-1.5" /> : <CheckCircle2 className="h-4 w-4 mr-1.5" />}
                   Enregistrer
                 </Button>
               </div>
@@ -471,7 +471,7 @@ export default function SettingsPage() {
                       disabled={isSaving}
                     >
                       {isSaving ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Spinner className="h-4 w-4 mr-2" />
                       ) : (
                         <EyeOff className="h-4 w-4 mr-2" />
                       )}
@@ -493,7 +493,7 @@ export default function SettingsPage() {
                       className="bg-green-600 hover:bg-green-700"
                     >
                       {isSaving ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Spinner className="h-4 w-4 mr-2" />
                       ) : (
                         <Rocket className="h-4 w-4 mr-2" />
                       )}
@@ -536,7 +536,7 @@ export default function SettingsPage() {
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" disabled={isDeleting}>
                         {isDeleting ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Spinner className="h-4 w-4 mr-2" />
                         ) : (
                           <Trash2 className="h-4 w-4 mr-2" />
                         )}

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Spinner } from "@/components/ui/spinner"
 import { 
   Plus, 
   Trash2, 
@@ -29,7 +30,6 @@ import {
   AlignLeft,
   Palette,
   Save,
-  Loader2,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -102,7 +102,7 @@ function BasePropertyEditor({ element, onUpdate, isUpdating, children }: Propert
             disabled={!isDirty || isUpdating}
           >
             {isUpdating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Spinner className="h-4 w-4" />
             ) : (
               <>
                 <Save className="h-4 w-4 mr-1" />
@@ -193,7 +193,7 @@ export function HeroPropertyEditor({ element, onUpdate, isUpdating }: PropertyEd
             onClick={handleSaveData}
             disabled={!isDirty || isUpdating}
           >
-            {isUpdating ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Appliquer'}
+            {isUpdating ? <Spinner className="h-3 w-3" /> : 'Appliquer'}
           </Button>
         </div>
         
@@ -317,7 +317,7 @@ export function AboutPropertyEditor({ element, onUpdate, isUpdating }: PropertyE
             onClick={handleSaveData}
             disabled={!isDirty || isUpdating}
           >
-            {isUpdating ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Appliquer'}
+            {isUpdating ? <Spinner className="h-3 w-3" /> : 'Appliquer'}
           </Button>
         </div>
         
@@ -458,7 +458,7 @@ export function SkillsPropertyEditor({ element, onUpdate, isUpdating }: Property
               onClick={handleSaveData}
               disabled={!isDirty || isUpdating}
             >
-              {isUpdating ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Appliquer'}
+              {isUpdating ? <Spinner className="h-3 w-3" /> : 'Appliquer'}
             </Button>
             <Button size="sm" variant="ghost" onClick={addCategory} className="h-8">
               <Plus className="h-3 w-3 mr-1" /> Catégorie
@@ -580,7 +580,7 @@ export function ServicesPropertyEditor({ element, onUpdate, isUpdating }: Proper
               onClick={handleSaveData}
               disabled={!isDirty || isUpdating}
             >
-              {isUpdating ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Appliquer'}
+              {isUpdating ? <Spinner className="h-3 w-3" /> : 'Appliquer'}
             </Button>
             <Button size="sm" variant="ghost" onClick={addService} className="h-8">
               <Plus className="h-3 w-3 mr-1" /> Service
@@ -673,7 +673,7 @@ export function ContactPropertyEditor({ element, onUpdate, isUpdating }: Propert
             onClick={handleSaveData}
             disabled={!isDirty || isUpdating}
           >
-            {isUpdating ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Appliquer'}
+            {isUpdating ? <Spinner className="h-3 w-3" /> : 'Appliquer'}
           </Button>
         </div>
         

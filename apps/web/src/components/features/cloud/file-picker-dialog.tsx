@@ -1,15 +1,17 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Image as ImageIcon, File as FileIcon, Check, Loader2 } from "lucide-react"
+import { Image as ImageIcon, File as FileIcon, Check } from "lucide-react"
+import { Spinner } from "@/components/ui/spinner"
 
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+} from "@/components/ui/responsive-dialog"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { filesAPI, type FileMetadata } from "@/lib/api"
@@ -90,17 +92,17 @@ export function FilePickerDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100%-2rem)] max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-base sm:text-lg">{title}</DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">{description}</DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent className="w-[calc(100%-2rem)] max-w-2xl">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle className="text-base sm:text-lg">{title}</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className="text-xs sm:text-sm">{description}</ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
         <div className="space-y-3 sm:space-y-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-6 sm:py-8">
-              <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground" />
+              <Spinner className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
             </div>
           ) : files.length === 0 ? (
             <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-muted-foreground">
@@ -152,16 +154,16 @@ export function FilePickerDialog({
             </ScrollArea>
           )}
 
-          <div className="flex flex-col-reverse xs:flex-row justify-end gap-2 pt-3 sm:pt-4 border-t">
+          <ResponsiveDialogFooter className="flex-col-reverse xs:flex-row justify-end gap-2 pt-3 sm:pt-4 border-t">
             <Button variant="outline" onClick={() => onOpenChange(false)} className="h-9 sm:h-10 text-sm">
               Annuler
             </Button>
             <Button onClick={handleSelect} disabled={!selectedFileId} className="h-9 sm:h-10 text-sm">
               Sélectionner
             </Button>
-          </div>
+          </ResponsiveDialogFooter>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }

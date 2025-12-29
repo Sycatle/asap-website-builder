@@ -14,7 +14,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { Spinner } from "@/components/ui/spinner";
 import { toast } from 'sonner';
 import SchemaRenderer from '@/components/SchemaRenderer';
 import { useWebsitesQuery, useExtensionCatalogQuery, useWebsiteExtensionsQuery, useExtensionDataQuery, useUpdateExtensionSettingsMutation, useDeactivateExtensionMutation } from '@/lib/query';
@@ -822,7 +823,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
             >
               {isDeactivating ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Spinner className="h-4 w-4 mr-2" />
                   Désactivation...
                 </>
               ) : (

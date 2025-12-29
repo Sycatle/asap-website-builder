@@ -5,7 +5,6 @@ import { useState, useEffect, useCallback } from "react"
 import {
   Shield,
   Key,
-  Loader2,
   Check,
   Eye,
   EyeOff,
@@ -14,6 +13,7 @@ import {
   Tablet,
   X,
 } from "lucide-react"
+import { Spinner } from "@/components/ui/spinner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -177,7 +177,7 @@ function SessionItem({ session, isRevoking, onRevoke }: SessionItemProps) {
             disabled={isRevoking}
           >
             {isRevoking ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
+              <Spinner className="h-3 w-3" />
             ) : (
               <>
                 <X className="h-3 w-3 mr-1" />
@@ -363,7 +363,7 @@ export function SecuritySettings() {
           />
           
           <Button onClick={handlePasswordChange} disabled={isChangingPassword} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
-            {isChangingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isChangingPassword && <Spinner className="mr-2 h-4 w-4" />}
             Mettre à jour
           </Button>
         </CardContent>

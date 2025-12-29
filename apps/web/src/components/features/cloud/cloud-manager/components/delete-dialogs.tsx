@@ -2,14 +2,15 @@
 
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Trash2, AlertTriangle, Loader2 } from "lucide-react";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
+import { Trash2, AlertTriangle } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import type { DeleteConfirmDialogProps, BulkDeleteDialogProps } from "../types";
 
 /**
@@ -22,20 +23,20 @@ export function DeleteConfirmDialog({
   onCancel,
 }: DeleteConfirmDialogProps) {
   return (
-    <Dialog open={!!deleteConfirm} onOpenChange={onCancel}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-destructive">
+    <ResponsiveDialog open={!!deleteConfirm} onOpenChange={onCancel}>
+      <ResponsiveDialogContent className="sm:max-w-md">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="h-5 w-5" />
             Confirmer la suppression
-          </DialogTitle>
-          <DialogDescription className="pt-2">
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className="pt-2">
             Êtes-vous sûr de vouloir supprimer <span className="font-medium text-foreground">{deleteConfirm?.file.filename}</span> ?
             <br />
             <span className="text-muted-foreground">Cette action est irréversible.</span>
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="gap-2 sm:gap-0">
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
+        <ResponsiveDialogFooter className="gap-2 sm:gap-0">
           <Button
             variant="outline"
             onClick={onCancel}
@@ -50,7 +51,7 @@ export function DeleteConfirmDialog({
           >
             {isDeleting ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Spinner className="h-4 w-4 mr-2" />
                 Suppression...
               </>
             ) : (
@@ -60,9 +61,9 @@ export function DeleteConfirmDialog({
               </>
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }
 
@@ -77,20 +78,20 @@ export function BulkDeleteDialog({
   onCancel,
 }: BulkDeleteDialogProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={onCancel}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-destructive">
+    <ResponsiveDialog open={isOpen} onOpenChange={onCancel}>
+      <ResponsiveDialogContent className="sm:max-w-md">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="h-5 w-5" />
             Confirmer la suppression
-          </DialogTitle>
-          <DialogDescription className="pt-2">
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className="pt-2">
             Êtes-vous sûr de vouloir supprimer <span className="font-medium text-foreground">{selectedCount} fichier{selectedCount > 1 ? 's' : ''}</span> ?
             <br />
             <span className="text-muted-foreground">Cette action est irréversible.</span>
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="gap-2 sm:gap-0">
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
+        <ResponsiveDialogFooter className="gap-2 sm:gap-0">
           <Button
             variant="outline"
             onClick={onCancel}
@@ -105,7 +106,7 @@ export function BulkDeleteDialog({
           >
             {isDeleting ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Spinner className="h-4 w-4 mr-2" />
                 Suppression...
               </>
             ) : (
@@ -115,8 +116,8 @@ export function BulkDeleteDialog({
               </>
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

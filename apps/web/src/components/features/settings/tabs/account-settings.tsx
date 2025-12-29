@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect } from "react"
-import { Loader2 } from "lucide-react"
+import { Spinner } from "@/components/ui/spinner"
 
 import {
   Avatar,
@@ -203,7 +203,7 @@ export function AccountSettings({
                 disabled={isUploadingAvatar}
                 className="text-xs sm:text-sm"
               >
-                {isUploadingAvatar && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+                {isUploadingAvatar && <Spinner className="mr-2 h-3 w-3" />}
                 Uploader
               </Button>
               <Button 

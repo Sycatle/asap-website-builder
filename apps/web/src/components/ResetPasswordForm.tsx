@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { Loader2, CheckCircle, XCircle, Eye, EyeOff, KeyRound } from "lucide-react";
+import { CheckCircle, XCircle, Eye, EyeOff, KeyRound } from "lucide-react";
 import { resetPasswordSchema, getPasswordStrength, type ResetPasswordFormData } from "@/lib/validations/auth";
 import { authAPI } from "@/lib/api/auth";
 import { RateLimitError } from "@/lib/api/client";
@@ -233,7 +234,7 @@ export default function ResetPasswordForm({
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Spinner className="mr-2 h-4 w-4" />
                   Réinitialisation...
                 </>
               ) : (

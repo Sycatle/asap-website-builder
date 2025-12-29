@@ -10,15 +10,15 @@ import {
   Sparkles,
   Bell,
   Palette,
-  Loader2,
 } from "lucide-react"
+import { Spinner } from "@/components/ui/spinner"
 
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -114,9 +114,9 @@ function TabNavigation({ activeTab, onTabChange, variant }: TabNavigationProps) 
 
   return (
     <div className="hidden sm:flex w-56 border-r bg-muted/30 p-4 flex-col shrink-0">
-      <DialogHeader className="pb-4">
-        <DialogTitle className="text-lg">Paramètres</DialogTitle>
-      </DialogHeader>
+      <ResponsiveDialogHeader className="pb-4">
+        <ResponsiveDialogTitle className="text-lg">Paramètres</ResponsiveDialogTitle>
+      </ResponsiveDialogHeader>
       <nav className="flex-1 space-y-1 overflow-y-auto">
         {SETTINGS_TABS.map((tab) => (
           <button
@@ -281,8 +281,8 @@ export function SettingsModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100%-1rem)] sm:max-w-4xl h-[90vh] sm:h-[80vh] max-h-[700px] p-0 gap-0 flex flex-col [&>button]:z-10 overflow-hidden">
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent className="max-w-[calc(100%-1rem)] sm:max-w-4xl h-[90vh] sm:h-[80vh] max-h-[700px] p-0 gap-0 flex flex-col [&>button]:z-10 overflow-hidden">
         <div className="flex flex-col sm:flex-row h-full min-h-0">
           {/* Mobile Tab Bar */}
           <TabNavigation 
@@ -311,15 +311,15 @@ export function SettingsModal({
                   Annuler
                 </Button>
                 <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
-                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isSaving && <Spinner className="mr-2 h-4 w-4" />}
                   Enregistrer
                 </Button>
               </div>
             )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }
 

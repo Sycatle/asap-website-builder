@@ -6,12 +6,13 @@ import { slugify } from '@/lib/utils/formatters';
 import { ELEMENT_TYPES, ELEMENT_LAYOUTS, type ElementType } from '@asap/shared';
 import { getElementIcon } from '@/lib/constants/elements';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogFooter,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,11 +25,11 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
+import { Spinner } from "@/components/ui/spinner";
 import { 
   ArrowLeft, 
   ArrowRight, 
   Check, 
-  Loader2,
   Plus,
 } from "lucide-react";
 
@@ -120,17 +121,17 @@ export function AddElementModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Ajouter un élément</DialogTitle>
-          <DialogDescription>
+    <ResponsiveDialog open={isOpen} onOpenChange={handleClose}>
+      <ResponsiveDialogContent className="sm:max-w-[500px]">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>Ajouter un élément</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
             {step === 'type' 
               ? 'Choisissez le type d\'élément à ajouter' 
               : 'Personnalisez votre nouvel élément'
             }
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
         {step === 'type' ? (
           <div className="space-y-4">
@@ -168,7 +169,7 @@ export function AddElementModal({
               })}
             </div>
             
-            <div className="flex justify-end gap-2">
+            <ResponsiveDialogFooter className="flex-row justify-end gap-2 sm:justify-end">
               <Button variant="outline" onClick={handleClose}>
                 Annuler
               </Button>
@@ -176,7 +177,7 @@ export function AddElementModal({
                 Suivant
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
-            </div>
+            </ResponsiveDialogFooter>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -209,7 +210,7 @@ export function AddElementModal({
               </div>
             )}
 
-            <div className="flex justify-between gap-2">
+            <ResponsiveDialogFooter className="flex-row justify-between gap-2 sm:justify-between">
               <Button type="button" variant="outline" onClick={handleBack}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Retour
@@ -217,7 +218,7 @@ export function AddElementModal({
               <Button type="submit" disabled={isCreating || !title.trim()}>
                 {isCreating ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Spinner className="h-4 w-4 mr-2" />
                     Création...
                   </>
                 ) : (
@@ -227,10 +228,10 @@ export function AddElementModal({
                   </>
                 )}
               </Button>
-            </div>
+            </ResponsiveDialogFooter>
           </form>
         )}
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

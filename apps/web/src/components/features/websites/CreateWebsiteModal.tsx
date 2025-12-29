@@ -6,12 +6,13 @@ import { queryKeys } from '@/lib/query';
 import { useQueryClient } from '@tanstack/react-query';
 import { slugify, validateSlug, getWebsiteDisplayUrl } from '@/lib/utils/formatters';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogFooter,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,11 +20,11 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
+import { Spinner } from "@/components/ui/spinner";
 import { 
   ArrowLeft, 
   ArrowRight, 
   Check, 
-  Loader2, 
   Sparkles,
   Briefcase,
   Palette,
@@ -194,20 +195,20 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <ResponsiveDialog open={isOpen} onOpenChange={handleClose}>
+      <ResponsiveDialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden flex flex-col">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
             {step === 'preset' ? 'Choisir un template' : 'Configurer votre site'}
-          </DialogTitle>
-          <DialogDescription>
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
             {step === 'preset' 
               ? 'Sélectionnez un template pour démarrer rapidement'
               : "Personnalisez les informations de base de votre site"
             }
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
         {step === 'preset' ? (
           <div className="flex-1 overflow-y-auto py-4 space-y-6">
@@ -324,7 +325,7 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
           </form>
         )}
 
-        <div className="flex items-center justify-between pt-4 border-t">
+        <ResponsiveDialogFooter className="flex-row items-center justify-between pt-4 border-t sm:justify-between">
           {step === 'preset' ? (
             <>
               <Button variant="ghost" onClick={handleClose}>
@@ -352,7 +353,7 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
               >
                 {isCreating ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Spinner className="h-4 w-4" />
                     Création...
                   </>
                 ) : (
@@ -364,8 +365,8 @@ export function CreateWebsiteModal({ isOpen, onClose, onSuccess }: CreateWebsite
               </Button>
             </>
           )}
-        </div>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

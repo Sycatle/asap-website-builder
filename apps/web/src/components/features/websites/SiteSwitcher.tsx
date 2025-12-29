@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { ChevronsUpDown, Plus, CheckCircle2, Clock, Loader2, Globe } from "lucide-react"
+import { ChevronsUpDown, Plus, CheckCircle2, Clock, Globe } from "lucide-react"
+import { Spinner } from "@/components/ui/spinner"
 import type { Website } from "@/lib/api"
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal"
 import { queryKeys } from "@/lib/query"
@@ -80,7 +81,7 @@ export function SiteSwitcher({
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" disabled className="cursor-wait">
             <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary/30">
-              <Loader2 className="size-4 animate-spin text-sidebar-primary-foreground/50" />
+              <Spinner className="size-4 text-sidebar-primary-foreground/50" />
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight gap-1.5">
               <span className="h-4 w-20 bg-muted/60 animate-pulse rounded" />

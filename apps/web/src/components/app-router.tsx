@@ -3,7 +3,8 @@ import { AppShell } from "./layouts/app-shell"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { QueryProvider, WebSocketProvider } from "@/components/providers"
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary"
-import { Loader2, RefreshCw } from "lucide-react"
+import { Spinner } from "@/components/ui/spinner"
+import { RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 // Helper to create lazy components with error handling for HMR issues
@@ -184,7 +185,7 @@ export function buildAppUrl(websiteId: string, page?: string): string {
 function PageLoader() {
   return (
     <div className="flex items-center justify-center h-[50vh]">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <Spinner className="h-8 w-8 text-primary" />
     </div>
   )
 }
@@ -282,7 +283,7 @@ export default function AppRouter() {
   if (isAuthenticated === null) {
     return (
       <div className="flex min-h-svh items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Spinner className="h-8 w-8 text-primary" />
       </div>
     )
   }

@@ -3,9 +3,10 @@ import { useWebsitesQuery, queryKeys } from "@/lib/query"
 import { useQueryClient } from "@tanstack/react-query"
 import { navigate } from "@/components/app-router"
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal"
-import { CheckCircle2, Clock, Globe, Loader2, Plus, ChevronRight } from "lucide-react"
+import { CheckCircle2, Clock, Globe, Plus, ChevronRight } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { getWebsiteDisplayUrl } from "@/lib/utils/formatters"
 import { cn } from "@/lib/utils"
 
@@ -41,7 +42,7 @@ export default function WebsiteSelector() {
   if (isLoading) {
     return (
       <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Spinner className="h-8 w-8 text-primary" />
       </div>
     )
   }
