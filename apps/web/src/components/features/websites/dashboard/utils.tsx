@@ -2,7 +2,7 @@
 
 // Re-export shared components
 export { ChangeIndicator, getPercentageChange } from "@/components/shared";
-export { formatTimeAgo } from "@/lib/utils";
+export { formatRelativeTimeFr as formatTimeAgo } from "@/lib/utils/formatters";
 
 /**
  * Calculate change between current and previous values
