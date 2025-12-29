@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger, useSidebar } from "@/com
 import { Separator } from "@/components/ui/separator"
 import { Toaster } from "@/components/ui/sonner"
 import { Input } from "@/components/ui/input"
+import { Kbd } from "@/components/ui/kbd"
 import { WebsiteProvider, useWebsiteContext } from "@/contexts/WebsiteContext"
 import { HeaderUser } from "@/components/layouts/header-user"
 import { useKeyboardShortcuts, getModifierKey } from "@/hooks/useKeyboardShortcuts"
@@ -13,11 +14,11 @@ import { useSyncWebSocket } from "@/hooks/useSyncWebSocket"
 import { navigate, Link } from "@/components/app-router"
 import { toast } from "sonner"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
@@ -268,9 +269,9 @@ function AppShellContent({
               <div className="flex items-center gap-2 w-full bg-muted/50 hover:bg-muted/70 rounded-md px-3 h-9 text-sm text-muted-foreground transition-colors cursor-pointer">
                 <Search className="h-4 w-4 shrink-0" />
                 <span className="flex-1 text-left truncate">Rechercher...</span>
-                <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                <Kbd className="hidden sm:inline-flex">
                   <span className="text-xs">⌘</span>K
-                </kbd>
+                </Kbd>
               </div>
             </button>
           </div>
@@ -291,7 +292,7 @@ function AppShellContent({
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom">
-                <p>Raccourcis clavier <kbd className="ml-1 px-1 py-0.5 text-xs bg-muted rounded">?</kbd></p>
+                <p>Raccourcis clavier <Kbd className="ml-1">?</Kbd></p>
               </TooltipContent>
             </Tooltip>
             
@@ -328,14 +329,14 @@ function AppShellContent({
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
       
       {/* Keyboard Shortcuts Help Dialog */}
-      <Dialog open={showShortcutsHelp} onOpenChange={setShowShortcutsHelp}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+      <ResponsiveDialog open={showShortcutsHelp} onOpenChange={setShowShortcutsHelp}>
+        <ResponsiveDialogContent className="sm:max-w-md">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="flex items-center gap-2">
               <Keyboard className="h-5 w-5" />
               Raccourcis clavier
-            </DialogTitle>
-          </DialogHeader>
+            </ResponsiveDialogTitle>
+          </ResponsiveDialogHeader>
           <div className="space-y-4 py-2">
             {shortcuts.map((section) => (
               <div key={section.category}>
@@ -347,7 +348,7 @@ function AppShellContent({
                       <div className="flex gap-1">
                         {item.keys.map((key, i) => (
                           <React.Fragment key={i}>
-                            <kbd className="px-2 py-1 text-xs bg-muted rounded font-mono">{key}</kbd>
+                            <Kbd>{key}</Kbd>
                             {i < item.keys.length - 1 && <span className="text-muted-foreground">+</span>}
                           </React.Fragment>
                         ))}
@@ -359,10 +360,10 @@ function AppShellContent({
             ))}
           </div>
           <div className="text-xs text-muted-foreground text-center pt-2 border-t">
-            Appuyez sur <kbd className="px-1 py-0.5 bg-muted rounded">Esc</kbd> pour fermer
+            Appuyez sur <Kbd>Esc</Kbd> pour fermer
           </div>
-        </DialogContent>
-      </Dialog>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
     </>
   )
 }
