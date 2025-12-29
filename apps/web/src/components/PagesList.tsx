@@ -56,7 +56,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { 
   usePagesQuery, 
   useCreatePageMutation, 
@@ -82,8 +82,6 @@ export function PagesList({
   currentPageId,
   onPageSelect 
 }: PagesListProps) {
-  const { toast } = useToast();
-  
   // React Query hooks
   const { data: pages = [], isLoading } = usePagesQuery(websiteId);
   const createPageMutation = useCreatePageMutation();
@@ -125,11 +123,7 @@ export function PagesList({
   // Handle create
   const handleCreate = async () => {
     if (!formData.title.trim()) {
-      toast({
-        title: "Erreur",
-        description: "Le titre est requis",
-        variant: "destructive",
-      });
+      toast.error("Le titre est requis");
       return;
     }
 
@@ -144,19 +138,12 @@ export function PagesList({
         },
       });
       
-      toast({
-        title: "Page créée",
-        description: `La page "${formData.title}" a été créée avec succès`,
-      });
+      toast.success(`Page "${formData.title}" créée avec succès`);
       
       setCreateDialogOpen(false);
       resetForm();
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de créer la page",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Impossible de créer la page");
     }
   };
 
@@ -176,19 +163,12 @@ export function PagesList({
 
       await updatePageMutation.mutateAsync({ websiteId, pageId: selectedPage.id, data: updateData });
       
-      toast({
-        title: "Page modifiée",
-        description: `La page "${formData.title}" a été mise à jour`,
-      });
+      toast.success(`Page "${formData.title}" mise à jour`);
       
       setEditDialogOpen(false);
       resetForm();
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de modifier la page",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Impossible de modifier la page");
     }
   };
 
@@ -199,19 +179,12 @@ export function PagesList({
     try {
       await deletePageMutation.mutateAsync({ websiteId, pageId: selectedPage.id });
       
-      toast({
-        title: "Page supprimée",
-        description: `La page "${selectedPage.title}" a été supprimée`,
-      });
+      toast.success(`Page "${selectedPage.title}" supprimée`);
       
       setDeleteDialogOpen(false);
       setSelectedPage(null);
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de supprimer la page",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Impossible de supprimer la page");
     }
   };
 
@@ -221,16 +194,9 @@ export function PagesList({
     const newVisibility = !page.visible;
     try {
       await updatePageMutation.mutateAsync({ websiteId, pageId: page.id, data: { visible: newVisibility } });
-      toast({
-        title: newVisibility ? "Page visible" : "Page masquée",
-        description: `La page "${page.title}" est maintenant ${newVisibility ? 'visible' : 'masquée'}`,
-      });
+      toast.success(`Page "${page.title}" ${newVisibility ? 'visible' : 'masquée'}`);
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de modifier la visibilité",
-        variant: "destructive",
-      });
+      toast.error("Impossible de modifier la visibilité");
     }
   };
 
@@ -296,16 +262,9 @@ export function PagesList({
     try {
       if (!websiteId) return;
       await reorderPagesMutation.mutateAsync({ websiteId, pageIds });
-      toast({
-        title: "Ordre mis à jour",
-        description: "L'ordre des pages a été modifié",
-      });
+      toast.success("Ordre des pages mis à jour");
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de réorganiser les pages",
-        variant: "destructive",
-      });
+      toast.error("Impossible de réorganiser les pages");
     }
 
     setDraggedPageId(null);

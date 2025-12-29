@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback } from 'react';
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { 
   usePagesQuery, 
   useCreatePageMutation, 
@@ -129,7 +129,6 @@ export function usePageDialogs() {
 // ============================================================================
 
 export function usePageMutations(websiteId: string | null) {
-  const { toast } = useToast();
   const createPageMutation = useCreatePageMutation();
   const updatePageMutation = useUpdatePageMutation();
   const deletePageMutation = useDeletePageMutation();
@@ -140,11 +139,7 @@ export function usePageMutations(websiteId: string | null) {
     onSuccess: () => void
   ) => {
     if (!formData.title.trim()) {
-      toast({
-        title: "Erreur",
-        description: "Le titre est requis",
-        variant: "destructive",
-      });
+      toast.error("Le titre est requis");
       return;
     }
 
@@ -159,20 +154,13 @@ export function usePageMutations(websiteId: string | null) {
         },
       });
       
-      toast({
-        title: "Page créée",
-        description: `La page "${formData.title}" a été créée avec succès`,
-      });
+      toast.success(`Page "${formData.title}" créée avec succès`);
       
       onSuccess();
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de créer la page",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Impossible de créer la page");
     }
-  }, [websiteId, createPageMutation, toast]);
+  }, [websiteId, createPageMutation]);
 
   const handleEdit = useCallback(async (
     pageId: string,
@@ -197,20 +185,13 @@ export function usePageMutations(websiteId: string | null) {
         data: updateData 
       });
       
-      toast({
-        title: "Page modifiée",
-        description: `La page "${formData.title}" a été mise à jour`,
-      });
+      toast.success(`Page "${formData.title}" mise à jour`);
       
       onSuccess();
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de modifier la page",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Impossible de modifier la page");
     }
-  }, [websiteId, updatePageMutation, toast]);
+  }, [websiteId, updatePageMutation]);
 
   const handleDelete = useCallback(async (page: Page, onSuccess: () => void) => {
     if (!websiteId) return;
@@ -221,20 +202,13 @@ export function usePageMutations(websiteId: string | null) {
         pageId: page.id 
       });
       
-      toast({
-        title: "Page supprimée",
-        description: `La page "${page.title}" a été supprimée`,
-      });
+      toast.success(`Page "${page.title}" supprimée`);
       
       onSuccess();
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de supprimer la page",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Impossible de supprimer la page");
     }
-  }, [websiteId, deletePageMutation, toast]);
+  }, [websiteId, deletePageMutation]);
 
   const handleToggleVisibility = useCallback(async (page: Page) => {
     if (!websiteId) return;
@@ -245,18 +219,11 @@ export function usePageMutations(websiteId: string | null) {
         pageId: page.id, 
         data: { visible: newVisibility } 
       });
-      toast({
-        title: newVisibility ? "Page visible" : "Page masquée",
-        description: `La page "${page.title}" est maintenant ${newVisibility ? 'visible' : 'masquée'}`,
-      });
+      toast.success(`Page "${page.title}" ${newVisibility ? 'visible' : 'masquée'}`);
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de modifier la visibilité",
-        variant: "destructive",
-      });
+      toast.error("Impossible de modifier la visibilité");
     }
-  }, [websiteId, updatePageMutation, toast]);
+  }, [websiteId, updatePageMutation]);
 
   const handleDuplicate = useCallback(async (page: Page) => {
     if (!websiteId) return;
@@ -271,35 +238,21 @@ export function usePageMutations(websiteId: string | null) {
           visible: false,
         },
       });
-      toast({
-        title: "Page dupliquée",
-        description: `La page "${page.title}" a été dupliquée`,
-      });
+      toast.success(`Page "${page.title}" dupliquée`);
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de dupliquer la page",
-        variant: "destructive",
-      });
+      toast.error("Impossible de dupliquer la page");
     }
-  }, [websiteId, createPageMutation, toast]);
+  }, [websiteId, createPageMutation]);
 
   const handleReorder = useCallback(async (pageIds: string[]) => {
     if (!websiteId) return;
     try {
       await reorderPagesMutation.mutateAsync({ websiteId, pageIds });
-      toast({
-        title: "Ordre mis à jour",
-        description: "L'ordre des pages a été modifié",
-      });
+      toast.success("Ordre des pages mis à jour");
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de réorganiser les pages",
-        variant: "destructive",
-      });
+      toast.error("Impossible de réorganiser les pages");
     }
-  }, [websiteId, reorderPagesMutation, toast]);
+  }, [websiteId, reorderPagesMutation]);
 
   return {
     handleCreate,
