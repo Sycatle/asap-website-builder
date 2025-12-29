@@ -9,6 +9,14 @@ import {
   FolderOpen,
   Workflow,
   Award,
+  // Landing SaaS icons
+  Navigation,
+  Grid3X3,
+  ListOrdered,
+  CreditCard,
+  Quote,
+  MousePointerClick,
+  Footprints,
 } from "lucide-react";
 import type { ElementType } from '@asap/shared';
 import { getElementLabel as getSharedElementLabel, getElementDescription as getSharedElementDescription } from '@asap/shared';
@@ -18,6 +26,7 @@ import { getElementLabel as getSharedElementLabel, getElementDescription as getS
  * Only includes active V1 element types
  */
 export const ELEMENT_ICONS: Record<ElementType, React.ElementType> = {
+  // Portfolio icons
   hero: Star,
   about: User,
   services: Briefcase,
@@ -26,6 +35,14 @@ export const ELEMENT_ICONS: Record<ElementType, React.ElementType> = {
   skills: Code,
   proof: Award,
   contact: Mail,
+  // Landing SaaS icons
+  navigation: Navigation,
+  features: Grid3X3,
+  'how-it-works': ListOrdered,
+  pricing: CreditCard,
+  testimonials: Quote,
+  cta: MousePointerClick,
+  footer: Footprints,
 };
 
 /**

@@ -21,6 +21,9 @@ export type ProductEventType =
   // Onboarding flow events
   | 'onboarding_started'
   | 'onboarding_step_viewed'
+  | 'onboarding_presets_loaded'
+  | 'onboarding_preset_selected'
+  | 'onboarding_template_confirmed'
   | 'github_oauth_started'
   | 'github_connected'
   | 'github_skipped'
