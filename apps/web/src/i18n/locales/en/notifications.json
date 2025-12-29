@@ -1,0 +1,46 @@
+{
+  "title": "Notifications",
+  "empty": "No notifications",
+  "markAllRead": "Mark all as read",
+  "settings": "Settings",
+  "viewAll": "View all notifications",
+  "new": "New",
+  "unread": "Unread",
+  "read": "Read",
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "older": "Older",
+  "types": {
+    "info": "Information",
+    "success": "Success",
+    "warning": "Warning",
+    "error": "Error"
+  },
+  "actions": {
+    "dismiss": "Dismiss",
+    "markRead": "Mark as read",
+    "markUnread": "Mark as unread"
+  },
+  "push": {
+    "enable": "Enable notifications",
+    "disable": "Disable notifications",
+    "enabled": "Notifications enabled",
+    "disabled": "Notifications disabled",
+    "blocked": "Notifications blocked by browser",
+    "notSupported": "Notifications not supported",
+    "permissionDenied": "Permission denied"
+  },
+  "messages": {
+    "sitePublished": "Your site \"{{name}}\" has been published",
+    "memberInvited": "{{name}} has been invited to join the team",
+    "memberJoined": "{{name}} joined your team",
+    "commentAdded": "{{name}} commented on your site",
+    "paymentReceived": "Payment received: {{amount}}",
+    "subscriptionRenewed": "Your subscription has been renewed",
+    "subscriptionExpiring": "Your subscription expires in {{days}} days",
+    "storageWarning": "You have used {{percent}}% of your storage",
+    "updateAvailable": "An update is available",
+    "securityAlert": "New login detected",
+    "welcomeMessage": "Welcome to ASAP! Start by creating your first site."
+  }
+}

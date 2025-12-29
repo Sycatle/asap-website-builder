@@ -1,0 +1,149 @@
+{
+  "title": "Paramètres",
+  "subtitle": "Gérez vos préférences",
+  "sections": {
+    "account": "Compte",
+    "appearance": "Apparence",
+    "language": "Langue",
+    "notifications": "Notifications",
+    "security": "Sécurité",
+    "billing": "Facturation",
+    "team": "Équipe",
+    "integrations": "Intégrations",
+    "advanced": "Avancé",
+    "danger": "Zone de danger"
+  },
+  "account": {
+    "title": "Paramètres du compte",
+    "subtitle": "Gérez les informations de votre compte",
+    "profile": {
+      "title": "Profil",
+      "name": "Nom complet",
+      "email": "Adresse email",
+      "avatar": "Photo de profil",
+      "changeAvatar": "Changer la photo",
+      "removeAvatar": "Supprimer la photo"
+    },
+    "deleteAccount": {
+      "title": "Supprimer le compte",
+      "description": "Supprimez définitivement votre compte et toutes vos données",
+      "warning": "Cette action est irréversible. Toutes vos données seront perdues.",
+      "confirm": "Oui, supprimer mon compte"
+    }
+  },
+  "appearance": {
+    "title": "Apparence",
+    "subtitle": "Personnalisez l'apparence de l'application",
+    "theme": {
+      "title": "Thème",
+      "description": "Choisissez votre thème préféré",
+      "light": "Clair",
+      "dark": "Sombre",
+      "system": "Système"
+    },
+    "density": {
+      "title": "Densité",
+      "description": "Ajustez l'espacement de l'interface",
+      "compact": "Compact",
+      "comfortable": "Confortable",
+      "spacious": "Spacieux"
+    },
+    "animations": {
+      "title": "Animations",
+      "description": "Activer les animations de l'interface",
+      "reduced": "Réduire les animations"
+    },
+    "fontSize": {
+      "title": "Taille de police",
+      "description": "Ajustez la taille du texte",
+      "small": "Petite",
+      "medium": "Moyenne",
+      "large": "Grande"
+    }
+  },
+  "language": {
+    "title": "Langue",
+    "subtitle": "Choisissez votre langue préférée",
+    "current": "Langue actuelle",
+    "select": "Sélectionner une langue",
+    "autoDetect": "Détection automatique",
+    "available": "Langues disponibles"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Gérez vos préférences de notifications",
+    "push": {
+      "title": "Notifications push",
+      "description": "Recevoir des notifications sur votre appareil",
+      "enabled": "Activées",
+      "disabled": "Désactivées",
+      "enable": "Activer",
+      "disable": "Désactiver"
+    },
+    "email": {
+      "title": "Notifications par email",
+      "description": "Recevoir des emails pour les mises à jour importantes",
+      "marketing": "Actualités et offres",
+      "updates": "Mises à jour produit",
+      "security": "Alertes de sécurité"
+    },
+    "types": {
+      "all": "Toutes les notifications",
+      "mentions": "Mentions uniquement",
+      "important": "Important uniquement",
+      "none": "Aucune"
+    }
+  },
+  "security": {
+    "title": "Sécurité",
+    "subtitle": "Protégez votre compte",
+    "password": {
+      "title": "Mot de passe",
+      "change": "Changer le mot de passe",
+      "current": "Mot de passe actuel",
+      "new": "Nouveau mot de passe",
+      "confirm": "Confirmer le mot de passe",
+      "lastChanged": "Dernière modification"
+    },
+    "twoFactor": {
+      "title": "Authentification à deux facteurs",
+      "description": "Ajoutez une couche de sécurité supplémentaire",
+      "enable": "Activer 2FA",
+      "disable": "Désactiver 2FA",
+      "enabled": "Activée",
+      "disabled": "Désactivée"
+    },
+    "sessions": {
+      "title": "Sessions actives",
+      "description": "Gérez vos sessions connectées",
+      "current": "Session actuelle",
+      "revoke": "Révoquer",
+      "revokeAll": "Révoquer toutes les autres sessions"
+    }
+  },
+  "billing": {
+    "title": "Facturation",
+    "subtitle": "Gérez votre abonnement et vos paiements",
+    "plan": {
+      "title": "Plan actuel",
+      "free": "Gratuit",
+      "pro": "Pro",
+      "enterprise": "Enterprise",
+      "upgrade": "Passer au plan supérieur",
+      "downgrade": "Rétrograder",
+      "cancel": "Annuler l'abonnement"
+    },
+    "payment": {
+      "title": "Méthode de paiement",
+      "add": "Ajouter une carte",
+      "update": "Mettre à jour",
+      "remove": "Supprimer"
+    },
+    "invoices": {
+      "title": "Factures",
+      "download": "Télécharger",
+      "noInvoices": "Aucune facture"
+    }
+  },
+  "saved": "Paramètres enregistrés"
+}

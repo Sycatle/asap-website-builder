@@ -1,0 +1,130 @@
+{
+  "title": "Editor",
+  "toolbar": {
+    "undo": "Undo",
+    "redo": "Redo",
+    "save": "Save",
+    "preview": "Preview",
+    "publish": "Publish",
+    "settings": "Settings",
+    "help": "Help"
+  },
+  "sidebar": {
+    "pages": "Pages",
+    "components": "Components",
+    "styles": "Styles",
+    "assets": "Assets",
+    "settings": "Settings",
+    "layers": "Layers",
+    "history": "History"
+  },
+  "pages": {
+    "title": "Pages",
+    "add": "New page",
+    "duplicate": "Duplicate",
+    "delete": "Delete",
+    "rename": "Rename",
+    "setAsHome": "Set as home",
+    "home": "Home",
+    "empty": "No pages",
+    "settings": {
+      "title": "Page settings",
+      "name": "Page name",
+      "slug": "URL (slug)",
+      "seo": "SEO",
+      "metaTitle": "Meta title",
+      "metaDescription": "Meta description"
+    }
+  },
+  "components": {
+    "title": "Components",
+    "search": "Search components...",
+    "categories": {
+      "layout": "Layout",
+      "content": "Content",
+      "media": "Media",
+      "forms": "Forms",
+      "navigation": "Navigation",
+      "interactive": "Interactive",
+      "advanced": "Advanced"
+    },
+    "dragToAdd": "Drag to add"
+  },
+  "canvas": {
+    "zoom": "Zoom",
+    "fitToScreen": "Fit to screen",
+    "actualSize": "Actual size",
+    "responsive": {
+      "desktop": "Desktop",
+      "tablet": "Tablet",
+      "mobile": "Mobile"
+    },
+    "emptyState": {
+      "title": "Empty page",
+      "description": "Drag components here to get started"
+    }
+  },
+  "properties": {
+    "title": "Properties",
+    "noSelection": "Select an element",
+    "tabs": {
+      "content": "Content",
+      "style": "Style",
+      "settings": "Settings"
+    },
+    "style": {
+      "spacing": "Spacing",
+      "margin": "Margin",
+      "padding": "Padding",
+      "size": "Size",
+      "width": "Width",
+      "height": "Height",
+      "colors": "Colors",
+      "background": "Background",
+      "text": "Text",
+      "border": "Border",
+      "borderRadius": "Border radius",
+      "shadow": "Shadow",
+      "typography": "Typography",
+      "fontFamily": "Font family",
+      "fontSize": "Font size",
+      "fontWeight": "Font weight",
+      "lineHeight": "Line height",
+      "letterSpacing": "Letter spacing"
+    }
+  },
+  "assets": {
+    "title": "Assets",
+    "upload": "Upload",
+    "dragDrop": "Drag and drop files here",
+    "browse": "Browse",
+    "empty": "No assets",
+    "delete": "Delete",
+    "copy": "Copy URL",
+    "types": {
+      "images": "Images",
+      "videos": "Videos",
+      "documents": "Documents",
+      "all": "All"
+    }
+  },
+  "publish": {
+    "title": "Publish",
+    "subtitle": "Put your site online",
+    "domain": "Domain",
+    "customDomain": "Custom domain",
+    "subdomain": "ASAP subdomain",
+    "ssl": "SSL certificate",
+    "publishing": "Publishing...",
+    "published": "Published!",
+    "viewSite": "View site",
+    "lastPublished": "Last published"
+  },
+  "messages": {
+    "saved": "Changes saved",
+    "published": "Site published successfully",
+    "deleted": "Element deleted",
+    "duplicated": "Element duplicated",
+    "unsavedChanges": "You have unsaved changes"
+  }
+}

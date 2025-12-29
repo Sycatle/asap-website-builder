@@ -1,0 +1,130 @@
+{
+  "title": "Éditeur",
+  "toolbar": {
+    "undo": "Annuler",
+    "redo": "Refaire",
+    "save": "Enregistrer",
+    "preview": "Aperçu",
+    "publish": "Publier",
+    "settings": "Paramètres",
+    "help": "Aide"
+  },
+  "sidebar": {
+    "pages": "Pages",
+    "components": "Composants",
+    "styles": "Styles",
+    "assets": "Médias",
+    "settings": "Paramètres",
+    "layers": "Calques",
+    "history": "Historique"
+  },
+  "pages": {
+    "title": "Pages",
+    "add": "Nouvelle page",
+    "duplicate": "Dupliquer",
+    "delete": "Supprimer",
+    "rename": "Renommer",
+    "setAsHome": "Définir comme accueil",
+    "home": "Accueil",
+    "empty": "Aucune page",
+    "settings": {
+      "title": "Paramètres de la page",
+      "name": "Nom de la page",
+      "slug": "URL (slug)",
+      "seo": "SEO",
+      "metaTitle": "Titre meta",
+      "metaDescription": "Description meta"
+    }
+  },
+  "components": {
+    "title": "Composants",
+    "search": "Rechercher un composant...",
+    "categories": {
+      "layout": "Mise en page",
+      "content": "Contenu",
+      "media": "Médias",
+      "forms": "Formulaires",
+      "navigation": "Navigation",
+      "interactive": "Interactif",
+      "advanced": "Avancé"
+    },
+    "dragToAdd": "Glissez pour ajouter"
+  },
+  "canvas": {
+    "zoom": "Zoom",
+    "fitToScreen": "Ajuster à l'écran",
+    "actualSize": "Taille réelle",
+    "responsive": {
+      "desktop": "Bureau",
+      "tablet": "Tablette",
+      "mobile": "Mobile"
+    },
+    "emptyState": {
+      "title": "Page vide",
+      "description": "Glissez des composants ici pour commencer"
+    }
+  },
+  "properties": {
+    "title": "Propriétés",
+    "noSelection": "Sélectionnez un élément",
+    "tabs": {
+      "content": "Contenu",
+      "style": "Style",
+      "settings": "Paramètres"
+    },
+    "style": {
+      "spacing": "Espacement",
+      "margin": "Marge",
+      "padding": "Padding",
+      "size": "Taille",
+      "width": "Largeur",
+      "height": "Hauteur",
+      "colors": "Couleurs",
+      "background": "Arrière-plan",
+      "text": "Texte",
+      "border": "Bordure",
+      "borderRadius": "Arrondis",
+      "shadow": "Ombre",
+      "typography": "Typographie",
+      "fontFamily": "Police",
+      "fontSize": "Taille",
+      "fontWeight": "Graisse",
+      "lineHeight": "Interligne",
+      "letterSpacing": "Espacement"
+    }
+  },
+  "assets": {
+    "title": "Médias",
+    "upload": "Téléverser",
+    "dragDrop": "Glissez-déposez vos fichiers ici",
+    "browse": "Parcourir",
+    "empty": "Aucun média",
+    "delete": "Supprimer",
+    "copy": "Copier l'URL",
+    "types": {
+      "images": "Images",
+      "videos": "Vidéos",
+      "documents": "Documents",
+      "all": "Tous"
+    }
+  },
+  "publish": {
+    "title": "Publier",
+    "subtitle": "Mettez votre site en ligne",
+    "domain": "Domaine",
+    "customDomain": "Domaine personnalisé",
+    "subdomain": "Sous-domaine ASAP",
+    "ssl": "Certificat SSL",
+    "publishing": "Publication en cours...",
+    "published": "Publié !",
+    "viewSite": "Voir le site",
+    "lastPublished": "Dernière publication"
+  },
+  "messages": {
+    "saved": "Modifications enregistrées",
+    "published": "Site publié avec succès",
+    "deleted": "Élément supprimé",
+    "duplicated": "Élément dupliqué",
+    "unsavedChanges": "Vous avez des modifications non enregistrées"
+  }
+}

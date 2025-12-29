@@ -1,0 +1,91 @@
+{
+  "generic": {
+    "title": "Erreur",
+    "unknown": "Une erreur inattendue s'est produite",
+    "tryAgain": "Veuillez réessayer",
+    "contactSupport": "Si le problème persiste, contactez le support"
+  },
+  "network": {
+    "offline": "Vous êtes hors ligne",
+    "connectionLost": "Connexion perdue",
+    "connectionRestored": "Connexion rétablie",
+    "timeout": "La requête a expiré",
+    "serverError": "Erreur serveur",
+    "serviceUnavailable": "Service temporairement indisponible"
+  },
+  "auth": {
+    "unauthorized": "Non autorisé",
+    "sessionExpired": "Votre session a expiré",
+    "loginRequired": "Connexion requise",
+    "invalidCredentials": "Identifiants invalides",
+    "accountLocked": "Compte verrouillé",
+    "emailNotVerified": "Email non vérifié",
+    "tooManyAttempts": "Trop de tentatives, réessayez plus tard"
+  },
+  "validation": {
+    "required": "Ce champ est requis",
+    "invalidEmail": "Adresse email invalide",
+    "invalidUrl": "URL invalide",
+    "invalidPhone": "Numéro de téléphone invalide",
+    "passwordTooWeak": "Mot de passe trop faible",
+    "passwordMismatch": "Les mots de passe ne correspondent pas",
+    "minLength": "Minimum {{min}} caractères requis",
+    "maxLength": "Maximum {{max}} caractères autorisés",
+    "invalidFormat": "Format invalide",
+    "alreadyExists": "Cette valeur existe déjà"
+  },
+  "permission": {
+    "denied": "Accès refusé",
+    "insufficientPermissions": "Permissions insuffisantes",
+    "ownerOnly": "Réservé au propriétaire",
+    "adminOnly": "Réservé aux administrateurs"
+  },
+  "resource": {
+    "notFound": "Ressource introuvable",
+    "deleted": "Cette ressource a été supprimée",
+    "unavailable": "Ressource indisponible"
+  },
+  "quota": {
+    "exceeded": "Quota dépassé",
+    "storageLimit": "Limite de stockage atteinte",
+    "sitesLimit": "Nombre maximum de sites atteint",
+    "membersLimit": "Nombre maximum de membres atteint",
+    "upgradeRequired": "Passez au plan supérieur pour continuer"
+  },
+  "upload": {
+    "fileTooLarge": "Fichier trop volumineux (max {{max}})",
+    "invalidType": "Type de fichier non autorisé",
+    "uploadFailed": "Échec du téléversement"
+  },
+  "http": {
+    "400": "Requête invalide",
+    "401": "Non authentifié",
+    "403": "Accès interdit",
+    "404": "Page introuvable",
+    "408": "Requête expirée",
+    "409": "Conflit",
+    "413": "Fichier trop volumineux",
+    "429": "Trop de requêtes",
+    "500": "Erreur serveur interne",
+    "502": "Passerelle incorrecte",
+    "503": "Service indisponible",
+    "504": "Passerelle expirée"
+  },
+  "pages": {
+    "notFound": {
+      "title": "Page introuvable",
+      "description": "La page que vous recherchez n'existe pas ou a été déplacée.",
+      "backHome": "Retour à l'accueil"
+    },
+    "serverError": {
+      "title": "Erreur serveur",
+      "description": "Une erreur s'est produite sur nos serveurs. Nous travaillons à la résoudre.",
+      "tryAgain": "Réessayer"
+    },
+    "maintenance": {
+      "title": "Maintenance en cours",
+      "description": "Le site est temporairement indisponible pour maintenance.",
+      "backSoon": "Nous serons de retour très bientôt !"
+    }
+  }
+}

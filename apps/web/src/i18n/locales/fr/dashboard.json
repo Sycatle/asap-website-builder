@@ -1,0 +1,77 @@
+{
+  "title": "Tableau de bord",
+  "welcome": "Bienvenue, {{name}} !",
+  "welcomeBack": "Bon retour, {{name}} !",
+  "overview": {
+    "title": "Vue d'ensemble",
+    "subtitle": "Résumé de votre activité"
+  },
+  "sites": {
+    "title": "Mes sites",
+    "subtitle": "Gérez vos sites web",
+    "empty": "Vous n'avez pas encore de site",
+    "create": "Créer un site",
+    "count_one": "{{count}} site",
+    "count_other": "{{count}} sites",
+    "lastUpdated": "Dernière mise à jour",
+    "visits": "Visites",
+    "status": {
+      "online": "En ligne",
+      "offline": "Hors ligne",
+      "maintenance": "Maintenance",
+      "building": "Construction en cours"
+    }
+  },
+  "quickActions": {
+    "title": "Actions rapides",
+    "newSite": "Nouveau site",
+    "editSite": "Modifier le site",
+    "viewAnalytics": "Voir les analytics",
+    "manageTeam": "Gérer l'équipe",
+    "openSettings": "Ouvrir les paramètres"
+  },
+  "stats": {
+    "totalVisits": "Visites totales",
+    "uniqueVisitors": "Visiteurs uniques",
+    "pageViews": "Pages vues",
+    "avgSessionDuration": "Durée moyenne",
+    "bounceRate": "Taux de rebond",
+    "conversionRate": "Taux de conversion",
+    "growth": "Croissance",
+    "vsLastPeriod": "vs période précédente",
+    "noDataYet": "Pas encore de données"
+  },
+  "activity": {
+    "title": "Activité récente",
+    "empty": "Aucune activité récente",
+    "viewAll": "Voir toute l'activité",
+    "siteCreated": "Site créé",
+    "siteUpdated": "Site mis à jour",
+    "sitePublished": "Site publié",
+    "memberJoined": "Membre ajouté",
+    "settingsChanged": "Paramètres modifiés"
+  },
+  "team": {
+    "title": "Équipe",
+    "members": "Membres",
+    "invite": "Inviter",
+    "pending": "En attente",
+    "roles": {
+      "owner": "Propriétaire",
+      "admin": "Administrateur",
+      "editor": "Éditeur",
+      "viewer": "Lecteur"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "Aucune notification",
+    "markAllRead": "Tout marquer comme lu",
+    "settings": "Paramètres de notifications"
+  },
+  "upgrade": {
+    "title": "Passez à la version Pro",
+    "description": "Débloquez toutes les fonctionnalités",
+    "cta": "Voir les offres"
+  }
+}

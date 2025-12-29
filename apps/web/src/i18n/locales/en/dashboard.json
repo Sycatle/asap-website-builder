@@ -1,0 +1,77 @@
+{
+  "title": "Dashboard",
+  "welcome": "Welcome, {{name}}!",
+  "welcomeBack": "Welcome back, {{name}}!",
+  "overview": {
+    "title": "Overview",
+    "subtitle": "Summary of your activity"
+  },
+  "sites": {
+    "title": "My sites",
+    "subtitle": "Manage your websites",
+    "empty": "You don't have any sites yet",
+    "create": "Create a site",
+    "count_one": "{{count}} site",
+    "count_other": "{{count}} sites",
+    "lastUpdated": "Last updated",
+    "visits": "Visits",
+    "status": {
+      "online": "Online",
+      "offline": "Offline",
+      "maintenance": "Maintenance",
+      "building": "Building"
+    }
+  },
+  "quickActions": {
+    "title": "Quick actions",
+    "newSite": "New site",
+    "editSite": "Edit site",
+    "viewAnalytics": "View analytics",
+    "manageTeam": "Manage team",
+    "openSettings": "Open settings"
+  },
+  "stats": {
+    "totalVisits": "Total visits",
+    "uniqueVisitors": "Unique visitors",
+    "pageViews": "Page views",
+    "avgSessionDuration": "Avg. session duration",
+    "bounceRate": "Bounce rate",
+    "conversionRate": "Conversion rate",
+    "growth": "Growth",
+    "vsLastPeriod": "vs last period",
+    "noDataYet": "No data yet"
+  },
+  "activity": {
+    "title": "Recent activity",
+    "empty": "No recent activity",
+    "viewAll": "View all activity",
+    "siteCreated": "Site created",
+    "siteUpdated": "Site updated",
+    "sitePublished": "Site published",
+    "memberJoined": "Member joined",
+    "settingsChanged": "Settings changed"
+  },
+  "team": {
+    "title": "Team",
+    "members": "Members",
+    "invite": "Invite",
+    "pending": "Pending",
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "editor": "Editor",
+      "viewer": "Viewer"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications",
+    "markAllRead": "Mark all as read",
+    "settings": "Notification settings"
+  },
+  "upgrade": {
+    "title": "Upgrade to Pro",
+    "description": "Unlock all features",
+    "cta": "View plans"
+  }
+}

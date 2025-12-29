@@ -1,0 +1,46 @@
+{
+  "title": "Notifications",
+  "empty": "Aucune notification",
+  "markAllRead": "Tout marquer comme lu",
+  "settings": "Paramètres",
+  "viewAll": "Voir toutes les notifications",
+  "new": "Nouvelle",
+  "unread": "Non lues",
+  "read": "Lues",
+  "today": "Aujourd'hui",
+  "yesterday": "Hier",
+  "older": "Plus anciennes",
+  "types": {
+    "info": "Information",
+    "success": "Succès",
+    "warning": "Avertissement",
+    "error": "Erreur"
+  },
+  "actions": {
+    "dismiss": "Ignorer",
+    "markRead": "Marquer comme lu",
+    "markUnread": "Marquer comme non lu"
+  },
+  "push": {
+    "enable": "Activer les notifications",
+    "disable": "Désactiver les notifications",
+    "enabled": "Notifications activées",
+    "disabled": "Notifications désactivées",
+    "blocked": "Notifications bloquées par le navigateur",
+    "notSupported": "Notifications non supportées",
+    "permissionDenied": "Permission refusée"
+  },
+  "messages": {
+    "sitePublished": "Votre site \"{{name}}\" a été publié",
+    "memberInvited": "{{name}} a été invité à rejoindre l'équipe",
+    "memberJoined": "{{name}} a rejoint votre équipe",
+    "commentAdded": "{{name}} a commenté sur votre site",
+    "paymentReceived": "Paiement reçu : {{amount}}",
+    "subscriptionRenewed": "Votre abonnement a été renouvelé",
+    "subscriptionExpiring": "Votre abonnement expire dans {{days}} jours",
+    "storageWarning": "Vous avez utilisé {{percent}}% de votre espace de stockage",
+    "updateAvailable": "Une mise à jour est disponible",
+    "securityAlert": "Nouvelle connexion détectée",
+    "welcomeMessage": "Bienvenue sur ASAP ! Commencez par créer votre premier site."
+  }
+}

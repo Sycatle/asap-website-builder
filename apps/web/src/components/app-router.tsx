@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect, useState, type ComponentType } from "react"
 import { AppShell } from "./layouts/app-shell"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { QueryProvider, WebSocketProvider } from "@/components/providers"
+import { QueryProvider, WebSocketProvider, I18nProvider } from "@/components/providers"
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary"
 import { Spinner } from "@/components/ui/spinner"
 import { RefreshCw } from "lucide-react"
@@ -346,42 +346,46 @@ export default function AppRouter() {
   // For select page, render without AppShell (same layout as login/register)
   if (isSelectPage) {
     return (
-      <QueryProvider>
-        <WebSocketProvider>
-          <TooltipProvider>
-            <ErrorBoundary level="page">
-              <Suspense fallback={<PageLoader />}>
-                <WebsiteSelector />
-              </Suspense>
-            </ErrorBoundary>
-          </TooltipProvider>
-        </WebSocketProvider>
-      </QueryProvider>
+      <I18nProvider>
+        <QueryProvider>
+          <WebSocketProvider>
+            <TooltipProvider>
+              <ErrorBoundary level="page">
+                <Suspense fallback={<PageLoader />}>
+                  <WebsiteSelector />
+                </Suspense>
+              </ErrorBoundary>
+            </TooltipProvider>
+          </WebSocketProvider>
+        </QueryProvider>
+      </I18nProvider>
     )
   }
 
   return (
-    <QueryProvider>
-      <WebSocketProvider>
-        <TooltipProvider>
-          <ErrorBoundary level="page">
-            <AppShell 
-              title={title} 
-              breadcrumbs={breadcrumbs}
-              isStudioPage={isStudioPage}
-              websiteId={websiteId}
-              showSidebar={true}
-              currentPage={route.page}
-            >
-              <ErrorBoundary level="section" title={title}>
-                <Suspense fallback={<PageLoader />}>
-                  {renderPage()}
-                </Suspense>
-              </ErrorBoundary>
-            </AppShell>
-          </ErrorBoundary>
-        </TooltipProvider>
-      </WebSocketProvider>
-    </QueryProvider>
+    <I18nProvider>
+      <QueryProvider>
+        <WebSocketProvider>
+          <TooltipProvider>
+            <ErrorBoundary level="page">
+              <AppShell 
+                title={title} 
+                breadcrumbs={breadcrumbs}
+                isStudioPage={isStudioPage}
+                websiteId={websiteId}
+                showSidebar={true}
+                currentPage={route.page}
+              >
+                <ErrorBoundary level="section" title={title}>
+                  <Suspense fallback={<PageLoader />}>
+                    {renderPage()}
+                  </Suspense>
+                </ErrorBoundary>
+              </AppShell>
+            </ErrorBoundary>
+          </TooltipProvider>
+        </WebSocketProvider>
+      </QueryProvider>
+    </I18nProvider>
   )
 }

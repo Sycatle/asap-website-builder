@@ -1,0 +1,149 @@
+{
+  "title": "Settings",
+  "subtitle": "Manage your preferences",
+  "sections": {
+    "account": "Account",
+    "appearance": "Appearance",
+    "language": "Language",
+    "notifications": "Notifications",
+    "security": "Security",
+    "billing": "Billing",
+    "team": "Team",
+    "integrations": "Integrations",
+    "advanced": "Advanced",
+    "danger": "Danger zone"
+  },
+  "account": {
+    "title": "Account settings",
+    "subtitle": "Manage your account information",
+    "profile": {
+      "title": "Profile",
+      "name": "Full name",
+      "email": "Email address",
+      "avatar": "Profile picture",
+      "changeAvatar": "Change picture",
+      "removeAvatar": "Remove picture"
+    },
+    "deleteAccount": {
+      "title": "Delete account",
+      "description": "Permanently delete your account and all your data",
+      "warning": "This action is irreversible. All your data will be lost.",
+      "confirm": "Yes, delete my account"
+    }
+  },
+  "appearance": {
+    "title": "Appearance",
+    "subtitle": "Customize the look of the application",
+    "theme": {
+      "title": "Theme",
+      "description": "Choose your preferred theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "density": {
+      "title": "Density",
+      "description": "Adjust interface spacing",
+      "compact": "Compact",
+      "comfortable": "Comfortable",
+      "spacious": "Spacious"
+    },
+    "animations": {
+      "title": "Animations",
+      "description": "Enable interface animations",
+      "reduced": "Reduce animations"
+    },
+    "fontSize": {
+      "title": "Font size",
+      "description": "Adjust text size",
+      "small": "Small",
+      "medium": "Medium",
+      "large": "Large"
+    }
+  },
+  "language": {
+    "title": "Language",
+    "subtitle": "Choose your preferred language",
+    "current": "Current language",
+    "select": "Select a language",
+    "autoDetect": "Auto-detect",
+    "available": "Available languages"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Manage your notification preferences",
+    "push": {
+      "title": "Push notifications",
+      "description": "Receive notifications on your device",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "enable": "Enable",
+      "disable": "Disable"
+    },
+    "email": {
+      "title": "Email notifications",
+      "description": "Receive emails for important updates",
+      "marketing": "News and offers",
+      "updates": "Product updates",
+      "security": "Security alerts"
+    },
+    "types": {
+      "all": "All notifications",
+      "mentions": "Mentions only",
+      "important": "Important only",
+      "none": "None"
+    }
+  },
+  "security": {
+    "title": "Security",
+    "subtitle": "Protect your account",
+    "password": {
+      "title": "Password",
+      "change": "Change password",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm password",
+      "lastChanged": "Last changed"
+    },
+    "twoFactor": {
+      "title": "Two-factor authentication",
+      "description": "Add an extra layer of security",
+      "enable": "Enable 2FA",
+      "disable": "Disable 2FA",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "sessions": {
+      "title": "Active sessions",
+      "description": "Manage your logged-in sessions",
+      "current": "Current session",
+      "revoke": "Revoke",
+      "revokeAll": "Revoke all other sessions"
+    }
+  },
+  "billing": {
+    "title": "Billing",
+    "subtitle": "Manage your subscription and payments",
+    "plan": {
+      "title": "Current plan",
+      "free": "Free",
+      "pro": "Pro",
+      "enterprise": "Enterprise",
+      "upgrade": "Upgrade plan",
+      "downgrade": "Downgrade",
+      "cancel": "Cancel subscription"
+    },
+    "payment": {
+      "title": "Payment method",
+      "add": "Add card",
+      "update": "Update",
+      "remove": "Remove"
+    },
+    "invoices": {
+      "title": "Invoices",
+      "download": "Download",
+      "noInvoices": "No invoices"
+    }
+  },
+  "saved": "Settings saved"
+}

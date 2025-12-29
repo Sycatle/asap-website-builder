@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useTranslation } from "react-i18next"
 
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
@@ -13,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
+import { useLanguage, SUPPORTED_LANGUAGES, type LanguageCode } from "@/i18n"
 
 // ============================================================================
 // Types
@@ -31,9 +33,9 @@ interface ThemeChoice {
 // ============================================================================
 
 const THEME_OPTIONS: ThemeChoice[] = [
-  { id: 'light', label: 'Clair', icon: '☀️' },
-  { id: 'dark', label: 'Sombre', icon: '🌙' },
-  { id: 'system', label: 'Système', icon: '💻' },
+  { id: 'light', label: 'settings:appearance.theme.light', icon: '☀️' },
+  { id: 'dark', label: 'settings:appearance.theme.dark', icon: '🌙' },
+  { id: 'system', label: 'settings:appearance.theme.system', icon: '💻' },
 ]
 
 // ============================================================================
@@ -77,6 +79,8 @@ interface ThemeSelectorProps {
 }
 
 function ThemeSelector({ value, onChange }: ThemeSelectorProps) {
+  const { t } = useTranslation()
+  
   return (
     <div className="grid grid-cols-3 gap-3">
       {THEME_OPTIONS.map((option) => (
@@ -91,21 +95,47 @@ function ThemeSelector({ value, onChange }: ThemeSelectorProps) {
           )}
         >
           <span className="text-2xl">{option.icon}</span>
-          <span className="text-sm font-medium">{option.label}</span>
+          <span className="text-sm font-medium">{t(option.label)}</span>
         </button>
       ))}
     </div>
   )
 }
 
-function LanguageSelector() {
+interface LanguageSelectorProps {
+  value: LanguageCode
+  onChange: (lang: LanguageCode) => void
+  isChanging?: boolean
+}
+
+function LanguageSelector({ value, onChange, isChanging }: LanguageSelectorProps) {
+  const { t } = useTranslation()
+  const languages = Object.values(SUPPORTED_LANGUAGES)
+
   return (
-    <div className="flex items-center justify-between p-3 border rounded-lg">
-      <div className="flex items-center gap-3">
-        <span className="text-2xl">🇫🇷</span>
-        <span className="text-sm font-medium">Français</span>
-      </div>
-      <Badge variant="secondary">Actuel</Badge>
+    <div className="grid gap-2">
+      {languages.map((lang) => (
+        <button
+          key={lang.code}
+          onClick={() => onChange(lang.code as LanguageCode)}
+          disabled={isChanging}
+          className={cn(
+            "flex items-center justify-between p-3 border rounded-lg transition-colors",
+            value === lang.code
+              ? "border-primary bg-primary/5"
+              : "border-border hover:bg-muted/50",
+            isChanging && "opacity-50 cursor-not-allowed"
+          )}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">{lang.flag}</span>
+            <span className="text-sm font-medium">{lang.nativeName}</span>
+          </div>
+          {value === lang.code && (
+            <Badge variant="secondary">{t('settings:language.current')}</Badge>
+          )}
+        </button>
+      ))}
     </div>
   )
 }
@@ -115,6 +145,8 @@ function LanguageSelector() {
 // ============================================================================
 
 export function AppearanceSettings() {
+  const { t } = useTranslation()
+  const { language, setLanguage, isChanging } = useLanguage()
   const [theme, setTheme] = useState<ThemeOption>('system')
 
   // Initialize theme from localStorage on mount
@@ -141,18 +173,18 @@ export function AppearanceSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Apparence</h3>
+        <h3 className="text-lg font-medium">{t('settings:appearance.title')}</h3>
         <p className="text-sm text-muted-foreground">
-          Personnalisez l'apparence de l'application.
+          {t('settings:appearance.subtitle')}
         </p>
       </div>
       <Separator />
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Thème</CardTitle>
+          <CardTitle className="text-base">{t('settings:appearance.theme.title')}</CardTitle>
           <CardDescription>
-            Choisissez le thème de l'interface.
+            {t('settings:appearance.theme.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -162,26 +194,30 @@ export function AppearanceSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Langue</CardTitle>
+          <CardTitle className="text-base">{t('settings:language.title')}</CardTitle>
           <CardDescription>
-            Choisissez la langue de l'interface.
+            {t('settings:language.subtitle')}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <LanguageSelector />
+          <LanguageSelector 
+            value={language} 
+            onChange={setLanguage}
+            isChanging={isChanging}
+          />
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Densité</CardTitle>
+          <CardTitle className="text-base">{t('settings:appearance.density.title')}</CardTitle>
           <CardDescription>
-            Ajustez l'espacement de l'interface.
+            {t('settings:appearance.density.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
-            <span className="text-sm">Interface compacte</span>
+            <span className="text-sm">{t('settings:appearance.density.compact')}</span>
             <Switch />
           </div>
         </CardContent>
