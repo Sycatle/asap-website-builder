@@ -1,5 +1,8 @@
 'use client';
 
+// Initialize i18n before any React hooks
+import '@/i18n';
+
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
