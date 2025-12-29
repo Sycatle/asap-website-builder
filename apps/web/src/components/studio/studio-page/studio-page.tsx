@@ -15,6 +15,11 @@ import type { WebsiteElement, UpdateElementRequest } from "@/lib/types"
 import { toast } from "sonner"
 import { AddElementModal } from "@/components/elements/AddElementModal"
 import { cn } from "@/lib/utils"
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable"
 
 import type { DevicePreview, StudioPageProps } from "./types"
 import { useIsMobile } from "./hooks"
@@ -227,8 +232,8 @@ export function StudioPage({ onBack }: StudioPageProps) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-background">
-      {/* Header */}
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
+      {/* Header - Fixed */}
       <StudioHeader
         website={website}
         currentPage={currentPage}
@@ -245,45 +250,84 @@ export function StudioPage({ onBack }: StudioPageProps) {
         onBack={onBack}
       />
 
-      {/* Main content */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Desktop left panel */}
-        <aside 
-          className={cn(
-            "hidden md:flex flex-col border-r bg-background transition-all duration-200 relative",
-            leftPanelOpen ? "w-72" : "w-0 border-r-0 overflow-hidden"
-          )}
-          aria-label={t('editor:panels.elements')}
-          aria-hidden={!leftPanelOpen}
-        >
-          {leftPanelOpen && <ElementList {...elementListProps} />}
-        </aside>
+      {/* Main content - Resizable panels for desktop */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Desktop: Resizable three-panel layout */}
+        <div className="hidden md:flex flex-1 overflow-hidden">
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            {/* Left Panel - Elements */}
+            {leftPanelOpen && (
+              <>
+                <ResizablePanel 
+                  defaultSize={18} 
+                  minSize={15} 
+                  maxSize={30}
+                  className="bg-background"
+                >
+                  <aside 
+                    className="h-full flex flex-col border-r overflow-hidden"
+                    aria-label={t('editor:panels.elements')}
+                  >
+                    <ElementList {...elementListProps} />
+                  </aside>
+                </ResizablePanel>
+                <ResizableHandle withHandle />
+              </>
+            )}
 
-        {/* Center - Preview */}
-        <PreviewCanvas
-          elements={elements}
-          devicePreview={devicePreview}
-          selectedElementId={selectedElementId}
-          isMobile={isMobile}
-          leftPanelOpen={leftPanelOpen}
-          rightPanelOpen={rightPanelOpen}
-          setLeftPanelOpen={setLeftPanelOpen}
-          setRightPanelOpen={setRightPanelOpen}
-          onElementClick={handleElementClick}
-          onAddClick={() => setShowAddModal(true)}
-        />
+            {/* Center Panel - Preview */}
+            <ResizablePanel defaultSize={leftPanelOpen && rightPanelOpen ? 54 : leftPanelOpen || rightPanelOpen ? 72 : 100}>
+              <PreviewCanvas
+                elements={elements}
+                devicePreview={devicePreview}
+                selectedElementId={selectedElementId}
+                isMobile={isMobile}
+                leftPanelOpen={leftPanelOpen}
+                rightPanelOpen={rightPanelOpen}
+                setLeftPanelOpen={setLeftPanelOpen}
+                setRightPanelOpen={setRightPanelOpen}
+                onElementClick={handleElementClick}
+                onAddClick={() => setShowAddModal(true)}
+              />
+            </ResizablePanel>
 
-        {/* Desktop right panel */}
-        <aside 
-          className={cn(
-            "hidden md:flex flex-col border-l bg-background transition-all duration-200 relative",
-            rightPanelOpen ? "w-80" : "w-0 border-l-0 overflow-hidden"
-          )}
-          aria-label={t('editor:panels.properties')}
-          aria-hidden={!rightPanelOpen}
-        >
-          {rightPanelOpen && <PropertyEditorPanel {...propertyEditorProps} />}
-        </aside>
+            {/* Right Panel - Properties */}
+            {rightPanelOpen && (
+              <>
+                <ResizableHandle withHandle />
+                <ResizablePanel 
+                  defaultSize={28} 
+                  minSize={20} 
+                  maxSize={40}
+                  className="bg-background"
+                >
+                  <aside 
+                    className="h-full flex flex-col border-l overflow-hidden"
+                    aria-label={t('editor:panels.properties')}
+                  >
+                    <PropertyEditorPanel {...propertyEditorProps} />
+                  </aside>
+                </ResizablePanel>
+              </>
+            )}
+          </ResizablePanelGroup>
+        </div>
+
+        {/* Mobile: Simple preview with sheets */}
+        <div className="md:hidden flex-1">
+          <PreviewCanvas
+            elements={elements}
+            devicePreview={devicePreview}
+            selectedElementId={selectedElementId}
+            isMobile={isMobile}
+            leftPanelOpen={leftPanelOpen}
+            rightPanelOpen={rightPanelOpen}
+            setLeftPanelOpen={setLeftPanelOpen}
+            setRightPanelOpen={setRightPanelOpen}
+            onElementClick={handleElementClick}
+            onAddClick={() => setShowAddModal(true)}
+          />
+        </div>
       </div>
 
       {/* Mobile bottom toolbar */}
