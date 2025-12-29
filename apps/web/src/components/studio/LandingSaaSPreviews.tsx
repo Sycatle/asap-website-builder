@@ -58,6 +58,22 @@ function getBoolean(data: Record<string, unknown> | undefined, key: string, fall
 }
 
 // ============================================
+// Smooth scroll helper for internal links
+// ============================================
+
+function handleInternalLink(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
+  // Only handle internal anchor links
+  if (href.startsWith('#')) {
+    e.preventDefault();
+    const targetId = href.slice(1);
+    const targetElement = document.getElementById(targetId);
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+}
+
+// ============================================
 // Navigation Preview
 // ============================================
 
@@ -76,7 +92,10 @@ export function NavigationPreview({ element }: LandingPreviewProps) {
   const displayLinks = navLinks.length > 0 ? navLinks : defaultLinks;
 
   return (
-    <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header 
+      id="navigation"
+      className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50"
+    >
       <nav className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
@@ -87,9 +106,14 @@ export function NavigationPreview({ element }: LandingPreviewProps) {
 
         <div className="hidden md:flex items-center gap-8">
           {displayLinks.map((link, i) => (
-            <span key={i} className="text-sm font-medium text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
+            <a 
+              key={i} 
+              href={link.href}
+              onClick={(e) => handleInternalLink(e, link.href)}
+              className="text-sm font-medium text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+            >
               {link.label}
-            </span>
+            </a>
           ))}
         </div>
 
@@ -124,7 +148,7 @@ export function LandingHeroPreview({ element }: LandingPreviewProps) {
   const showDashboardPreview = getBoolean(settings, 'show_dashboard_preview', true);
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-background via-background to-muted/30">
+    <section id="hero" className="relative overflow-hidden bg-gradient-to-b from-background via-background to-muted/30">
       {/* Background decoration */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
@@ -263,7 +287,7 @@ export function FeaturesPreview({ element }: LandingPreviewProps) {
   const displayFeatures = features.length > 0 ? features : defaultFeatures;
 
   return (
-    <section className="py-20 md:py-32 bg-muted/30">
+    <section id="features" className="py-20 md:py-32 bg-muted/30 scroll-mt-16">
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-2xl text-center mb-16">
           <Badge variant="outline" className="mb-4">{badgeText}</Badge>
@@ -324,7 +348,7 @@ export function HowItWorksPreview({ element }: LandingPreviewProps) {
   const displaySteps = steps.length > 0 ? steps : defaultSteps;
 
   return (
-    <section className="py-20 md:py-32">
+    <section id="how-it-works" className="py-20 md:py-32 scroll-mt-16">
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-2xl text-center mb-16">
           <Badge variant="outline" className="mb-4">{badgeText}</Badge>
@@ -375,7 +399,7 @@ export function PricingPreview({ element }: LandingPreviewProps) {
   const displayPlans = plans.length > 0 ? plans : defaultPlans;
 
   return (
-    <section className="py-20 md:py-32 bg-muted/30">
+    <section id="pricing" className="py-20 md:py-32 bg-muted/30 scroll-mt-16">
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-2xl text-center mb-16">
           <Badge variant="outline" className="mb-4">{badgeText}</Badge>
@@ -451,7 +475,7 @@ export function TestimonialsPreview({ element }: LandingPreviewProps) {
   const displayTestimonials = testimonials.length > 0 ? testimonials : defaultTestimonials;
 
   return (
-    <section className="py-20 md:py-32">
+    <section id="testimonials" className="py-20 md:py-32 scroll-mt-16">
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-2xl text-center mb-16">
           <Badge variant="outline" className="mb-4">{badgeText}</Badge>
@@ -503,7 +527,7 @@ export function CTAPreview({ element }: LandingPreviewProps) {
   const ctaSecondaryText = getString(settings, 'cta_secondary_text', 'Voir les tarifs');
 
   return (
-    <section className="py-20 md:py-32 bg-primary text-primary-foreground">
+    <section id="cta" className="py-20 md:py-32 bg-primary text-primary-foreground scroll-mt-16">
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl mb-6">
@@ -541,7 +565,7 @@ export function FooterPreview({ element }: LandingPreviewProps) {
   const copyright = getString(settings, 'copyright', '© 2024 ASAP. Tous droits réservés.');
 
   return (
-    <footer className="border-t bg-background py-12">
+    <footer id="footer" className="border-t bg-background py-12">
       <div className="container mx-auto px-4">
         <div className="grid gap-8 md:grid-cols-4">
           <div>

@@ -41,7 +41,7 @@ export function PreviewCanvas({
 
   return (
     <main 
-      className="flex-1 flex flex-col bg-muted/30 min-w-0"
+      className="flex-1 flex flex-col bg-muted/30 min-w-0 overflow-hidden"
       role="region"
       aria-label={t('editor:canvas.sitePreview')}
     >
@@ -54,11 +54,11 @@ export function PreviewCanvas({
         setRightPanelOpen={setRightPanelOpen}
       />
       
-      {/* Preview canvas */}
-      <ScrollArea className="flex-1 p-3 sm:p-4 md:p-6">
+      {/* Preview canvas - this is the only scrollable area */}
+      <div className="flex-1 overflow-hidden p-3 sm:p-4 md:p-6">
         <div 
           className={cn(
-            "mx-auto bg-card dark:bg-slate-950 shadow-2xl rounded-lg overflow-hidden transition-all duration-300 min-h-[50vh]",
+            "mx-auto bg-card dark:bg-slate-950 shadow-2xl transition-all duration-300 h-full flex flex-col",
             DEVICE_SIZES[devicePreview],
             isMobile && "rounded-none shadow-none"
           )}
@@ -70,7 +70,7 @@ export function PreviewCanvas({
               setLeftPanelOpen={setLeftPanelOpen}
             />
           ) : (
-            <div>
+            <div className="flex-1 overflow-auto relative scroll-smooth" id="preview-scroll-container">
               {visibleElements.map((element) => (
                 <SectionRenderer
                   key={element.id}
@@ -82,7 +82,7 @@ export function PreviewCanvas({
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </main>
   );
 }
@@ -105,7 +105,7 @@ function PreviewToolbar({
 }) {
   const { t } = useTranslation(['common', 'editor']);
   return (
-    <div className="sticky top-0 z-10 p-2 sm:p-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 flex items-center justify-between gap-2">
+    <div className="shrink-0 p-2 sm:p-3 border-b bg-background flex items-center justify-between gap-2">
       {/* Left toggle - Elements */}
       <Button
         variant={leftPanelOpen ? "secondary" : "ghost"}
