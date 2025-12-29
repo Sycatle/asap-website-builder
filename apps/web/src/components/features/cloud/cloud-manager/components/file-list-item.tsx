@@ -19,7 +19,7 @@ import {
   Link2
 } from "lucide-react";
 import { formatBytes, formatDate } from "@/lib/utils/formatters";
-import { getFileIcon } from "../utils";
+import { getFileIcon } from "@/components/shared/file-utils";
 import type { FileListItemProps } from "../types";
 
 /**

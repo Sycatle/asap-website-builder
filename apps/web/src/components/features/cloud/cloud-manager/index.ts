@@ -17,7 +17,7 @@ export type {
   FileMetadata,
 } from "./types";
 
-// Utils
+// Utils - re-export from shared
 export {
   isImage,
   isVideo,
@@ -27,7 +27,7 @@ export {
   getFileTypeLabel,
   getFileUrl,
   copyFileUrl,
-} from "./utils";
+} from "@/components/shared/file-utils";
 
 // Components
 export { QuotaCard } from "./components/quota-card";

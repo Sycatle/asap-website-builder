@@ -16,7 +16,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { formatBytes } from "@/lib/utils/formatters";
-import { isImage, isVideo, isAudio, getFileIcon, getFileTypeLabel } from "../utils";
+import { isImage, isVideo, isAudio, getFileIcon, getFileTypeLabel } from "@/components/shared/file-utils";
 import type { FilePreviewDialogProps } from "../types";
 
 /**

@@ -1,5 +1,5 @@
 // Website feature components
-export { default as Dashboard } from './Dashboard';
+export { Dashboard, Dashboard as default } from './dashboard';
 export { WebsiteCard } from './WebsiteCard';
 export { WebsitesList } from './WebsitesList';
 export { CreateWebsiteModal } from './CreateWebsiteModal';

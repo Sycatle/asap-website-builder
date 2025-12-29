@@ -33,17 +33,17 @@ function lazyWithRetry<T extends ComponentType<unknown>>(
 }
 
 // Lazy load page components with retry logic for HMR stability
-const Dashboard = lazyWithRetry(() => import("@/components/features/websites/Dashboard"))
+const Dashboard = lazyWithRetry(() => import("@/components/features/websites/dashboard"))
 const ExtensionsManager = lazyWithRetry(() => import("@/components/features/extensions/ExtensionsManager"))
 const ExtensionPage = lazyWithRetry(() => import("@/components/features/extensions/ExtensionConfig"))
-const CloudPage = lazyWithRetry(() => import("@/components/features/cloud/CloudManager"))
+const CloudPage = lazyWithRetry(() => import("@/components/features/cloud/cloud-manager"))
 const SettingsPage = lazyWithRetry(() => import("@/components/features/settings/SettingsPage"))
-const StudioPage = lazyWithRetry(() => import("@/components/studio/StudioPage"))
-const PagesPage = lazyWithRetry(() => import("@/components/features/pages/PagesPage"))
+const StudioPage = lazyWithRetry(() => import("@/components/studio/studio-page"))
+const PagesPage = lazyWithRetry(() => import("@/components/features/pages/pages-page"))
 const AdministratorsPage = lazyWithRetry(() => import("@/components/features/settings/AdministratorsPage"))
 const ThemePage = lazyWithRetry(() => import("@/components/features/settings/ThemePage"))
 const WebsiteSelector = lazyWithRetry(() => import("@/components/pages/WebsiteSelector"))
-const AnalyticsPage = lazyWithRetry(() => import("@/components/features/analytics/AnalyticsPage"))
+const AnalyticsPage = lazyWithRetry(() => import("@/components/features/analytics/analytics-page"))
 const SeoPage = lazyWithRetry(() => import("@/components/features/seo/SeoPage"))
 
 // UUID regex pattern
@@ -81,7 +81,6 @@ function parseRoute(pathname: string): Route {
   const websiteId = segments[0]
   
   if (!websiteId || !UUID_PATTERN.test(websiteId)) {
-    // Invalid UUID - maybe old URL format, redirect to select
     return { page: "select" }
   }
   
@@ -125,10 +124,6 @@ function parseRoute(pathname: string): Route {
     
     case "seo":
       return { page: "seo", websiteId }
-    
-    // Legacy routes without UUID - redirect to select
-    case "dashboard":
-      return { page: "select" }
     
     default:
       return { page: "not-found" }

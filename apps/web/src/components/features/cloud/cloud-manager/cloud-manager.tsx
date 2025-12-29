@@ -26,7 +26,7 @@ import { useGridNavigation, KeyboardHint } from '@/hooks/useGridNavigation';
 import { loggers } from '@/lib/logger';
 
 import type { ViewMode, DeleteConfirmState } from "./types";
-import { getFileUrl } from "./utils";
+import { getFileUrl } from "@/components/shared/file-utils";
 import { CloudManagerSkeleton } from "./components/cloud-manager-skeleton";
 import { QuotaCard } from "./components/quota-card";
 import { FileCard } from "./components/file-card";

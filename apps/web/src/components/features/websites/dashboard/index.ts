@@ -12,4 +12,4 @@ export { RecentEventsCard } from './recent-events-card';
 export { SiteProgressionCard } from './site-progression-card';
 export { WeeklyGoalsCard } from './weekly-goals-card';
 export { AchievementsCard } from './achievements-card';
-export { default as Dashboard } from './dashboard';
+export { default, default as Dashboard } from './dashboard';
