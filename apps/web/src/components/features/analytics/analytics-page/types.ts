@@ -193,7 +193,5 @@ export interface ConversionFunnelProps {
   conversions: ConversionsData;
 }
 
-export interface ChangeIndicatorProps {
-  value: number;
-  inverted?: boolean;
-}
+// Re-export ChangeIndicatorProps from shared
+export type { ChangeIndicatorProps } from "@/components/shared";

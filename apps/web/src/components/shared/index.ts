@@ -6,7 +6,37 @@ export { NotificationsDropdown } from './notifications-dropdown';
 export { ErrorBoundary, type ErrorBoundaryProps } from './ErrorBoundary';
 export { PageHeader } from './page-header';
 export { PresenceAvatars } from './presence-avatars';
-export { LogoutConfirmDialog } from './logout-confirm-dialog';
+
+// UI Components
+export { 
+  ChangeIndicator, 
+  getPercentageChange,
+  type ChangeIndicatorProps,
+} from './change-indicator';
+export { 
+  StatusBadge, 
+  StatusDot,
+  type StatusBadgeProps,
+  type PublishStatus,
+  type ConnectionStatus,
+  type WebVitalStatus,
+  type GenericStatus,
+} from './status-badge';
+export { 
+  StatCard, 
+  StatCardGrid,
+  LiveStatCard,
+  type StatCardProps,
+} from './stat-card';
+
+// Dialogs
+export { 
+  ConfirmDialog, 
+  DeleteConfirmDialog,
+  LogoutConfirmDialog,
+  type ConfirmDialogProps,
+  type ConfirmDialogVariant,
+} from './confirm-dialog';
 
 // Command Palette (component-first)
 export { CommandPalette, useCommandPalette, type CommandPaletteProps } from './command-palette';
@@ -24,3 +54,4 @@ export {
   copyFileUrl,
 } from './file-utils';
 export { FilePreviewDialog, type FilePreviewDialogProps } from './file-preview-dialog';
+

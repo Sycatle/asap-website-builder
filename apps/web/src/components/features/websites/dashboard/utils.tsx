@@ -1,26 +1,8 @@
 "use client"
 
-import { ArrowUpRight, ArrowDownRight } from "lucide-react";
-
-/**
- * Displays an indicator showing change direction (positive/negative)
- */
-export function ChangeIndicator({ value, suffix = '' }: { value: number; suffix?: string }) {
-  if (value === 0) return null;
-  const isPositive = value > 0;
-  return (
-    <span className={`inline-flex items-center gap-0.5 text-xs font-medium transition-all duration-300 ${
-      isPositive ? 'text-green-600' : 'text-red-500'
-    }`}>
-      {isPositive ? (
-        <ArrowUpRight className="h-3 w-3" />
-      ) : (
-        <ArrowDownRight className="h-3 w-3" />
-      )}
-      {isPositive ? '+' : ''}{value}{suffix}
-    </span>
-  );
-}
+// Re-export shared components
+export { ChangeIndicator, getPercentageChange } from "@/components/shared";
+export { formatTimeAgo } from "@/lib/utils";
 
 /**
  * Calculate change between current and previous values
@@ -28,18 +10,6 @@ export function ChangeIndicator({ value, suffix = '' }: { value: number; suffix?
 export function getChange(current: number, previous: number): number {
   if (previous === 0) return 0;
   return current - previous;
-}
-
-/**
- * Format time ago in French
- */
-export function formatTimeAgo(date: Date): string {
-  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-  
-  if (seconds < 60) return 'À l\'instant';
-  if (seconds < 3600) return `Il y a ${Math.floor(seconds / 60)} min`;
-  if (seconds < 86400) return `Il y a ${Math.floor(seconds / 3600)}h`;
-  return `Il y a ${Math.floor(seconds / 86400)}j`;
 }
 
 /**

@@ -1,58 +1,8 @@
 "use client"
 
-import { ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import type { WebVitalStatus } from "./types";
-
-/**
- * Change indicator showing positive/negative trend
- */
-export function ChangeIndicator({ 
-  value, 
-  inverted = false 
-}: { 
-  value: number; 
-  inverted?: boolean;
-}) {
-  const isPositive = inverted ? value < 0 : value > 0;
-  const isNegative = inverted ? value > 0 : value < 0;
-  
-  return (
-    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${
-      isPositive ? 'text-green-600' : isNegative ? 'text-red-500' : 'text-muted-foreground'
-    }`}>
-      {value > 0 ? (
-        <ArrowUpRight className="h-3 w-3" />
-      ) : value < 0 ? (
-        <ArrowDownRight className="h-3 w-3" />
-      ) : null}
-      {value > 0 ? '+' : ''}{value}%
-    </span>
-  );
-}
-
-/**
- * Status badge for Core Web Vitals
- */
-export function StatusBadge({ status }: { status: WebVitalStatus }) {
-  const styles: Record<WebVitalStatus, string> = {
-    'good': 'bg-green-100 text-green-700 border-green-200',
-    'needs-improvement': 'bg-amber-100 text-amber-700 border-amber-200',
-    'poor': 'bg-red-100 text-red-700 border-red-200',
-  };
-  
-  const labels: Record<WebVitalStatus, string> = {
-    'good': 'Bon',
-    'needs-improvement': 'À améliorer',
-    'poor': 'Mauvais',
-  };
-  
-  return (
-    <Badge variant="outline" className={styles[status]}>
-      {labels[status]}
-    </Badge>
-  );
-}
+// Re-export shared components
+export { ChangeIndicator } from "@/components/shared";
+export { StatusBadge } from "@/components/shared";
 
 /**
  * Position indicator with color coding
