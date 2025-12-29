@@ -19,9 +19,9 @@ export function PropertyEditorPanel({
 }: PropertyEditorPanelProps) {
   const { t } = useTranslation(['common', 'editor']);
   return (
-    <div className="flex flex-col h-full" role="region" aria-label={t('editor:propertyPanel.title')}>
-      {/* Header */}
-      <div className="sticky top-0 z-10 p-3 sm:p-4 border-b bg-background flex items-center justify-between">
+    <div className="flex flex-col h-full overflow-hidden" role="region" aria-label={t('editor:propertyPanel.title')}>
+      {/* Header - Fixed */}
+      <div className="shrink-0 p-3 sm:p-4 border-b bg-background flex items-center justify-between">
         <h3 className="font-semibold text-sm flex items-center gap-2" id="properties-title">
           <Settings2 className="h-4 w-4" aria-hidden="true" />
           {t('editor:properties.title')}
@@ -33,8 +33,8 @@ export function PropertyEditorPanel({
         )}
       </div>
       
-      {/* Property editor content */}
-      <ScrollArea className="flex-1 p-4">
+      {/* Property editor content - Scrollable */}
+      <div className="flex-1 overflow-y-auto p-4">
         {selectedElement ? (
           <PropertyEditor
             element={selectedElement}
@@ -44,7 +44,7 @@ export function PropertyEditorPanel({
         ) : (
           <EmptyPropertyState />
         )}
-      </ScrollArea>
+      </div>
     </div>
   );
 }

@@ -16,7 +16,7 @@ export type {
   PreviewCanvasProps,
   MobileToolbarProps,
 } from './types';
-export { DEVICE_SIZES } from './types';
+export { DEVICE_SIZES, DEVICE_CONFIGS } from './types';
 
 // Hooks
 export { useIsMobile } from './hooks';

@@ -52,7 +52,7 @@ export function StudioHeader({
   const { t } = useTranslation(['common', 'editor']);
   return (
     <>
-      <header className="sticky top-0 z-30 h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-3 sm:px-4 md:px-6 shrink-0 gap-2">
+      <header className="z-30 h-14 border-b bg-background flex items-center px-3 sm:px-4 md:px-6 shrink-0 gap-2">
         {/* Left section */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {onBack && (

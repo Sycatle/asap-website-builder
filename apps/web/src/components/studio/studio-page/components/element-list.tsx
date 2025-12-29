@@ -3,7 +3,6 @@
 import React, { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getElementIcon, getElementLabel } from "@/lib/constants/elements";
 import {
@@ -41,9 +40,9 @@ export function ElementList({
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   return (
-    <div className="flex flex-col h-full" role="region" aria-label={t('editor:elementList.title')}>
-      {/* Header */}
-      <div className="sticky top-0 z-10 p-3 sm:p-4 border-b bg-background flex items-center justify-between">
+    <div className="flex flex-col h-full overflow-hidden" role="region" aria-label={t('editor:elementList.title')}>
+      {/* Header - Fixed */}
+      <div className="shrink-0 p-3 sm:p-4 border-b bg-background flex items-center justify-between">
         <div>
           <h3 className="font-semibold text-sm flex items-center gap-2" id="elements-title">
             <Layers className="h-4 w-4" aria-hidden="true" />
@@ -68,8 +67,8 @@ export function ElementList({
         </Button>
       </div>
       
-      {/* Element list */}
-      <ScrollArea className="flex-1 p-2">
+      {/* Element list - Scrollable */}
+      <div className="flex-1 overflow-y-auto p-2">
         {isLoading ? (
           <ElementListSkeleton />
         ) : sortedElements.length === 0 ? (
@@ -87,7 +86,7 @@ export function ElementList({
             onDrop={onDrop}
           />
         )}
-      </ScrollArea>
+      </div>
     </div>
   );
 }
