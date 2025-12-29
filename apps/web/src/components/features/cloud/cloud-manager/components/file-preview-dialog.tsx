@@ -2,13 +2,13 @@
 
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { 
   Trash2,
   Download,
@@ -32,17 +32,17 @@ export function FilePreviewDialog({
   copiedId,
 }: FilePreviewDialogProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] sm:max-w-3xl p-4 sm:p-6">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+    <ResponsiveDialog open={isOpen} onOpenChange={onClose}>
+      <ResponsiveDialogContent className="max-w-[95vw] sm:max-w-3xl p-4 sm:p-6">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle className="flex items-center gap-2 text-sm sm:text-base">
             {file && getFileIcon(file.mime_type, "h-4 w-4 sm:h-5 sm:w-5")}
             <span className="truncate">{file?.filename}</span>
-          </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className="text-xs sm:text-sm">
             {file && `${getFileTypeLabel(file.mime_type)} · ${formatBytes(file.original_size)}`}
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
         
         {/* Preview Content */}
         {file && (
@@ -77,7 +77,7 @@ export function FilePreviewDialog({
           </div>
         )}
 
-        <DialogFooter className="flex-col gap-2 mt-4 sm:mt-0">
+        <ResponsiveDialogFooter className="flex-col gap-2 mt-4 sm:mt-0">
           <Button
             variant="outline"
             onClick={onCopyLink}
@@ -113,8 +113,8 @@ export function FilePreviewDialog({
             <Trash2 className="h-4 w-4 mr-1.5" />
             Supprimer
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }
