@@ -13,4 +13,4 @@ const normalizedSection = normalizeSection(section);
 const Renderer = getSectionRenderer(normalizedSection.element_type);
 ---
 
-<Renderer section={normalizedSection} website={website} />
+<Renderer section={normalizedSection} website={website} client:load />

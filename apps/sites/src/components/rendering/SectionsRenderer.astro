@@ -1,6 +1,6 @@
 ---
 import type { Element, Website } from '@asap/shared';
-import SectionRenderer from './SectionRenderer.astro';
+import SectionsWrapper from './SectionsWrapper';
 
 interface Props {
   sections: Element[];
@@ -10,6 +10,4 @@ interface Props {
 const { sections, website } = Astro.props;
 ---
 
-{sections.map((section) => (
-  <SectionRenderer section={section} website={website} />
-))}
+<SectionsWrapper sections={sections} website={website} client:only="react" />
