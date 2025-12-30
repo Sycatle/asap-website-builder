@@ -312,10 +312,10 @@ export function NavigationSaaSRenderer({ section }: SectionRendererProps) {
 export function HeroSaaSRenderer({ section, website }: SectionRendererProps) {
   const showBadge = getData(section, 'show_badge', true);
   const badgeIcon = getData(section, 'badge_icon', 'sparkles');
-  const badgeText = getData(section, 'badge_text', '');
-  const headlineLine1 = getData(section, 'headline_line1', website?.title || 'Créez votre site');
+  const badgeText = getData(section, 'badge_text', 'Nouvelle version disponible');
+  const headlineLine1 = getData(section, 'headline_line1', 'Créez votre site web');
   const headlineLine2 = getData(section, 'headline_line2', 'en quelques minutes');
-  const subheadline = getData(section, 'subheadline', website?.tagline || '');
+  const subheadline = getData(section, 'subheadline', 'La plateforme tout-en-un pour créer, gérer et faire évoluer votre présence en ligne.');
   const subheadlineBold = getData(section, 'subheadline_bold', '');
   const ctaPrimaryText = getData(section, 'cta_primary_text', 'Commencer gratuitement');
   const ctaPrimaryHref = getData(section, 'cta_primary_href', '/signup');
@@ -326,16 +326,25 @@ export function HeroSaaSRenderer({ section, website }: SectionRendererProps) {
   const showSocialProof = getData(section, 'show_social_proof', true);
   const socialProofAvatarsCount = getData(section, 'social_proof_avatars_count', 5);
   const socialProofText = getData(section, 'social_proof_text', '+500 créateurs nous font confiance');
-  const socialProofRating = getData(section, 'social_proof_rating', '4.9/5');
+  const socialProofRating = getData(section, 'social_proof_rating', '4.9/5 sur 200+ avis');
   const backgroundDecorations = getData(section, 'background_decorations', true);
   const showDashboardPreview = getData(section, 'show_dashboard_preview', true);
-  const dashboardUrl = getData(section, 'dashboard_url', '');
+  const dashboardUrl = getData(section, 'dashboard_url', 'app.asap.cool');
   const dashboardStats = getData(section, 'dashboard_stats', []) as Array<{ icon: string; value: string; label: string }>;
+  
+  // Default dashboard stats if none provided
+  const defaultDashboardStats = [
+    { icon: 'globe', value: '3', label: 'Sites' },
+    { icon: 'cloud', value: '2.4 GB', label: 'Storage' },
+    { icon: 'sparkles', value: '8,500', label: 'Tokens' },
+  ];
+  const displayDashboardStats = dashboardStats.length > 0 ? dashboardStats : defaultDashboardStats;
 
   const BadgeIcon = badgeIcon ? getIcon(badgeIcon) : null;
   const PrimaryIcon = ctaPrimaryIcon ? getIcon(ctaPrimaryIcon) : null;
   const SecondaryIcon = ctaSecondaryIcon ? getIcon(ctaSecondaryIcon) : null;
   const StarIcon = getIcon('star');
+  const ShieldIcon = getIcon('shield');
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-background via-background to-muted/30">
@@ -414,28 +423,38 @@ export function HeroSaaSRenderer({ section, website }: SectionRendererProps) {
 
           {/* Dashboard Preview */}
           {showDashboardPreview && (
-            <div className="mt-16 relative">
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent z-10 pointer-events-none" />
+            <div className="mt-16 mx-auto max-w-5xl">
               <div className="relative rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
+                {/* Browser chrome */}
                 <div className="border-b border-border bg-muted/50 px-4 py-3 flex items-center gap-2">
                   <div className="flex gap-1.5">
                     <div className="w-3 h-3 rounded-full bg-red-500" />
                     <div className="w-3 h-3 rounded-full bg-yellow-500" />
                     <div className="w-3 h-3 rounded-full bg-green-500" />
                   </div>
-                  <div className="flex-1 text-center text-sm text-muted-foreground">{dashboardUrl}</div>
+                  <div className="flex-1 flex justify-center">
+                    <div className="flex items-center gap-2 rounded-md bg-background px-3 py-1 text-xs text-muted-foreground">
+                      <ShieldIcon className="h-3 w-3" />
+                      {dashboardUrl}
+                    </div>
+                  </div>
                 </div>
-                <div className="p-6 grid grid-cols-3 gap-4">
-                  {dashboardStats.map((stat, i) => {
-                    const StatIcon = getIcon(stat.icon);
-                    return (
-                      <div key={i} className="p-4 rounded-lg bg-muted">
-                        <StatIcon className="w-6 h-6 text-primary mb-2" />
-                        <div className="text-2xl font-bold">{stat.value}</div>
-                        <div className="text-sm text-muted-foreground">{stat.label}</div>
-                      </div>
-                    );
-                  })}
+                {/* Dashboard content */}
+                <div className="aspect-[16/9] bg-gradient-to-br from-primary/5 via-background to-purple-500/5 flex items-center justify-center">
+                  <div className="text-center p-8">
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      {displayDashboardStats.map((stat, i) => {
+                        const StatIcon = getIcon(stat.icon);
+                        return (
+                          <div key={i} className="p-4 rounded-lg border bg-background/80 backdrop-blur">
+                            <StatIcon className="h-6 w-6 text-primary mx-auto mb-2" />
+                            <div className="text-2xl font-bold">{stat.value}</div>
+                            <div className="text-xs text-muted-foreground">{stat.label}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -453,7 +472,7 @@ export function HeroSaaSRenderer({ section, website }: SectionRendererProps) {
 export function FeaturesSaaSRenderer({ section }: SectionRendererProps) {
   const badgeText = getData(section, 'badge_text', 'Fonctionnalités');
   const headlineLine1 = getData(section, 'headline_line1', 'Tout ce dont vous avez besoin');
-  const headlineLine2 = getData(section, 'headline_line2', 'pour réussir');
+  const headlineLine2 = getData(section, 'headline_line2', 'pour réussir en ligne');
   const subheadline = getData(section, 'subheadline', '');
   const features = getData(section, 'features', []) as Array<{
     icon?: string;
@@ -465,6 +484,17 @@ export function FeaturesSaaSRenderer({ section }: SectionRendererProps) {
   const showBadges = getData(section, 'show_badges', true);
   const showIcons = getData(section, 'show_icons', true);
   const hoverEffect = getData(section, 'hover_effect', true);
+
+  const defaultFeatures = [
+    { icon: 'github', title: 'Sync GitHub', description: 'Synchronisez automatiquement vos projets GitHub', badge: 'Populaire' },
+    { icon: 'globe', title: 'Multi-sites', description: 'Gérez plusieurs sites depuis un seul tableau de bord' },
+    { icon: 'cloud', title: 'Hébergement inclus', description: 'Hébergement cloud rapide et sécurisé inclus' },
+    { icon: 'sparkles', title: 'Assistant IA', description: 'Générez du contenu avec l\'intelligence artificielle', badge: 'Nouveau' },
+    { icon: 'puzzle', title: 'Extensions', description: 'Étendez les fonctionnalités avec notre marketplace' },
+    { icon: 'bar-chart-3', title: 'Analytics', description: 'Suivez vos performances avec des statistiques détaillées' },
+  ];
+
+  const displayFeatures = features.length > 0 ? features : defaultFeatures;
 
   return (
     <section id="features" className="py-20 md:py-32 bg-muted/30 scroll-mt-16">
@@ -490,7 +520,7 @@ export function FeaturesSaaSRenderer({ section }: SectionRendererProps) {
           columns === 3 && 'md:grid-cols-2 lg:grid-cols-3',
           columns === 4 && 'md:grid-cols-2 lg:grid-cols-4'
         )}>
-          {features.map((feature, i) => {
+          {displayFeatures.map((feature, i) => {
             const FeatureIcon = feature.icon ? getIcon(feature.icon) : null;
             return (
               <Card key={i} className={cn(
@@ -539,6 +569,15 @@ export function HowItWorksSaaSRenderer({ section }: SectionRendererProps) {
   const showNumbers = getData(section, 'show_numbers', true);
   const showConnectors = getData(section, 'show_connectors', true);
 
+  const defaultSteps = [
+    { number: '01', title: 'Créez votre compte', description: 'Inscription gratuite en 30 secondes' },
+    { number: '02', title: 'Choisissez un template', description: 'Sélectionnez parmi nos modèles professionnels' },
+    { number: '03', title: 'Ajoutez votre contenu', description: 'Personnalisez selon vos besoins' },
+    { number: '04', title: 'Publiez en un clic', description: 'Votre site est en ligne instantanément' },
+  ];
+
+  const displaySteps = steps.length > 0 ? steps : defaultSteps;
+
   return (
     <section className="py-20 md:py-32">
       <div className="container mx-auto px-4">
@@ -558,9 +597,9 @@ export function HowItWorksSaaSRenderer({ section }: SectionRendererProps) {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {steps.map((step, i) => (
+          {displaySteps.map((step, i) => (
             <div key={i} className="relative">
-              {showConnectors && i < steps.length - 1 && (
+              {showConnectors && i < displaySteps.length - 1 && (
                 <div className="hidden lg:block absolute top-8 left-1/2 w-full h-0.5 bg-gradient-to-r from-primary/50 to-primary/10" />
               )}
               <div className="relative flex flex-col items-center text-center">
