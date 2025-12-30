@@ -10,7 +10,9 @@ import type {
 } from '@asap/shared';
 import { sortSections } from '@/lib/rendering/normalize';
 
-const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
+// Use INTERNAL_API_URL for server-side (SSR) requests within Docker network
+// Falls back to PUBLIC_API_URL for client-side or local development
+const API_URL = import.meta.env.INTERNAL_API_URL || import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
 
 async function fetchJson<T>(url: string): Promise<T | null> {
   try {
@@ -97,6 +99,15 @@ function normalizePage(page: SiteRenderPage): SiteRenderPage {
   };
 }
 
+// Transform element to ensure settings are also in data for renderer compatibility
+function normalizeElement(element: Element): Element {
+  return {
+    ...element,
+    // Copy settings to data for backward compatibility with renderers
+    data: element.data || element.settings || {},
+  };
+}
+
 async function buildLegacyPayload(slug: string): Promise<SiteRenderPayload | null> {
   const website = await fetchJson<Website>(`${API_URL}/public/websites/${slug}`);
   if (!website) {
@@ -104,15 +115,27 @@ async function buildLegacyPayload(slug: string): Promise<SiteRenderPayload | nul
   }
 
   const pages = await fetchJson<Page[]>(`${API_URL}/public/websites/${slug}/pages`);
-  const elements = await fetchJson<Element[]>(`${API_URL}/public/websites/${slug}/elements`);
+  const rawElements = await fetchJson<Element[]>(`${API_URL}/public/websites/${slug}/elements`);
+  
+  // Normalize elements to ensure data field is populated
+  const elements = rawElements?.map(normalizeElement) ?? [];
 
   const theme = (website.metadata?.theme || (website.data as { theme?: Theme } | undefined)?.theme) as Theme | undefined;
   const seo = (website.metadata?.seo || (website.data as { seo?: SEOMetadata } | undefined)?.seo) as SEOMetadata | undefined;
 
+  // If we have pages but no elements in them, assign all website elements to the homepage
+  // This handles the case where the API doesn't include page.elements
+  const hasPageElements = pages && pages.some((page) => page.elements && page.elements.length > 0);
+  
   const normalizedPages = pages && pages.length > 0
     ? pages.map((page) => ({
         ...page,
-        sections: sortSections((page.elements ?? []) as Element[]) as SiteRenderSection[],
+        // Use page.elements if available, otherwise use website elements for homepage
+        sections: sortSections(
+          (page.elements && page.elements.length > 0)
+            ? page.elements.map(normalizeElement)
+            : (page.is_homepage && !hasPageElements ? elements : [])
+        ) as SiteRenderSection[],
       }))
     : [{
         id: `${website.id}-home`,
@@ -123,7 +146,7 @@ async function buildLegacyPayload(slug: string): Promise<SiteRenderPayload | nul
         is_homepage: true,
         visible: true,
         order_index: 0,
-        sections: sortSections(elements ?? []) as SiteRenderSection[],
+        sections: sortSections(elements) as SiteRenderSection[],
       }];
 
   return normalizeRenderPayload({
