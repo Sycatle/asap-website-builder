@@ -1,0 +1,16 @@
+---
+import type { Element, Website } from '@asap/shared';
+import { getSectionRenderer } from '@/lib/rendering/registry';
+import { normalizeSection } from '@/lib/rendering/normalize';
+
+interface Props {
+  section: Element;
+  website?: Website;
+}
+
+const { section, website } = Astro.props;
+const normalizedSection = normalizeSection(section);
+const Renderer = getSectionRenderer(normalizedSection.element_type);
+---
+
+<Renderer section={normalizedSection} website={website} />

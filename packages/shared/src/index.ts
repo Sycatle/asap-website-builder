@@ -18,3 +18,6 @@ export * from './freelance-profile.ts';
 
 // Landing SaaS Schemas (Property definitions)
 export * from './landing-saas-schema.ts';
+
+// Site rendering payloads
+export * from './site-rendering.ts';

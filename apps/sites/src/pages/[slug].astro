@@ -5,12 +5,9 @@
  * Route: /{slug}
  */
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import ElementRenderer from '@/components/renderers/ElementRenderer.astro';
-import { 
-  getPublicWebsite, 
-  getPublicElements,
-} from '@/lib/api';
-import type { Theme, SEOMetadata } from '@asap/shared';
+import SectionsRenderer from '@/components/rendering/SectionsRenderer.astro';
+import PageNavigation from '@/components/site/PageNavigation.astro';
+import { buildSeo, getSiteRenderPayload, resolveSitePage } from '@/lib/site-data';
 
 // Get slug from URL and normalize to lowercase for case-insensitive matching
 const { slug: rawSlug } = Astro.params;
@@ -20,47 +17,26 @@ if (!slug) {
   return Astro.redirect('/');
 }
 
-// Fetch website data from API (data from dashboard)
-const website = await getPublicWebsite(slug);
+const payload = await getSiteRenderPayload(slug);
 
-// Handle 404
-if (!website) {
+if (!payload) {
   return Astro.redirect('/404');
 }
 
-// Only show published websites
+const { website, theme } = payload;
+
 if (website.status !== 'published') {
   return Astro.redirect('/404');
 }
 
-// Fetch elements (sections) from API
-const rawElements = await getPublicElements(slug);
+const page = resolveSitePage(payload);
 
-// Filter visible and sort by order
-const elements = rawElements
-  .filter(e => e.visible !== false)
-  .sort((a, b) => (a.order_index ?? a.order ?? 0) - (b.order_index ?? b.order ?? 0));
+if (!page) {
+  return Astro.redirect('/404');
+}
 
-// Extract theme and SEO from website metadata (configured in dashboard)
-const websiteData = (website.data || {}) as Record<string, unknown>;
-const theme = (website.metadata?.theme || websiteData.theme) as Theme | undefined;
-const seoMeta = (website.metadata?.seo || websiteData.seo || {}) as SEOMetadata;
-
-// Build full SEO object from dashboard data
-const seo = {
-  title: seoMeta.title || website.title,
-  description: seoMeta.description || website.tagline || '',
-  keywords: seoMeta.keywords || [],
-  author: seoMeta.author,
-  image: seoMeta.image || website.metadata?.socialImage,
-  url: `https://${slug}.asap.cool`,
-  siteName: website.title,
-  twitterHandle: seoMeta.twitterHandle,
-  type: 'website' as const,
-  canonicalUrl: seoMeta.canonicalUrl || `https://${slug}.asap.cool`,
-  noIndex: seoMeta.noIndex || false,
-  noFollow: seoMeta.noFollow || false,
-};
+const seo = buildSeo(payload, page, slug);
+const showNavigation = payload.pages.length > 1;
 ---
 
 <BaseLayout 
@@ -69,27 +45,32 @@ const seo = {
   favicon={website.metadata?.favicon}
   fontFamily={theme?.fontFamily}
 >
-  {elements.length === 0 ? (
-    <!-- Default hero when no elements configured -->
-    <section class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div class="text-center px-6">
-        <h1 class="text-5xl sm:text-6xl md:text-7xl font-extrabold text-white mb-4">
-          {website.title}
-        </h1>
-        {website.tagline && (
-          <p class="text-xl text-slate-300 max-w-2xl mx-auto">
-            {website.tagline}
-          </p>
-        )}
-      </div>
-    </section>
-  ) : (
-    <!-- Render all elements using SSR Astro components -->
-    {elements.map((element) => (
-      <ElementRenderer 
-        element={element} 
-        website={website}
-      />
-    ))}
+  {showNavigation && (
+    <PageNavigation
+      pages={payload.pages}
+      activeSlug={page.slug}
+      siteSlug={slug}
+      siteTitle={website.title}
+    />
   )}
+
+  <div class:list={[showNavigation && 'pt-20']}>
+    {page.sections.length === 0 ? (
+      <!-- Default hero when no elements configured -->
+      <section class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div class="text-center px-6">
+          <h1 class="text-5xl sm:text-6xl md:text-7xl font-extrabold text-white mb-4">
+            {website.title}
+          </h1>
+          {website.tagline && (
+            <p class="text-xl text-slate-300 max-w-2xl mx-auto">
+              {website.tagline}
+            </p>
+          )}
+        </div>
+      </section>
+    ) : (
+      <SectionsRenderer sections={page.sections} website={website} />
+    )}
+  </div>
 </BaseLayout>
