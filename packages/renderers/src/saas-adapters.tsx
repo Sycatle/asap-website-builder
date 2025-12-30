@@ -461,7 +461,7 @@ export function FeaturesSaaSRenderer({ section }: SectionRendererProps) {
     description: string;
     badge?: string;
   }>;
-  const columns = getData(section, 'columns', 3);
+  const columns = getData<number>(section, 'columns', 3);
   const showBadges = getData(section, 'show_badges', true);
   const showIcons = getData(section, 'show_icons', true);
   const hoverEffect = getData(section, 'hover_effect', true);
@@ -602,13 +602,24 @@ export function PricingSaaSRenderer({ section }: SectionRendererProps) {
   const popularBadgeText = getData(section, 'popular_badge_text', 'Populaire');
   const currency = getData(section, 'currency', '€');
 
-  const defaultPlans = [
+  type PricingPlan = {
+    name: string;
+    description?: string;
+    price: string;
+    period?: string;
+    popular?: boolean;
+    features?: string[];
+    cta_text?: string;
+    cta_variant?: string;
+  };
+
+  const defaultPlans: PricingPlan[] = [
     { name: 'Gratuit', description: 'Pour démarrer', price: '0', period: 'Toujours gratuit', features: ['1 site web', '500 Mo de stockage', '1000 tokens IA', 'Sous-domaine asap.cool'] },
     { name: 'Pro', description: 'Pour les créateurs', price: '9', period: '/mois', popular: true, features: ['5 sites web', '10 Go de stockage', '10 000 tokens IA', 'Domaines personnalisés', 'Analytics avancés'] },
     { name: 'Team', description: 'Pour les équipes', price: '29', period: '/mois', features: ['Sites illimités', '100 Go de stockage', 'Tokens illimités', 'Multi-utilisateurs', 'API access'] },
   ];
 
-  const displayPlans = plans.length > 0 ? plans : defaultPlans;
+  const displayPlans: PricingPlan[] = plans.length > 0 ? plans : defaultPlans;
 
   const CheckIcon = getIcon('check');
 

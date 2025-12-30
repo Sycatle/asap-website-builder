@@ -1073,8 +1073,18 @@ export function CustomRenderer({ section, isSelected, onClick }: SectionRenderer
 // ============================================
 // Main Section Renderer - Routes to correct renderer
 // ============================================
+
+/**
+ * Section Type Registry
+ * 
+ * This is the SINGLE SOURCE OF TRUTH for all section renderers.
+ * Any new section type must be added here to be rendered correctly
+ * in both studio preview and public sites.
+ */
 const renderers: Record<string, React.ComponentType<SectionRendererProps>> = {
-  // SaaS Landing Page sections
+  // =====================================
+  // SaaS Landing Page Sections
+  // =====================================
   navigation: NavigationSaaSRenderer,
   hero: HeroSaaSRenderer,
   features: FeaturesSaaSRenderer,
@@ -1083,13 +1093,66 @@ const renderers: Record<string, React.ComponentType<SectionRendererProps>> = {
   testimonials: TestimonialsSaaSRenderer,
   cta: CTASaaSRenderer,
   footer: FooterSaaSRenderer,
+
+  // =====================================
+  // Portfolio / Freelance Sections (Legacy)
+  // =====================================
+  'portfolio-hero': HeroRenderer,
+  about: AboutRenderer,
+  skills: SkillsRenderer,
+  projects: ProjectsRenderer,
+  experience: ExperienceRenderer,
+  education: EducationRenderer,
+  contact: ContactRenderer,
+  services: ServicesRenderer,
+  gallery: GalleryRenderer,
+  blog: BlogRenderer,
+  faq: FAQRenderer,
+  
+  // =====================================
+  // Custom / Fallback
+  // =====================================
   custom: CustomRenderer,
 };
 
-export function   SectionRenderer({ section, website, isSelected, isEditable, onClick }: SectionRendererProps) {
-  const sectionType = section.element_type;
+/**
+ * SectionRenderer - Main component for rendering any section type
+ * 
+ * This is the primary export used by both:
+ * - apps/web (studio preview)
+ * - apps/sites (public published sites)
+ * 
+ * Usage:
+ * ```tsx
+ * <SectionRenderer section={section} website={website} />
+ * ```
+ */
+export function SectionRenderer({ section, website, isSelected, isEditable, onClick }: SectionRendererProps) {
+  const sectionType = section.element_type?.toLowerCase() || 'custom';
   const Renderer = renderers[sectionType] || CustomRenderer;
   return <Renderer section={section} website={website} isSelected={isSelected} isEditable={isEditable} onClick={onClick} />;
+}
+
+/**
+ * Get a specific renderer by section type
+ * Useful for rendering individual sections or custom integrations
+ */
+export function getRenderer(type: string): React.ComponentType<SectionRendererProps> {
+  return renderers[type?.toLowerCase()] || CustomRenderer;
+}
+
+/**
+ * Check if a section type has a registered renderer
+ */
+export function hasRenderer(type: string): boolean {
+  return type?.toLowerCase() in renderers;
+}
+
+/**
+ * Get all registered section types
+ */
+export function getRegisteredSectionTypes(): string[] {
+  return Object.keys(renderers);
 }
 
 export { renderers };
