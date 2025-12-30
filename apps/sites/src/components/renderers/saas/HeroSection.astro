@@ -1,0 +1,91 @@
+---
+/**
+ * Hero Section - SaaS Landing
+ * Renders the hero section for SaaS landing pages
+ */
+const { element } = Astro.props;
+---
+
+<section class="relative overflow-hidden bg-gradient-to-b from-background via-background to-muted/30">
+  <div class="absolute inset-0 -z-10">
+    <div class="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+    <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
+  </div>
+
+  <div class="container mx-auto px-4 py-20 md:py-32">
+    <div class="mx-auto max-w-4xl text-center">
+      {element.data?.badge && (
+        <div class="mb-6 px-4 py-2 inline-flex items-center gap-2 rounded-full bg-secondary/10 text-sm font-medium">
+          <!-- Sparkles icon like studio -->
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12l4 4L19 7" />
+          </svg>
+          <span>{element.data.badge}</span>
+        </div>
+      )}
+
+      <h1 class="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl mb-6">
+        {element.data?.headline || 'Your SaaS Solution'}
+        {element.data?.highlight && <span class="block text-primary mt-2">{element.data.highlight}</span>}
+      </h1>
+
+      {element.data?.subheadline && (
+        <p class="mx-auto max-w-2xl text-lg md:text-xl text-muted-foreground mb-8">{element.data.subheadline}</p>
+      )}
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+        {element.data?.ctaPrimary && (
+          <a href={element.data.ctaPrimary.href || '/signup'} class="inline-flex items-center rounded-md bg-primary px-8 py-3 text-base font-semibold text-primary-foreground">
+            {element.data.ctaPrimary.label}
+            <svg class="ml-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </a>
+        )}
+
+        {element.data?.ctaSecondary && (
+          <a href={element.data.ctaSecondary.href || '#demo'} class="inline-flex items-center rounded-md border border-muted/20 px-8 py-3 text-base font-semibold">
+            <svg class="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l4 2-4 2v-4z" />
+            </svg>
+            {element.data.ctaSecondary.label}
+          </a>
+        )}
+      </div>
+
+      <!-- Social proof / dashboard preview area preserved from studio (optional) -->
+      {element.data?.showPreview && (
+        <div class="mt-16 mx-auto max-w-5xl">
+          <div class="relative rounded-xl border bg-background shadow-2xl overflow-hidden">
+            <div class="flex items-center gap-2 border-b bg-muted/50 px-4 py-3">
+              <div class="flex gap-1.5">
+                <div class="h-3 w-3 rounded-full bg-red-500" />
+                <div class="h-3 w-3 rounded-full bg-yellow-500" />
+                <div class="h-3 w-3 rounded-full bg-green-500" />
+              </div>
+              <div class="flex-1 flex justify-center">
+                <div class="flex items-center gap-2 rounded-md bg-background px-3 py-1 text-xs text-muted-foreground">
+                  <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                  app.asap.cool/dashboard
+                </div>
+              </div>
+            </div>
+            <div class="aspect-[16/9] bg-gradient-to-br from-primary/5 via-background to-purple-500/5 flex items-center justify-center">
+              <div class="text-center p-8">
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                  {(element.data?.previewStats || []).map((stat) => (
+                    <div class="p-4 rounded-lg border bg-background/80 backdrop-blur">
+                      <div class="text-2xl font-bold">{stat.value}</div>
+                      <div class="text-xs text-muted-foreground">{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+                {element.data?.previewText && <p class="text-muted-foreground">{element.data.previewText}</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+</section>
