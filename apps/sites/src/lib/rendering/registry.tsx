@@ -1,26 +1,45 @@
+/**
+ * Section Renderer Registry
+ * 
+ * This file provides the interface to @asap/renderers package.
+ * The actual renderers are defined in the shared package to ensure
+ * 100% parity between studio preview and public sites.
+ */
+
 import React from 'react';
 import type { SectionRendererProps } from '@asap/renderers';
-import { CustomRenderer, renderers } from '@asap/renderers';
+import { CustomRenderer, renderers, getRenderer, hasRenderer } from '@asap/renderers';
 
 export type SectionRendererComponent = React.ComponentType<SectionRendererProps>;
 
-const registry = new Map<string, SectionRendererComponent>(Object.entries(renderers));
-
-export function registerSectionRenderer(type: string, renderer: SectionRendererComponent): void {
-  registry.set(type, renderer);
-}
-
+/**
+ * Get the renderer for a specific section type.
+ * Falls back to UnknownSectionRenderer if not found.
+ */
 export function getSectionRenderer(type: string): SectionRendererComponent {
-  return registry.get(type) ?? UnknownSectionRenderer;
+  if (hasRenderer(type)) {
+    return getRenderer(type);
+  }
+  return UnknownSectionRenderer;
 }
 
+/**
+ * Renderer shown when a section type is not recognized.
+ * Helps debugging during development.
+ */
 export const UnknownSectionRenderer: SectionRendererComponent = ({ section }) => (
-  <section className="border border-dashed border-red-500/70 bg-red-500/10 px-6 py-12 text-center text-red-700">
-    <h2 className="text-lg font-semibold">Section inconnue</h2>
+  <section className="border border-dashed border-destructive/70 bg-destructive/10 px-6 py-12 text-center text-destructive">
+    <h2 className="text-lg font-semibold">Section type not found</h2>
     <p className="mt-2 text-sm">
-      Le type de section <span className="font-mono">{section.element_type}</span> n&apos;est pas enregistré.
+      The section type <code className="font-mono bg-destructive/20 px-1 rounded">{section.element_type}</code> is not registered.
+    </p>
+    <p className="mt-1 text-xs text-muted-foreground">
+      Add it to <code className="font-mono">packages/renderers/src/renderers.tsx</code>
     </p>
   </section>
 );
 
 export const defaultSectionRenderer: SectionRendererComponent = CustomRenderer;
+
+// Re-export for convenience
+export { renderers, hasRenderer };

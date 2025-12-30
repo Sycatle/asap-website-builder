@@ -1,4 +1,3 @@
-import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { Element, Website } from '@asap/shared';
 import { SectionRenderer } from '@asap/renderers';
@@ -10,7 +9,7 @@ export interface ParitySnapshot {
 
 export function createSectionSnapshot(section: Element, website?: Website): ParitySnapshot {
   const normalized = normalizeSection(section);
-  const html = renderToStaticMarkup(<SectionRenderer section={normalized} website={website} />);
+  const html = renderToStaticMarkup(<SectionRenderer section={normalized} />);
   return { html: normalizeHtml(html) };
 }
 
