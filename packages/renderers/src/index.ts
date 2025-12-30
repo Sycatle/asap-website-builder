@@ -15,5 +15,5 @@ export * from './renderers';
 // V1 MVP: Freelance Portfolio Renderer
 export * from './freelance-renderer';
 
-// Landing Page SaaS Renderer
-export * from './landing-saas-renderer';
+// SaaS Section Renderers (unified - uses CSS variables)
+export * from './saas-adapters';

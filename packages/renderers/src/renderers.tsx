@@ -13,6 +13,18 @@ import DOMPurify from 'dompurify';
 import type { Section, Website } from './types';
 import { getData, cn } from './utils';
 
+// Import SaaS section adapters
+import {
+  NavigationSaaSRenderer,
+  HeroSaaSRenderer,
+  FeaturesSaaSRenderer,
+  HowItWorksSaaSRenderer,
+  PricingSaaSRenderer,
+  TestimonialsSaaSRenderer,
+  CTASaaSRenderer,
+  FooterSaaSRenderer,
+} from './saas-adapters';
+
 // ============================================
 // HTML Sanitization
 // ============================================
@@ -1062,24 +1074,21 @@ export function CustomRenderer({ section, isSelected, onClick }: SectionRenderer
 // Main Section Renderer - Routes to correct renderer
 // ============================================
 const renderers: Record<string, React.ComponentType<SectionRendererProps>> = {
-  hero: HeroRenderer,
-  about: AboutRenderer,
-  skills: SkillsRenderer,
-  projects: ProjectsRenderer,
-  experience: ExperienceRenderer,
-  education: EducationRenderer,
-  contact: ContactRenderer,
-  testimonials: TestimonialsRenderer,
-  services: ServicesRenderer,
-  pricing: PricingRenderer,
-  faq: FAQRenderer,
-  gallery: GalleryRenderer,
-  blog: BlogRenderer,
+  // SaaS Landing Page sections
+  navigation: NavigationSaaSRenderer,
+  hero: HeroSaaSRenderer,
+  features: FeaturesSaaSRenderer,
+  'how-it-works': HowItWorksSaaSRenderer,
+  pricing: PricingSaaSRenderer,
+  testimonials: TestimonialsSaaSRenderer,
+  cta: CTASaaSRenderer,
+  footer: FooterSaaSRenderer,
   custom: CustomRenderer,
 };
 
-export function SectionRenderer({ section, website, isSelected, isEditable, onClick }: SectionRendererProps) {
-  const Renderer = renderers[section.element_type] || CustomRenderer;
+export function   SectionRenderer({ section, website, isSelected, isEditable, onClick }: SectionRendererProps) {
+  const sectionType = section.element_type;
+  const Renderer = renderers[sectionType] || CustomRenderer;
   return <Renderer section={section} website={website} isSelected={isSelected} isEditable={isEditable} onClick={onClick} />;
 }
 
