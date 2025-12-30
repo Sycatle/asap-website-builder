@@ -1,15 +1,38 @@
 "use client"
 
 /**
- * Section Renderers for Preview System
+ * Section Renderers for Studio Preview System
  * 
- * V1: Using fixed FreelanceDevProfile structure
- * Section renderers from @asap/renderers package are used for the public site rendering.
+ * IMPORTANT: This file re-exports from @asap/renderers which is the
+ * SINGLE SOURCE OF TRUTH for all section renderers.
+ * 
+ * Both the studio preview (apps/web) and public sites (apps/sites) use
+ * the exact same renderers from this package, guaranteeing 100% visual parity.
+ * 
+ * DO NOT define renderers here - add them to packages/renderers instead.
  */
 
-// Re-export all renderers from the shared package
+// Re-export main components
 export {
   SectionRenderer,
+  getRenderer,
+  hasRenderer,
+  getRegisteredSectionTypes,
+  renderers,
+} from '@asap/renderers';
+
+// Re-export individual renderers for direct use
+export {
+  // SaaS Sections
+  NavigationSaaSRenderer,
+  HeroSaaSRenderer,
+  FeaturesSaaSRenderer,
+  HowItWorksSaaSRenderer,
+  PricingSaaSRenderer,
+  TestimonialsSaaSRenderer,
+  CTASaaSRenderer,
+  FooterSaaSRenderer,
+  // Portfolio Sections
   HeroRenderer,
   AboutRenderer,
   SkillsRenderer,
@@ -17,16 +40,14 @@ export {
   ExperienceRenderer,
   EducationRenderer,
   ContactRenderer,
-  TestimonialsRenderer,
   ServicesRenderer,
   PricingRenderer,
   FAQRenderer,
   GalleryRenderer,
   BlogRenderer,
   CustomRenderer,
-  type SectionRendererProps,
 } from '@asap/renderers';
 
-// Re-export types - Note: Section type removed in V1, using FreelanceDevProfile instead
-export type { Website } from '@asap/renderers';
+// Re-export types
+export type { SectionRendererProps, Website, Section } from '@asap/renderers';
 
