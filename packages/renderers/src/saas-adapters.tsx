@@ -303,7 +303,7 @@ export function FeaturesSaaSRenderer({ section }: SectionRendererProps) {
           <Badge variant="outline" className="mb-4">
             {badgeText}
           </Badge>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4">
             {headlineLine1}
             <span className="text-primary"> {headlineLine2}</span>
           </h2>
@@ -327,22 +327,22 @@ export function FeaturesSaaSRenderer({ section }: SectionRendererProps) {
                 'relative overflow-hidden group',
                 hoverEffect && 'transition-all duration-300 hover:shadow-lg hover:-translate-y-1'
               )}>
+                {showBadges && feature.badge && (
+                  <Badge className="absolute -top-2 -right-2 z-10" variant="default">
+                    {feature.badge}
+                  </Badge>
+                )}
                 <CardHeader>
                   {showIcons && FeatureIcon && (
                     <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
                       <FeatureIcon className="w-6 h-6 text-primary" />
                     </div>
                   )}
-                  <div className="flex items-center gap-2">
-                    <CardTitle className="text-lg">{feature.title}</CardTitle>
-                    {showBadges && feature.badge && (
-                      <Badge variant="secondary" className="text-xs">
-                        {feature.badge}
-                      </Badge>
-                    )}
-                  </div>
-                  <CardDescription>{feature.description}</CardDescription>
+                  <CardTitle className="text-xl">{feature.title}</CardTitle>
                 </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-base">{feature.description}</CardDescription>
+                </CardContent>
               </Card>
             );
           })}
@@ -372,18 +372,18 @@ export function HowItWorksSaaSRenderer({ section }: SectionRendererProps) {
   const showConnectors = getData(section, 'show_connectors', defaults.show_connectors as boolean);
 
   return (
-    <section className="py-20 md:py-32">
+    <section id="how-it-works" className="py-20 md:py-32 scroll-mt-16">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
+        <div className="mx-auto max-w-2xl text-center mb-16">
           <Badge variant="outline" className="mb-4">
             {badgeText}
           </Badge>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4">
             {headlineLine1}
             <span className="text-primary"> {headlineLine2}</span>
           </h2>
           {subheadline && (
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg text-muted-foreground">
               {subheadline}
             </p>
           )}
@@ -393,16 +393,16 @@ export function HowItWorksSaaSRenderer({ section }: SectionRendererProps) {
           {steps.map((step, i) => (
             <div key={i} className="relative">
               {showConnectors && i < steps.length - 1 && (
-                <div className="hidden lg:block absolute top-8 left-1/2 w-full h-0.5 bg-gradient-to-r from-primary/50 to-primary/10" />
+                <div className="hidden lg:block absolute top-8 left-[60%] w-full h-0.5 bg-gradient-to-r from-primary/50 to-primary/10" />
               )}
-              <div className="relative flex flex-col items-center text-center">
+              <div className="relative z-10 flex flex-col items-center text-center">
                 {showNumbers && (
-                  <div className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold mb-4 relative z-10">
-                    {step.number || String(i + 1).padStart(2, '0')}
+                  <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold mb-4">
+                    {step.number || String(i + 1)}
                   </div>
                 )}
-                <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
-                <p className="text-muted-foreground">{step.description}</p>
+                <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
+                <p className="text-muted-foreground text-base">{step.description}</p>
               </div>
             </div>
           ))}
@@ -582,9 +582,9 @@ export function CTASaaSRenderer({ section }: SectionRendererProps) {
   const SecondaryIcon = ctaSecondaryIcon ? getIcon(ctaSecondaryIcon) : null;
 
   return (
-    <section className="py-20 md:py-32 bg-primary">
+    <section id="cta" className="py-20 md:py-32 bg-primary scroll-mt-16">
       <div className="container mx-auto px-4 text-center">
-        <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
+        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-primary-foreground mb-4">
           {headline}
         </h2>
         {(subheadlineLine1 || subheadlineLine2) && (
