@@ -1,0 +1,130 @@
+---
+/**
+ * Dynamic Page Route - Renders additional pages of a published website
+ * 100% SSR for optimal SEO
+ * Route: /{slug}/{pageSlug}
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import ElementRenderer from '@/components/renderers/ElementRenderer.astro';
+import { 
+  getPublicWebsite, 
+  getPublicPages,
+} from '@/lib/api';
+import type { Theme } from '@asap/shared';
+
+// Get params from URL
+const { slug, page: pageSlug } = Astro.params;
+
+if (!slug || !pageSlug) {
+  return Astro.redirect('/404');
+}
+
+// Fetch website data from API
+const website = await getPublicWebsite(slug);
+
+// Handle 404
+if (!website) {
+  return Astro.redirect('/404');
+}
+
+// Only show published websites
+if (website.status !== 'published') {
+  return Astro.redirect('/404');
+}
+
+// Fetch all pages for this website
+const pages = await getPublicPages(slug);
+
+// Find the requested page
+const currentPage = pages.find(p => p.slug === pageSlug);
+
+if (!currentPage) {
+  return Astro.redirect('/404');
+}
+
+// Extract theme from website metadata
+const websiteData = (website.data || {}) as Record<string, unknown>;
+const theme = (website.metadata?.theme || websiteData.theme) as Theme | undefined;
+
+// Build SEO object for the page
+const seo = {
+  title: currentPage.title || website.title,
+  description: currentPage.description || website.tagline || '',
+  keywords: (website.metadata?.seo?.keywords || []) as string[],
+  url: `https://${slug}.asap.cool/${pageSlug}`,
+  siteName: website.title,
+  type: 'website' as const,
+  canonicalUrl: `https://${slug}.asap.cool/${pageSlug}`,
+};
+
+// Get elements for this page
+const pageElements = (currentPage.elements || [])
+  .filter((e: any) => e.visible !== false)
+  .sort((a: any, b: any) => (a.order_index ?? a.order ?? 0) - (b.order_index ?? b.order ?? 0));
+
+// Navigation links for multi-page sites
+const navPages = pages.map(p => ({
+  title: p.title,
+  slug: p.slug,
+  href: `/${slug}/${p.slug}`,
+  active: p.slug === pageSlug,
+}));
+---
+
+<BaseLayout 
+  seo={seo} 
+  theme={theme}
+  favicon={website.metadata?.favicon}
+  fontFamily={theme?.fontFamily}
+>
+  <!-- Page Navigation (if multiple pages) -->
+  {pages.length > 1 && (
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+      <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <a href={`/${slug}`} class="font-bold text-lg text-foreground">
+          {website.title}
+        </a>
+        <div class="flex items-center gap-4">
+          {navPages.map((navPage) => (
+            <a 
+              href={navPage.href}
+              class:list={[
+                'text-sm font-medium transition-colors',
+                navPage.active ? 'text-primary' : 'text-muted hover:text-foreground'
+              ]}
+            >
+              {navPage.title}
+            </a>
+          ))}
+        </div>
+      </div>
+    </nav>
+  )}
+
+  <!-- Page Content -->
+  <div class:list={[pages.length > 1 && 'pt-20']}>
+    {pageElements.length === 0 ? (
+      <!-- Empty page content -->
+      <section class="min-h-screen flex items-center justify-center">
+        <div class="text-center px-6">
+          <h1 class="text-4xl font-bold text-foreground mb-4">
+            {currentPage.title}
+          </h1>
+          {currentPage.description && (
+            <p class="text-muted text-lg max-w-xl mx-auto">
+              {currentPage.description}
+            </p>
+          )}
+        </div>
+      </section>
+    ) : (
+      <!-- Render all page elements using SSR -->
+      {pageElements.map((element: any) => (
+        <ElementRenderer 
+          element={element} 
+          website={website}
+        />
+      ))}
+    )}
+  </div>
+</BaseLayout>

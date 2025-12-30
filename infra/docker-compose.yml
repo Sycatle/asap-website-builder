@@ -127,6 +127,28 @@ services:
     networks:
       - asap-network
 
+  # Sites application (Astro) - Public sites server
+  sites:
+    image: node:20-alpine
+    container_name: asap-sites
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 4322"
+    ports:
+      - "4322:4322"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 4322
+      PUBLIC_API_URL: http://localhost:3000/api
+      NODE_ENV: development
+    volumes:
+      - ../apps/sites:/app
+      - /app/node_modules
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - asap-network
+
 networks:
   asap-network:
     driver: bridge

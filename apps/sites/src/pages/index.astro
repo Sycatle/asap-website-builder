@@ -1,0 +1,33 @@
+---
+/**
+ * Index Page - Redirects to ASAP main site
+ * 
+ * The sites app is designed to render individual portfolio sites at /{slug}
+ * The root path redirects to the main ASAP landing page.
+ */
+---
+
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="refresh" content="0; url=https://asap.cool" />
+    <title>Redirection - ASAP</title>
+    <link rel="canonical" href="https://asap.cool" />
+  </head>
+  <body class="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+    <div class="text-center">
+      <h1 class="text-2xl font-semibold mb-4">Redirection en cours...</h1>
+      <p class="text-slate-400">
+        Si vous n'êtes pas redirigé automatiquement, 
+        <a href="https://asap.cool" class="text-indigo-400 hover:text-indigo-300 underline">
+          cliquez ici
+        </a>.
+      </p>
+    </div>
+    <script>
+      window.location.href = 'https://asap.cool';
+    </script>
+  </body>
+</html>

@@ -5,7 +5,7 @@
  * Import from here instead of duplicating constant definitions.
  */
 
-import type { ElementType } from './types';
+import type { ElementType } from './types.ts';
 
 // ============================================
 // Domain Configuration

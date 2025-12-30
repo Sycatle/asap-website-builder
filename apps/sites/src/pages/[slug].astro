@@ -1,25 +1,26 @@
 ---
 /**
  * Dynamic Public Page - Renders any published website by slug
- * Uses the same renderers as the preview system for 100% visual parity
+ * 100% SSR for optimal SEO - no client-side JavaScript needed
  * Route: /{slug}
  */
 import BaseLayout from '@/layouts/BaseLayout.astro';
+import ElementRenderer from '@/components/renderers/ElementRenderer.astro';
 import { 
   getPublicWebsite, 
-  getPublicSections,
-  type PublicSection,
+  getPublicElements,
 } from '@/lib/api';
-import { SectionRenderer } from '@asap/renderers';
+import type { Theme, SEOMetadata } from '@asap/shared';
 
-// Get slug from URL
-const { slug } = Astro.params;
+// Get slug from URL and normalize to lowercase for case-insensitive matching
+const { slug: rawSlug } = Astro.params;
+const slug = String(rawSlug || '').toLowerCase();
 
 if (!slug) {
   return Astro.redirect('/');
 }
 
-// Fetch website data
+// Fetch website data from API (data from dashboard)
 const website = await getPublicWebsite(slug);
 
 // Handle 404
@@ -32,22 +33,23 @@ if (website.status !== 'published') {
   return Astro.redirect('/404');
 }
 
-// Fetch sections
-const rawSections = await getPublicSections(slug);
+// Fetch elements (sections) from API
+const rawElements = await getPublicElements(slug);
 
 // Filter visible and sort by order
-const sections = rawSections
-  .filter(s => s.visible !== false)
-  .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+const elements = rawElements
+  .filter(e => e.visible !== false)
+  .sort((a, b) => (a.order_index ?? a.order ?? 0) - (b.order_index ?? b.order ?? 0));
 
-// Extract theme and SEO from metadata
-const theme = website.metadata?.theme;
-const seoMeta = website.metadata?.seo || {};
+// Extract theme and SEO from website metadata (configured in dashboard)
+const websiteData = (website.data || {}) as Record<string, unknown>;
+const theme = (website.metadata?.theme || websiteData.theme) as Theme | undefined;
+const seoMeta = (website.metadata?.seo || websiteData.seo || {}) as SEOMetadata;
 
-// Build full SEO object
+// Build full SEO object from dashboard data
 const seo = {
   title: seoMeta.title || website.title,
-  description: seoMeta.description || website.tagline,
+  description: seoMeta.description || website.tagline || '',
   keywords: seoMeta.keywords || [],
   author: seoMeta.author,
   image: seoMeta.image || website.metadata?.socialImage,
@@ -59,30 +61,6 @@ const seo = {
   noIndex: seoMeta.noIndex || false,
   noFollow: seoMeta.noFollow || false,
 };
-
-// Convert sections to renderer format
-const rendererSections = sections.map(s => ({
-  id: s.id,
-  website_id: s.website_id,
-  section_type: s.section_type as any,
-  title: s.title,
-  layout: s.layout,
-  content: s.content,
-  data: s.content, // Alias for renderer compatibility
-  settings: s.settings,
-  visible: s.visible,
-  order_index: s.order_index,
-}));
-
-// Convert website for renderer
-const rendererWebsite = {
-  id: website.id,
-  slug: website.slug,
-  title: website.title,
-  tagline: website.tagline,
-  status: website.status as 'draft' | 'published',
-  metadata: website.metadata,
-};
 ---
 
 <BaseLayout 
@@ -91,37 +69,26 @@ const rendererWebsite = {
   favicon={website.metadata?.favicon}
   fontFamily={theme?.fontFamily}
 >
-  {rendererSections.length === 0 ? (
-    <!-- Default hero when no sections configured -->
-    <SectionRenderer 
-      client:load
-      section={{
-        id: 'default-hero',
-        website_id: website.id,
-        section_type: 'hero',
-        title: website.title,
-        layout: 'centered',
-        content: {
-          headline: website.title,
-          subheadline: website.tagline,
-        },
-        data: {
-          headline: website.title,
-          subheadline: website.tagline,
-        },
-        settings: {},
-        visible: true,
-        order_index: 0,
-      }}
-      website={rendererWebsite}
-    />
+  {elements.length === 0 ? (
+    <!-- Default hero when no elements configured -->
+    <section class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div class="text-center px-6">
+        <h1 class="text-5xl sm:text-6xl md:text-7xl font-extrabold text-white mb-4">
+          {website.title}
+        </h1>
+        {website.tagline && (
+          <p class="text-xl text-slate-300 max-w-2xl mx-auto">
+            {website.tagline}
+          </p>
+        )}
+      </div>
+    </section>
   ) : (
-    <!-- Render all sections using shared renderers -->
-    {rendererSections.map((section) => (
-      <SectionRenderer 
-        client:load
-        section={section} 
-        website={rendererWebsite}
+    <!-- Render all elements using SSR Astro components -->
+    {elements.map((element) => (
+      <ElementRenderer 
+        element={element} 
+        website={website}
       />
     ))}
   )}

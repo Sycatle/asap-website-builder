@@ -48,7 +48,7 @@ export function PreviewCanvas({
 
   return (
     <main 
-      className="flex-1 flex flex-col bg-muted/30 min-w-0 overflow-hidden"
+      className="h-full flex flex-col bg-muted/30 min-w-0"
       role="region"
       aria-label={t('editor:canvas.sitePreview')}
     >
@@ -63,7 +63,7 @@ export function PreviewCanvas({
       
       {/* Preview canvas container */}
       <div className={cn(
-        "flex-1 overflow-hidden flex items-center justify-center relative",
+        "flex-1 min-h-0 flex items-center justify-center relative overflow-hidden",
         isDeviceFrame ? "p-4 sm:p-6 md:p-8 bg-gradient-to-br from-muted/50 via-muted/30 to-muted/50" : "p-0"
       )}>
         {/* Device frame wrapper */}
@@ -72,7 +72,7 @@ export function PreviewCanvas({
             "relative transition-all duration-500 ease-out flex flex-col",
             deviceConfig.width,
             deviceConfig.maxWidth,
-            deviceConfig.height,
+            isDeviceFrame ? "h-full max-h-full" : "h-full",
             // Frame styling for tablet/mobile
             isDeviceFrame && [
               deviceConfig.borderRadius,
@@ -81,7 +81,7 @@ export function PreviewCanvas({
               "ring-1 ring-gray-700 dark:ring-gray-600",
             ],
             // Desktop: full width, no frame
-            !isDeviceFrame && "rounded-none border-0 h-full",
+            !isDeviceFrame && "rounded-none border-0",
             // Responsive scaling for very small containers
             devicePreview === 'tablet' && "max-w-full",
           )}
@@ -108,7 +108,7 @@ export function PreviewCanvas({
 
           {/* Main preview content */}
           <div className={cn(
-            "flex-1 bg-card dark:bg-slate-950 flex flex-col min-h-0",
+            "flex-1 bg-card dark:bg-slate-950 overflow-y-auto overflow-x-hidden",
             // Inner border radius for device frames
             devicePreview === 'mobile' && "rounded-[1.75rem]",
             devicePreview === 'tablet' && "rounded-xl",
@@ -122,10 +122,7 @@ export function PreviewCanvas({
                   setLeftPanelOpen={setLeftPanelOpen}
                 />
               ) : (
-                <div 
-                  className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth min-h-0" 
-                  id="preview-scroll-container"
-                >
+                <div id="preview-scroll-container">
                   {visibleElements.map((element) => (
                     <SectionRenderer
                       key={element.id}

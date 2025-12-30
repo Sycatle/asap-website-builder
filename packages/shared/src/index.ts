@@ -5,16 +5,16 @@
  */
 
 // Types
-export * from './types';
+export * from './types.ts';
 
 // Constants
-export * from './constants';
+export * from './constants.ts';
 
 // Utilities
-export * from './utils';
+export * from './utils.ts';
 
 // Freelance Profile (V1 Canonical Model)
-export * from './freelance-profile';
+export * from './freelance-profile.ts';
 
 // Landing SaaS Schemas (Property definitions)
-export * from './landing-saas-schema';
+export * from './landing-saas-schema.ts';
