@@ -5,8 +5,8 @@
  * Import from here instead of duplicating utility functions.
  */
 
-import { SLUG_MIN_LENGTH, SLUG_REGEX, ASAP_DOMAIN } from './constants.ts';
-import type { Element, Theme } from './types.ts';
+import { SLUG_MIN_LENGTH, SLUG_REGEX, ASAP_DOMAIN } from './constants';
+import type { Element, Theme } from './types';
 
 // ============================================
 // Constants
