@@ -269,14 +269,31 @@ pub async fn create_page(
         }
     }
 
-    // If this is set as homepage, unset other homepages
+    // Start transaction for atomic create with homepage flag
+    let mut tx = match pool.begin().await {
+        Ok(tx) => tx,
+        Err(e) => {
+            tracing::error!("Failed to start transaction: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    // If this is set as homepage, unset other homepages (within transaction)
     if payload.is_homepage.unwrap_or(false) {
-        let _ = sqlx::query(
+        if let Err(e) = sqlx::query(
             "UPDATE website_pages SET is_homepage = false WHERE website_id = $1"
         )
         .bind(website_uuid)
-        .execute(&pool)
-        .await;
+        .execute(&mut *tx)
+        .await {
+            tracing::error!("Failed to unset homepages: {}", e);
+            let _ = tx.rollback().await;
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
     }
 
     // Get next order value
@@ -284,7 +301,7 @@ pub async fn create_page(
         r#"SELECT COALESCE(MAX("order"), 0) + 1 FROM website_pages WHERE website_id = $1"#
     )
     .bind(website_uuid)
-    .fetch_one(&pool)
+    .fetch_one(&mut *tx)
     .await
     .unwrap_or(0);
 
@@ -304,11 +321,19 @@ pub async fn create_page(
     .bind(payload.order.unwrap_or(next_order))
     .bind(payload.visible.unwrap_or(true))
     .bind(payload.metadata.as_ref().unwrap_or(&serde_json::json!({})))
-    .execute(&pool)
+    .execute(&mut *tx)
     .await;
 
     match result {
         Ok(_) => {
+            // Commit the transaction before any other operations
+            if let Err(e) = tx.commit().await {
+                tracing::error!("Failed to commit transaction: {}", e);
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                    "error": "Internal server error"
+                }))).into_response();
+            }
+
             // Create event
             let event_payload = serde_json::json!({
                 "website_id": website_id,
@@ -443,15 +468,32 @@ pub async fn update_page(
         _ => {}
     }
 
-    // If setting as homepage, unset others
+    // Start transaction for atomic update with homepage flag
+    let mut tx = match pool.begin().await {
+        Ok(tx) => tx,
+        Err(e) => {
+            tracing::error!("Failed to start transaction: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    // If setting as homepage, unset others (within transaction)
     if payload.is_homepage.unwrap_or(false) {
-        let _ = sqlx::query(
+        if let Err(e) = sqlx::query(
             "UPDATE website_pages SET is_homepage = false WHERE website_id = $1 AND id != $2"
         )
         .bind(website_uuid)
         .bind(page_uuid)
-        .execute(&pool)
-        .await;
+        .execute(&mut *tx)
+        .await {
+            tracing::error!("Failed to unset homepages: {}", e);
+            let _ = tx.rollback().await;
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
     }
 
     // Build dynamic update query
@@ -524,8 +566,16 @@ pub async fn update_page(
     
     q = q.bind(page_uuid).bind(website_uuid);
 
-    match q.execute(&pool).await {
+    match q.execute(&mut *tx).await {
         Ok(_) => {
+            // Commit transaction
+            if let Err(e) = tx.commit().await {
+                tracing::error!("Failed to commit transaction: {}", e);
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                    "error": "Internal server error"
+                }))).into_response();
+            }
+
             let update_data = serde_json::json!({
                 "slug": payload.slug,
                 "title": payload.title,
@@ -554,6 +604,7 @@ pub async fn update_page(
             }))).into_response()
         }
         Err(e) => {
+            let _ = tx.rollback().await;
             if e.to_string().contains("unique constraint") {
                 return (StatusCode::CONFLICT, Json(serde_json::json!({
                     "error": "A page with this slug already exists"
@@ -713,21 +764,51 @@ pub async fn reorder_pages(
         }
     }
 
-    // Update order for each page
+    // Start transaction for atomic reordering
+    let mut tx = match pool.begin().await {
+        Ok(tx) => tx,
+        Err(e) => {
+            tracing::error!("Failed to start transaction: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
+
+    // Update order for each page within transaction
     for (index, page_id) in payload.page_ids.iter().enumerate() {
         let page_uuid = match Uuid::parse_str(page_id) {
             Ok(id) => id,
-            Err(_) => continue,
+            Err(_) => {
+                let _ = tx.rollback().await;
+                return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                    "error": format!("Invalid page ID: {}", page_id)
+                }))).into_response();
+            }
         };
 
-        let _ = sqlx::query(
+        if let Err(e) = sqlx::query(
             r#"UPDATE website_pages SET "order" = $1 WHERE id = $2 AND website_id = $3"#
         )
         .bind(index as i32)
         .bind(page_uuid)
         .bind(website_uuid)
-        .execute(&pool)
-        .await;
+        .execute(&mut *tx)
+        .await {
+            tracing::error!("Failed to update page order: {}", e);
+            let _ = tx.rollback().await;
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Failed to reorder pages"
+            }))).into_response();
+        }
+    }
+
+    // Commit transaction
+    if let Err(e) = tx.commit().await {
+        tracing::error!("Failed to commit transaction: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+            "error": "Internal server error"
+        }))).into_response();
     }
 
     // Broadcast to all users with access (owner + active administrators)
