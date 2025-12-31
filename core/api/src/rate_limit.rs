@@ -225,29 +225,61 @@ impl RateLimiter {
 /// Shared rate limiter type for Axum state
 pub type SharedRateLimiter = Arc<RateLimiter>;
 
+/// Validate IP address format (basic check)
+fn is_valid_ip(ip: &str) -> bool {
+    ip.parse::<std::net::IpAddr>().is_ok()
+}
+
+/// Get trusted proxy IPs from environment
+fn get_trusted_proxies() -> Vec<std::net::IpAddr> {
+    std::env::var("TRUSTED_PROXIES")
+        .unwrap_or_default()
+        .split(',')
+        .filter_map(|s| s.trim().parse().ok())
+        .collect()
+}
+
 /// Extract client IP from request
+/// SECURITY: Only trusts X-Forwarded-For when request comes from a trusted proxy
 fn extract_client_ip(req: &Request) -> String {
-    // Try X-Forwarded-For header first (for proxied requests)
-    if let Some(forwarded) = req.headers().get("x-forwarded-for") {
-        if let Ok(forwarded_str) = forwarded.to_str() {
-            // Take first IP in the chain
-            if let Some(ip) = forwarded_str.split(',').next() {
-                return ip.trim().to_string();
+    // Get direct connection IP first
+    let direct_ip = req.extensions()
+        .get::<ConnectInfo<SocketAddr>>()
+        .map(|ci| ci.0.ip());
+    
+    // Only trust forwarded headers if from a trusted proxy
+    let trusted_proxies = get_trusted_proxies();
+    let from_trusted_proxy = direct_ip
+        .map(|ip| trusted_proxies.contains(&ip))
+        .unwrap_or(false);
+    
+    if from_trusted_proxy {
+        // Trust X-Forwarded-For only from trusted proxies
+        if let Some(forwarded) = req.headers().get("x-forwarded-for") {
+            if let Ok(forwarded_str) = forwarded.to_str() {
+                // Take first IP in the chain and validate it
+                if let Some(ip) = forwarded_str.split(',').next() {
+                    let ip = ip.trim();
+                    if is_valid_ip(ip) {
+                        return ip.to_string();
+                    }
+                }
+            }
+        }
+
+        // Trust X-Real-IP only from trusted proxies
+        if let Some(real_ip) = req.headers().get("x-real-ip") {
+            if let Ok(ip) = real_ip.to_str() {
+                if is_valid_ip(ip) {
+                    return ip.to_string();
+                }
             }
         }
     }
 
-    // Try X-Real-IP header
-    if let Some(real_ip) = req.headers().get("x-real-ip") {
-        if let Ok(ip) = real_ip.to_str() {
-            return ip.to_string();
-        }
-    }
-
-    // Fallback to connection info
-    req.extensions()
-        .get::<ConnectInfo<SocketAddr>>()
-        .map(|ci| ci.0.ip().to_string())
+    // Use direct connection IP (cannot be spoofed)
+    direct_ip
+        .map(|ip| ip.to_string())
         .unwrap_or_else(|| "unknown".to_string())
 }
 

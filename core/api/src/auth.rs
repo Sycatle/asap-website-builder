@@ -543,6 +543,9 @@ pub async fn login(
     .await {
         Ok(Some(account)) => account,
         Ok(None) => {
+            // SECURITY: Perform dummy hash to prevent timing attack
+            // This ensures response time is similar whether email exists or not
+            let _ = verify_password(&payload.password, "$2b$12$K4qSkN5vBnQK7mPjFn5Oau2WmWfOmVkhXJGpY9LJsMEbJwH4J9mqe");
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
                 "error": "Invalid email or password"
             }))).into_response();
@@ -891,17 +894,18 @@ pub async fn forgot_password(
     }
 
     // TODO: In production, send email with reset link
-    // For now, log the token for development/testing
+    // For now, log the token for development/testing only
     let reset_url = format!(
         "{}/reset-password?token={}",
         std::env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:4321".to_string()),
         reset_token.token
     );
-    tracing::info!(
-        "Password reset requested for {}. Reset URL: {}",
-        account.email,
-        reset_url
-    );
+    
+    // SECURITY: Only log reset URL in debug builds - never in production
+    #[cfg(debug_assertions)]
+    tracing::debug!("[DEV ONLY] Password reset URL: {}", reset_url);
+    
+    tracing::info!("Password reset requested for {}", account.email);
 
     // Create notification (optional - can be used for email sending)
     // In the future, this could trigger an email notification
