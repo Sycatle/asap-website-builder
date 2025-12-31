@@ -299,7 +299,7 @@ export function FeaturesSaaSRenderer({ section }: SectionRendererProps) {
   return (
     <section id="features" className="py-20 md:py-32 bg-muted/30 scroll-mt-16">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
+        <div className="mx-auto max-w-3xl text-center mb-16">
           <Badge variant="outline" className="mb-4">
             {badgeText}
           </Badge>
@@ -308,7 +308,7 @@ export function FeaturesSaaSRenderer({ section }: SectionRendererProps) {
             <span className="text-primary"> {headlineLine2}</span>
           </h2>
           {subheadline && (
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg text-muted-foreground">
               {subheadline}
             </p>
           )}
@@ -323,27 +323,29 @@ export function FeaturesSaaSRenderer({ section }: SectionRendererProps) {
           {features.map((feature, i) => {
             const FeatureIcon = feature.icon ? getIcon(feature.icon) : null;
             return (
-              <Card key={i} className={cn(
-                'relative overflow-hidden group',
-                hoverEffect && 'transition-all duration-300 hover:shadow-lg hover:-translate-y-1'
-              )}>
+              <div key={i} className="relative pt-3">
                 {showBadges && feature.badge && (
-                  <Badge className="absolute -top-2 -right-2 z-10" variant="default">
+                  <Badge className="absolute -top-0 right-4 z-10" variant="default">
                     {feature.badge}
                   </Badge>
                 )}
-                <CardHeader>
-                  {showIcons && FeatureIcon && (
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-                      <FeatureIcon className="w-6 h-6 text-primary" />
-                    </div>
-                  )}
-                  <CardTitle className="text-xl">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-base">{feature.description}</CardDescription>
-                </CardContent>
-              </Card>
+                <Card className={cn(
+                  'relative h-full group',
+                  hoverEffect && 'transition-all duration-300 hover:shadow-lg hover:-translate-y-1'
+                )}>
+                  <CardHeader>
+                    {showIcons && FeatureIcon && (
+                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                        <FeatureIcon className="w-6 h-6 text-primary" />
+                      </div>
+                    )}
+                    <CardTitle className="text-xl">{feature.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription className="text-base">{feature.description}</CardDescription>
+                  </CardContent>
+                </Card>
+              </div>
             );
           })}
         </div>
@@ -374,7 +376,7 @@ export function HowItWorksSaaSRenderer({ section }: SectionRendererProps) {
   return (
     <section id="how-it-works" className="py-20 md:py-32 scroll-mt-16">
       <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-2xl text-center mb-16">
+        <div className="mx-auto max-w-3xl text-center mb-16">
           <Badge variant="outline" className="mb-4">
             {badgeText}
           </Badge>
@@ -439,7 +441,7 @@ export function PricingSaaSRenderer({ section }: SectionRendererProps) {
   return (
     <section id="pricing" className="py-20 md:py-32 bg-muted/30 scroll-mt-16">
       <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-2xl text-center mb-16">
+        <div className="mx-auto max-w-3xl text-center mb-16">
           <Badge variant="outline" className="mb-4">{badgeText}</Badge>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4">
             {headlineLine1}
@@ -521,7 +523,7 @@ export function TestimonialsSaaSRenderer({ section }: SectionRendererProps) {
   return (
     <section id="testimonials" className="py-20 md:py-32 scroll-mt-16">
       <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-2xl text-center mb-16">
+        <div className="mx-auto max-w-3xl text-center mb-16">
           <Badge variant="outline" className="mb-4">{badgeText}</Badge>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4">
             {headlineLine1}
