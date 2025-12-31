@@ -74,42 +74,89 @@ struct WebsiteWithDataRow {
 // Handlers
 // ============================================
 
-/// Track a single event
+/// Track a single event - stores in database asynchronously
 pub async fn track_event(
-    State(_pool): State<PgPool>,
+    State(pool): State<PgPool>,
     Json(payload): Json<TrackEventRequest>,
 ) -> StatusCode {
-    // V1: Just log events - no database storage yet
-    tracing::info!(
+    tracing::debug!(
         "Metric event: {} for website {}",
         payload.event_type,
         payload.website_id
     );
     
-    if let Some(data) = &payload.event_data {
-        tracing::debug!("Event data: {:?}", data);
-    }
+    // Fire-and-forget database insert (don't block the response)
+    tokio::spawn(async move {
+        if let Err(e) = store_event(&pool, &payload).await {
+            tracing::warn!("Failed to store metric event: {}", e);
+        }
+    });
 
     StatusCode::ACCEPTED
 }
 
-/// Track multiple events (batch)
+/// Track multiple events (batch) - stores in database asynchronously  
 pub async fn track_events_batch(
-    State(_pool): State<PgPool>,
+    State(pool): State<PgPool>,
     Json(payload): Json<BatchEventsRequest>,
 ) -> StatusCode {
-    // V1: Just log events - no database storage yet
-    tracing::info!("Batch metrics: {} events", payload.events.len());
+    let event_count = payload.events.len();
+    tracing::debug!("Batch metrics: {} events", event_count);
     
-    for event in &payload.events {
-        tracing::debug!(
-            "Metric event: {} for website {}",
-            event.event_type,
-            event.website_id
-        );
-    }
+    // Fire-and-forget batch insert
+    tokio::spawn(async move {
+        if let Err(e) = store_events_batch(&pool, &payload.events).await {
+            tracing::warn!("Failed to store {} metric events: {}", event_count, e);
+        }
+    });
 
     StatusCode::ACCEPTED
+}
+
+/// Store a single event in the database
+async fn store_event(pool: &PgPool, event: &TrackEventRequest) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"
+        INSERT INTO product_events (website_id, event_type, event_data)
+        VALUES ($1, $2, $3)
+        "#
+    )
+    .bind(event.website_id)
+    .bind(&event.event_type)
+    .bind(&event.event_data.clone().unwrap_or(serde_json::json!({})))
+    .execute(pool)
+    .await?;
+    
+    Ok(())
+}
+
+/// Store multiple events in a batch transaction
+async fn store_events_batch(pool: &PgPool, events: &[TrackEventRequest]) -> Result<(), sqlx::Error> {
+    if events.is_empty() {
+        return Ok(());
+    }
+    
+    // Use a transaction for batch insert
+    let mut tx = pool.begin().await?;
+    
+    for event in events {
+        sqlx::query(
+            r#"
+            INSERT INTO product_events (website_id, event_type, event_data)
+            VALUES ($1, $2, $3)
+            "#
+        )
+        .bind(event.website_id)
+        .bind(&event.event_type)
+        .bind(&event.event_data.clone().unwrap_or(serde_json::json!({})))
+        .execute(&mut *tx)
+        .await?;
+    }
+    
+    tx.commit().await?;
+    tracing::debug!("Stored {} metric events", events.len());
+    
+    Ok(())
 }
 
 /// Get activation metrics for a website

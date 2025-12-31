@@ -138,6 +138,10 @@ async fn main() -> anyhow::Result<()> {
     let ws_state = Arc::new(websocket::WsState::new(shared_config.clone(), pool.clone()));
     tracing::info!("WebSocket state initialized with authentication");
 
+    // Start periodic cleanup tasks
+    websocket::spawn_cleanup_task(ws_state.clone());
+    tracing::info!("WebSocket cleanup task started (runs every 5 minutes)");
+
     // Start Redis Pub/Sub subscribers for real-time features
     if let Ok(redis_url) = std::env::var("REDIS_URL") {
         // Notification subscriber

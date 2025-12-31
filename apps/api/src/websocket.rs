@@ -809,6 +809,57 @@ fn verify_token_and_get_claims(token: &str, config: &SharedConfig) -> Option<Cla
     }
 }
 
+/// Cleanup interval for stale connection tracking data
+const CLEANUP_INTERVAL: std::time::Duration = std::time::Duration::from_secs(300); // 5 minutes
+
+/// Spawn a background task to periodically cleanup stale data
+/// - Removes stale IP entries from CONNECTION_COUNTS
+/// - Cleans expired access cache entries from WsState
+pub fn spawn_cleanup_task(state: Arc<WsState>) {
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(CLEANUP_INTERVAL);
+        interval.tick().await; // Skip first immediate tick
+        
+        loop {
+            interval.tick().await;
+            
+            // Cleanup stale IP connection counts (IPs with 0 connections)
+            {
+                let mut counts = CONNECTION_COUNTS.write().await;
+                let before = counts.len();
+                counts.retain(|_, &mut count| count > 0);
+                let after = counts.len();
+                if before != after {
+                    info!("Cleaned up {} stale IP entries from connection counts", before - after);
+                }
+            }
+            
+            // Cleanup expired access cache entries
+            {
+                let mut cache = state.access_cache.write().await;
+                let before = cache.len();
+                let now = std::time::Instant::now();
+                cache.retain(|_, entry| entry.cached_at.elapsed() < ACCESS_CACHE_TTL);
+                let after = cache.len();
+                if before != after {
+                    info!("Cleaned up {} expired access cache entries", before - after);
+                }
+            }
+            
+            // Log current stats
+            let total_connections = TOTAL_CONNECTIONS.load(std::sync::atomic::Ordering::Relaxed);
+            let ip_count = CONNECTION_COUNTS.read().await.len();
+            let cache_size = state.access_cache.read().await.len();
+            let presence_rooms = state.website_presence.read().await.len();
+            
+            tracing::debug!(
+                "WebSocket stats: {} total connections, {} unique IPs, {} cache entries, {} presence rooms",
+                total_connections, ip_count, cache_size, presence_rooms
+            );
+        }
+    });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
