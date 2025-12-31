@@ -1,0 +1,901 @@
+{
+  "title": "Tableau de bord",
+  "welcome": "Bienvenue, {{name}} !",
+  "welcomeBack": "Bon retour, {{name}} !",
+  "overview": {
+    "title": "Vue d'ensemble",
+    "subtitle": "Résumé de votre activité"
+  },
+  "sites": {
+    "title": "Mes sites",
+    "subtitle": "Gérez vos sites web",
+    "empty": "Vous n'avez pas encore de site",
+    "emptyDescription": "Créez votre premier site en quelques clics à partir d'un template professionnel.",
+    "create": "Créer un site",
+    "createFirst": "Créer mon premier site",
+    "createNew": "Créer un nouveau site",
+    "fromTemplate": "À partir d'un template",
+    "count_one": "{{count}} site",
+    "count_other": "{{count}} sites",
+    "lastUpdated": "Dernière mise à jour",
+    "visits": "Visites",
+    "status": {
+      "online": "En ligne",
+      "offline": "Hors ligne",
+      "maintenance": "Maintenance",
+      "building": "Construction en cours"
+    },
+    "card": {
+      "published": "Site publié avec succès !",
+      "publishedDescription": "Votre site est maintenant accessible à l'adresse {{url}}",
+      "viewSite": "Voir le site",
+      "urlCopied": "URL copiée !",
+      "deleted": "Site supprimé avec succès",
+      "deletedDescription": "Le site \"{{title}}\" a été supprimé définitivement.",
+      "deleteError": "Erreur lors de la suppression du site",
+      "publishError": "Erreur lors de la publication",
+      "actions": "Actions du site"
+    }
+  },
+  "quickActions": {
+    "title": "Actions rapides",
+    "newSite": "Nouveau site",
+    "editSite": "Modifier le site",
+    "viewAnalytics": "Voir les analytics",
+    "manageTeam": "Gérer l'équipe",
+    "openSettings": "Ouvrir les paramètres"
+  },
+  "stats": {
+    "totalVisits": "Visites totales",
+    "uniqueVisitors": "Visiteurs uniques",
+    "pageViews": "Pages vues",
+    "avgSessionDuration": "Durée moyenne",
+    "bounceRate": "Taux de rebond",
+    "conversionRate": "Taux de conversion",
+    "growth": "Croissance",
+    "vsLastPeriod": "vs période précédente",
+    "noDataYet": "Pas encore de données"
+  },
+  "activity": {
+    "title": "Activité récente",
+    "empty": "Aucune activité récente",
+    "viewAll": "Voir toute l'activité",
+    "siteCreated": "Site créé",
+    "siteUpdated": "Site mis à jour",
+    "sitePublished": "Site publié",
+    "memberJoined": "Membre ajouté",
+    "settingsChanged": "Paramètres modifiés"
+  },
+  "team": {
+    "title": "Équipe",
+    "members": "Membres",
+    "invite": "Inviter",
+    "pending": "En attente",
+    "roles": {
+      "owner": "Propriétaire",
+      "admin": "Administrateur",
+      "editor": "Éditeur",
+      "viewer": "Lecteur"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Gérez vos notifications et préférences",
+    "empty": "Aucune notification",
+    "emptyDescription": "Vous n'avez pas de notifications pour le moment",
+    "markAllRead": "Tout marquer comme lu",
+    "allRead": "Tout est lu !",
+    "allReadDescription": "Vous avez lu toutes vos notifications",
+    "settings": "Paramètres de notifications",
+    "loadMore": "Charger plus",
+    "markAsRead": "Marquer comme lu",
+    "deleted": "Notification supprimée",
+    "deleteError": "Erreur lors de la suppression",
+    "markedAllRead": "Toutes les notifications marquées comme lues",
+    "markError": "Erreur lors du marquage",
+    "view": "Voir",
+    "tabs": {
+      "all": "Toutes",
+      "unread": "Non lues",
+      "settings": "Paramètres"
+    },
+    "filter": {
+      "category": "Catégorie",
+      "allCategories": "Toutes les catégories"
+    },
+    "push": {
+      "title": "Notifications Push",
+      "description": "Recevez des notifications sur votre appareil même quand l'app est fermée",
+      "notSupported": "Les notifications push ne sont pas supportées sur ce navigateur.",
+      "blocked": "Les notifications sont bloquées. Veuillez les autoriser dans les paramètres de votre navigateur.",
+      "enable": "Activer les notifications push",
+      "enabledDescription": "Vous recevrez des notifications sur cet appareil",
+      "disabledDescription": "Activez pour recevoir des notifications",
+      "enabled": "Notifications push activées",
+      "disabled": "Notifications push désactivées",
+      "enableError": "Impossible d'activer les notifications push",
+      "disableError": "Erreur lors de la désactivation"
+    },
+    "preferences": {
+      "title": "Préférences de notification",
+      "description": "Choisissez quels types de notifications vous souhaitez recevoir",
+      "categories": "Catégories activées",
+      "updated": "Paramètres mis à jour",
+      "updateError": "Erreur lors de la mise à jour"
+    },
+    "quietHours": {
+      "title": "Heures calmes",
+      "description": "Désactivez les notifications pendant certaines heures",
+      "start": "Début",
+      "end": "Fin",
+      "clear": "Effacer"
+    },
+    "categories": {
+      "system": "Système",
+      "account": "Compte",
+      "website": "Site web",
+      "extension": "Extension",
+      "billing": "Facturation",
+      "analytics": "Analytics",
+      "security": "Sécurité"
+    },
+    "priority": {
+      "low": "Basse",
+      "normal": "Normale",
+      "high": "Haute",
+      "urgent": "Urgente"
+    }
+  },
+  "upgrade": {
+    "title": "Passez à la version Pro",
+    "description": "Débloquez toutes les fonctionnalités",
+    "cta": "Voir les offres"
+  },
+  "extensions": {
+    "title": "Extensions",
+    "subtitle": "Activez des extensions pour débloquer de nouvelles fonctionnalités",
+    "available": "{{count}} disponibles",
+    "active": "Extensions activées",
+    "activeCount": "{{count}} active",
+    "activeCountPlural": "{{count}} actives",
+    "suggested": "Extensions suggérées",
+    "allActivated": "Toutes les extensions disponibles sont déjà activées !",
+    "noWebsite": "Aucun site web trouvé. Créez un site pour gérer les extensions.",
+    "noWebsiteSelected": "Aucun site web sélectionné",
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "activeTooltip": "Extension activée et fonctionnelle"
+    },
+    "actions": {
+      "configure": "Configurer",
+      "activate": "Activer",
+      "activating": "Activation...",
+      "deactivate": "Désactiver",
+      "deactivating": "Désactivation...",
+      "deactivateTooltip": "Désactiver l'extension",
+      "activateExtension": "Activer l'extension"
+    },
+    "toast": {
+      "activated": "Extension {{name}} activée !",
+      "activateError": "Erreur lors de l'activation de l'extension {{name}}",
+      "deactivated": "Extension désactivée",
+      "deactivateError": "Erreur lors de la désactivation de l'extension"
+    },
+    "categories": {
+      "integration": "Intégration",
+      "content": "Contenu",
+      "engagement": "Engagement",
+      "analytics": "Analytics",
+      "appearance": "Apparence"
+    },
+    "config": {
+      "notFound": "Extension non trouvée",
+      "notFoundDescription": "L'extension \"{{slug}}\" n'existe pas ou n'est pas disponible.",
+      "backToExtensions": "Retour aux extensions",
+      "disabled": "Extension désactivée",
+      "disabledDescription": "Activez cette extension pour accéder à sa configuration.",
+      "tabs": {
+        "config": "Configuration",
+        "data": "Données",
+        "changelog": "Historique"
+      },
+      "actions": "Actions",
+      "sync": "Synchroniser",
+      "syncShort": "Sync",
+      "noHistory": "Aucun historique disponible",
+      "changelog": {
+        "sync": "Synchronisation des données",
+        "settingsUpdated": "Configuration mise à jour",
+        "enabled": "Extension activée"
+      },
+      "toast": {
+        "saved": "Configuration enregistrée",
+        "saveError": "Erreur lors de l'enregistrement",
+        "saving": "Enregistrement en cours...",
+        "activated": "Extension activée",
+        "activateError": "Erreur lors de l'activation",
+        "activating": "Activation en cours...",
+        "deactivated": "Extension désactivée",
+        "deactivateError": "Erreur lors de la désactivation",
+        "missingData": "Données manquantes pour la désactivation",
+        "actionExecuted": "Action \"{{action}}\" exécutée",
+        "actionError": "Erreur lors de l'exécution de l'action",
+        "actionExecuting": "Exécution de \"{{action}}\"...",
+        "cancelled": "Modifications annulées",
+        "refreshing": "Actualisation des données..."
+      },
+      "shortcuts": {
+        "save": "Sauvegarder",
+        "cancel": "Annuler les modifications",
+        "refresh": "Actualiser"
+      },
+      "confirm": {
+        "title": "Désactiver l'extension",
+        "description": "Êtes-vous sûr de vouloir désactiver l'extension",
+        "note": "Vous pourrez la réactiver à tout moment."
+      }
+    }
+  },
+  "cloud": {
+    "title": "Fichiers",
+    "subtitle": "Gérez vos fichiers et médias",
+    "selectFile": "Sélectionner un fichier",
+    "selectFileDescription": "Choisissez un fichier depuis votre stockage cloud.",
+    "noFiles": "Aucun fichier trouvé",
+    "filesLabel": "Fichiers",
+    "uploadTooltip": "Téléverser des fichiers",
+    "view": {
+      "grid": "Affichage en grille",
+      "list": "Affichage en liste"
+    },
+    "upload": {
+      "button": "Upload",
+      "uploading": "Upload...",
+      "progress": "{{completed}}/{{total}}",
+      "success": "{{filename}} uploadé avec succès !",
+      "successMultiple": "{{count}} fichiers uploadés avec succès !",
+      "error": "Échec de l'upload de {{filename}}",
+      "errorMultiple": "Échec de l'upload de {{count}} fichiers",
+      "partial": "{{success}} fichier(s) uploadé(s), {{failed}} échec(s)"
+    },
+    "delete": {
+      "title": "Confirmer la suppression",
+      "description": "Êtes-vous sûr de vouloir supprimer <strong>{{filename}}</strong> ?",
+      "descriptionBulk": "Êtes-vous sûr de vouloir supprimer <strong>{{count}} fichier(s)</strong> ?",
+      "irreversible": "Cette action est irréversible.",
+      "deleting": "Suppression...",
+      "success": "Fichier supprimé",
+      "successMultiple": "{{count}} fichier(s) supprimé(s)",
+      "error": "Erreur lors de la suppression"
+    },
+    "copy": {
+      "success": "Lien copié !"
+    },
+    "download": {
+      "started": "{{count}} téléchargement(s) lancé(s)"
+    },
+    "empty": {
+      "title": "Aucun fichier",
+      "description": "Commencez par uploader votre premier fichier",
+      "button": "Upload un fichier"
+    },
+    "quota": {
+      "title": "Espace de stockage",
+      "titleShort": "Stockage",
+      "tooltip": "Quota de stockage total disponible",
+      "used": "{{percentage}}% utilisé · {{remaining}} restant",
+      "usage": "{{percentage}}% utilisé · {{remaining}} restant"
+    },
+    "selection": {
+      "count": "{{count}} fichier(s)",
+      "selectAll": "Tout sélectionner",
+      "selectAllTooltip": "Tout sélectionner",
+      "all": "Tout",
+      "download": "Télécharger",
+      "downloadTooltip": "Télécharger la sélection",
+      "downloadSelection": "Télécharger la sélection",
+      "delete": "Supprimer",
+      "deleteTooltip": "Supprimer la sélection",
+      "deleteSelection": "Supprimer la sélection",
+      "cancelTooltip": "Annuler la sélection",
+      "clearSelection": "Annuler la sélection"
+    },
+    "preview": {
+      "notAvailable": "Aperçu non disponible",
+      "copyUrl": "Copier l'URL",
+      "copied": "Copié !"
+    },
+    "contextMenu": {
+      "preview": "Aperçu",
+      "copyLink": "Copier le lien",
+      "download": "Télécharger",
+      "openNewTab": "Ouvrir dans un nouvel onglet",
+      "delete": "Supprimer"
+    }
+  },
+  "pages": {
+    "title": "Pages",
+    "subtitle": "Gérez les pages de votre site web",
+    "new": "Nouvelle page",
+    "count_one": "{{count}} page",
+    "count_other": "{{count}} pages",
+    "list": {
+      "title": "Liste des pages",
+      "description": "Organisez et gérez les pages de votre site",
+      "searchPlaceholder": "Rechercher une page...",
+      "empty": "Aucune page",
+      "emptyDescription": "Commencez par créer votre première page",
+      "noResults": "Aucune page trouvée",
+      "noResultsDescription": "Essayez avec un autre terme de recherche",
+      "create": "Créer une page"
+    },
+    "stats": {
+      "total": "Total des pages",
+      "totalTooltip": "Nombre total de pages créées",
+      "totalDescription": "Pages sur votre site",
+      "published": "Pages publiées",
+      "publishedTooltip": "Pages visibles publiquement",
+      "publishedDescription": "Visibles sur le site",
+      "draft": "Brouillons",
+      "draftTooltip": "Pages masquées non visibles",
+      "draftDescription": "Pages non publiées",
+      "homepage": "Page d'accueil",
+      "homepageTooltip": "Page principale du site (URL: /)",
+      "homepageDescription": "Page principale"
+    },
+    "item": {
+      "home": "Accueil",
+      "homepageTooltip": "Cette page est la page d'accueil du site",
+      "hidden": "Masquée",
+      "hiddenTooltip": "Cette page n'est pas visible publiquement",
+      "dragTooltip": "Glisser pour réorganiser",
+      "viewTooltip": "Voir la page sur le site",
+      "actionsTooltip": "Actions de la page"
+    },
+    "actions": {
+      "edit": "Modifier",
+      "duplicate": "Dupliquer",
+      "hide": "Masquer",
+      "show": "Afficher",
+      "view": "Voir la page",
+      "delete": "Supprimer",
+      "deleteDisabled": "La page d'accueil ne peut pas être supprimée"
+    },
+    "dialogs": {
+      "create": {
+        "title": "Nouvelle page",
+        "description": "Créez une nouvelle page pour votre site web"
+      },
+      "edit": {
+        "title": "Modifier la page",
+        "description": "Modifiez les informations de la page"
+      },
+      "delete": {
+        "title": "Supprimer la page ?",
+        "description": "Êtes-vous sûr de vouloir supprimer la page \"{{title}}\" ? Cette action est irréversible."
+      }
+    },
+    "form": {
+      "title": "Titre",
+      "titlePlaceholder": "Contact",
+      "slug": "URL (slug)",
+      "slugPlaceholder": "contact",
+      "slugDescription": "Laissez vide pour la page d'accueil",
+      "slugDisabled": "Le slug ne peut pas être modifié pour la page d'accueil",
+      "description": "Description",
+      "descriptionPlaceholder": "Description de la page (optionnel)",
+      "homepage": "Page d'accueil",
+      "homepageDescription": "Définir comme page principale",
+      "visible": "Visible",
+      "visibleDescription": "Afficher la page sur le site"
+    }
+  },
+  "seo": {
+    "title": "SEO & Référencement",
+    "subtitle": "Performances de recherche et optimisation du référencement",
+    "selectSite": "Sélectionnez un site",
+    "selectSiteDescription": "Choisissez un site web pour voir ses statistiques SEO",
+    "export": "Exporter",
+    "exportTooltip": "Exporter les données SEO",
+    "score": "Score {{score}}",
+    "timeRange": {
+      "7d": "7 derniers jours",
+      "28d": "28 derniers jours",
+      "90d": "3 derniers mois"
+    },
+    "tabs": {
+      "performance": "Performance",
+      "queries": "Requêtes",
+      "pages": "Pages",
+      "health": "Santé",
+      "backlinks": "Backlinks"
+    },
+    "health": {
+      "excellent": "Excellent ! Votre site est bien optimisé.",
+      "good": "Correct. Quelques améliorations possibles.",
+      "poor": "À améliorer. Plusieurs problèmes détectés.",
+      "score": "Score SEO",
+      "critical": "Critiques",
+      "warnings": "Avertissements",
+      "passed": "Réussis"
+    },
+    "kpi": {
+      "impressions": "Impressions",
+      "impressionsTooltip": "Nombre de fois où votre site apparaît dans les résultats de recherche",
+      "clicks": "Clics",
+      "clicksTooltip": "Nombre de clics vers votre site depuis les résultats de recherche",
+      "ctr": "CTR moyen",
+      "ctrTooltip": "Taux de clics : pourcentage d'impressions convertis en clics",
+      "position": "Position moyenne",
+      "positionTooltip": "Position moyenne de votre site dans les résultats de recherche",
+      "vsPrevious": "vs période précédente"
+    },
+    "ctrQuality": {
+      "excellent": "Excellent",
+      "good": "Bon",
+      "average": "Moyen",
+      "low": "Faible"
+    },
+    "positionQuality": {
+      "top3": "Top 3",
+      "firstPage": "1ère page",
+      "secondPage": "2ème page",
+      "far": "Loin"
+    },
+    "performance": {
+      "title": "Performances de recherche",
+      "description": "Impressions et clics dans les résultats Google",
+      "byDevice": "Par appareil",
+      "byCountry": "Par pays"
+    },
+    "queries": {
+      "title": "Requêtes de recherche",
+      "description": "Les termes de recherche qui amènent les visiteurs sur votre site"
+    },
+    "pagesTab": {
+      "title": "Pages dans les résultats de recherche",
+      "indexation": "Indexation",
+      "indexed": "Pages indexées",
+      "pending": "En attente",
+      "excluded": "Exclues",
+      "sitemap": "Sitemap",
+      "lastSubmitted": "Dernière soumission",
+      "urlsInSitemap": "URLs dans sitemap",
+      "urlsIndexed": "URLs indexées"
+    },
+    "healthTab": {
+      "coreWebVitals": "Core Web Vitals",
+      "coreWebVitalsDescription": "Métriques de performance essentielles pour le SEO",
+      "lcp": "LCP (Largest Contentful Paint)",
+      "lcpDescription": "Temps de chargement du contenu principal",
+      "fid": "FID (First Input Delay)",
+      "fidDescription": "Délai de première interaction",
+      "cls": "CLS (Cumulative Layout Shift)",
+      "clsDescription": "Stabilité visuelle de la page",
+      "ttfb": "TTFB (Time to First Byte)",
+      "ttfbDescription": "Temps de réponse du serveur",
+      "issues": "Problèmes détectés",
+      "issuesDescription": "Points à corriger pour améliorer votre référencement",
+      "noIssues": "Aucun problème détecté !",
+      "noIssuesDescription": "Votre site est bien optimisé.",
+      "richResults": "Rich Results",
+      "eligible": "Éligibles",
+      "detected": "Détectés"
+    },
+    "backlinks": {
+      "total": "Total backlinks",
+      "newThisMonth": "+{{count}} ce mois",
+      "lostThisMonth": "-{{count}} perdus",
+      "referringDomains": "Domaines référents",
+      "referringDomainsDescription": "Sites uniques pointant vers vous",
+      "distribution": "Répartition liens",
+      "dofollow": "Dofollow",
+      "nofollow": "Nofollow",
+      "recommendations": "Conseils pour améliorer vos backlinks",
+      "strengths": "Points forts",
+      "strengthsList": {
+        "goodRatio": "Bon ratio dofollow/nofollow",
+        "diversity": "Diversité des domaines référents",
+        "growth": "Croissance positive ce mois-ci"
+      },
+      "improvements": "À améliorer",
+      "improvementsList": {
+        "content": "Créer du contenu partageable",
+        "partnerships": "Développer les partenariats",
+        "caseStudies": "Publier des études de cas"
+      }
+    },
+    "table": {
+      "query": "Requête",
+      "page": "Page",
+      "impressions": "Impressions",
+      "clicks": "Clics",
+      "ctr": "CTR",
+      "position": "Position"
+    }
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Analyse détaillée des performances de votre site",
+    "export": "Exporter",
+    "exportTooltip": "Exporter les données analytics",
+    "online": "{{count}} en ligne",
+    "timeRange": {
+      "7d": "7 derniers jours",
+      "30d": "30 derniers jours",
+      "90d": "90 derniers jours"
+    },
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "traffic": "Trafic",
+      "content": "Contenu",
+      "conversions": "Conversions"
+    }
+  },
+  "theme": {
+    "title": "Thème",
+    "subtitle": "Personnalisez l'apparence de votre site",
+    "selectSite": "Sélectionnez un site pour personnaliser le thème",
+    "saved": "Thème enregistré",
+    "saveError": "Erreur lors de l'enregistrement",
+    "cancelTooltip": "Annuler les modifications non enregistrées",
+    "saveTooltip": "Sauvegarder les paramètres du thème",
+    "tabs": {
+      "colors": "Couleurs",
+      "typography": "Typographie",
+      "options": "Options"
+    },
+    "colors": {
+      "main": "Couleurs principales",
+      "mainDescription": "Définissez les couleurs de votre marque",
+      "primary": "Couleur principale",
+      "secondary": "Couleur secondaire",
+      "base": "Couleurs de base",
+      "baseDescription": "Arrière-plan et texte",
+      "background": "Arrière-plan",
+      "text": "Couleur du texte"
+    },
+    "radius": {
+      "none": "Aucun",
+      "small": "Petit",
+      "medium": "Moyen",
+      "large": "Grand",
+      "full": "Arrondi"
+    }
+  },
+  "administrators": {
+    "title": "Administrateurs",
+    "subtitle": "Gérez les accès et permissions des collaborateurs de votre site",
+    "collaborators": "{{count}} collaborateur(s)",
+    "selectSite": "Sélectionnez un site pour gérer les administrateurs",
+    "loadError": "Erreur lors du chargement des administrateurs",
+    "stats": {
+      "total": "Total",
+      "totalTooltip": "Nombre total de collaborateurs",
+      "active": "Actifs",
+      "activeTooltip": "Collaborateurs ayant accepté l'invitation",
+      "pending": "En attente",
+      "pendingTooltip": "Invitations en attente d'acceptation"
+    },
+    "invite": {
+      "title": "Inviter un collaborateur",
+      "description": "Ajoutez une personne pour collaborer sur votre site",
+      "email": "Adresse email",
+      "emailPlaceholder": "collaborateur@example.com",
+      "role": "Rôle",
+      "button": "Inviter",
+      "success": "Invitation envoyée avec succès",
+      "error": "Erreur lors de l'envoi de l'invitation",
+      "resent": "Invitation renvoyée",
+      "resendError": "Erreur lors du renvoi"
+    },
+    "roles": {
+      "owner": "Propriétaire",
+      "admin": "Administrateur",
+      "adminDescription": "Peut gérer le site, les extensions et inviter des collaborateurs",
+      "editor": "Éditeur",
+      "editorDescription": "Peut modifier le contenu mais pas les paramètres",
+      "viewer": "Lecteur",
+      "viewerDescription": "Peut uniquement consulter le site"
+    },
+    "status": {
+      "active": "Actif",
+      "pending": "En attente",
+      "revoked": "Révoqué"
+    },
+    "actions": {
+      "edit": "Modifier le rôle",
+      "resend": "Renvoyer l'invitation",
+      "remove": "Retirer",
+      "updateSuccess": "Rôle mis à jour",
+      "updateError": "Erreur lors de la mise à jour",
+      "removeSuccess": "Administrateur supprimé",
+      "removeError": "Erreur lors de la suppression"
+    }
+  },
+  "createSite": {
+    "title": "Créer un site",
+    "selectTemplate": "Veuillez sélectionner un template",
+    "enterName": "Veuillez entrer un nom pour votre site",
+    "urlTaken": "Cette URL est déjà utilisée",
+    "urlTakenDescription": "Veuillez choisir une autre URL pour votre site.",
+    "error": "Erreur lors de la création du site",
+    "success": "Site créé avec succès !",
+    "successDescription": "Votre site est prêt à l'adresse {{url}}"
+  },
+  "websites": {
+    "title": "Mes sites",
+    "count": "{{count}} site",
+    "countPlural": "{{count}} sites",
+    "create": "Créer un site",
+    "createNew": "Créer un nouveau site",
+    "createFirst": "Créer mon premier site",
+    "noWebsites": "Aucun site web",
+    "noWebsitesDescription": "Créez votre premier site en quelques clics à partir d'un template professionnel.",
+    "fromTemplate": "À partir d'un template",
+    "startWithTemplate": "Commencer avec un template",
+    "createFirstSite": "Créer votre premier site",
+    "noSiteCreated": "Aucun site créé",
+    "createFirstBelow": "Créez votre premier site ci-dessous",
+    "selectSite": "Sélectionner un site",
+    "currentSite": "Site actuel: {{name}}",
+    "mySites": "Mes sites ({{count}})",
+    "modal": {
+      "chooseTemplate": "Choisir un template",
+      "configureYourSite": "Configurer votre site",
+      "selectTemplateToStart": "Sélectionnez un template pour démarrer rapidement",
+      "customizeBasicInfo": "Personnalisez les informations de base de votre site",
+      "noTemplates": "Aucun template disponible",
+      "selectedTemplate": "Template sélectionné",
+      "siteName": "Nom de votre site",
+      "siteNamePlaceholder": "Mon super site",
+      "siteNameDescription": "Le nom qui apparaîtra sur votre site",
+      "siteUrl": "URL du site",
+      "siteUrlPlaceholder": "mon-site",
+      "siteUrlDescription": "L'URL ne pourra pas être modifiée après la création",
+      "creating": "Création...",
+      "createSite": "Créer le site"
+    },
+    "switcher": {
+      "selectSite": "Sélectionner un site",
+      "noSiteCreated": "Aucun site créé",
+      "createFirstBelow": "Créez votre premier site ci-dessous"
+    },
+    "card": {
+      "untitled": "Sans titre",
+      "created": "Créé {{time}}",
+      "edit": "Éditer",
+      "view": "Voir le site",
+      "copyUrl": "Copier l'URL",
+      "publish": "Publier",
+      "publishing": "Publication...",
+      "delete": "Supprimer",
+      "deleting": "Suppression...",
+      "confirmDelete": "Supprimer le site ?",
+      "confirmDeleteDescription": "Cette action est irréversible. Le site <strong>{{title}}</strong> et toutes ses données seront définitivement supprimés.",
+      "publicTooltip": "Ce site est accessible publiquement",
+      "draftTooltip": "Ce site n'est pas encore publié"
+    },
+    "status": {
+      "online": "En ligne",
+      "draft": "Brouillon"
+    },
+    "categories": {
+      "professional": "Professionnel",
+      "creative": "Créatif",
+      "blog": "Blog",
+      "business": "Business",
+      "developer": "Développeur",
+      "personal": "Personnel"
+    },
+    "toast": {
+      "deleted": "Site supprimé avec succès",
+      "deletedDescription": "Le site \"{{title}}\" a été supprimé définitivement.",
+      "deleteError": "Erreur lors de la suppression du site",
+      "published": "Site publié avec succès !",
+      "publishedDescription": "Votre site est maintenant accessible à l'adresse {{url}}",
+      "publishError": "Erreur lors de la publication",
+      "urlCopied": "URL copiée !",
+      "created": "Site créé avec succès !",
+      "createdDescription": "Votre site est prêt à l'adresse {{url}}"
+    }
+  },
+  "dashboard": {
+    "mySite": "Mon site",
+    "publish": "Publier",
+    "studio": "Studio",
+    "view": "Voir",
+    "realtimeStats": "Stats en temps réel",
+    "liveVisitors": "{{count}} en ligne",
+    "visits": "visites",
+    "quickActions": {
+      "studio": "Studio",
+      "pages": "Pages",
+      "extensions": "Extensions",
+      "medias": "Médias",
+      "theme": "Thème",
+      "analytics": "Analytics",
+      "settings": "Paramètres"
+    },
+    "stats": {
+      "live": "Live",
+      "activeVisitors": "visiteurs actifs",
+      "activeVisitorsTooltip": "Nombre de visiteurs actuellement sur votre site",
+      "todayVisits": "visites aujourd'hui",
+      "todayVisitsTooltip": "Nombre total de visites depuis minuit",
+      "pageViews": "pages vues",
+      "pageViewsTooltip": "Nombre de pages consultées aujourd'hui",
+      "conversionRate": "taux de conversion",
+      "conversionRateTooltip": "Pourcentage de visiteurs effectuant une action"
+    },
+    "conversions": {
+      "title": "Conversions",
+      "newsletter": "Newsletter",
+      "activeSubscribers": "abonnés actifs",
+      "contact": "Contact",
+      "requestsReceived": "demandes reçues"
+    },
+    "chart": {
+      "trendTitle": "Tendance des 7 derniers jours",
+      "visits": "Visites"
+    },
+    "cloud": {
+      "title": "Cloud & Stockage",
+      "files": "{{count}} fichier",
+      "filesPlural": "{{count}} fichiers",
+      "manageFiles": "Gérer les fichiers",
+      "spaceUsed": "Espace utilisé",
+      "spaceAlmostFull": "Espace presque plein",
+      "noFiles": "Aucun fichier",
+      "uploadFirst": "Uploadez vos premiers médias",
+      "addFiles": "Ajouter des fichiers",
+      "otherFiles": "+{{count}} autre fichier",
+      "otherFilesPlural": "+{{count}} autres fichiers"
+    },
+    "team": {
+      "title": "Équipe",
+      "manage": "Gérer",
+      "noCollaborators": "Aucun collaborateur",
+      "inviteCollaborator": "Inviter un collaborateur",
+      "otherMembers": "+{{count}} autre",
+      "otherMembersPlural": "+{{count}} autres"
+    },
+    "roles": {
+      "owner": "Propriétaire",
+      "admin": "Admin",
+      "editor": "Éditeur",
+      "viewer": "Lecteur"
+    },
+    "activity": {
+      "title": "Activité récente",
+      "viewAll": "Voir tout",
+      "newVisit": "Nouvelle visite",
+      "newSubscriber": "Nouvel abonné newsletter",
+      "newContact": "Nouvelle demande de contact",
+      "pageViewed": "Page consultée: Accueil",
+      "visitorFromGoogle": "Visiteur depuis Google"
+    },
+    "progression": {
+      "title": "Progression du site",
+      "stepsCompleted": "{{completed}}/{{total}} étapes complétées",
+      "addPage": "Ajouter une page",
+      "createSections": "Créer des sections",
+      "customizeTheme": "Personnaliser le thème",
+      "configureSeo": "Configurer le SEO",
+      "activateExtension": "Activer une extension",
+      "publishSite": "Publier le site"
+    },
+    "goals": {
+      "title": "Objectifs de la semaine",
+      "details": "Détails",
+      "weeklyVisits": "Visites cette semaine",
+      "newSubscribers": "Nouveaux abonnés",
+      "contactRequests": "Demandes de contact"
+    },
+    "achievements": {
+      "title": "Récompenses",
+      "firstPage": "Première page",
+      "firstPageDescription": "Créer votre première page",
+      "builder": "Constructeur",
+      "builderDescription": "Ajouter 5 sections",
+      "live": "En ligne !",
+      "liveDescription": "Publier votre site",
+      "powerUser": "Power User",
+      "powerUserDescription": "Activer 3 extensions",
+      "popular": "Populaire",
+      "popularDescription": "Atteindre 1000 visites",
+      "influencer": "Influenceur",
+      "influencerDescription": "100 abonnés newsletter"
+    }
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Analyse détaillée des performances de votre site",
+    "export": "Exporter",
+    "exportTooltip": "Exporter les données analytics",
+    "online": "en ligne",
+    "timeRange": {
+      "7d": "7 derniers jours",
+      "30d": "30 derniers jours",
+      "90d": "90 derniers jours"
+    },
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "traffic": "Trafic",
+      "content": "Contenu",
+      "conversions": "Conversions"
+    },
+    "realtime": {
+      "title": "En temps réel",
+      "activeVisitors": "visiteurs actifs",
+      "pagesPerMin": "pages/min",
+      "loadTime": "temps de chargement"
+    },
+    "kpi": {
+      "totalVisits": "Visites totales",
+      "totalVisitsTooltip": "Nombre total de visites sur votre site",
+      "uniqueVisitors": "Visiteurs uniques",
+      "uniqueVisitorsTooltip": "Nombre de visiteurs distincts",
+      "pageViews": "Pages vues",
+      "pageViewsTooltip": "Nombre total de pages consultées",
+      "bounceRate": "Taux de rebond",
+      "bounceRateTooltip": "Pourcentage de visiteurs quittant après une seule page",
+      "vsPreviousPeriod": "vs période précédente",
+      "excellent": "Excellent",
+      "average": "Moyen",
+      "needsImprovement": "À améliorer"
+    },
+    "traffic": {
+      "title": "Évolution du trafic",
+      "description": "Visites et pages vues sur la période sélectionnée",
+      "visits": "Visites",
+      "pageViews": "Pages vues",
+      "uniqueVisitors": "Visiteurs uniques"
+    },
+    "sources": {
+      "title": "Sources de trafic",
+      "detailTitle": "Détail des sources",
+      "visitors": "visiteurs"
+    },
+    "engagement": {
+      "pagesPerSession": "Pages/session",
+      "avgDuration": "Durée moyenne",
+      "scrollDepth": "Profondeur scroll",
+      "returnVisitors": "Visiteurs récurrents"
+    },
+    "devices": {
+      "title": "Appareils"
+    },
+    "countries": {
+      "title": "Pays"
+    },
+    "hourly": {
+      "title": "Trafic par heure (aujourd'hui)"
+    },
+    "topPages": {
+      "title": "Pages les plus consultées",
+      "page": "Page",
+      "views": "Vues",
+      "uniqueViews": "Vues uniques",
+      "avgTime": "Temps moyen",
+      "bounce": "Rebond"
+    },
+    "conversions": {
+      "newsletterSignups": "Inscriptions newsletter",
+      "contactForms": "Formulaires de contact",
+      "ctaClicks": "Clics CTA",
+      "downloads": "Téléchargements",
+      "rate": "taux",
+      "funnel": {
+        "title": "Entonnoir de conversion",
+        "description": "Parcours des visiteurs vers les objectifs",
+        "totalVisitors": "Visiteurs totaux",
+        "pageViews": "Pages vues",
+        "engaged": "Engagés (>30s)",
+        "ctaClicks": "Clics CTA",
+        "conversions": "Conversions"
+      }
+    }
+  }
+}

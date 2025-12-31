@@ -18,7 +18,10 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+  Field,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -42,6 +45,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Card,
   CardContent,
@@ -286,33 +295,56 @@ export default function AdministratorsPage() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Actifs</CardTitle>
-            <Check className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.active}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">En attente</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.pending}</div>
-          </CardContent>
-        </Card>
+        <TooltipProvider>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Users className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Nombre total de collaborateurs</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.total}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Actifs</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Check className="h-4 w-4 text-green-500 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Collaborateurs ayant accepté l'invitation</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.active}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">En attente</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Clock className="h-4 w-4 text-yellow-500 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Invitations en attente d'acceptation</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.pending}</div>
+            </CardContent>
+          </Card>
+        </TooltipProvider>
       </div>
 
       {/* Invite Form */}
@@ -328,8 +360,8 @@ export default function AdministratorsPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="email">Adresse email</Label>
+            <Field className="flex-1">
+              <FieldLabel htmlFor="email">Adresse email</FieldLabel>
               <Input
                 id="email"
                 type="email"
@@ -338,9 +370,9 @@ export default function AdministratorsPage() {
                 onChange={(e) => setInviteEmail(e.target.value)}
                 required
               />
-            </div>
-            <div className="sm:w-48 space-y-2">
-              <Label htmlFor="role">Rôle</Label>
+            </Field>
+            <Field className="sm:w-48">
+              <FieldLabel htmlFor="role">Rôle</FieldLabel>
               <Select value={inviteRole} onValueChange={setInviteRole}>
                 <SelectTrigger id="role">
                   <SelectValue />
@@ -366,7 +398,7 @@ export default function AdministratorsPage() {
                   </SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
             <div className="flex items-end">
               <Button type="submit" disabled={isInviting || !inviteEmail}>
                 {isInviting ? (

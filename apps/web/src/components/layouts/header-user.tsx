@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect } from "react"
+import { useTranslation } from "react-i18next"
 import {
   LogOut,
   Settings,
@@ -23,9 +24,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { SettingsModal } from "@/components/settings-modal"
-import { NotificationsDropdown } from "@/components/shared/notifications-dropdown"
-import { LogoutConfirmDialog } from "@/components/shared/logout-confirm-dialog"
+import { SettingsModal } from "@/components/features/settings"
+import { NotificationsDropdown, LogoutConfirmDialog } from "@/components/shared"
 import { 
   useAuthStore, 
   useUserData, 
@@ -38,6 +38,7 @@ interface HeaderUserProps {
 }
 
 export function HeaderUser({ user: initialUser }: HeaderUserProps) {
+  const { t } = useTranslation('common')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'account' | 'billing'>('account')
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
@@ -119,16 +120,16 @@ export function HeaderUser({ user: initialUser }: HeaderUserProps) {
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => openSettings('account')}>
             <Settings className="mr-2 h-4 w-4" />
-            Paramètres
+            {t('navigation.settings')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openSettings('billing')}>
             <CreditCard className="mr-2 h-4 w-4" />
-            Facturation
+            {t('navigation.billing')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
             <LogOut className="mr-2 h-4 w-4" />
-            Déconnexion
+            {t('navigation.logout')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

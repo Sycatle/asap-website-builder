@@ -260,20 +260,23 @@ export function PageHeader({
       )}
     >
       <div className="px-3 sm:px-4 md:px-6 h-11 sm:h-12 flex items-center w-full">
+        {/* Back button - Always visible if enabled */}
+        {showBackButton && (
+          <div className="mr-2 sm:mr-3 shrink-0">
+            <Link href={backHref}>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        )}
+
         {stickyContent ? (
-        <div className="flex-1">{stickyContent}</div>
+        <div className="flex-1 min-w-0">{stickyContent}</div>
         ) : (
         /* Default sticky content - Mobile optimized */
         <div className="flex items-center justify-between w-full gap-3">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-            {/* Back button */}
-            {showBackButton && (
-            <Link href={backHref}>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            )}
             
             {/* Icon - smaller in sticky */}
             {icon && (

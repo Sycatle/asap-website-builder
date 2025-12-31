@@ -24,7 +24,7 @@ export interface IntegrationConfig {
   };
 }
 
-export interface WebsiteData {
+export interface IntegrationWebsiteData {
   source?: string;
   projects?: GitHubProject[];
   generated_at?: string;
@@ -43,8 +43,8 @@ export const integrationsAPI = {
   },
 
   // Get website data (contains GitHub projects data)
-  async getWebsiteData(websiteId: string): Promise<WebsiteData> {
-    const website = await apiClient.get<{ data: WebsiteData }>(`/websites/${websiteId}`);
+  async getWebsiteData(websiteId: string): Promise<IntegrationWebsiteData> {
+    const website = await apiClient.get<{ data: IntegrationWebsiteData }>(`/websites/${websiteId}`);
     return website.data || {};
   },
 };

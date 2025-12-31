@@ -5,11 +5,17 @@
  */
 
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -138,28 +144,28 @@ export function ReviewProfileStep({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nom complet *</Label>
+                <Field>
+                  <FieldLabel htmlFor="name">Nom complet *</FieldLabel>
                   <Input
                     id="name"
                     value={profile.identity.name}
                     onChange={(e) => updateField('identity', { name: e.target.value })}
                     placeholder="Marie Dupont"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="title">Titre professionnel *</Label>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="title">Titre professionnel *</FieldLabel>
                   <Input
                     id="title"
                     value={profile.identity.title}
                     onChange={(e) => updateField('identity', { title: e.target.value })}
                     placeholder="Développeuse Full-Stack Freelance"
                   />
-                </div>
+                </Field>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="tagline">Phrase d'accroche</Label>
+              <Field>
+                <FieldLabel htmlFor="tagline">Phrase d'accroche</FieldLabel>
                 <Textarea
                   id="tagline"
                   value={profile.identity.tagline || ''}
@@ -167,23 +173,23 @@ export function ReviewProfileStep({
                   placeholder="Je transforme vos idées en applications web performantes..."
                   rows={2}
                 />
-                <p className="text-xs text-muted-foreground">
+                <FieldDescription>
                   Une phrase courte qui résume votre proposition de valeur
-                </p>
-              </div>
+                </FieldDescription>
+              </Field>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="location">Localisation</Label>
+                <Field>
+                  <FieldLabel htmlFor="location">Localisation</FieldLabel>
                   <Input
                     id="location"
                     value={profile.identity.location || ''}
                     onChange={(e) => updateField('identity', { location: e.target.value })}
                     placeholder="Paris, France"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="availability">Disponibilité</Label>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="availability">Disponibilité</FieldLabel>
                   <select
                     id="availability"
                     value={profile.identity.availability}
@@ -196,7 +202,7 @@ export function ReviewProfileStep({
                     <option value="busy">Occupé (missions en cours)</option>
                     <option value="not-available">Non disponible</option>
                   </select>
-                </div>
+                </Field>
               </div>
 
               {/* AI Suggestion */}
@@ -270,8 +276,8 @@ export function ReviewProfileStep({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
+                <Field>
+                  <FieldLabel htmlFor="email">Email *</FieldLabel>
                   <Input
                     id="email"
                     type="email"
@@ -279,9 +285,9 @@ export function ReviewProfileStep({
                     onChange={(e) => updateField('contact', { email: e.target.value })}
                     placeholder="contact@example.com"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Téléphone</Label>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="phone">Téléphone</FieldLabel>
                   <Input
                     id="phone"
                     type="tel"
@@ -289,12 +295,12 @@ export function ReviewProfileStep({
                     onChange={(e) => updateField('contact', { phone: e.target.value })}
                     placeholder="+33 6 12 34 56 78"
                   />
-                </div>
+                </Field>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="github">GitHub</Label>
+                <Field>
+                  <FieldLabel htmlFor="github">GitHub</FieldLabel>
                   <Input
                     id="github"
                     value={profile.contact.socials.github || ''}
@@ -303,9 +309,9 @@ export function ReviewProfileStep({
                     })}
                     placeholder="https://github.com/username"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="linkedin">LinkedIn</Label>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="linkedin">LinkedIn</FieldLabel>
                   <Input
                     id="linkedin"
                     value={profile.contact.socials.linkedin || ''}
@@ -314,21 +320,21 @@ export function ReviewProfileStep({
                     })}
                     placeholder="https://linkedin.com/in/username"
                   />
-                </div>
+                </Field>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="bookingUrl">Lien de prise de rendez-vous</Label>
+              <Field>
+                <FieldLabel htmlFor="bookingUrl">Lien de prise de rendez-vous</FieldLabel>
                 <Input
                   id="bookingUrl"
                   value={profile.contact.bookingUrl || ''}
                   onChange={(e) => updateField('contact', { bookingUrl: e.target.value })}
                   placeholder="https://calendly.com/username"
                 />
-                <p className="text-xs text-muted-foreground">
+                <FieldDescription>
                   Calendly, Cal.com, ou tout autre outil de prise de rendez-vous
-                </p>
-              </div>
+                </FieldDescription>
+              </Field>
             </CardContent>
           </Card>
         </TabsContent>

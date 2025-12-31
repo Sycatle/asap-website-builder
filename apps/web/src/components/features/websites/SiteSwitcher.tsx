@@ -1,7 +1,9 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { ChevronsUpDown, Plus, CheckCircle2, Clock, Loader2, Globe } from "lucide-react"
+import { useTranslation } from 'react-i18next'
+import { ChevronsUpDown, Plus, CheckCircle2, Clock, Globe } from "lucide-react"
+import { Spinner } from "@/components/ui/spinner"
 import type { Website } from "@/lib/api"
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal"
 import { queryKeys } from "@/lib/query"
@@ -40,6 +42,7 @@ export function SiteSwitcher({
   currentWebsite, 
   isLoading = false 
 }: SiteSwitcherProps) {
+  const { t } = useTranslation(['common', 'dashboard'])
   const { isMobile } = useSidebar()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
@@ -55,7 +58,7 @@ export function SiteSwitcher({
 
   const handleCreateSuccess = useCallback((websiteId: string) => {
     // Refresh websites list after creation
-    queryClient.invalidateQueries({ queryKey: queryKeys.websites })
+    queryClient.invalidateQueries({ queryKey: queryKeys.websites.all })
     setIsDropdownOpen(false)
     // Navigate to the newly created website
     navigate(`/app/${websiteId}`)
@@ -69,9 +72,9 @@ export function SiteSwitcher({
   // Get status display
   const getStatusInfo = (status: string) => {
     if (status === 'published') {
-      return { icon: CheckCircle2, label: 'En ligne', className: 'text-green-500' }
+      return { icon: CheckCircle2, label: t('dashboard:websites.status.online'), className: 'text-green-500' }
     }
-    return { icon: Clock, label: 'Brouillon', className: 'text-muted-foreground' }
+    return { icon: Clock, label: t('dashboard:websites.status.draft'), className: 'text-muted-foreground' }
   }
 
   if (isLoading) {
@@ -80,7 +83,7 @@ export function SiteSwitcher({
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" disabled className="cursor-wait">
             <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary/30">
-              <Loader2 className="size-4 animate-spin text-sidebar-primary-foreground/50" />
+              <Spinner className="size-4 text-sidebar-primary-foreground/50" />
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight gap-1.5">
               <span className="h-4 w-20 bg-muted/60 animate-pulse rounded" />
@@ -110,17 +113,17 @@ export function SiteSwitcher({
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold text-muted-foreground">
-                      Créer un site
+                      {t('dashboard:websites.create')}
                     </span>
                     <span className="truncate text-xs text-muted-foreground/70">
-                      Commencer avec un template
+                      {t('dashboard:websites.startWithTemplate')}
                     </span>
                   </div>
                   <Plus className="ml-auto size-4 text-muted-foreground" />
                 </SidebarMenuButton>
               </TooltipTrigger>
               <TooltipContent side="right">
-                <p>Créer votre premier site</p>
+                <p>{t('dashboard:websites.createFirstSite')}</p>
               </TooltipContent>
             </Tooltip>
           </SidebarMenuItem>
@@ -144,7 +147,7 @@ export function SiteSwitcher({
               <SidebarMenuButton
                 size="lg"
                 className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground transition-colors"
-                aria-label={`Site actuel: ${currentWebsite?.title || 'Sélectionner un site'}`}
+                aria-label={t('dashboard:websites.currentSite', { name: currentWebsite?.title || t('dashboard:websites.selectSite') })}
               >
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold shadow-sm">
                   {currentWebsite ? getInitial(currentWebsite.title) : "A"}
@@ -154,7 +157,7 @@ export function SiteSwitcher({
                     {currentWebsite?.title || "ASAP"}
                   </span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {currentWebsite ? getWebsiteDisplayUrl(currentWebsite.slug) : "Sélectionner un site"}
+                    {currentWebsite ? getWebsiteDisplayUrl(currentWebsite.slug) : t('dashboard:websites.selectSite')}
                   </span>
                 </div>
                 <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
@@ -167,14 +170,14 @@ export function SiteSwitcher({
               sideOffset={4}
             >
               <DropdownMenuLabel className="text-xs text-muted-foreground font-medium px-2">
-                Mes sites ({websites.length})
+                {t('dashboard:websites.mySites', { count: websites.length })}
               </DropdownMenuLabel>
               {websites.length === 0 ? (
                 <div className="px-3 py-4 text-center">
                   <Globe className="size-8 mx-auto mb-2 text-muted-foreground/50" />
-                  <p className="text-sm text-muted-foreground">Aucun site créé</p>
+                  <p className="text-sm text-muted-foreground">{t('dashboard:websites.switcher.noSiteCreated')}</p>
                   <p className="text-xs text-muted-foreground/70 mt-1">
-                    Créez votre premier site ci-dessous
+                    {t('dashboard:websites.switcher.createFirstBelow')}
                   </p>
                 </div>
               ) : (
@@ -224,7 +227,7 @@ export function SiteSwitcher({
                 <div className="flex size-7 items-center justify-center rounded-md border border-dashed bg-background">
                   <Plus className="size-4" />
                 </div>
-                <span className="font-medium">Créer un nouveau site</span>
+                <span className="font-medium">{t('dashboard:websites.createNew')}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect, useCallback } from "react"
+import { useTranslation } from 'react-i18next'
 import {
   Download,
   RefreshCw,
@@ -49,6 +50,7 @@ import { toast } from "sonner"
 // ============================================================================
 
 export function NetworkStatusIndicator() {
+  const { t } = useTranslation(['common'])
   const { isOnline } = usePWA()
   const [showOffline, setShowOffline] = useState(false)
   const [wasOffline, setWasOffline] = useState(false)
@@ -59,14 +61,14 @@ export function NetworkStatusIndicator() {
       setWasOffline(true)
     } else if (wasOffline) {
       // Show "back online" toast
-      toast.success("Connexion rétablie", {
-        description: "Vous êtes de nouveau en ligne",
+      toast.success(t('pwa.connectionRestored'), {
+        description: t('pwa.backOnline'),
         duration: 3000,
       })
       setShowOffline(false)
       setWasOffline(false)
     }
-  }, [isOnline, wasOffline])
+  }, [isOnline, wasOffline, t])
 
   if (isOnline && !showOffline) return null
 
@@ -83,12 +85,12 @@ export function NetworkStatusIndicator() {
         {isOnline ? (
           <>
             <Wifi className="h-4 w-4" />
-            <span>Connexion rétablie</span>
+            <span>{t('pwa.connectionRestored')}</span>
           </>
         ) : (
           <>
             <WifiOff className="h-4 w-4 animate-pulse" />
-            <span>Hors ligne</span>
+            <span>{t('pwa.offline')}</span>
           </>
         )}
       </div>
@@ -105,6 +107,7 @@ interface PWAInstallBannerProps {
 }
 
 export function PWAInstallBanner({ className }: PWAInstallBannerProps) {
+  const { t } = useTranslation(['common'])
   const { isInstallable, isInstalled, install, isIOS, showIOSInstallInstructions } = usePWA()
   const [dismissed, setDismissed] = useState(false)
   const [showIOSGuide, setShowIOSGuide] = useState(false)
@@ -130,8 +133,8 @@ export function PWAInstallBanner({ className }: PWAInstallBannerProps) {
   const handleInstall = async () => {
     const success = await install()
     if (success) {
-      toast.success("Application installée !", {
-        description: "ASAP a été ajouté à votre écran d'accueil",
+      toast.success(t('pwa.appInstalled'), {
+        description: t('pwa.appInstalledDesc'),
       })
     }
   }
@@ -162,9 +165,9 @@ export function PWAInstallBanner({ className }: PWAInstallBannerProps) {
             <Smartphone className="h-6 w-6 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm">Installer ASAP</h3>
+            <h3 className="font-semibold text-sm">{t('pwa.installAsap')}</h3>
             <p className="text-xs text-muted-foreground mt-1">
-              Accédez à ASAP directement depuis votre écran d'accueil pour une expérience optimale.
+              {t('pwa.installDesc')}
             </p>
           </div>
         </div>
@@ -177,22 +180,22 @@ export function PWAInstallBanner({ className }: PWAInstallBannerProps) {
               size="sm"
             >
               <Share className="h-4 w-4 mr-2" />
-              Comment installer
+              {t('pwa.howToInstall')}
             </Button>
           ) : (
             <Button onClick={handleInstall} className="flex-1" size="sm">
               <Download className="h-4 w-4 mr-2" />
-              Installer
+              {t('pwa.install')}
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={handleDismiss}>
-            Plus tard
+            {t('pwa.later')}
           </Button>
         </div>
 
         <div className="flex items-center gap-2 mt-3 text-[10px] text-muted-foreground">
           <Zap className="h-3 w-3" />
-          <span>Fonctionne hors ligne • Notifications push • Accès rapide</span>
+          <span>{t('pwa.features')}</span>
         </div>
       </div>
 
@@ -200,29 +203,29 @@ export function PWAInstallBanner({ className }: PWAInstallBannerProps) {
       <AlertDialog open={showIOSGuide} onOpenChange={setShowIOSGuide}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Installer sur iOS</AlertDialogTitle>
+            <AlertDialogTitle>{t('pwa.installOnIos')}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-4">
-                <p>Pour installer ASAP sur votre appareil iOS :</p>
+                <p>{t('pwa.iosInstructions')}</p>
                 <ol className="list-decimal list-inside space-y-2 text-sm">
                   <li className="flex items-start gap-2">
                     <span className="bg-muted rounded-full w-5 h-5 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">1</span>
-                    <span>Appuyez sur le bouton <Share className="h-4 w-4 inline" /> Partager en bas de Safari</span>
+                    <span><Share className="h-4 w-4 inline" /> {t('pwa.iosStep1')}</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="bg-muted rounded-full w-5 h-5 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">2</span>
-                    <span>Faites défiler et appuyez sur <Plus className="h-4 w-4 inline" /> "Sur l'écran d'accueil"</span>
+                    <span><Plus className="h-4 w-4 inline" /> {t('pwa.iosStep2')}</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="bg-muted rounded-full w-5 h-5 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">3</span>
-                    <span>Appuyez sur "Ajouter" en haut à droite</span>
+                    <span>{t('pwa.iosStep3')}</span>
                   </li>
                 </ol>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction>Compris</AlertDialogAction>
+            <AlertDialogAction>{t('pwa.understood')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -235,6 +238,7 @@ export function PWAInstallBanner({ className }: PWAInstallBannerProps) {
 // ============================================================================
 
 export function PWAUpdatePrompt() {
+  const { t } = useTranslation(['common'])
   const { isUpdateAvailable, update } = usePWA()
   const [showPrompt, setShowPrompt] = useState(false)
 
@@ -247,8 +251,8 @@ export function PWAUpdatePrompt() {
   const handleUpdate = () => {
     update()
     setShowPrompt(false)
-    toast.info("Mise à jour en cours...", {
-      description: "L'application va se recharger",
+    toast.info(t('pwa.updating'), {
+      description: t('pwa.appWillReload'),
     })
     // Reload after a short delay
     setTimeout(() => {
@@ -261,18 +265,18 @@ export function PWAUpdatePrompt() {
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg flex items-center gap-3 animate-slide-down">
       <RefreshCw className="h-4 w-4 animate-spin" />
-      <span className="text-sm font-medium">Mise à jour disponible</span>
+      <span className="text-sm font-medium">{t('pwa.updateAvailable')}</span>
       <Button
         size="sm"
         variant="secondary"
         onClick={handleUpdate}
         className="h-7 text-xs"
       >
-        Mettre à jour
+        {t('pwa.update')}
       </Button>
       <button
         onClick={() => setShowPrompt(false)}
-        className="p-1 hover:bg-white/20 rounded"
+        className="p-1 hover:bg-card/20 rounded"
       >
         <X className="h-3 w-3" />
       </button>
@@ -289,6 +293,7 @@ interface PWAStatusPanelProps {
 }
 
 export function PWAStatusPanel({ className }: PWAStatusPanelProps) {
+  const { t } = useTranslation(['common'])
   const pwa = usePWA()
   const [cacheStats, setCacheStats] = useState<any>(null)
   const [isClearing, setIsClearing] = useState(false)
@@ -311,13 +316,13 @@ export function PWAStatusPanel({ className }: PWAStatusPanelProps) {
     setIsClearing(true)
     try {
       await pwa.clearCache()
-      toast.success("Cache vidé", {
-        description: "Le cache de l'application a été vidé",
+      toast.success(t('pwa.cacheCleared'), {
+        description: t('pwa.cacheClearedDesc'),
       })
       setCacheStats(null)
     } catch (error) {
-      toast.error("Erreur", {
-        description: "Impossible de vider le cache",
+      toast.error(t('errors.update'), {
+        description: t('pwa.cacheError'),
       })
     } finally {
       setIsClearing(false)
@@ -327,9 +332,9 @@ export function PWAStatusPanel({ className }: PWAStatusPanelProps) {
   return (
     <div className={cn("space-y-4", className)}>
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold">État PWA</h3>
+        <h3 className="font-semibold">{t('pwa.pwaStatus')}</h3>
         <Badge variant={pwa.isInstalled ? "default" : "secondary"}>
-          {pwa.isInstalled ? "Installée" : "Non installée"}
+          {pwa.isInstalled ? t('pwa.installed') : t('pwa.notInstalled')}
         </Badge>
       </div>
 
@@ -340,7 +345,7 @@ export function PWAStatusPanel({ className }: PWAStatusPanelProps) {
           ) : (
             <WifiOff className="h-4 w-4 text-red-500" />
           )}
-          <span>{pwa.isOnline ? "En ligne" : "Hors ligne"}</span>
+          <span>{pwa.isOnline ? t('pwa.online') : t('pwa.offline')}</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -354,18 +359,18 @@ export function PWAStatusPanel({ className }: PWAStatusPanelProps) {
 
         <div className="flex items-center gap-2">
           <Cloud className="h-4 w-4 text-muted-foreground" />
-          <span>{cacheStats?.totalItems || 0} éléments en cache</span>
+          <span>{t('pwa.cachedItems', { count: cacheStats?.totalItems || 0 })}</span>
         </div>
 
         <div className="flex items-center gap-2">
           <Bell className="h-4 w-4 text-muted-foreground" />
-          <span>Push {pwa.isChrome || pwa.isFirefox ? "supporté" : "limité"}</span>
+          <span>{pwa.isChrome || pwa.isFirefox ? t('pwa.pushSupported') : t('pwa.pushLimited')}</span>
         </div>
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Plateforme</span>
+          <span className="text-muted-foreground">{t('pwa.platform')}</span>
           <span>
             {pwa.isIOS && "iOS"}
             {pwa.isAndroid && "Android"}
@@ -373,7 +378,7 @@ export function PWAStatusPanel({ className }: PWAStatusPanelProps) {
           </span>
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Navigateur</span>
+          <span className="text-muted-foreground">{t('pwa.browser')}</span>
           <span>
             {pwa.isChrome && "Chrome"}
             {pwa.isSafari && "Safari"}
@@ -387,7 +392,7 @@ export function PWAStatusPanel({ className }: PWAStatusPanelProps) {
       {cacheStats && (
         <div className="space-y-2 pt-2 border-t">
           <span className="text-xs text-muted-foreground">
-            Version Service Worker: {cacheStats.version}
+            {t('pwa.swVersion')}: {cacheStats.version}
           </span>
         </div>
       )}
@@ -400,7 +405,7 @@ export function PWAStatusPanel({ className }: PWAStatusPanelProps) {
             className="flex-1"
           >
             <Download className="h-4 w-4 mr-2" />
-            Installer
+            {t('pwa.install')}
           </Button>
         )}
         <Button
@@ -415,7 +420,7 @@ export function PWAStatusPanel({ className }: PWAStatusPanelProps) {
           ) : (
             <CloudOff className="h-4 w-4 mr-2" />
           )}
-          Vider le cache
+          {t('pwa.clearCache')}
         </Button>
       </div>
     </div>
@@ -427,6 +432,7 @@ export function PWAStatusPanel({ className }: PWAStatusPanelProps) {
 // ============================================================================
 
 export function OfflineQueueStatus() {
+  const { t } = useTranslation(['common'])
   const { isOnline } = usePWA()
   const [queueSize, setQueueSize] = useState(0)
   const [syncing, setSyncing] = useState(false)
@@ -439,7 +445,7 @@ export function OfflineQueueStatus() {
           setQueueSize(event.data.remaining)
           setSyncing(false)
           if (event.data.synced > 0) {
-            toast.success(`${event.data.synced} action(s) synchronisée(s)`)
+            toast.success(t('pwa.actionsSynced', { count: event.data.synced }))
           }
         }
       })
@@ -478,12 +484,12 @@ export function OfflineQueueStatus() {
         {syncing ? (
           <>
             <RefreshCw className="h-4 w-4 animate-spin text-primary" />
-            <span>Synchronisation en cours...</span>
+            <span>{t('pwa.syncing')}</span>
           </>
         ) : (
           <>
             <CloudOff className="h-4 w-4 text-amber-500" />
-            <span>{queueSize} action(s) en attente</span>
+            <span>{t('pwa.pendingActions', { count: queueSize })}</span>
           </>
         )}
       </div>

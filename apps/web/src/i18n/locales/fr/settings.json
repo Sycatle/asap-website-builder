@@ -1,0 +1,216 @@
+{
+  "title": "Paramètres",
+  "subtitle": "Gérez vos préférences",
+  "sections": {
+    "account": "Compte",
+    "appearance": "Apparence",
+    "language": "Langue",
+    "notifications": "Notifications",
+    "security": "Sécurité",
+    "billing": "Facturation",
+    "cloud": "Stockage",
+    "plan": "Abonnement",
+    "team": "Équipe",
+    "integrations": "Intégrations",
+    "advanced": "Avancé",
+    "danger": "Zone de danger"
+  },
+  "account": {
+    "title": "Paramètres du compte",
+    "subtitle": "Gérez les informations de votre compte",
+    "profile": {
+      "title": "Profil",
+      "name": "Nom complet",
+      "email": "Adresse email",
+      "avatar": "Photo de profil",
+      "changeAvatar": "Changer la photo",
+      "removeAvatar": "Supprimer la photo"
+    },
+    "deleteAccount": {
+      "title": "Supprimer le compte",
+      "description": "Supprimez définitivement votre compte et toutes vos données",
+      "warning": "Cette action est irréversible. Toutes vos données seront perdues.",
+      "confirm": "Oui, supprimer mon compte"
+    }
+  },
+  "appearance": {
+    "title": "Apparence",
+    "subtitle": "Personnalisez l'apparence de l'application",
+    "theme": {
+      "title": "Thème",
+      "description": "Choisissez votre thème préféré",
+      "light": "Clair",
+      "dark": "Sombre",
+      "system": "Système"
+    },
+    "density": {
+      "title": "Densité",
+      "description": "Ajustez l'espacement de l'interface",
+      "compact": "Interface compacte",
+      "comfortable": "Confortable",
+      "spacious": "Spacieux"
+    },
+    "animations": {
+      "title": "Animations",
+      "description": "Activer les animations de l'interface",
+      "reduced": "Réduire les animations"
+    },
+    "fontSize": {
+      "title": "Taille de police",
+      "description": "Ajustez la taille du texte",
+      "small": "Petite",
+      "medium": "Moyenne",
+      "large": "Grande"
+    }
+  },
+  "language": {
+    "title": "Langue",
+    "subtitle": "Choisissez votre langue préférée",
+    "current": "Actuel",
+    "select": "Sélectionner une langue",
+    "autoDetect": "Détection automatique",
+    "available": "Langues disponibles"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Gérez vos préférences de notifications",
+    "push": {
+      "title": "Notifications push",
+      "description": "Recevoir des notifications sur votre appareil",
+      "enabled": "Activées",
+      "disabled": "Désactivées",
+      "enable": "Activer",
+      "disable": "Désactiver"
+    },
+    "email": {
+      "title": "Notifications par email",
+      "description": "Recevoir des emails pour les mises à jour importantes",
+      "marketing": "Actualités et offres",
+      "updates": "Mises à jour produit",
+      "security": "Alertes de sécurité"
+    },
+    "types": {
+      "all": "Toutes les notifications",
+      "mentions": "Mentions uniquement",
+      "important": "Important uniquement",
+      "none": "Aucune"
+    }
+  },
+  "security": {
+    "title": "Sécurité",
+    "subtitle": "Protégez votre compte",
+    "password": {
+      "title": "Mot de passe",
+      "change": "Changer le mot de passe",
+      "current": "Mot de passe actuel",
+      "new": "Nouveau mot de passe",
+      "confirm": "Confirmer le mot de passe",
+      "lastChanged": "Dernière modification"
+    },
+    "twoFactor": {
+      "title": "Authentification à deux facteurs",
+      "description": "Ajoutez une couche de sécurité supplémentaire",
+      "enable": "Activer 2FA",
+      "disable": "Désactiver 2FA",
+      "enabled": "Activée",
+      "disabled": "Désactivée"
+    },
+    "sessions": {
+      "title": "Sessions actives",
+      "description": "Gérez vos sessions connectées",
+      "current": "Session actuelle",
+      "revoke": "Révoquer",
+      "revokeAll": "Révoquer toutes les autres sessions"
+    }
+  },
+  "billing": {
+    "title": "Facturation",
+    "subtitle": "Gérez votre abonnement et vos paiements",
+    "plan": {
+      "title": "Plan actuel",
+      "free": "Gratuit",
+      "pro": "Pro",
+      "enterprise": "Enterprise",
+      "upgrade": "Passer au plan supérieur",
+      "downgrade": "Rétrograder",
+      "cancel": "Annuler l'abonnement"
+    },
+    "payment": {
+      "title": "Méthode de paiement",
+      "add": "Ajouter une carte",
+      "update": "Mettre à jour",
+      "remove": "Supprimer"
+    },
+    "invoices": {
+      "title": "Factures",
+      "download": "Télécharger",
+      "noInvoices": "Aucune facture"
+    }
+  },
+  "website": {
+    "title": "Paramètres du site",
+    "subtitle": "Configurez les informations et le comportement de votre site",
+    "general": {
+      "title": "Informations générales",
+      "description": "Les informations de base de votre site",
+      "url": "URL du site",
+      "urlDescription": "L'URL ne peut pas être modifiée après création",
+      "siteTitle": "Titre du site",
+      "tagline": "Tagline",
+      "taglinePlaceholder": "Une courte description accrocheuse",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Description détaillée de votre site pour le SEO...",
+      "descriptionHelp": "Utilisée pour les moteurs de recherche (meta description)"
+    },
+    "seo": {
+      "title": "SEO & Réseaux sociaux",
+      "description": "Optimisez la visibilité de votre site",
+      "favicon": "Favicon (URL)",
+      "faviconDescription": "L'icône affichée dans l'onglet du navigateur",
+      "ogImage": "Image de partage (OG Image)",
+      "ogImageDescription": "Image affichée lors du partage sur les réseaux sociaux (1200x630px recommandé)",
+      "indexing": "Indexation par les moteurs de recherche",
+      "indexingDescription": "Autoriser Google et autres à indexer votre site",
+      "indexingTooltip": "Active/désactive l'indexation par les moteurs de recherche",
+      "notIndexedWarning": "Votre site ne sera pas visible dans les résultats de recherche"
+    },
+    "publication": {
+      "title": "Statut de publication",
+      "description": "Gérez la visibilité de votre site",
+      "online": "Site en ligne",
+      "draft": "Site en brouillon",
+      "public": "Public",
+      "private": "Privé",
+      "accessibleAt": "Accessible à {{url}}",
+      "onlyYou": "Seul vous pouvez voir votre site",
+      "publish": "Publier le site",
+      "unpublish": "Mettre en brouillon",
+      "publishTooltip": "Rendre le site public et accessible à tous",
+      "unpublishTooltip": "Rendre le site privé et non accessible publiquement"
+    },
+    "danger": {
+      "title": "Zone de danger",
+      "description": "Actions irréversibles sur votre site",
+      "deleteTitle": "Supprimer le site",
+      "deleteDescription": "Supprimer définitivement ce site et toutes ses données",
+      "deleteWarning": "Attention : cette action est irréversible",
+      "deleteConfirmTitle": "Supprimer le site ?",
+      "deleteConfirmDescription": "Cette action est irréversible. Toutes les données de ce site seront définitivement supprimées : pages, sections, médias, extensions et configurations.",
+      "deleteButton": "Supprimer",
+      "deleteConfirmButton": "Supprimer définitivement"
+    }
+  },
+  "toast": {
+    "saved": "Paramètres enregistrés",
+    "saveError": "Erreur lors de la sauvegarde",
+    "published": "Site publié avec succès !",
+    "publishError": "Erreur lors de la publication",
+    "unpublished": "Site mis en brouillon",
+    "unpublishError": "Erreur lors de la mise en brouillon",
+    "deleted": "Site supprimé",
+    "deleteError": "Erreur lors de la suppression",
+    "saving": "Enregistrement...",
+    "profileUpdated": "Profil mis à jour"
+  },
+  "saved": "Paramètres enregistrés"
+}

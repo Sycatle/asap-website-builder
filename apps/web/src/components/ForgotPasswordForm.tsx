@@ -1,9 +1,14 @@
+// Initialize i18n before any React hooks
+import '@/i18n';
+
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { Loader2, Mail, ArrowLeft, CheckCircle } from "lucide-react";
+import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
 import { forgotPasswordSchema, type ForgotPasswordFormData } from "@/lib/validations/auth";
 import { authAPI } from "@/lib/api/auth";
 import { RateLimitError } from "@/lib/api/client";
@@ -12,6 +17,7 @@ export default function ForgotPasswordForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
+  const { t } = useTranslation(['common']);
   const [email, setEmail] = useState('');
   const [errors, setErrors] = useState<Partial<ForgotPasswordFormData>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -38,14 +44,14 @@ export default function ForgotPasswordForm({
     try {
       await authAPI.forgotPassword({ email: result.data.email });
       setIsSuccess(true);
-      toast.success('Email envoyé !');
+      toast.success(t('auth.emailSent'));
     } catch (error: any) {
       if (error instanceof RateLimitError) {
-        toast.error(`Trop de tentatives. Réessayez dans ${error.retryAfter}s.`);
+        toast.error(t('auth.rateLimited', { time: `${error.retryAfter}s` }));
       } else {
         // Always show success message to prevent email enumeration
         setIsSuccess(true);
-        toast.success('Email envoyé !');
+        toast.success(t('auth.emailSent'));
       }
     } finally {
       setIsLoading(false);
@@ -61,13 +67,11 @@ export default function ForgotPasswordForm({
             <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Email envoyé !</h1>
-            <p className="text-sm text-muted-foreground mt-2">
-              Si un compte existe avec l'adresse <strong>{email}</strong>, vous recevrez un email avec les instructions pour réinitialiser votre mot de passe.
-            </p>
+            <h1 className="text-xl font-bold">{t('auth.emailSent')}</h1>
+            <p className="text-sm text-muted-foreground mt-2" dangerouslySetInnerHTML={{ __html: t('auth.emailSentDesc', { email }) }} />
           </div>
           <p className="text-xs text-muted-foreground">
-            Vérifiez également votre dossier spam si vous ne recevez pas l'email.
+            {t('auth.checkSpam')}
           </p>
         </div>
         <div className="flex flex-col gap-3">
@@ -79,14 +83,14 @@ export default function ForgotPasswordForm({
             }}
             className="w-full"
           >
-            Réessayer avec une autre adresse
+            {t('auth.tryDifferentEmail')}
           </Button>
           <a 
             href="/login" 
             className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-primary"
           >
             <ArrowLeft className="h-4 w-4" />
-            Retour à la connexion
+            {t('auth.backToLogin')}
           </a>
         </div>
       </div>
@@ -107,9 +111,9 @@ export default function ForgotPasswordForm({
               </div>
               <span className="sr-only">ASAP</span>
             </a>
-            <h1 className="text-xl font-bold">Mot de passe oublié ?</h1>
+            <h1 className="text-xl font-bold">{t('auth.forgotPasswordTitle')}</h1>
             <p className="text-center text-sm text-muted-foreground">
-              Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.
+              {t('auth.forgotPasswordDesc')}
             </p>
           </div>
 
@@ -120,7 +124,7 @@ export default function ForgotPasswordForm({
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="vous@exemple.com"
+                placeholder={t('auth.emailPlaceholder')}
                 required
                 disabled={isLoading}
                 aria-invalid={!!errors.email}
@@ -133,13 +137,13 @@ export default function ForgotPasswordForm({
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Envoi en cours...
+                  <Spinner className="mr-2 h-4 w-4" />
+                  {t('auth.sending')}
                 </>
               ) : (
                 <>
                   <Mail className="mr-2 h-4 w-4" />
-                  Envoyer le lien
+                  {t('auth.sendResetLink')}
                 </>
               )}
             </Button>
@@ -152,7 +156,7 @@ export default function ForgotPasswordForm({
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary"
         >
           <ArrowLeft className="h-4 w-4" />
-          Retour à la connexion
+          {t('auth.backToLogin')}
         </a>
       </div>
     </div>

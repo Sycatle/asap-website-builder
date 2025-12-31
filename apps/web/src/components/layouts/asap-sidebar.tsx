@@ -1,4 +1,5 @@
 import * as React from "react"
+import { useTranslation } from "react-i18next"
 import {
   Home,
   ImageIcon,
@@ -55,6 +56,8 @@ export function AsapSidebar({
   currentWebsite = null,
   isLoadingWebsites = false,
 }: AsapSidebarProps) {
+  const { t } = useTranslation(['common', 'editor'])
+  
   // Get current website ID from context
   const { currentWebsiteId } = useWebsiteContext()
   
@@ -87,10 +90,10 @@ export function AsapSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Accueil">
+                <SidebarMenuButton asChild tooltip={t('common:navigation.home')}>
                   <Link href={buildUrl('')}>
                     <Home />
-                    <span>Accueil</span>
+                    <span>{t('common:navigation.home')}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -101,7 +104,7 @@ export function AsapSidebar({
         {/* Création - Only when website selected */}
         {currentWebsite && (
           <SidebarGroup>
-            <SidebarGroupLabel>Création</SidebarGroupLabel>
+            <SidebarGroupLabel>{t('common:navigation.creation')}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
@@ -113,18 +116,18 @@ export function AsapSidebar({
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip="Pages">
+                  <SidebarMenuButton asChild tooltip={t('common:navigation.pages')}>
                     <Link href={buildUrl('/pages')}>
                       <FileText />
-                      <span>Pages</span>
+                      <span>{t('common:navigation.pages')}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip="Médias">
+                  <SidebarMenuButton asChild tooltip={t('common:navigation.media')}>
                     <Link href={buildUrl('/cloud')}>
                       <ImageIcon />
-                      <span>Médias</span>
+                      <span>{t('common:navigation.media')}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -136,7 +139,7 @@ export function AsapSidebar({
         {/* Analytics */}
         {currentWebsite && (
           <SidebarGroup>
-            <SidebarGroupLabel>Analyse</SidebarGroupLabel>
+            <SidebarGroupLabel>{t('common:navigation.analytics')}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
@@ -162,44 +165,44 @@ export function AsapSidebar({
 
         {/* Configuration */}
         <SidebarGroup>
-          <SidebarGroupLabel>Configuration</SidebarGroupLabel>
+          <SidebarGroupLabel>{t('common:navigation.configuration')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {currentWebsite && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip="Paramètres">
+                  <SidebarMenuButton asChild tooltip={t('common:navigation.settings')}>
                     <Link href={buildUrl('/settings')}>
                       <Settings />
-                      <span>Paramètres</span>
+                      <span>{t('common:navigation.settings')}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
               {currentWebsite && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip="Administrateurs">
+                  <SidebarMenuButton asChild tooltip={t('common:navigation.administrators')}>
                     <Link href={buildUrl('/administrators')}>
                       <Users />
-                      <span>Administrateurs</span>
+                      <span>{t('common:navigation.administrators')}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
               {currentWebsite && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip="Thème">
+                  <SidebarMenuButton asChild tooltip={t('common:navigation.theme')}>
                     <Link href={buildUrl('/theme')}>
                       <Palette />
-                      <span>Thème</span>
+                      <span>{t('common:navigation.theme')}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Extensions">
+                <SidebarMenuButton asChild tooltip={t('common:navigation.extensions')}>
                   <Link href={buildUrl('/extensions')}>
                     <Puzzle />
-                    <span>Extensions</span>
+                    <span>{t('common:navigation.extensions')}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

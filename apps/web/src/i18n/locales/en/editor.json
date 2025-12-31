@@ -1,0 +1,347 @@
+{
+  "title": "Editor",
+  "toolbar": {
+    "undo": "Undo",
+    "redo": "Redo",
+    "save": "Save",
+    "preview": "Preview",
+    "publish": "Publish",
+    "settings": "Settings",
+    "help": "Help"
+  },
+  "sidebar": {
+    "pages": "Pages",
+    "components": "Components",
+    "styles": "Styles",
+    "assets": "Assets",
+    "settings": "Settings",
+    "layers": "Layers",
+    "history": "History",
+    "elements": "Elements"
+  },
+  "pages": {
+    "title": "Pages",
+    "add": "New page",
+    "duplicate": "Duplicate",
+    "delete": "Delete",
+    "rename": "Rename",
+    "setAsHome": "Set as home",
+    "home": "Home",
+    "empty": "No pages",
+    "settings": {
+      "title": "Page settings",
+      "name": "Page name",
+      "slug": "URL (slug)",
+      "seo": "SEO",
+      "metaTitle": "Meta title",
+      "metaDescription": "Meta description"
+    }
+  },
+  "components": {
+    "title": "Components",
+    "search": "Search components...",
+    "categories": {
+      "layout": "Layout",
+      "content": "Content",
+      "media": "Media",
+      "forms": "Forms",
+      "navigation": "Navigation",
+      "interactive": "Interactive",
+      "advanced": "Advanced"
+    },
+    "dragToAdd": "Drag to add"
+  },
+  "canvas": {
+    "zoom": "Zoom",
+    "fitToScreen": "Fit to screen",
+    "actualSize": "Actual size",
+    "sitePreview": "Site preview",
+    "livePreview": "Live preview",
+    "hideElements": "Hide elements",
+    "showElements": "Show elements",
+    "hideProperties": "Hide properties",
+    "showProperties": "Show properties",
+    "responsive": {
+      "desktop": "Desktop",
+      "tablet": "Tablet",
+      "mobile": "Mobile"
+    },
+    "emptyState": {
+      "title": "Empty page",
+      "description": "Drag components here to get started",
+      "noElements": "No visible elements",
+      "addToStart": "Add elements to get started"
+    }
+  },
+  "properties": {
+    "title": "Properties",
+    "noSelection": "Select an element",
+    "selectToEdit": "to edit its properties",
+    "elementTitle": "Element title",
+    "visible": "Visible",
+    "tabs": {
+      "content": "Content",
+      "style": "Style",
+      "settings": "Settings"
+    },
+    "style": {
+      "spacing": "Spacing",
+      "margin": "Margin",
+      "padding": "Padding",
+      "size": "Size",
+      "width": "Width",
+      "height": "Height",
+      "colors": "Colors",
+      "background": "Background",
+      "text": "Text",
+      "border": "Border",
+      "borderRadius": "Border radius",
+      "shadow": "Shadow",
+      "typography": "Typography",
+      "fontFamily": "Font family",
+      "fontSize": "Font size",
+      "fontWeight": "Font weight",
+      "lineHeight": "Line height",
+      "letterSpacing": "Letter spacing",
+      "layout": "Layout"
+    },
+    "layout": {
+      "default": "Default"
+    },
+    "hero": {
+      "name": "Name / Main title",
+      "namePlaceholder": "Your Name",
+      "title": "Title / Role",
+      "titlePlaceholder": "Full Stack Developer",
+      "subtitle": "Subtitle",
+      "subtitlePlaceholder": "A short description...",
+      "ctaButton": "Action button",
+      "ctaTextPlaceholder": "Button text",
+      "backgroundImage": "Background image (URL)"
+    },
+    "about": {
+      "description": "Description",
+      "descriptionPlaceholder": "Your description...",
+      "photo": "Photo (URL)",
+      "highlights": "Highlights",
+      "highlightPlaceholder": "Point {{number}}"
+    },
+    "skills": {
+      "categories": "Categories",
+      "category": "Category",
+      "newCategory": "New category",
+      "categoryName": "Category name",
+      "skill": "Skill"
+    },
+    "services": {
+      "title": "Services",
+      "service": "Service",
+      "newService": "New service",
+      "serviceName": "Service name",
+      "serviceDescription": "Service description"
+    },
+    "contact": {
+      "info": "Information",
+      "email": "Email",
+      "phone": "Phone",
+      "location": "Location",
+      "socials": "Social networks",
+      "type": "Type",
+      "website": "Website"
+    },
+    "generic": {
+      "advancedSoon": "Advanced editor coming soon",
+      "basicEditable": "Basic properties are editable above"
+    }
+  },
+  "assets": {
+    "title": "Assets",
+    "upload": "Upload",
+    "dragDrop": "Drag and drop files here",
+    "browse": "Browse",
+    "empty": "No assets",
+    "delete": "Delete",
+    "copy": "Copy URL",
+    "types": {
+      "images": "Images",
+      "videos": "Videos",
+      "documents": "Documents",
+      "all": "All"
+    }
+  },
+  "publish": {
+    "title": "Publish",
+    "subtitle": "Put your site online",
+    "domain": "Domain",
+    "customDomain": "Custom domain",
+    "subdomain": "ASAP subdomain",
+    "ssl": "SSL certificate",
+    "publishing": "Publishing...",
+    "published": "Published!",
+    "viewSite": "View site",
+    "lastPublished": "Last published"
+  },
+  "messages": {
+    "saved": "Changes saved",
+    "published": "Site published successfully",
+    "deleted": "Element deleted",
+    "duplicated": "Element duplicated",
+    "unsavedChanges": "You have unsaved changes",
+    "elementAdded": "Element added",
+    "elementsReordered": "Elements reordered"
+  },
+  "header": {
+    "backToDashboard": "Back to dashboard",
+    "online": "Online",
+    "draft": "Draft",
+    "selectPage": "Select a page to edit",
+    "page": "Page",
+    "refresh": "Refresh elements",
+    "viewSite": "View site in new tab",
+    "openSite": "Open site",
+    "closeMenu": "Close menu",
+    "openMenu": "Open menu",
+    "previewSize": "Preview size",
+    "displayOptions": "Display options"
+  },
+  "elementList": {
+    "title": "Element list",
+    "addNew": "Add new element",
+    "loading": "Loading elements",
+    "loadingElements": "Loading elements...",
+    "empty": "No elements",
+    "emptyHint": "Start by adding your first element",
+    "addFirst": "Add your first element",
+    "addElement": "Add element",
+    "hidden": "hidden",
+    "hiddenElement": "Hidden element",
+    "dragHint": "Drag to reorder"
+  },
+  "panels": {
+    "elements": "Elements panel",
+    "properties": "Properties panel"
+  },
+  "propertyPanel": {
+    "title": "Property editor",
+    "elementProperties": "Element properties"
+  },
+  "mobileToolbar": {
+    "actions": "Studio actions",
+    "closeElements": "Close elements",
+    "openElements": "Open elements",
+    "closeProperties": "Close properties",
+    "openProperties": "Open properties",
+    "selectFirst": "Select an element first"
+  },
+  "mobileSheets": {
+    "manageElements": "Manage your page elements",
+    "editProperties": "Edit selected element properties"
+  },
+  "states": {
+    "loadingSite": "Loading site",
+    "noWebsite": "No website selected",
+    "selectToPreview": "Select a website to preview",
+    "backToDashboard": "Back to dashboard"
+  },
+  "previews": {
+    "hidden": "Hidden",
+    "hero": {
+      "defaultName": "Your Name",
+      "defaultTitle": "Full-Stack Developer",
+      "defaultTagline": "Turn your ideas into reality",
+      "contactMe": "Contact me",
+      "viewProjects": "View projects",
+      "availability": {
+        "available": "Available",
+        "busy": "Busy",
+        "unavailable": "Unavailable"
+      }
+    },
+    "services": {
+      "defaults": {
+        "webApps": {
+          "title": "Web Applications",
+          "description": "Custom development"
+        },
+        "apis": {
+          "title": "APIs & Backend",
+          "description": "Robust architecture"
+        },
+        "consulting": {
+          "title": "Consulting",
+          "description": "Technical support"
+        }
+      }
+    },
+    "process": {
+      "defaults": {
+        "discovery": {
+          "title": "Discovery",
+          "description": "Discuss your needs"
+        },
+        "proposal": {
+          "title": "Proposal",
+          "description": "Detailed quote"
+        },
+        "development": {
+          "title": "Development",
+          "description": "Iterative implementation"
+        },
+        "delivery": {
+          "title": "Delivery",
+          "description": "Production deployment"
+        }
+      }
+    },
+    "proof": {
+      "defaults": {
+        "projects": "Projects delivered",
+        "clients": "Satisfied clients",
+        "experience": "Years of experience"
+      }
+    },
+    "about": {
+      "defaultBio": "Passionate about web development for several years, I specialize in creating modern applications...",
+      "years": "years"
+    },
+    "contact": {
+      "contactButton": "Contact"
+    },
+    "generic": {
+      "elementType": "Element of type \"{{type}}\""
+    },
+    "navigation": {
+      "login": "Login"
+    },
+    "landingHero": {
+      "defaultHeadline1": "Create your website",
+      "defaultHeadline2": "in minutes",
+      "cta": "Get started",
+      "demo": "Demo"
+    },
+    "features": {
+      "badge": "Features",
+      "defaultHeadline": "Everything you need"
+    },
+    "howItWorks": {
+      "badge": "Easy",
+      "title": "How it works"
+    },
+    "pricing": {
+      "badge": "Pricing",
+      "title": "Plans and pricing",
+      "popular": "Popular"
+    },
+    "testimonials": {
+      "badge": "Reviews",
+      "title": "What our customers say"
+    },
+    "cta": {
+      "defaultHeadline": "Ready to get started?",
+      "defaultButton": "Sign up for free"
+    },
+    "footer": {
+      "rights": "All rights reserved."
+    }
+  }
+}

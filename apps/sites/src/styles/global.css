@@ -2,24 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Base styles */
+/* Base styles - Using shadcn/ui compatible CSS variables */
 @layer base {
   :root {
-    /* Default theme colors (can be overridden per site) */
-    --color-primary: 99 102 241; /* indigo-500 */
-    --color-secondary: 139 92 246; /* violet-500 */
-    --color-accent: 236 72 153; /* pink-500 */
-    --color-background: 15 23 42; /* slate-900 */
-    --color-foreground: 248 250 252; /* slate-50 */
-    --color-muted: 148 163 184; /* slate-400 */
-    --color-border: 51 65 85; /* slate-700 */
+    --radius: 0.75rem;
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 239 84% 67%;
   }
 
-  .light {
-    --color-background: 255 255 255;
-    --color-foreground: 15 23 42;
-    --color-muted: 100 116 139;
-    --color-border: 226 232 240;
+  .dark, :root.dark, html.dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 6%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 6%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 5% 12%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 20%;
+    --input: 240 3.7% 15.9%;
+    --ring: 239 84% 67%;
   }
 
   html {

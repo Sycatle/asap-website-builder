@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { extensionsAPI } from '@/lib/api';
 import type { Extension, WebsiteExtension, ConfigSchema, ConfigAction } from '@/lib/api/extensions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,7 +15,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { Spinner } from "@/components/ui/spinner";
 import { toast } from 'sonner';
 import SchemaRenderer from '@/components/SchemaRenderer';
 import { useWebsitesQuery, useExtensionCatalogQuery, useWebsiteExtensionsQuery, useExtensionDataQuery, useUpdateExtensionSettingsMutation, useDeactivateExtensionMutation } from '@/lib/query';
@@ -96,7 +98,7 @@ const getDefaultSchema = (extension: Extension): ConfigSchema => {
 // Category helpers
 const getCategoryColor = (category: string) => {
   const colors: Record<string, string> = {
-    'integration': 'bg-gray-900',
+    'integration': 'bg-zinc-700 dark:bg-zinc-300',
     'content': 'bg-indigo-600',
     'engagement': 'bg-green-600',
     'analytics': 'bg-purple-600',
@@ -105,16 +107,7 @@ const getCategoryColor = (category: string) => {
   return colors[category] || 'bg-blue-600';
 };
 
-const getCategoryLabel = (category: string) => {
-  const labels: Record<string, string> = {
-    'integration': 'Intégration',
-    'content': 'Contenu',
-    'engagement': 'Engagement',
-    'analytics': 'Analytics',
-    'appearance': 'Apparence',
-  };
-  return labels[category] || category;
-};
+// Category labels will be translated inside the component using the t function
 
 const getExtensionIcon = (category: string) => {
   const iconClass = "w-6 h-6";
@@ -163,6 +156,8 @@ interface ChangelogEntry {
 }
 
 export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
+  const { t } = useTranslation(['dashboard', 'common']);
+  
   // Context hook for websiteId
   const { currentWebsiteId: websiteId } = useWebsiteContext();
   // React Query hooks
@@ -174,6 +169,14 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
   // Mutations
   const updateSettingsMutation = useUpdateExtensionSettingsMutation();
   const deactivateExtensionMutation = useDeactivateExtensionMutation();
+  
+  // Category label helper (inside component to access t function)
+  const getCategoryLabel = (category: string) => {
+    const translationKey = `dashboard:extensions.categories.${category}`;
+    const translated = t(translationKey);
+    // Return category if translation key doesn't exist
+    return translated === translationKey ? category : translated;
+  };
   
   // Derive extension from catalog
   const extension = useMemo(() => {
@@ -238,28 +241,28 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
       {
         id: '1',
         action: 'sync',
-        description: 'Synchronisation des données',
+        description: t('dashboard:extensions.config.changelog.sync'),
         timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
       },
       {
         id: '2',
         action: 'settings_updated',
-        description: 'Configuration mise à jour',
+        description: t('dashboard:extensions.config.changelog.settingsUpdated'),
         timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
       },
       {
         id: '3',
         action: 'enabled',
-        description: 'Extension activée',
+        description: t('dashboard:extensions.config.changelog.enabled'),
         timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
       },
     ]);
-  }, []);
+  }, [t]);
 
   // Cancel changes handler
   const handleCancelChanges = () => {
     setSettings(initialSettings);
-    toast.info('Modifications annulées');
+    toast.info(t('dashboard:extensions.config.toast.cancelled'));
   };
 
   // Keyboard shortcuts
@@ -272,7 +275,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
           handleSaveSettings();
         }
       },
-      description: 'Sauvegarder',
+      description: t('dashboard:extensions.config.shortcuts.save'),
       enabled: isSettingsDirty,
     },
     {
@@ -282,7 +285,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
           handleCancelChanges();
         }
       },
-      description: 'Annuler les modifications',
+      description: t('dashboard:extensions.config.shortcuts.cancel'),
       enabled: isSettingsDirty,
     },
     {
@@ -291,11 +294,11 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
       shift: true,
       action: () => {
         refreshData();
-        toast.info('Actualisation des données...');
+        toast.info(t('dashboard:extensions.config.toast.refreshing'));
       },
-      description: 'Actualiser',
+      description: t('dashboard:extensions.config.shortcuts.refresh'),
     },
-  ], [isSettingsDirty, isSaving, initialSettings]);
+  ], [isSettingsDirty, isSaving, initialSettings, t]);
 
   useKeyboardShortcuts(shortcuts);
 
@@ -317,9 +320,9 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
 
     try {
       await toast.promise(savePromise(), {
-        loading: 'Enregistrement en cours...',
-        success: 'Configuration enregistrée',
-        error: 'Erreur lors de l\'enregistrement',
+        loading: t('dashboard:extensions.config.toast.saving'),
+        success: t('dashboard:extensions.config.toast.saved'),
+        error: t('dashboard:extensions.config.toast.saveError'),
       });
     } catch (err) {
       console.error('Failed to save settings:', err);
@@ -357,9 +360,9 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
 
     try {
       await toast.promise(actionPromise(), {
-        loading: `Exécution de "${action?.label || actionKey}"...`,
-        success: `Action "${action?.label || actionKey}" exécutée`,
-        error: `Erreur lors de l'exécution de l'action`,
+        loading: t('dashboard:extensions.config.toast.actionExecuting', { action: action?.label || actionKey }),
+        success: t('dashboard:extensions.config.toast.actionExecuted', { action: action?.label || actionKey }),
+        error: t('dashboard:extensions.config.toast.actionError'),
       });
     } catch (err) {
       console.error('Failed to execute action:', err);
@@ -385,9 +388,9 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
 
       try {
         await toast.promise(activatePromise(), {
-          loading: 'Activation en cours...',
-          success: 'Extension activée',
-          error: 'Erreur lors de l\'activation',
+          loading: t('dashboard:extensions.config.toast.activating'),
+          success: t('dashboard:extensions.config.toast.activated'),
+          error: t('dashboard:extensions.config.toast.activateError'),
         });
       } catch (err) {
         console.error('Failed to activate extension:', err);
@@ -397,7 +400,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
 
   const confirmDeactivateExtension = async () => {
     if (!websiteId || !websiteExtension) {
-      toast.error('Données manquantes pour la désactivation');
+      toast.error(t('dashboard:extensions.config.toast.missingData'));
       return;
     }
     
@@ -408,10 +411,10 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
         websiteId,
         extensionId: websiteExtension.id,
       });
-      toast.success('Extension désactivée');
+      toast.success(t('dashboard:extensions.toast.deactivated'));
     } catch (err) {
       console.error('Failed to deactivate extension:', err);
-      toast.error('Erreur lors de la désactivation');
+      toast.error(t('dashboard:extensions.toast.deactivateError'));
     } finally {
       setIsDeactivating(false);
       setShowDeactivateConfirm(false);
@@ -512,14 +515,14 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
         <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
           {Icons.error}
         </div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">Extension non trouvée</h3>
-        <p className="text-gray-500 mb-6">L'extension "{slug}" n'existe pas ou n'est pas disponible.</p>
+        <h3 className="text-xl font-semibold text-foreground mb-2">{t('dashboard:extensions.config.notFound')}</h3>
+        <p className="text-muted-foreground mb-6">{t('dashboard:extensions.config.notFoundDescription', { slug })}</p>
         <Link 
           href={`/app/${websiteId}/extensions`} 
           className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-medium"
         >
           {Icons.back}
-          Retour aux extensions
+          {t('dashboard:extensions.config.backToExtensions')}
         </Link>
       </div>
     );
@@ -538,14 +541,14 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
       {/* Back link */}
       <Link 
         href={`/app/${websiteId}/extensions`} 
-        className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-gray-500 hover:text-gray-700 mb-4 sm:mb-6 transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground hover:text-foreground mb-4 sm:mb-6 transition-colors"
       >
         {Icons.back}
-        Extensions
+        {t('dashboard:extensions.title')}
       </Link>
 
       {/* Header Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 sm:mb-6">
+      <div className="bg-card rounded-xl shadow-sm border border-border mb-4 sm:mb-6">
         <div className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             {/* Extension info */}
@@ -555,17 +558,17 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <h1 className="text-lg sm:text-xl font-bold text-gray-900">{extension.name}</h1>
+                  <h1 className="text-lg sm:text-xl font-bold text-foreground">{extension.name}</h1>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${
                     isExtensionEnabled 
                       ? 'bg-green-100 text-green-700' 
-                      : 'bg-gray-100 text-gray-600'
+                      : 'bg-muted text-muted-foreground'
                   }`}>
-                    {isExtensionEnabled ? 'Actif' : 'Inactif'}
+                    {isExtensionEnabled ? t('dashboard:extensions.status.active') : t('dashboard:extensions.status.inactive')}
                   </span>
                 </div>
-                <p className="mt-1 text-xs sm:text-sm text-gray-600 line-clamp-2">{extension.description}</p>
-                <div className="mt-1.5 sm:mt-2 flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-gray-500">
+                <p className="mt-1 text-xs sm:text-sm text-muted-foreground line-clamp-2">{extension.description}</p>
+                <div className="mt-1.5 sm:mt-2 flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     {getCategoryLabel(extension.category)}
                   </span>
@@ -582,11 +585,11 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
                 <button
                   onClick={() => handleAction(syncAction.key)}
                   disabled={executingAction === syncAction.key}
-                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-foreground bg-card border border-input rounded-lg hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {executingAction === syncAction.key ? Icons.spinner : Icons.sync}
-                  <span className="hidden xs:inline">Synchroniser</span>
-                  <span className="xs:hidden">Sync</span>
+                  <span className="hidden xs:inline">{t('dashboard:extensions.config.sync')}</span>
+                  <span className="xs:hidden">{t('dashboard:extensions.config.syncShort')}</span>
                 </button>
               )}
               
@@ -600,7 +603,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
                 }`}
               >
                 {Icons.power}
-                {isExtensionEnabled ? 'Désactiver' : 'Activer'}
+                {isExtensionEnabled ? t('dashboard:extensions.actions.deactivate') : t('dashboard:extensions.actions.activate')}
               </button>
             </div>
           </div>
@@ -616,15 +619,15 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setPendingConfirm(null)}
-                  className="flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium text-muted-foreground bg-card border border-input rounded-lg hover:bg-muted"
                 >
-                  Annuler
+                  {t('common:actions.cancel')}
                 </button>
                 <button
                   onClick={() => handleAction(pendingConfirm)}
                   className="flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
                 >
-                  Confirmer
+                  {t('common:actions.confirm')}
                 </button>
               </div>
             </div>
@@ -634,21 +637,21 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
 
       {/* Tabs Content */}
       {isExtensionEnabled && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="bg-card rounded-xl shadow-sm border border-border">
           <div className="p-4 sm:p-6">
             <Tabs defaultValue={defaultTab}>
               <TabsList className="mb-4 flex flex-wrap gap-1">
                 {hasConfig && (
                   <TabsTrigger value="config" className="gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
                     {Icons.settings}
-                    <span className="hidden xs:inline">Configuration</span>
+                    <span className="hidden xs:inline">{t('dashboard:extensions.config.tabs.config')}</span>
                     <span className="xs:hidden">Config</span>
                   </TabsTrigger>
                 )}
                 {hasData && (
                   <TabsTrigger value="data" className="gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
                     {Icons.data}
-                    Données
+                    {t('dashboard:extensions.config.tabs.data')}
                     {Object.keys(extensionData).length > 0 && (
                       <Badge variant="secondary" className="ml-1 text-[10px] sm:text-xs h-4 sm:h-5">
                         {Object.values(extensionData).flat().length}
@@ -658,7 +661,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
                 )}
                 <TabsTrigger value="changelog" className="gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
                   {Icons.history}
-                  <span className="hidden xs:inline">Historique</span>
+                  <span className="hidden xs:inline">{t('dashboard:extensions.config.tabs.changelog')}</span>
                   <span className="xs:hidden">Hist.</span>
                   {changelog.length > 0 && (
                     <Badge variant="secondary" className="ml-1 text-[10px] sm:text-xs h-4 sm:h-5">
@@ -684,8 +687,8 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
                     
                     {/* Other actions */}
                       {getOtherActions().length > 0 && (
-                        <div className="border-t border-gray-200 pt-4 sm:pt-6">
-                          <h3 className="text-xs sm:text-sm font-medium text-gray-900 mb-2 sm:mb-3">Actions</h3>
+                        <div className="border-t border-border pt-4 sm:pt-6">
+                          <h3 className="text-xs sm:text-sm font-medium text-foreground mb-2 sm:mb-3">{t('dashboard:extensions.config.actions')}</h3>
                           <div className="flex flex-wrap gap-2">
                             {getOtherActions().map((action) => (
                               <button
@@ -696,7 +699,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
                                   action.style === 'danger'
                                     ? 'text-red-600 bg-red-50 border border-red-200 hover:bg-red-100'
                                     : action.style === 'secondary'
-                                    ? 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                                    ? 'text-foreground bg-card border border-input hover:bg-muted'
                                     : 'text-white bg-primary-600 hover:bg-primary-700'
                                 }`}
                               >
@@ -730,10 +733,10 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
                 <div>
                   {changelog.length === 0 ? (
                     <div className="text-center py-12">
-                      <div className="w-12 h-12 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                      <div className="w-12 h-12 mx-auto bg-muted rounded-full flex items-center justify-center mb-3">
                         {Icons.history}
                       </div>
-                      <p className="text-gray-500">Aucun historique disponible</p>
+                      <p className="text-muted-foreground">{t('dashboard:extensions.config.noHistory')}</p>
                     </div>
                   ) : (
                     <div className="space-y-1">
@@ -741,15 +744,15 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
                         <div 
                           key={entry.id}
                           className={`flex items-start gap-3 py-3 ${
-                            index !== changelog.length - 1 ? 'border-b border-gray-100' : ''
+                            index !== changelog.length - 1 ? 'border-b border-border' : ''
                           }`}
                         >
-                          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 text-gray-500">
+                          <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center flex-shrink-0 text-muted-foreground">
                             {getActionIcon(entry.action)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm text-gray-900">{entry.description}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">
+                            <p className="text-sm text-foreground">{entry.description}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
                               {formatRelativeTimeFr(entry.timestamp)}
                               {entry.user && ` • ${entry.user}`}
                             </p>
@@ -767,20 +770,20 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
 
       {/* Not enabled state */}
       {!isExtensionEnabled && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8 text-center">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3 sm:mb-4 text-gray-400">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6 sm:p-8 text-center">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-muted rounded-full flex items-center justify-center mb-3 sm:mb-4 text-muted-foreground">
             {Icons.power}
           </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1.5 sm:mb-2">Extension désactivée</h3>
-          <p className="text-xs sm:text-sm text-gray-500 mb-4 sm:mb-6 max-w-md mx-auto">
-            Activez cette extension pour accéder à sa configuration.
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-1.5 sm:mb-2">{t('dashboard:extensions.config.disabled')}</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6 max-w-md mx-auto">
+            {t('dashboard:extensions.config.disabledDescription')}
           </p>
           <button
             onClick={handleToggleExtension}
             className="inline-flex items-center gap-2 px-5 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
           >
             {Icons.check}
-            Activer l'extension
+            {t('dashboard:extensions.actions.activateExtension')}
           </button>
         </div>
       )}
@@ -799,12 +802,12 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
-              Désactiver l'extension
+              {t('dashboard:extensions.config.confirm.title')}
             </DialogTitle>
             <DialogDescription className="pt-2">
-              Êtes-vous sûr de vouloir désactiver l'extension <span className="font-medium text-foreground">{extension?.name}</span> ?
+              {t('dashboard:extensions.config.confirm.description')} <span className="font-medium text-foreground">{extension?.name}</span> ?
               <br />
-              <span className="text-muted-foreground">Vous pourrez la réactiver à tout moment.</span>
+              <span className="text-muted-foreground">{t('dashboard:extensions.config.confirm.note')}</span>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -813,7 +816,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
               onClick={() => setShowDeactivateConfirm(false)}
               disabled={isDeactivating}
             >
-              Annuler
+              {t('common:actions.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -822,11 +825,11 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
             >
               {isDeactivating ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Désactivation...
+                  <Spinner className="h-4 w-4 mr-2" />
+                  {t('dashboard:extensions.actions.deactivating')}
                 </>
               ) : (
-                'Désactiver'
+                t('dashboard:extensions.actions.deactivate')
               )}
             </Button>
           </DialogFooter>

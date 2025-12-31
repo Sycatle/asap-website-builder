@@ -1,6 +1,12 @@
 # =============================================================================
 # ASAP v2 - Makefile (Docker-first development)
-# =============================================================================
+
+
+
+
+
+
+PUBLIC_SITES_URL=http://localhost:4322# Sites app URL (for canonical links)PUBLIC_API_URL=http://localhost:3000/api# API endpoint - Points to the ASAP API server# =============================================================================
 # Use bash for shell commands (required for read -n, [[ ]], etc.)
 SHELL := /bin/bash
 # =============================================================================
@@ -30,6 +36,7 @@ help:
 	@echo "  make dev-build       - Rebuild and start dev environment"
 	@echo "  make dev-api         - Start only API with dependencies"
 	@echo "  make dev-web         - Start only Web with dependencies"
+	@echo "  make dev-sites       - Start only Sites with dependencies"
 	@echo "  make dev-worker      - Start only Worker with dependencies"
 	@echo ""
 	@echo "$(GREEN)Docker Commands:$(NC)"
@@ -40,6 +47,7 @@ help:
 	@echo "  make logs            - View logs from all services"
 	@echo "  make logs-api        - View API logs"
 	@echo "  make logs-web        - View Web logs"
+	@echo "  make logs-sites      - View Sites logs"
 	@echo "  make logs-worker     - View Worker logs"
 	@echo "  make ps              - Show running containers"
 	@echo ""
@@ -77,41 +85,53 @@ help:
 	@echo ""
 
 # =============================================================================
-# Development Commands (Docker-first)
+# Development Commands (Docker-only)
 # =============================================================================
 .PHONY: dev dev-build dev-api dev-web dev-worker
 
 dev:
-	@echo "$(CYAN)Starting full dev environment with hot reload...$(NC)"
+	@echo "$(CYAN)Starting full dev environment with Docker...$(NC)"
+	@echo "$(YELLOW)Ensuring local ports are free: 4322, 4321, 3000$(NC)"
+	@fuser -k 4322/tcp 2>/dev/null || true
+	@fuser -k 4321/tcp 2>/dev/null || true
+	@fuser -k 3000/tcp 2>/dev/null || true
+	@echo "$(YELLOW)Killed local processes on those ports (if any).$(NC)"
 	$(DOCKER_COMPOSE) $(COMPOSE_DEV) up -d
 	@echo "$(GREEN)✓ Development environment started$(NC)"
 	@echo ""
-	@echo "  API:      http://localhost:3000  (with cargo-watch hot reload)"
-	@echo "  Web:      http://localhost:4321  (with Astro hot reload)"
+	@echo "  API:      http://localhost:3000"
+	@echo "  Web:      http://localhost:4321"
+	@echo "  Sites:    http://localhost:4322"
 	@echo "  Postgres: localhost:5432"
 	@echo "  Redis:    localhost:6379"
 	@echo ""
 	@echo "$(YELLOW)Run 'make logs' to follow logs$(NC)"
 
 dev-build:
-	@echo "$(CYAN)Rebuilding and starting dev environment...$(NC)"
+	@echo "$(CYAN)Rebuilding and starting dev environment with Docker...$(NC)"
 	$(DOCKER_COMPOSE) $(COMPOSE_DEV) up -d --build
 	@echo "$(GREEN)✓ Development environment rebuilt and started$(NC)"
 
 dev-api:
-	@echo "$(CYAN)Starting API with dependencies (hot reload)...$(NC)"
-	$(DOCKER_COMPOSE) $(COMPOSE_DEV) up -d postgres redis migrations api
+	@echo "$(CYAN)Starting API with Docker...$(NC)"
+	$(DOCKER_COMPOSE) $(COMPOSE_DEV) up -d api
 	@echo "$(GREEN)✓ API started at http://localhost:3000$(NC)"
 
 dev-web:
-	@echo "$(CYAN)Starting Web with all dependencies...$(NC)"
-	$(DOCKER_COMPOSE) $(COMPOSE_DEV) up -d
+	@echo "$(CYAN)Starting Web with Docker...$(NC)"
+	$(DOCKER_COMPOSE) $(COMPOSE_DEV) up -d web
 	@echo "$(GREEN)✓ Web started at http://localhost:4321$(NC)"
 
 dev-worker:
-	@echo "$(CYAN)Starting Worker with dependencies (hot reload)...$(NC)"
-	$(DOCKER_COMPOSE) $(COMPOSE_DEV) up -d postgres redis migrations worker
+	@echo "$(CYAN)Starting Worker with Docker...$(NC)"
+	$(DOCKER_COMPOSE) $(COMPOSE_DEV) up -d worker
 	@echo "$(GREEN)✓ Worker started$(NC)"
+
+# Sites app runs locally (no Docker) - requires API running
+dev-sites:
+	@echo "$(CYAN)Starting Sites container with Docker...$(NC)"
+	$(DOCKER_COMPOSE) $(COMPOSE_DEV) up -d sites
+	@echo "$(GREEN)✓ Sites started at http://localhost:4322$(NC)"
 
 # =============================================================================
 # Docker Commands
@@ -150,6 +170,9 @@ logs-api:
 
 logs-web:
 	$(DOCKER_COMPOSE) $(COMPOSE_DEV) logs -f web
+
+logs-sites:
+	$(DOCKER_COMPOSE) $(COMPOSE_DEV) logs -f sites
 
 logs-worker:
 	$(DOCKER_COMPOSE) $(COMPOSE_DEV) logs -f worker

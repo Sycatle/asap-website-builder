@@ -1,0 +1,91 @@
+{
+  "generic": {
+    "title": "Error",
+    "unknown": "An unexpected error occurred",
+    "tryAgain": "Please try again",
+    "contactSupport": "If the problem persists, contact support"
+  },
+  "network": {
+    "offline": "You are offline",
+    "connectionLost": "Connection lost",
+    "connectionRestored": "Connection restored",
+    "timeout": "Request timed out",
+    "serverError": "Server error",
+    "serviceUnavailable": "Service temporarily unavailable"
+  },
+  "auth": {
+    "unauthorized": "Unauthorized",
+    "sessionExpired": "Your session has expired",
+    "loginRequired": "Login required",
+    "invalidCredentials": "Invalid credentials",
+    "accountLocked": "Account locked",
+    "emailNotVerified": "Email not verified",
+    "tooManyAttempts": "Too many attempts, please try again later"
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalidEmail": "Invalid email address",
+    "invalidUrl": "Invalid URL",
+    "invalidPhone": "Invalid phone number",
+    "passwordTooWeak": "Password too weak",
+    "passwordMismatch": "Passwords do not match",
+    "minLength": "Minimum {{min}} characters required",
+    "maxLength": "Maximum {{max}} characters allowed",
+    "invalidFormat": "Invalid format",
+    "alreadyExists": "This value already exists"
+  },
+  "permission": {
+    "denied": "Access denied",
+    "insufficientPermissions": "Insufficient permissions",
+    "ownerOnly": "Owner only",
+    "adminOnly": "Admin only"
+  },
+  "resource": {
+    "notFound": "Resource not found",
+    "deleted": "This resource has been deleted",
+    "unavailable": "Resource unavailable"
+  },
+  "quota": {
+    "exceeded": "Quota exceeded",
+    "storageLimit": "Storage limit reached",
+    "sitesLimit": "Maximum number of sites reached",
+    "membersLimit": "Maximum number of members reached",
+    "upgradeRequired": "Upgrade to continue"
+  },
+  "upload": {
+    "fileTooLarge": "File too large (max {{max}})",
+    "invalidType": "Invalid file type",
+    "uploadFailed": "Upload failed"
+  },
+  "http": {
+    "400": "Bad request",
+    "401": "Unauthenticated",
+    "403": "Forbidden",
+    "404": "Page not found",
+    "408": "Request timeout",
+    "409": "Conflict",
+    "413": "File too large",
+    "429": "Too many requests",
+    "500": "Internal server error",
+    "502": "Bad gateway",
+    "503": "Service unavailable",
+    "504": "Gateway timeout"
+  },
+  "pages": {
+    "notFound": {
+      "title": "Page not found",
+      "description": "The page you are looking for does not exist or has been moved.",
+      "backHome": "Back to home"
+    },
+    "serverError": {
+      "title": "Server error",
+      "description": "An error occurred on our servers. We are working to fix it.",
+      "tryAgain": "Try again"
+    },
+    "maintenance": {
+      "title": "Maintenance in progress",
+      "description": "The site is temporarily unavailable for maintenance.",
+      "backSoon": "We'll be back very soon!"
+    }
+  }
+}

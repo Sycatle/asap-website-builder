@@ -65,3 +65,27 @@ incremental/
 *.sublime-workspace
 .fleet/
 
+
+# pnpm cache and workspace
+.pnpm-store/
+.pnpm-debug.log*
+.pnpm/
+
+# Tooling caches
+.cache/
+.turbo/
+.parcel-cache/
+.vite/
+.next/
+.vercel/
+.netlify/
+.output/
+
+# Local build artifacts
+.cache-loader/
+dist/
+build/
+
+# Editor/workspace storage
+.vscode/**/workspaceStorage/
+

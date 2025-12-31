@@ -13,7 +13,11 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import {
   Select,
@@ -35,6 +39,12 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api';
 
@@ -203,15 +213,33 @@ export default function ThemePage() {
             </div>
             <div className="flex items-center gap-2">
               {hasChanges && (
-                <Button variant="outline" size="sm" onClick={handleRevert} className="h-8">
-                  <RotateCcw className="h-4 w-4 mr-1.5" />
-                  <span className="hidden sm:inline">Annuler</span>
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" onClick={handleRevert} className="h-8">
+                        <RotateCcw className="h-4 w-4 mr-1.5" />
+                        <span className="hidden sm:inline">Annuler</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Annuler les modifications non enregistrées</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
-              <Button size="sm" onClick={handleSave} disabled={!hasChanges || isSaving} className="h-8">
-                {isSaving ? <RefreshCw className="h-4 w-4 animate-spin mr-1.5" /> : <Save className="h-4 w-4 mr-1.5" />}
-                <span className="hidden sm:inline">Enregistrer</span>
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button size="sm" onClick={handleSave} disabled={!hasChanges || isSaving} className="h-8">
+                      {isSaving ? <RefreshCw className="h-4 w-4 animate-spin mr-1.5" /> : <Save className="h-4 w-4 mr-1.5" />}
+                      <span className="hidden sm:inline">Enregistrer</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Sauvegarder les paramètres du thème</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         }
@@ -244,41 +272,43 @@ export default function ThemePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="primary">Couleur principale</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="primary"
-                      type="color"
-                      value={theme.primary_color}
-                      onChange={(e) => updateTheme('primary_color', e.target.value)}
-                      className="w-12 h-10 p-1 cursor-pointer"
-                    />
-                    <Input
-                      value={theme.primary_color}
-                      onChange={(e) => updateTheme('primary_color', e.target.value)}
-                      className="flex-1 font-mono"
-                    />
-                  </div>
-                </div>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="primary">Couleur principale</FieldLabel>
+                    <div className="flex gap-2">
+                      <Input
+                        id="primary"
+                        type="color"
+                        value={theme.primary_color}
+                        onChange={(e) => updateTheme('primary_color', e.target.value)}
+                        className="w-12 h-10 p-1 cursor-pointer"
+                      />
+                      <Input
+                        value={theme.primary_color}
+                        onChange={(e) => updateTheme('primary_color', e.target.value)}
+                        className="flex-1 font-mono"
+                      />
+                    </div>
+                  </Field>
 
-                <div className="space-y-2">
-                  <Label htmlFor="secondary">Couleur secondaire</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="secondary"
-                      type="color"
-                      value={theme.secondary_color}
-                      onChange={(e) => updateTheme('secondary_color', e.target.value)}
-                      className="w-12 h-10 p-1 cursor-pointer"
-                    />
-                    <Input
-                      value={theme.secondary_color}
-                      onChange={(e) => updateTheme('secondary_color', e.target.value)}
-                      className="flex-1 font-mono"
-                    />
-                  </div>
-                </div>
+                  <Field>
+                    <FieldLabel htmlFor="secondary">Couleur secondaire</FieldLabel>
+                    <div className="flex gap-2">
+                      <Input
+                        id="secondary"
+                        type="color"
+                        value={theme.secondary_color}
+                        onChange={(e) => updateTheme('secondary_color', e.target.value)}
+                        className="w-12 h-10 p-1 cursor-pointer"
+                      />
+                      <Input
+                        value={theme.secondary_color}
+                        onChange={(e) => updateTheme('secondary_color', e.target.value)}
+                        className="flex-1 font-mono"
+                      />
+                    </div>
+                  </Field>
+                </FieldGroup>
               </CardContent>
             </Card>
 
@@ -290,41 +320,43 @@ export default function ThemePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="background">Arrière-plan</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="background"
-                      type="color"
-                      value={theme.background_color}
-                      onChange={(e) => updateTheme('background_color', e.target.value)}
-                      className="w-12 h-10 p-1 cursor-pointer"
-                    />
-                    <Input
-                      value={theme.background_color}
-                      onChange={(e) => updateTheme('background_color', e.target.value)}
-                      className="flex-1 font-mono"
-                    />
-                  </div>
-                </div>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="background">Arrière-plan</FieldLabel>
+                    <div className="flex gap-2">
+                      <Input
+                        id="background"
+                        type="color"
+                        value={theme.background_color}
+                        onChange={(e) => updateTheme('background_color', e.target.value)}
+                        className="w-12 h-10 p-1 cursor-pointer"
+                      />
+                      <Input
+                        value={theme.background_color}
+                        onChange={(e) => updateTheme('background_color', e.target.value)}
+                        className="flex-1 font-mono"
+                      />
+                    </div>
+                  </Field>
 
-                <div className="space-y-2">
-                  <Label htmlFor="text">Couleur du texte</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="text"
-                      type="color"
-                      value={theme.text_color}
-                      onChange={(e) => updateTheme('text_color', e.target.value)}
-                      className="w-12 h-10 p-1 cursor-pointer"
-                    />
-                    <Input
-                      value={theme.text_color}
-                      onChange={(e) => updateTheme('text_color', e.target.value)}
-                      className="flex-1 font-mono"
-                    />
-                  </div>
-                </div>
+                  <Field>
+                    <FieldLabel htmlFor="text">Couleur du texte</FieldLabel>
+                    <div className="flex gap-2">
+                      <Input
+                        id="text"
+                        type="color"
+                        value={theme.text_color}
+                        onChange={(e) => updateTheme('text_color', e.target.value)}
+                        className="w-12 h-10 p-1 cursor-pointer"
+                      />
+                      <Input
+                        value={theme.text_color}
+                        onChange={(e) => updateTheme('text_color', e.target.value)}
+                        className="flex-1 font-mono"
+                      />
+                    </div>
+                  </Field>
+                </FieldGroup>
               </CardContent>
             </Card>
           </div>

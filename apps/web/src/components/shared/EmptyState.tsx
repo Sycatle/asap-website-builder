@@ -1,7 +1,15 @@
 "use client"
 
-import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from "@/components/ui/empty";
+import { cn } from "@/lib/utils";
 
 interface EmptyStateProps {
   icon?: ReactNode;
@@ -9,33 +17,50 @@ interface EmptyStateProps {
   description?: string;
   action?: ReactNode;
   className?: string;
+  /** Variant for the icon container */
+  iconVariant?: "default" | "icon";
 }
 
+/**
+ * EmptyState - Wrapper around shadcn/ui Empty component
+ * Provides backward compatibility with existing API
+ */
 export function EmptyState({ 
   icon, 
   title, 
   description, 
   action, 
-  className 
+  className,
+  iconVariant = "default",
 }: EmptyStateProps) {
   return (
-    <div className={cn(
-      "flex flex-col items-center justify-center py-12 px-4 text-center",
-      "border-2 border-dashed rounded-lg bg-muted/30",
-      className
-    )}>
-      {icon && (
-        <div className="mb-4 opacity-50">
-          {icon}
-        </div>
+    <Empty className={cn("border-2 bg-muted/30", className)}>
+      <EmptyHeader>
+        {icon && (
+          <EmptyMedia variant={iconVariant} className="opacity-50">
+            {icon}
+          </EmptyMedia>
+        )}
+        <EmptyTitle>{title}</EmptyTitle>
+        {description && (
+          <EmptyDescription>{description}</EmptyDescription>
+        )}
+      </EmptyHeader>
+      {action && (
+        <EmptyContent>
+          {action}
+        </EmptyContent>
       )}
-      <h3 className="text-lg font-semibold mb-2">{title}</h3>
-      {description && (
-        <p className="text-sm text-muted-foreground max-w-md mb-4">
-          {description}
-        </p>
-      )}
-      {action}
-    </div>
+    </Empty>
   );
 }
+
+// Re-export primitives for advanced usage
+export {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from "@/components/ui/empty";

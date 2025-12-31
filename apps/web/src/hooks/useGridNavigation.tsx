@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { Kbd } from "@/components/ui/kbd"
 
 interface UseGridNavigationOptions<T> {
   items: T[]
@@ -300,7 +301,7 @@ export function KeyboardHint({ className = "", compact = false }: { className?: 
   if (compact) {
     return (
       <div className={`text-[10px] sm:text-xs text-muted-foreground flex items-center gap-2 ${className}`}>
-        <kbd className="px-1.5 py-0.5 bg-muted rounded font-mono">⌘A</kbd>
+        <Kbd>⌘A</Kbd>
         <span>tout sélectionner</span>
       </div>
     )
@@ -309,23 +310,23 @@ export function KeyboardHint({ className = "", compact = false }: { className?: 
   return (
     <div className={`text-xs text-muted-foreground flex flex-wrap items-center justify-center gap-x-4 gap-y-1 ${className}`}>
       <span className="hidden sm:flex items-center gap-1.5">
-        <kbd className="px-1.5 py-0.5 bg-muted rounded font-mono text-[10px]">↑↓←→</kbd>
+        <Kbd>↑↓←→</Kbd>
         <span>naviguer</span>
       </span>
       <span className="flex items-center gap-1.5">
-        <kbd className="px-1.5 py-0.5 bg-muted rounded font-mono text-[10px]">⌘/Ctrl+clic</kbd>
+        <Kbd>⌘/Ctrl+clic</Kbd>
         <span>sélectionner</span>
       </span>
       <span className="hidden sm:flex items-center gap-1.5">
-        <kbd className="px-1.5 py-0.5 bg-muted rounded font-mono text-[10px]">Shift+clic</kbd>
+        <Kbd>Shift+clic</Kbd>
         <span>plage</span>
       </span>
       <span className="flex items-center gap-1.5">
-        <kbd className="px-1.5 py-0.5 bg-muted rounded font-mono text-[10px]">⌘A</kbd>
+        <Kbd>⌘A</Kbd>
         <span>tout</span>
       </span>
       <span className="hidden xs:flex items-center gap-1.5">
-        <kbd className="px-1.5 py-0.5 bg-muted rounded font-mono text-[10px]">Entrée</kbd>
+        <Kbd>Entrée</Kbd>
         <span>ouvrir</span>
       </span>
     </div>

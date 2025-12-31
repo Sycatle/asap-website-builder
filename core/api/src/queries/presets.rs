@@ -135,10 +135,14 @@ pub async fn create_website_from_preset(
             .execute(&mut *tx)
             .await?;
 
-            // Create elements for this page
-            if let Some(elements) = page.get("elements").and_then(|s| s.as_array()) {
+            // Create elements for this page (supports both "elements" and "sections" keys)
+            if let Some(elements) = page.get("elements").and_then(|s| s.as_array())
+                .or_else(|| page.get("sections").and_then(|s| s.as_array())) {
                 for (element_order, element) in elements.iter().enumerate() {
-                    let element_type = element.get("element_type").and_then(|s| s.as_str()).unwrap_or("custom");
+                    // Support both "element_type" and "section_type" keys
+                    let element_type = element.get("element_type").and_then(|s| s.as_str())
+                        .or_else(|| element.get("section_type").and_then(|s| s.as_str()))
+                        .unwrap_or("custom");
                     let element_slug = element.get("slug").and_then(|s| s.as_str()).unwrap_or("element");
                     let element_title = element.get("title").and_then(|s| s.as_str()).unwrap_or("Element");
                     let layout = element.get("layout").and_then(|l| l.as_str()).unwrap_or("full");
@@ -196,7 +200,10 @@ pub async fn create_website_from_preset(
         .await?;
 
         for (order, element) in elements.iter().enumerate() {
-            let element_type = element.get("element_type").and_then(|s| s.as_str()).unwrap_or("custom");
+            // Support both "element_type" and "section_type" keys
+            let element_type = element.get("element_type").and_then(|s| s.as_str())
+                .or_else(|| element.get("section_type").and_then(|s| s.as_str()))
+                .unwrap_or("custom");
             let element_slug = element.get("slug").and_then(|s| s.as_str()).unwrap_or("element");
             let element_title = element.get("title").and_then(|s| s.as_str()).unwrap_or("Element");
             let layout = element.get("layout").and_then(|l| l.as_str()).unwrap_or("full");

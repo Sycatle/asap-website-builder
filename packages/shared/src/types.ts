@@ -16,6 +16,7 @@
  * @see V1_SECTION_ORDER in freelance-profile.ts for canonical order
  */
 export type ElementType =
+  // Portfolio element types
   | 'hero'       // Hero + CTA
   | 'about'      // About me / Bio
   | 'services'   // What I do (freelance services)
@@ -23,7 +24,15 @@ export type ElementType =
   | 'process'    // How I work (steps)
   | 'skills'     // Tech stack / skills
   | 'proof'      // Testimonials / social proof
-  | 'contact';   // Contact form
+  | 'contact'    // Contact form
+  // Landing SaaS element types
+  | 'navigation' // Navigation bar
+  | 'features'   // Features grid
+  | 'how-it-works' // How it works steps
+  | 'pricing'    // Pricing plans
+  | 'testimonials' // Customer testimonials
+  | 'cta'        // Call to action
+  | 'footer';    // Footer
 
 // ============================================
 // LEGACY/FROZEN Element Types (V2+)

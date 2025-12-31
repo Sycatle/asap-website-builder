@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect, useCallback } from "react"
+import { useTranslation } from 'react-i18next'
 import {
   Bell,
   BellRing,
@@ -27,7 +28,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
+import { Field, FieldLabel } from "@/components/ui/field"
 import { formatRelativeTimeFr } from "@/lib/utils/formatters"
 import {
   DropdownMenu,
@@ -97,6 +98,7 @@ interface NotificationsDropdownProps {
 }
 
 export function NotificationsDropdown({ className }: NotificationsDropdownProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [pushEnabled, setPushEnabled] = useState(false)
 
@@ -157,10 +159,10 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
   const handleMarkAllAsRead = async () => {
     try {
       await markAllAsRead()
-      toast.success('Toutes les notifications marquées comme lues')
+      toast.success(t('notifications:toast.markedAllRead'))
     } catch (error) {
       console.error('Failed to mark all as read:', error)
-      toast.error('Erreur lors du marquage des notifications')
+      toast.error(t('notifications:toast.markAllError'))
     }
   }
 
@@ -171,7 +173,7 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
       await deleteNotification(notification.id)
     } catch (error) {
       console.error('Failed to delete notification:', error)
-      toast.error('Erreur lors de la suppression')
+      toast.error(t('notifications:toast.deleteError'))
     }
   }
 
@@ -200,12 +202,12 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
       const subscription = await subscribeToPushNotifications()
       if (subscription) {
         setPushEnabled(true)
-        toast.success('Notifications push activées')
+        toast.success(t('notifications:toast.pushEnabled'))
       } else {
-        toast.error('Impossible d\'activer les notifications push')
+        toast.error(t('notifications:toast.pushError'))
       }
     } else {
-      toast.error('Permission refusée pour les notifications')
+      toast.error(t('notifications:toast.permissionDenied'))
     }
   }
 
@@ -270,10 +272,10 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2">
-            <h4 className="font-semibold text-sm">Notifications</h4>
+            <h4 className="font-semibold text-sm">{t('notifications:title')}</h4>
             {unreadCount > 0 && (
               <Badge variant="secondary" className="text-xs">
-                {unreadCount} non lues
+                {t('notifications:unreadCount', { count: unreadCount })}
               </Badge>
             )}
           </div>
@@ -286,7 +288,7 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
                 onClick={handleMarkAllAsRead}
               >
                 <CheckCheck className="h-4 w-4 mr-1" />
-                Tout lire
+                {t('notifications:markAllRead')}
               </Button>
             )}
             <DropdownMenu>
@@ -296,44 +298,40 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Paramètres</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('common:navigation.settings')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {!pushEnabled && (
                   <DropdownMenuItem onClick={handleEnablePush}>
                     <Bell className="mr-2 h-4 w-4" />
-                    Activer les notifications push
+                    {t('notifications:enablePush')}
                   </DropdownMenuItem>
                 )}
-                <div className="px-2 py-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="sound-toggle" className="text-sm flex items-center gap-2 cursor-pointer">
-                      {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                      Son
-                    </Label>
-                    <Switch
-                      id="sound-toggle"
-                      checked={soundEnabled}
-                      onCheckedChange={toggleSound}
-                    />
-                  </div>
-                </div>
-                <div className="px-2 py-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="vibration-toggle" className="text-sm flex items-center gap-2 cursor-pointer">
-                      <Smartphone className="h-4 w-4" />
-                      Vibration
-                    </Label>
-                    <Switch
-                      id="vibration-toggle"
-                      checked={vibrationEnabled}
-                      onCheckedChange={toggleVibration}
-                    />
-                  </div>
-                </div>
+                <Field orientation="horizontal" className="px-2 py-1.5">
+                  <FieldLabel htmlFor="sound-toggle" className="text-sm flex items-center gap-2 cursor-pointer">
+                    {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                    {t('notifications:settings.sound')}
+                  </FieldLabel>
+                  <Switch
+                    id="sound-toggle"
+                    checked={soundEnabled}
+                    onCheckedChange={toggleSound}
+                  />
+                </Field>
+                <Field orientation="horizontal" className="px-2 py-1.5">
+                  <FieldLabel htmlFor="vibration-toggle" className="text-sm flex items-center gap-2 cursor-pointer">
+                    <Smartphone className="h-4 w-4" />
+                    Vibration
+                  </FieldLabel>
+                  <Switch
+                    id="vibration-toggle"
+                    checked={vibrationEnabled}
+                    onCheckedChange={toggleVibration}
+                  />
+                </Field>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => window.location.href = '/app/notifications'}>
                   <Settings className="mr-2 h-4 w-4" />
-                  Tous les paramètres
+                  {t('notifications:settings.all')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -357,9 +355,9 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-8 text-center">
               <Bell className="h-12 w-12 text-muted-foreground/50 mb-3" />
-              <p className="text-sm text-muted-foreground">Aucune notification</p>
+              <p className="text-sm text-muted-foreground">{t('notifications:empty.title')}</p>
               <p className="text-xs text-muted-foreground/70 mt-1">
-                Vous recevrez des notifications ici
+                {t('notifications:empty.description')}
               </p>
             </div>
           ) : (
@@ -456,7 +454,7 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
                 setOpen(false)
               }}
             >
-              Voir toutes les notifications
+              {t('notifications:viewAll')}
             </Button>
           </div>
         )}

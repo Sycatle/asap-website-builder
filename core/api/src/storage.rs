@@ -328,11 +328,11 @@ impl FileStorageService {
         // Check quota
         self.check_user_quota(account_id, data.len() as i64).await?;
 
-        // Calculate hash (deduplicate by content)
+        // Calculate hash (deduplicate by content within the same account)
         let file_hash = self.calculate_hash(data);
 
-        // Check if file already exists (content deduplication)
-        if let Ok(Some(existing_file)) = self.get_file_by_hash(&file_hash).await {
+        // Check if file already exists for this account (content deduplication)
+        if let Ok(Some(existing_file)) = self.get_file_by_hash(account_id, &file_hash).await {
             return Ok(existing_file);
         }
 
@@ -447,12 +447,13 @@ impl FileStorageService {
         Ok(decompressed)
     }
 
-    /// Get file by hash (for content deduplication)
-    async fn get_file_by_hash(&self, file_hash: &str) -> Result<Option<File>> {
+    /// Get file by hash for a specific account (for content deduplication)
+    async fn get_file_by_hash(&self, account_id: Uuid, file_hash: &str) -> Result<Option<File>> {
         let row = sqlx::query(
             "SELECT id, account_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at
-             FROM files WHERE file_hash = $1"
+             FROM files WHERE account_id = $1 AND file_hash = $2"
         )
+        .bind(account_id)
         .bind(file_hash)
         .fetch_optional(&self.pool)
         .await?;

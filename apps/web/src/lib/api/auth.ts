@@ -15,21 +15,6 @@ import type {
   RevokeSessionRequest,
 } from '../types';
 
-// Re-export types for backward compatibility
-export type {
-  SignupRequest,
-  SignupResponse,
-  LoginRequest,
-  LoginResponse,
-  MeResponse,
-  ChangePasswordRequest,
-  ForgotPasswordRequest,
-  ResetPasswordRequest,
-  RefreshTokenRequest,
-  TokenPairResponse,
-  UpdateGitHubIntegrationRequest,
-};
-
 // Storage keys
 const ACCESS_TOKEN_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
@@ -133,7 +118,6 @@ export const authAPI = {
    * Store tokens from login/signup response
    */
   setTokens(response: LoginResponse | SignupResponse) {
-    // Prefer access_token if available (new API), fallback to token (legacy)
     const accessToken = response.access_token || response.token;
     this.setToken(accessToken);
     

@@ -10,9 +10,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Spinner } from '@/components/ui/spinner';
 import { 
   ArrowLeft, Rocket, Globe, Check, Copy, ExternalLink, 
-  PartyPopper, Share2, Twitter, Linkedin, Loader2
+  PartyPopper, Share2, Twitter, Linkedin
 } from 'lucide-react';
 import { openExternalUrl } from '@/lib/utils/security';
 import type { FreelanceDevProfile } from '@asap/shared';
@@ -285,7 +286,7 @@ export function PublishStep({
         >
           {isPublishing ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Spinner className="h-4 w-4" />
               Publication...
             </>
           ) : (

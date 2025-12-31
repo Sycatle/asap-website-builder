@@ -1,13 +1,14 @@
 import React, { lazy, Suspense, useEffect, useState, type ComponentType } from "react"
 import { AppShell } from "./layouts/app-shell"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { QueryProvider, WebSocketProvider } from "@/components/providers"
+import { QueryProvider, WebSocketProvider, I18nProvider } from "@/components/providers"
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary"
-import { Loader2, RefreshCw } from "lucide-react"
+import { Spinner } from "@/components/ui/spinner"
+import { RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 // Helper to create lazy components with error handling for HMR issues
-function lazyWithRetry<T extends ComponentType<unknown>>(
+function lazyWithRetry<T extends ComponentType<any>>(
   importFn: () => Promise<{ default: T }>,
   retries = 3,
   interval = 1000
@@ -32,17 +33,17 @@ function lazyWithRetry<T extends ComponentType<unknown>>(
 }
 
 // Lazy load page components with retry logic for HMR stability
-const Dashboard = lazyWithRetry(() => import("@/components/features/websites/Dashboard"))
+const Dashboard = lazyWithRetry(() => import("@/components/features/websites/dashboard"))
 const ExtensionsManager = lazyWithRetry(() => import("@/components/features/extensions/ExtensionsManager"))
 const ExtensionPage = lazyWithRetry(() => import("@/components/features/extensions/ExtensionConfig"))
-const CloudPage = lazyWithRetry(() => import("@/components/features/cloud/CloudManager"))
+const CloudPage = lazyWithRetry(() => import("@/components/features/cloud/cloud-manager"))
 const SettingsPage = lazyWithRetry(() => import("@/components/features/settings/SettingsPage"))
-const StudioPage = lazyWithRetry(() => import("@/components/studio/StudioPage"))
-const PagesPage = lazyWithRetry(() => import("@/components/PagesList"))
+const StudioPage = lazyWithRetry(() => import("@/components/studio/studio-page"))
+const PagesPage = lazyWithRetry(() => import("@/components/features/pages/pages-page"))
 const AdministratorsPage = lazyWithRetry(() => import("@/components/features/settings/AdministratorsPage"))
 const ThemePage = lazyWithRetry(() => import("@/components/features/settings/ThemePage"))
 const WebsiteSelector = lazyWithRetry(() => import("@/components/pages/WebsiteSelector"))
-const AnalyticsPage = lazyWithRetry(() => import("@/components/features/analytics/AnalyticsPage"))
+const AnalyticsPage = lazyWithRetry(() => import("@/components/features/analytics/analytics-page"))
 const SeoPage = lazyWithRetry(() => import("@/components/features/seo/SeoPage"))
 
 // UUID regex pattern
@@ -80,7 +81,6 @@ function parseRoute(pathname: string): Route {
   const websiteId = segments[0]
   
   if (!websiteId || !UUID_PATTERN.test(websiteId)) {
-    // Invalid UUID - maybe old URL format, redirect to select
     return { page: "select" }
   }
   
@@ -124,10 +124,6 @@ function parseRoute(pathname: string): Route {
     
     case "seo":
       return { page: "seo", websiteId }
-    
-    // Legacy routes without UUID - redirect to select
-    case "dashboard":
-      return { page: "select" }
     
     default:
       return { page: "not-found" }
@@ -184,7 +180,7 @@ export function buildAppUrl(websiteId: string, page?: string): string {
 function PageLoader() {
   return (
     <div className="flex items-center justify-center h-[50vh]">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <Spinner className="h-8 w-8 text-primary" />
     </div>
   )
 }
@@ -282,7 +278,7 @@ export default function AppRouter() {
   if (isAuthenticated === null) {
     return (
       <div className="flex min-h-svh items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Spinner className="h-8 w-8 text-primary" />
       </div>
     )
   }
@@ -319,7 +315,7 @@ export default function AppRouter() {
         return <StudioPage />
       
       case "pages":
-        return <PagesPage websiteId={route.websiteId} />
+        return <PagesPage />
       
       case "administrators":
         return <AdministratorsPage />
@@ -350,42 +346,46 @@ export default function AppRouter() {
   // For select page, render without AppShell (same layout as login/register)
   if (isSelectPage) {
     return (
-      <QueryProvider>
-        <WebSocketProvider>
-          <TooltipProvider>
-            <ErrorBoundary level="page">
-              <Suspense fallback={<PageLoader />}>
-                <WebsiteSelector />
-              </Suspense>
-            </ErrorBoundary>
-          </TooltipProvider>
-        </WebSocketProvider>
-      </QueryProvider>
+      <I18nProvider>
+        <QueryProvider>
+          <WebSocketProvider>
+            <TooltipProvider>
+              <ErrorBoundary level="page">
+                <Suspense fallback={<PageLoader />}>
+                  <WebsiteSelector />
+                </Suspense>
+              </ErrorBoundary>
+            </TooltipProvider>
+          </WebSocketProvider>
+        </QueryProvider>
+      </I18nProvider>
     )
   }
 
   return (
-    <QueryProvider>
-      <WebSocketProvider>
-        <TooltipProvider>
-          <ErrorBoundary level="page">
-            <AppShell 
-              title={title} 
-              breadcrumbs={breadcrumbs}
-              isStudioPage={isStudioPage}
-              websiteId={websiteId}
-              showSidebar={true}
-              currentPage={route.page}
-            >
-              <ErrorBoundary level="section" title={title}>
-                <Suspense fallback={<PageLoader />}>
-                  {renderPage()}
-                </Suspense>
-              </ErrorBoundary>
-            </AppShell>
-          </ErrorBoundary>
-        </TooltipProvider>
-      </WebSocketProvider>
-    </QueryProvider>
+    <I18nProvider>
+      <QueryProvider>
+        <WebSocketProvider>
+          <TooltipProvider>
+            <ErrorBoundary level="page">
+              <AppShell 
+                title={title} 
+                breadcrumbs={breadcrumbs}
+                isStudioPage={isStudioPage}
+                websiteId={websiteId}
+                showSidebar={true}
+                currentPage={route.page}
+              >
+                <ErrorBoundary level="section" title={title}>
+                  <Suspense fallback={<PageLoader />}>
+                    {renderPage()}
+                  </Suspense>
+                </ErrorBoundary>
+              </AppShell>
+            </ErrorBoundary>
+          </TooltipProvider>
+        </WebSocketProvider>
+      </QueryProvider>
+    </I18nProvider>
   )
 }

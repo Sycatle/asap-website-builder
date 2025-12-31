@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Extension, WebsiteExtension } from '@/lib/api/extensions';
 import { useWebsitesQuery, useExtensionCatalogQuery, useWebsiteExtensionsQuery, useActivateExtensionMutation, useDeactivateExtensionMutation } from '@/lib/query';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
@@ -19,6 +20,12 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { 
   BookOpen, 
   Mail, 
@@ -27,12 +34,12 @@ import {
   Puzzle,
   Link as LinkIcon,
   Star,
-  Loader2,
   Settings,
   Power,
   Play,
   Info
 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
 // Icon mapping for categories
 const categoryIcons: Record<string, React.ElementType> = {
@@ -43,16 +50,9 @@ const categoryIcons: Record<string, React.ElementType> = {
   'appearance': Palette,
 };
 
-// Category labels in French
-const categoryLabels: Record<string, string> = {
-  'integration': 'Intégration',
-  'content': 'Contenu',
-  'engagement': 'Engagement',
-  'analytics': 'Analytics',
-  'appearance': 'Apparence',
-};
-
 export default function ExtensionsManager() {
+  const { t } = useTranslation(['dashboard', 'common']);
+  
   // Get websiteId from context
   const { currentWebsiteId } = useWebsiteContext();
   
@@ -95,13 +95,13 @@ export default function ExtensionsManager() {
     
     // Only show error after we've loaded and confirmed no websites
     if (hasLoadedOnce.current && !websitesLoading && websites.length === 0) {
-      toast.error('Aucun site web trouvé. Créez un site pour gérer les extensions.');
+      toast.error(t('dashboard:extensions.noWebsite'));
     }
-  }, [websitesLoading, websites.length]);
+  }, [websitesLoading, websites.length, t]);
 
   const handleActivateExtension = async (extension: Extension) => {
     if (!currentWebsiteId) {
-      toast.error('Aucun site web sélectionné');
+      toast.error(t('dashboard:extensions.noWebsiteSelected'));
       return;
     }
 
@@ -118,9 +118,9 @@ export default function ExtensionsManager() {
 
     try {
       await toast.promise(activatePromise(), {
-        loading: `Activation de ${extension.name}...`,
-        success: (name) => `Extension ${name} activée !`,
-        error: `Erreur lors de l'activation de l'extension ${extension.name}`,
+        loading: t('dashboard:extensions.actions.activating'),
+        success: (name) => t('dashboard:extensions.toast.activated', { name }),
+        error: t('dashboard:extensions.toast.activateError', { name: extension.name }),
       });
     } catch (err) {
       extensionsLogger.error('Failed to activate extension:', err);
@@ -131,7 +131,7 @@ export default function ExtensionsManager() {
 
   const handleDeactivateExtension = async (extensionId: string) => {
     if (!currentWebsiteId) {
-      toast.error('Aucun site web sélectionné');
+      toast.error(t('dashboard:extensions.noWebsiteSelected'));
       return;
     }
 
@@ -146,9 +146,9 @@ export default function ExtensionsManager() {
 
     try {
       await toast.promise(deactivatePromise(), {
-        loading: 'Désactivation en cours...',
-        success: 'Extension désactivée',
-        error: "Erreur lors de la désactivation de l'extension",
+        loading: t('dashboard:extensions.actions.deactivating'),
+        success: t('dashboard:extensions.toast.deactivated'),
+        error: t('dashboard:extensions.toast.deactivateError'),
       });
     } catch (err) {
       extensionsLogger.error('Failed to deactivate extension:', err);
@@ -242,15 +242,15 @@ export default function ExtensionsManager() {
     <div className="flex flex-col gap-6 sm:gap-8 animate-fade-in">
       {/* Page Header */}
       <PageHeader
-        title="Extensions"
-        subtitle="Activez des extensions pour débloquer de nouvelles fonctionnalités"
+        title={t('dashboard:extensions.title')}
+        subtitle={t('dashboard:extensions.subtitle')}
         icon={
           <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
             <Puzzle className="h-5 w-5 text-white" />
           </div>
         }
         badge={{
-          label: `${catalogExtensions.length} disponibles`,
+          label: t('dashboard:extensions.available', { count: catalogExtensions.length }),
           variant: 'outline',
         }}
         backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
@@ -261,15 +261,15 @@ export default function ExtensionsManager() {
                 <Puzzle className="h-4 w-4 text-white" />
               </div>
               <div className="hidden sm:block">
-                <p className="text-sm font-semibold">Extensions</p>
-                <p className="text-[11px] text-muted-foreground">{enabledActiveExtensions.length} actives sur {catalogExtensions.length}</p>
+                <p className="text-sm font-semibold">{t('dashboard:extensions.title')}</p>
+                <p className="text-[11px] text-muted-foreground">{enabledActiveExtensions.length} {t('dashboard:extensions.activeCount', { count: enabledActiveExtensions.length })} {t('common:labels.on')} {catalogExtensions.length}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {enabledActiveExtensions.length > 0 && (
                 <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] h-5">
                   <div className="h-1.5 w-1.5 rounded-full bg-green-500 mr-1" />
-                  {enabledActiveExtensions.length} active{enabledActiveExtensions.length > 1 ? 's' : ''}
+                  {enabledActiveExtensions.length} {enabledActiveExtensions.length > 1 ? t('dashboard:extensions.activeCountPlural', { count: enabledActiveExtensions.length }) : t('dashboard:extensions.activeCount', { count: enabledActiveExtensions.length })}
                 </Badge>
               )}
             </div>
@@ -282,7 +282,7 @@ export default function ExtensionsManager() {
         <div>
           <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-            Extensions activées ({enabledActiveExtensions.length})
+            {t('dashboard:extensions.active')} ({enabledActiveExtensions.length})
           </h2>
           <div 
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4"
@@ -304,7 +304,16 @@ export default function ExtensionsManager() {
                             {getExtensionIcon(catalogExtension.category)}
                       </div>
                       <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-xs transition-transform duration-200 hover:scale-105">
-                        Actif
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help">{t('dashboard:extensions.status.active')}</span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t('dashboard:extensions.status.activeTooltip')}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </Badge>
                     </div>
                     <CardTitle className="text-sm sm:text-base mt-2 sm:mt-3">{catalogExtension.name}</CardTitle>
@@ -315,7 +324,7 @@ export default function ExtensionsManager() {
                   <CardContent className="pt-2 px-3 sm:px-6 pb-3 sm:pb-6">
                     <div className="flex items-center gap-2 mb-3 sm:mb-4">
                       <Badge variant="outline" className="text-[10px] sm:text-xs">
-                        {categoryLabels[catalogExtension.category] || catalogExtension.category}
+                        {t(`dashboard:extensions.categories.${catalogExtension.category}`) || catalogExtension.category}
                       </Badge>
                       <span className="text-[10px] sm:text-xs text-muted-foreground">v{catalogExtension.version}</span>
                     </div>
@@ -323,7 +332,7 @@ export default function ExtensionsManager() {
                       <Button asChild variant="secondary" size="sm" className="flex-1 h-8 sm:h-9 text-xs sm:text-sm group/btn">
                         <Link href={`/app/${currentWebsiteId}/extensions/${catalogExtension.slug}`}>
                           <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 transition-transform group-hover/btn:rotate-90" />
-                          Configurer
+                          {t('dashboard:extensions.actions.configure')}
                         </Link>
                       </Button>
                       <Button
@@ -333,11 +342,22 @@ export default function ExtensionsManager() {
                         disabled={activatingExtension === websiteExtension.id}
                         className="text-destructive hover:text-destructive h-8 sm:h-9 w-8 sm:w-9 p-0"
                       >
-                        {activatingExtension === websiteExtension.id ? (
-                          <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
-                        ) : (
-                          <Power className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        )}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div>
+                                {activatingExtension === websiteExtension.id ? (
+                                  <Spinner className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                ) : (
+                                  <Power className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t('dashboard:extensions.actions.deactivateTooltip')}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </Button>
                     </div>
                   </CardContent>
@@ -347,7 +367,7 @@ export default function ExtensionsManager() {
                 <ContextMenuItem asChild>
                   <Link href={`/app/${currentWebsiteId}/extensions/${catalogExtension.slug}`}>
                     <Settings className="mr-2 h-4 w-4" />
-                    Configurer
+                    {t('dashboard:extensions.actions.configure')}
                   </Link>
                 </ContextMenuItem>
                 <ContextMenuSeparator />
@@ -357,7 +377,7 @@ export default function ExtensionsManager() {
                   disabled={activatingExtension === websiteExtension.id}
                 >
                   <Power className="mr-2 h-4 w-4" />
-                  Désactiver
+                  {t('dashboard:extensions.actions.deactivate')}
                 </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>
@@ -371,12 +391,12 @@ export default function ExtensionsManager() {
       <div>
         <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
           <Star className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500 animate-pulse-soft" />
-          Extensions suggérées ({suggestedExtensions.length})
+          {t('dashboard:extensions.suggested')} ({suggestedExtensions.length})
         </h2>
         {suggestedExtensions.length === 0 ? (
           <Card className="animate-fade-in">
             <CardContent className="py-6 sm:py-8 text-center text-sm text-muted-foreground">
-              Toutes les extensions disponibles sont déjà activées !
+              {t('dashboard:extensions.allActivated')}
             </CardContent>
           </Card>
         ) : (
@@ -402,7 +422,7 @@ export default function ExtensionsManager() {
                       <CardContent className="pt-2 px-3 sm:px-6 pb-3 sm:pb-6">
                         <div className="flex items-center gap-2 mb-3 sm:mb-4">
                           <Badge variant="outline" className="text-[10px] sm:text-xs transition-colors group-hover:bg-muted">
-                            {categoryLabels[extension.category] || extension.category}
+                            {t(`dashboard:extensions.categories.${extension.category}`) || extension.category}
                           </Badge>
                           <span className="text-[10px] sm:text-xs text-muted-foreground">v{extension.version}</span>
                         </div>
@@ -414,12 +434,12 @@ export default function ExtensionsManager() {
                         >
                           {activatingExtension === extension.id ? (
                             <>
-                              <Loader2 className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
-                              Activation...
+                              <Spinner className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                              {t('dashboard:extensions.actions.activating')}
                             </>
                           ) : (
                             <>
-                              <span className="transition-transform group-hover/activate:scale-105">Activer</span>
+                              <span className="transition-transform group-hover/activate:scale-105">{t('dashboard:extensions.actions.activate')}</span>
                             </>
                           )}
                         </Button>
@@ -432,7 +452,7 @@ export default function ExtensionsManager() {
                       disabled={activatingExtension === extension.id}
                     >
                       <Play className="mr-2 h-4 w-4" />
-                      Activer l'extension
+                      {t('dashboard:extensions.actions.activateExtension')}
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem disabled>

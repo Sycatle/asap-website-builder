@@ -8,11 +8,12 @@
 "use client"
 
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { PresetOnboardingRouter } from './presets';
 
@@ -23,26 +24,28 @@ interface OnboardingModalProps {
 }
 
 export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalProps) {
+  const { t } = useTranslation(['onboarding']);
+  
   const handleComplete = (websiteId: string) => {
     onSuccess?.(websiteId);
     onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent 
+    <ResponsiveDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <ResponsiveDialogContent 
         className="max-w-4xl w-full h-[90vh] max-h-[900px] p-0 overflow-hidden"
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <VisuallyHidden>
-          <DialogTitle>Créer un nouveau site</DialogTitle>
+          <ResponsiveDialogTitle>{t('modal.title')}</ResponsiveDialogTitle>
         </VisuallyHidden>
         <div className="h-full overflow-y-auto">
           <PresetOnboardingRouter onComplete={handleComplete} />
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }
 

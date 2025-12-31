@@ -1,0 +1,76 @@
+---
+/**
+ * Dynamic Page Route - Renders additional pages of a published website
+ * 100% SSR for optimal SEO
+ * Route: /{slug}/{pageSlug}
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import SectionsRenderer from '@/components/rendering/SectionsRenderer.astro';
+import PageNavigation from '@/components/site/PageNavigation.astro';
+import { buildSeo, getSiteRenderPayload, resolveSitePage } from '@/lib/site-data';
+
+// Get params from URL
+const { slug, page: pageSlug } = Astro.params;
+
+if (!slug || !pageSlug) {
+  return Astro.redirect('/404');
+}
+
+const payload = await getSiteRenderPayload(slug);
+
+if (!payload) {
+  return Astro.redirect('/404');
+}
+
+const { website, theme } = payload;
+
+if (website.status !== 'published') {
+  return Astro.redirect('/404');
+}
+
+const currentPage = resolveSitePage(payload, pageSlug);
+
+if (!currentPage) {
+  return Astro.redirect('/404');
+}
+
+const seo = buildSeo(payload, currentPage, slug, pageSlug);
+---
+
+<BaseLayout 
+  seo={seo} 
+  theme={theme}
+  favicon={website.metadata?.favicon}
+  fontFamily={theme?.fontFamily}
+>
+  <!-- Page Navigation (if multiple pages) -->
+  {payload.pages.length > 1 && (
+    <PageNavigation
+      pages={payload.pages}
+      activeSlug={currentPage.slug}
+      siteSlug={slug}
+      siteTitle={website.title}
+    />
+  )}
+
+  <!-- Page Content -->
+  <div class:list={[payload.pages.length > 1 && 'pt-20']}>
+    {currentPage.sections.length === 0 ? (
+      <!-- Empty page content -->
+      <section class="min-h-screen flex items-center justify-center">
+        <div class="text-center px-6">
+          <h1 class="text-4xl font-bold text-foreground mb-4">
+            {currentPage.title}
+          </h1>
+          {currentPage.description && (
+            <p class="text-muted text-lg max-w-xl mx-auto">
+              {currentPage.description}
+            </p>
+          )}
+        </div>
+      </section>
+    ) : (
+      <SectionsRenderer sections={currentPage.sections} website={website} />
+    )}
+  </div>
+</BaseLayout>

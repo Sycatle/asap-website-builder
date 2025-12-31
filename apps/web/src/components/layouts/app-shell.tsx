@@ -1,17 +1,11 @@
 import * as React from "react"
 import { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { AsapSidebar } from "@/components/layouts/asap-sidebar"
 import { SidebarProvider, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
-import { Toaster } from "@/components/ui/sonner"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
+import { Input } from "@/components/ui/input"
+import { Kbd } from "@/components/ui/kbd"
 import { WebsiteProvider, useWebsiteContext } from "@/contexts/WebsiteContext"
 import { HeaderUser } from "@/components/layouts/header-user"
 import { useKeyboardShortcuts, getModifierKey } from "@/hooks/useKeyboardShortcuts"
@@ -20,21 +14,22 @@ import { useSyncWebSocket } from "@/hooks/useSyncWebSocket"
 import { navigate, Link } from "@/components/app-router"
 import { toast } from "sonner"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Keyboard } from "lucide-react"
+import { Keyboard, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SkipLink } from "@/components/ui/accessibility"
 import { PresenceAvatars } from "@/components/shared/presence-avatars"
+import { CommandPalette, useCommandPalette } from "@/components/shared/command-palette"
 
 interface AppShellProps {
   children: React.ReactNode
@@ -46,23 +41,24 @@ interface AppShellProps {
   currentPage?: string
 }
 
-// Keyboard shortcuts help dialog content
-const shortcuts = [
-  { category: "Navigation", items: [
-    { keys: ["g", "d"], description: "Aller au Dashboard" },
-    { keys: ["g", "e"], description: "Aller aux Extensions" },
-    { keys: ["g", "c"], description: "Aller au Cloud" },
-  ]},
-  { category: "Actions", items: [
-    { keys: [getModifierKey(), "s"], description: "Sauvegarder" },
-    { keys: ["Esc"], description: "Annuler / Fermer" },
-    { keys: [getModifierKey(), "Shift", "r"], description: "Rafraîchir les données" },
-  ]},
-  { category: "Interface", items: [
-    { keys: ["["], description: "Ouvrir/Fermer la sidebar" },
-    { keys: ["?"], description: "Afficher l'aide des raccourcis" },
-  ]},
-]
+// Keyboard shortcuts categories (keys only, descriptions added dynamically with i18n)
+const shortcutKeys = {
+  navigation: [
+    { keys: ["g", "d"], descKey: "goToDashboard" },
+    { keys: ["g", "e"], descKey: "goToExtensions" },
+    { keys: ["g", "c"], descKey: "goToCloud" },
+  ],
+  actions: [
+    { keys: [getModifierKey(), "s"], descKey: "save" },
+    { keys: ["Esc"], descKey: "cancelClose" },
+    { keys: [getModifierKey(), "Shift", "r"], descKey: "refreshData" },
+  ],
+  interface: [
+    { keys: [getModifierKey(), "k"], descKey: "openCommandPalette" },
+    { keys: ["["], descKey: "toggleSidebar" },
+    { keys: ["?"], descKey: "showShortcutsHelp" },
+  ],
+}
 
 export function AppShell({ 
   children, 
@@ -121,9 +117,29 @@ function AppShellContent({
   websiteId,
   currentPage,
 }: AppShellContentProps) {
+  const { t } = useTranslation('common')
   const { toggleSidebar, setOpen, open } = useSidebar()
   const [pendingGoTo, setPendingGoTo] = useState(false)
   const previousSidebarStateRef = React.useRef<boolean | null>(null)
+  
+  // Build shortcuts with translated descriptions
+  const shortcuts = [
+    { category: t('shortcuts.navigation'), items: shortcutKeys.navigation.map(s => ({
+      keys: s.keys,
+      description: t(`shortcuts.${s.descKey}`)
+    }))},
+    { category: t('shortcuts.actions'), items: shortcutKeys.actions.map(s => ({
+      keys: s.keys,
+      description: t(`shortcuts.${s.descKey}`)
+    }))},
+    { category: t('shortcuts.interface'), items: shortcutKeys.interface.map(s => ({
+      keys: s.keys,
+      description: t(`shortcuts.${s.descKey}`)
+    }))},
+  ]
+  
+  // Command palette state
+  const { open: commandOpen, setOpen: setCommandOpen } = useCommandPalette()
   
   // Get data from context
   const { 
@@ -250,105 +266,93 @@ function AppShellContent({
           isLoadingWebsites={isLoadingWebsites}
         />
       )}
-      <SidebarInset>
+      <SidebarInset className={isStudioPage ? "overflow-hidden" : undefined}>
         <SkipLink targetId="main-content" />
-        <header className="sticky top-0 z-40 flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b bg-background px-3 sm:px-4" role="banner">
+        <header className="sticky top-0 z-40 flex h-14 sm:h-16 shrink-0 items-center gap-2 sm:gap-3 border-b bg-background px-3 sm:px-4" role="banner">
+          {/* Left section: Sidebar trigger */}
           {showSidebar && (
             <>
               <SidebarTrigger className="-ml-1" />
-              <Separator orientation="vertical" className="mr-1 sm:mr-2 h-4" />
+              <Separator orientation="vertical" className="h-4" />
             </>
           )}
-          <Breadcrumb className="flex-1 min-w-0">
-            <BreadcrumbList>
-              <BreadcrumbItem className="hidden sm:block">
-                <BreadcrumbLink asChild>
-                  <Link href={websiteId ? `/app/${websiteId}` : "/app"}>
-                    {isLoadingWebsites ? "Chargement..." : (currentWebsite?.title || "ASAP")}
-                  </Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              {breadcrumbs.map((crumb, index) => (
-                <React.Fragment key={index}>
-                  <BreadcrumbSeparator className="hidden sm:block" />
-                  <BreadcrumbItem className="max-w-[120px] sm:max-w-none">
-                    {crumb.href ? (
-                      <BreadcrumbLink asChild>
-                        <Link href={crumb.href} className="truncate">
-                          {crumb.label}
-                        </Link>
-                      </BreadcrumbLink>
-                    ) : (
-                      <BreadcrumbPage className="truncate">{crumb.label}</BreadcrumbPage>
-                    )}
-                  </BreadcrumbItem>
-                </React.Fragment>
-              ))}
-              {title && breadcrumbs.length === 0 && (
-                <>
-                  <BreadcrumbSeparator className="hidden sm:block" />
-                  <BreadcrumbItem className="max-w-[120px] sm:max-w-none">
-                    <BreadcrumbPage className="truncate">{title}</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </>
-              )}
-            </BreadcrumbList>
-          </Breadcrumb>
           
-          {/* Keyboard shortcuts help button - hidden on mobile */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="hidden sm:flex h-8 w-8 text-muted-foreground hover:text-foreground"
-                onClick={() => setShowShortcutsHelp(true)}
-              >
-                <Keyboard className="h-4 w-4" />
-                <span className="sr-only">Raccourcis clavier</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>Raccourcis clavier <kbd className="ml-1 px-1 py-0.5 text-xs bg-muted rounded">?</kbd></p>
-            </TooltipContent>
-          </Tooltip>
+          {/* Center section: Search trigger - opens command palette */}
+          <div className="flex-1 flex items-center min-w-0">
+            <button 
+              onClick={() => setCommandOpen(true)}
+              className="relative w-full max-w-md group"
+            >
+              <div className="flex items-center gap-2 w-full bg-muted/50 hover:bg-muted/70 rounded-md px-3 h-9 text-sm text-muted-foreground transition-colors cursor-pointer">
+                <Search className="h-4 w-4 shrink-0" />
+                <span className="flex-1 text-left truncate">{t('navigation.searchPlaceholder')}</span>
+                <Kbd className="hidden sm:inline-flex">
+                  <span className="text-xs">⌘</span>K
+                </Kbd>
+              </div>
+            </button>
+          </div>
           
-          {/* Real-time presence avatars - shows other users viewing this website */}
-          {currentWebsiteId && (
-            <PresenceAvatars 
-              websiteId={currentWebsiteId} 
-              currentPage={currentPage}
-              maxAvatars={3}
-              size="sm"
-              className="mr-2"
-            />
-          )}
-          
-          <HeaderUser />
+          {/* Right section: Actions - always right-aligned */}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {/* Keyboard shortcuts - desktop only */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hidden sm:flex h-8 w-8 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowShortcutsHelp(true)}
+                >
+                  <Keyboard className="h-4 w-4" />
+                  <span className="sr-only">{t('navigation.keyboardShortcuts')}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>{t('navigation.keyboardShortcuts')} <Kbd className="ml-1">?</Kbd></p>
+              </TooltipContent>
+            </Tooltip>
+            
+            {/* Real-time presence avatars */}
+            {currentWebsiteId && (
+              <PresenceAvatars 
+                websiteId={currentWebsiteId} 
+                currentPage={currentPage}
+                maxAvatars={2}
+                size="sm"
+                className="hidden xs:flex"
+              />
+            )}
+            
+            {/* User menu - always visible */}
+            <HeaderUser />
+          </div>
         </header>
         <main
           id="main-content"
           role="main"
           tabIndex={-1}
           className={cn(
-            "flex-1 overflow-auto focus:outline-none",
-            isStudioPage ? "p-0" : "p-3 sm:p-4 md:p-6"
+            "flex-1 focus:outline-none",
+            isStudioPage ? "p-0 overflow-hidden" : "p-3 sm:p-4 md:p-6 overflow-auto"
           )}
         >
           {children}
         </main>
       </SidebarInset>
-      <Toaster />
+      
+      {/* Command Palette */}
+      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
       
       {/* Keyboard Shortcuts Help Dialog */}
-      <Dialog open={showShortcutsHelp} onOpenChange={setShowShortcutsHelp}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+      <ResponsiveDialog open={showShortcutsHelp} onOpenChange={setShowShortcutsHelp}>
+        <ResponsiveDialogContent className="sm:max-w-md">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="flex items-center gap-2">
               <Keyboard className="h-5 w-5" />
-              Raccourcis clavier
-            </DialogTitle>
-          </DialogHeader>
+              {t('navigation.keyboardShortcuts')}
+            </ResponsiveDialogTitle>
+          </ResponsiveDialogHeader>
           <div className="space-y-4 py-2">
             {shortcuts.map((section) => (
               <div key={section.category}>
@@ -360,7 +364,7 @@ function AppShellContent({
                       <div className="flex gap-1">
                         {item.keys.map((key, i) => (
                           <React.Fragment key={i}>
-                            <kbd className="px-2 py-1 text-xs bg-muted rounded font-mono">{key}</kbd>
+                            <Kbd>{key}</Kbd>
                             {i < item.keys.length - 1 && <span className="text-muted-foreground">+</span>}
                           </React.Fragment>
                         ))}
@@ -372,10 +376,10 @@ function AppShellContent({
             ))}
           </div>
           <div className="text-xs text-muted-foreground text-center pt-2 border-t">
-            Appuyez sur <kbd className="px-1 py-0.5 bg-muted rounded">Esc</kbd> pour fermer
+            {t('shortcuts.pressEscToClose', { defaultValue: 'Press' })} <Kbd>Esc</Kbd> {t('actions.close').toLowerCase()}
           </div>
-        </DialogContent>
-      </Dialog>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
     </>
   )
 }

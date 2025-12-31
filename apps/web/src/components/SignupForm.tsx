@@ -1,11 +1,22 @@
+// Initialize i18n before any React hooks
+import '@/i18n';
+
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../lib/store/authStore';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { Loader2, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import { signupSchema, getPasswordStrength, type SignupFormData } from "@/lib/validations/auth";
 import { isValidRedirectUrl } from "@/lib/utils/security";
 import { RateLimitError } from "@/lib/api/client";
@@ -14,6 +25,7 @@ export default function SignupForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
+  const { t } = useTranslation(['common']);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Partial<SignupFormData>>({});
@@ -88,22 +100,22 @@ export default function SignupForm({
     };
 
     toast.promise(signupPromise(), {
-      loading: 'Création du compte...',
+      loading: t('auth.creating'),
       success: () => {
         // Redirect on success
         const redirectUrl = getRedirectUrl();
         setTimeout(() => {
           window.location.href = redirectUrl;
         }, 500);
-        return 'Bienvenue ! Votre compte a été créé.';
+        return t('auth.accountCreated');
       },
       error: (err) => {
         // Handle rate limiting with countdown
         if (err instanceof RateLimitError) {
           setRateLimitCountdown(err.retryAfter);
-          return `Trop de tentatives. Réessayez dans ${formatCountdown(err.retryAfter)}.`;
+          return t('auth.rateLimited', { time: formatCountdown(err.retryAfter) });
         }
-        return err.message || 'Échec de la création du compte';
+        return err.message || t('status.failed');
       },
     });
   };
@@ -122,42 +134,38 @@ export default function SignupForm({
               </div>
               <span className="sr-only">ASAP</span>
             </a>
-            <h1 className="text-xl font-bold">Créer votre compte</h1>
+            <h1 className="text-xl font-bold">{t('auth.createAccount')}</h1>
             <p className="text-center text-sm text-muted-foreground">
-              Accédez à votre espace en quelques secondes
+              {t('auth.accessSpace')}
             </p>
           </div>
 
-          <div className="flex flex-col gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+          <FieldGroup className="gap-4">
+            <Field data-invalid={!!errors.email}>
+              <FieldLabel htmlFor="email">{t('auth.email')}</FieldLabel>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="vous@exemple.com"
+                placeholder={t('auth.emailPlaceholder')}
                 required
                 aria-invalid={!!errors.email}
-                aria-describedby={errors.email ? "email-error" : undefined}
               />
-              {errors.email && (
-                <p id="email-error" className="text-sm text-destructive">{errors.email}</p>
-              )}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Mot de passe</Label>
+              {errors.email && <FieldError>{errors.email}</FieldError>}
+            </Field>
+            <Field data-invalid={!!errors.password}>
+              <FieldLabel htmlFor="password">{t('auth.password')}</FieldLabel>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder={t('auth.passwordPlaceholder')}
                 required
                 minLength={8}
                 disabled={isRateLimited}
                 aria-invalid={!!errors.password}
-                aria-describedby="password-requirements"
               />
               {password.length > 0 && (
                 <div className="space-y-1">
@@ -173,46 +181,46 @@ export default function SignupForm({
                     ))}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Force: {passwordStrength.label}
+                    {t('auth.passwordStrength')}: {passwordStrength.label}
                   </p>
                 </div>
               )}
               {errors.password ? (
-                <p id="password-requirements" className="text-sm text-destructive">{errors.password}</p>
+                <FieldError>{errors.password}</FieldError>
               ) : (
-                <p id="password-requirements" className="text-xs text-muted-foreground">
-                  Min. 8 caractères, majuscule, minuscule et chiffre
-                </p>
+                <FieldDescription>
+                  {t('auth.passwordRequirementsShort')}
+                </FieldDescription>
               )}
-            </div>
+            </Field>
             {isRateLimited && (
               <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
                 <Clock className="h-4 w-4 shrink-0" />
-                <span>Trop de tentatives. Réessayez dans {formatCountdown(rateLimitCountdown!)}</span>
+                <span>{t('auth.rateLimited', { time: formatCountdown(rateLimitCountdown!) })}</span>
               </div>
             )}
             <Button type="submit" className="w-full" disabled={isLoading || isRateLimited}>
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Création...
+                  <Spinner className="mr-2 h-4 w-4" />
+                  {t('auth.creating')}
                 </>
               ) : isRateLimited ? (
                 <>
                   <Clock className="mr-2 h-4 w-4" />
-                  Patientez {formatCountdown(rateLimitCountdown!)}
+                  {t('auth.waitTime', { time: formatCountdown(rateLimitCountdown!) })}
                 </>
               ) : (
-                'Créer mon compte'
+                t('auth.signUp')
               )}
             </Button>
-          </div>
+          </FieldGroup>
         </div>
       </form>
       <div className="text-center text-sm text-muted-foreground">
-        Déjà un compte?{' '}
+        {t('auth.alreadyHaveAccount')}{' '}
         <a href={`/login${searchParams}`} className="underline underline-offset-4 hover:text-primary font-medium">
-          Se connecter
+          {t('auth.signIn')}
         </a>
       </div>
     </div>

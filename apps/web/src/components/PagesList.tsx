@@ -34,13 +34,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,10 +53,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { 
   usePagesQuery, 
   useCreatePageMutation, 
@@ -82,8 +88,6 @@ export function PagesList({
   currentPageId,
   onPageSelect 
 }: PagesListProps) {
-  const { toast } = useToast();
-  
   // React Query hooks
   const { data: pages = [], isLoading } = usePagesQuery(websiteId);
   const createPageMutation = useCreatePageMutation();
@@ -125,11 +129,7 @@ export function PagesList({
   // Handle create
   const handleCreate = async () => {
     if (!formData.title.trim()) {
-      toast({
-        title: "Erreur",
-        description: "Le titre est requis",
-        variant: "destructive",
-      });
+      toast.error("Le titre est requis");
       return;
     }
 
@@ -144,19 +144,12 @@ export function PagesList({
         },
       });
       
-      toast({
-        title: "Page créée",
-        description: `La page "${formData.title}" a été créée avec succès`,
-      });
+      toast.success(`Page "${formData.title}" créée avec succès`);
       
       setCreateDialogOpen(false);
       resetForm();
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de créer la page",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Impossible de créer la page");
     }
   };
 
@@ -176,19 +169,12 @@ export function PagesList({
 
       await updatePageMutation.mutateAsync({ websiteId, pageId: selectedPage.id, data: updateData });
       
-      toast({
-        title: "Page modifiée",
-        description: `La page "${formData.title}" a été mise à jour`,
-      });
+      toast.success(`Page "${formData.title}" mise à jour`);
       
       setEditDialogOpen(false);
       resetForm();
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de modifier la page",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Impossible de modifier la page");
     }
   };
 
@@ -199,19 +185,12 @@ export function PagesList({
     try {
       await deletePageMutation.mutateAsync({ websiteId, pageId: selectedPage.id });
       
-      toast({
-        title: "Page supprimée",
-        description: `La page "${selectedPage.title}" a été supprimée`,
-      });
+      toast.success(`Page "${selectedPage.title}" supprimée`);
       
       setDeleteDialogOpen(false);
       setSelectedPage(null);
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de supprimer la page",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Impossible de supprimer la page");
     }
   };
 
@@ -221,16 +200,9 @@ export function PagesList({
     const newVisibility = !page.visible;
     try {
       await updatePageMutation.mutateAsync({ websiteId, pageId: page.id, data: { visible: newVisibility } });
-      toast({
-        title: newVisibility ? "Page visible" : "Page masquée",
-        description: `La page "${page.title}" est maintenant ${newVisibility ? 'visible' : 'masquée'}`,
-      });
+      toast.success(`Page "${page.title}" ${newVisibility ? 'visible' : 'masquée'}`);
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de modifier la visibilité",
-        variant: "destructive",
-      });
+      toast.error("Impossible de modifier la visibilité");
     }
   };
 
@@ -296,16 +268,9 @@ export function PagesList({
     try {
       if (!websiteId) return;
       await reorderPagesMutation.mutateAsync({ websiteId, pageIds });
-      toast({
-        title: "Ordre mis à jour",
-        description: "L'ordre des pages a été modifié",
-      });
+      toast.success("Ordre des pages mis à jour");
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de réorganiser les pages",
-        variant: "destructive",
-      });
+      toast.error("Impossible de réorganiser les pages");
     }
 
     setDraggedPageId(null);
@@ -465,17 +430,17 @@ export function PagesList({
       </Collapsible>
 
       {/* Create Page Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nouvelle page</DialogTitle>
-            <DialogDescription>
+      <ResponsiveDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>Nouvelle page</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
               Créez une nouvelle page pour votre site web
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="title">Titre</Label>
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+          <FieldGroup className="py-4">
+            <Field>
+              <FieldLabel htmlFor="title">Titre</FieldLabel>
               <Input
                 id="title"
                 value={formData.title}
@@ -486,9 +451,9 @@ export function PagesList({
                 }))}
                 placeholder="Contact"
               />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="slug">URL (slug)</Label>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="slug">URL (slug)</FieldLabel>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">/</span>
                 <Input
@@ -501,12 +466,12 @@ export function PagesList({
                   placeholder="contact"
                 />
               </div>
-              <p className="text-xs text-muted-foreground">
+              <FieldDescription>
                 Laissez vide pour la page d'accueil
-              </p>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
+              </FieldDescription>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="description">Description</FieldLabel>
               <Textarea
                 id="description"
                 value={formData.description}
@@ -514,14 +479,14 @@ export function PagesList({
                 placeholder="Description de la page (optionnel)"
                 rows={2}
               />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Page d'accueil</Label>
-                <p className="text-xs text-muted-foreground">
+            </Field>
+            <Field orientation="horizontal">
+              <FieldContent>
+                <FieldLabel>Page d'accueil</FieldLabel>
+                <FieldDescription>
                   Définir comme page principale
-                </p>
-              </div>
+                </FieldDescription>
+              </FieldContent>
               <Switch
                 checked={formData.is_homepage}
                 onCheckedChange={(checked) => setFormData(prev => ({ 
@@ -530,39 +495,39 @@ export function PagesList({
                   slug: checked ? '' : prev.slug
                 }))}
               />
-            </div>
-          </div>
-          <DialogFooter>
+            </Field>
+          </FieldGroup>
+          <ResponsiveDialogFooter>
             <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
               Annuler
             </Button>
             <Button onClick={handleCreate}>
               Créer la page
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
 
       {/* Edit Page Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Modifier la page</DialogTitle>
-            <DialogDescription>
+      <ResponsiveDialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>Modifier la page</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
               Modifiez les informations de la page
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="edit-title">Titre</Label>
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+          <FieldGroup className="py-4">
+            <Field>
+              <FieldLabel htmlFor="edit-title">Titre</FieldLabel>
               <Input
                 id="edit-title"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-slug">URL (slug)</Label>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="edit-slug">URL (slug)</FieldLabel>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">/</span>
                 <Input
@@ -575,23 +540,23 @@ export function PagesList({
                   disabled={formData.is_homepage}
                 />
               </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-description">Description</Label>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="edit-description">Description</FieldLabel>
               <Textarea
                 id="edit-description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 rows={2}
               />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Page d'accueil</Label>
-                <p className="text-xs text-muted-foreground">
+            </Field>
+            <Field orientation="horizontal">
+              <FieldContent>
+                <FieldLabel>Page d'accueil</FieldLabel>
+                <FieldDescription>
                   Définir comme page principale
-                </p>
-              </div>
+                </FieldDescription>
+              </FieldContent>
               <Switch
                 checked={formData.is_homepage}
                 onCheckedChange={(checked) => setFormData(prev => ({ 
@@ -600,30 +565,30 @@ export function PagesList({
                   slug: checked ? '' : prev.slug
                 }))}
               />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Visible</Label>
-                <p className="text-xs text-muted-foreground">
+            </Field>
+            <Field orientation="horizontal">
+              <FieldContent>
+                <FieldLabel>Visible</FieldLabel>
+                <FieldDescription>
                   Afficher la page sur le site
-                </p>
-              </div>
+                </FieldDescription>
+              </FieldContent>
               <Switch
                 checked={formData.visible}
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, visible: checked }))}
               />
-            </div>
-          </div>
-          <DialogFooter>
+            </Field>
+          </FieldGroup>
+          <ResponsiveDialogFooter>
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
               Annuler
             </Button>
             <Button onClick={handleEdit}>
               Enregistrer
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

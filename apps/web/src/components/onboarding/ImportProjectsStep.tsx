@@ -5,12 +5,14 @@
  */
 
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowRight, ArrowLeft, Star, GitFork, Calendar, Search, Loader2 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import { ArrowRight, ArrowLeft, Star, GitFork, Calendar, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import type { GitHubRepo } from '@/lib/api/onboarding';
 import { sortReposByRelevance } from '@/lib/api/onboarding';
@@ -34,6 +36,7 @@ export function ImportProjectsStep({
   isLoading = false,
   isImporting = false,
 }: ImportProjectsStepProps) {
+  const { t } = useTranslation(['onboarding', 'common']);
   const [searchQuery, setSearchQuery] = React.useState('');
   
   // Sort repos by relevance
@@ -82,8 +85,8 @@ export function ImportProjectsStep({
       <Card>
         <CardContent className="py-16">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">Chargement de vos repositories...</p>
+            <Spinner className="h-8 w-8 text-primary" />
+            <p className="text-muted-foreground">{t('import.loading')}</p>
           </div>
         </CardContent>
       </Card>
@@ -96,13 +99,13 @@ export function ImportProjectsStep({
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle className="text-xl">Sélectionnez vos projets</CardTitle>
+              <CardTitle className="text-xl">{t('import.title')}</CardTitle>
               <CardDescription className="mt-1">
-                Choisissez les repositories à afficher dans votre portfolio
+                {t('import.description')}
               </CardDescription>
             </div>
             <Badge variant="outline" className="text-sm">
-              {selectedRepoIds.length} / {repos.length} sélectionnés
+              {t('import.selectedCount', { selected: selectedRepoIds.length, total: repos.length })}
             </Badge>
           </div>
         </CardHeader>
@@ -112,7 +115,7 @@ export function ImportProjectsStep({
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Rechercher un repository..."
+                placeholder={t('import.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -120,13 +123,13 @@ export function ImportProjectsStep({
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={selectRecommended}>
-                Recommandés
+                {t('import.recommended')}
               </Button>
               <Button variant="outline" size="sm" onClick={selectAll}>
-                Tout
+                {t('import.all')}
               </Button>
               <Button variant="ghost" size="sm" onClick={deselectAll}>
-                Aucun
+                {t('import.none')}
               </Button>
             </div>
           </div>
@@ -136,7 +139,7 @@ export function ImportProjectsStep({
             <div className="p-4 space-y-2">
               {filteredRepos.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  Aucun repository trouvé
+                  {t('import.noRepos')}
                 </div>
               ) : (
                 filteredRepos.map((repo) => (
@@ -154,9 +157,8 @@ export function ImportProjectsStep({
           {/* Tips */}
           <div className="bg-muted/50 rounded-lg p-4">
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">💡 Conseil :</span>{' '}
-              Sélectionnez 3 à 6 projets représentatifs de vos compétences. 
-              Privilégiez la qualité sur la quantité.
+              <span className="font-medium text-foreground">{t('import.tip')}</span>{' '}
+              {t('import.tipDescription')}
             </p>
           </div>
         </CardContent>
@@ -166,7 +168,7 @@ export function ImportProjectsStep({
       <div className="flex justify-between">
         <Button variant="ghost" onClick={onBack} className="gap-2">
           <ArrowLeft className="h-4 w-4" />
-          Retour
+          {t('common:actions.back')}
         </Button>
         <Button 
           onClick={onNext} 
@@ -175,12 +177,12 @@ export function ImportProjectsStep({
         >
           {isImporting ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Import en cours...
+              <Spinner className="h-4 w-4" />
+              {t('import.importing')}
             </>
           ) : (
             <>
-              Importer {selectedRepoIds.length} projet{selectedRepoIds.length > 1 ? 's' : ''}
+              {t('import.importButton', { count: selectedRepoIds.length })}
               <ArrowRight className="h-4 w-4" />
             </>
           )}

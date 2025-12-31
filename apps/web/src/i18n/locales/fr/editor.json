@@ -1,0 +1,347 @@
+{
+  "title": "Éditeur",
+  "toolbar": {
+    "undo": "Annuler",
+    "redo": "Refaire",
+    "save": "Enregistrer",
+    "preview": "Aperçu",
+    "publish": "Publier",
+    "settings": "Paramètres",
+    "help": "Aide"
+  },
+  "sidebar": {
+    "pages": "Pages",
+    "components": "Composants",
+    "styles": "Styles",
+    "assets": "Médias",
+    "settings": "Paramètres",
+    "layers": "Calques",
+    "history": "Historique",
+    "elements": "Éléments"
+  },
+  "pages": {
+    "title": "Pages",
+    "add": "Nouvelle page",
+    "duplicate": "Dupliquer",
+    "delete": "Supprimer",
+    "rename": "Renommer",
+    "setAsHome": "Définir comme accueil",
+    "home": "Accueil",
+    "empty": "Aucune page",
+    "settings": {
+      "title": "Paramètres de la page",
+      "name": "Nom de la page",
+      "slug": "URL (slug)",
+      "seo": "SEO",
+      "metaTitle": "Titre meta",
+      "metaDescription": "Description meta"
+    }
+  },
+  "components": {
+    "title": "Composants",
+    "search": "Rechercher un composant...",
+    "categories": {
+      "layout": "Mise en page",
+      "content": "Contenu",
+      "media": "Médias",
+      "forms": "Formulaires",
+      "navigation": "Navigation",
+      "interactive": "Interactif",
+      "advanced": "Avancé"
+    },
+    "dragToAdd": "Glissez pour ajouter"
+  },
+  "canvas": {
+    "zoom": "Zoom",
+    "fitToScreen": "Ajuster à l'écran",
+    "actualSize": "Taille réelle",
+    "sitePreview": "Aperçu du site",
+    "livePreview": "Aperçu en direct",
+    "hideElements": "Masquer les éléments",
+    "showElements": "Afficher les éléments",
+    "hideProperties": "Masquer les propriétés",
+    "showProperties": "Afficher les propriétés",
+    "responsive": {
+      "desktop": "Bureau",
+      "tablet": "Tablette",
+      "mobile": "Mobile"
+    },
+    "emptyState": {
+      "title": "Page vide",
+      "description": "Glissez des composants ici pour commencer",
+      "noElements": "Aucun élément visible",
+      "addToStart": "Ajoutez des éléments pour commencer"
+    }
+  },
+  "properties": {
+    "title": "Propriétés",
+    "noSelection": "Sélectionnez un élément",
+    "selectToEdit": "pour modifier ses propriétés",
+    "elementTitle": "Titre de l'élément",
+    "visible": "Visible",
+    "tabs": {
+      "content": "Contenu",
+      "style": "Style",
+      "settings": "Paramètres"
+    },
+    "style": {
+      "spacing": "Espacement",
+      "margin": "Marge",
+      "padding": "Padding",
+      "size": "Taille",
+      "width": "Largeur",
+      "height": "Hauteur",
+      "colors": "Couleurs",
+      "background": "Arrière-plan",
+      "text": "Texte",
+      "border": "Bordure",
+      "borderRadius": "Arrondis",
+      "shadow": "Ombre",
+      "typography": "Typographie",
+      "fontFamily": "Police",
+      "fontSize": "Taille",
+      "fontWeight": "Graisse",
+      "lineHeight": "Interligne",
+      "letterSpacing": "Espacement",
+      "layout": "Mise en page"
+    },
+    "layout": {
+      "default": "Par défaut"
+    },
+    "hero": {
+      "name": "Nom / Titre principal",
+      "namePlaceholder": "Votre Nom",
+      "title": "Titre / Rôle",
+      "titlePlaceholder": "Développeur Full Stack",
+      "subtitle": "Sous-titre",
+      "subtitlePlaceholder": "Une courte description...",
+      "ctaButton": "Bouton d'action",
+      "ctaTextPlaceholder": "Texte du bouton",
+      "backgroundImage": "Image de fond (URL)"
+    },
+    "about": {
+      "description": "Description",
+      "descriptionPlaceholder": "Votre description...",
+      "photo": "Photo (URL)",
+      "highlights": "Points forts",
+      "highlightPlaceholder": "Point {{number}}"
+    },
+    "skills": {
+      "categories": "Catégories",
+      "category": "Catégorie",
+      "newCategory": "Nouvelle catégorie",
+      "categoryName": "Nom de la catégorie",
+      "skill": "Compétence"
+    },
+    "services": {
+      "title": "Services",
+      "service": "Service",
+      "newService": "Nouveau service",
+      "serviceName": "Nom du service",
+      "serviceDescription": "Description du service"
+    },
+    "contact": {
+      "info": "Informations",
+      "email": "Email",
+      "phone": "Téléphone",
+      "location": "Localisation",
+      "socials": "Réseaux sociaux",
+      "type": "Type",
+      "website": "Site web"
+    },
+    "generic": {
+      "advancedSoon": "Éditeur avancé bientôt disponible",
+      "basicEditable": "Les propriétés de base sont modifiables ci-dessus"
+    }
+  },
+  "assets": {
+    "title": "Médias",
+    "upload": "Téléverser",
+    "dragDrop": "Glissez-déposez vos fichiers ici",
+    "browse": "Parcourir",
+    "empty": "Aucun média",
+    "delete": "Supprimer",
+    "copy": "Copier l'URL",
+    "types": {
+      "images": "Images",
+      "videos": "Vidéos",
+      "documents": "Documents",
+      "all": "Tous"
+    }
+  },
+  "publish": {
+    "title": "Publier",
+    "subtitle": "Mettez votre site en ligne",
+    "domain": "Domaine",
+    "customDomain": "Domaine personnalisé",
+    "subdomain": "Sous-domaine ASAP",
+    "ssl": "Certificat SSL",
+    "publishing": "Publication en cours...",
+    "published": "Publié !",
+    "viewSite": "Voir le site",
+    "lastPublished": "Dernière publication"
+  },
+  "messages": {
+    "saved": "Modifications enregistrées",
+    "published": "Site publié avec succès",
+    "deleted": "Élément supprimé",
+    "duplicated": "Élément dupliqué",
+    "unsavedChanges": "Vous avez des modifications non enregistrées",
+    "elementAdded": "Élément ajouté",
+    "elementsReordered": "Éléments réorganisés"
+  },
+  "header": {
+    "backToDashboard": "Retour au tableau de bord",
+    "online": "En ligne",
+    "draft": "Brouillon",
+    "selectPage": "Sélectionner une page à modifier",
+    "page": "Page",
+    "refresh": "Actualiser les éléments",
+    "viewSite": "Voir le site dans un nouvel onglet",
+    "openSite": "Ouvrir le site",
+    "closeMenu": "Fermer le menu",
+    "openMenu": "Ouvrir le menu",
+    "previewSize": "Taille d'aperçu",
+    "displayOptions": "Options d'affichage"
+  },
+  "elementList": {
+    "title": "Liste des éléments",
+    "addNew": "Ajouter un nouvel élément",
+    "loading": "Chargement des éléments",
+    "loadingElements": "Chargement des éléments...",
+    "empty": "Aucun élément",
+    "emptyHint": "Commencez par ajouter votre premier élément",
+    "addFirst": "Ajouter votre premier élément",
+    "addElement": "Ajouter un élément",
+    "hidden": "masqué",
+    "hiddenElement": "Élément masqué",
+    "dragHint": "Glissez pour réorganiser"
+  },
+  "panels": {
+    "elements": "Panneau des éléments",
+    "properties": "Panneau des propriétés"
+  },
+  "propertyPanel": {
+    "title": "Éditeur de propriétés",
+    "elementProperties": "Propriétés de l'élément"
+  },
+  "mobileToolbar": {
+    "actions": "Actions du studio",
+    "closeElements": "Fermer les éléments",
+    "openElements": "Ouvrir les éléments",
+    "closeProperties": "Fermer les propriétés",
+    "openProperties": "Ouvrir les propriétés",
+    "selectFirst": "Sélectionnez d'abord un élément"
+  },
+  "mobileSheets": {
+    "manageElements": "Gérer les éléments de votre page",
+    "editProperties": "Modifier les propriétés de l'élément sélectionné"
+  },
+  "states": {
+    "loadingSite": "Chargement du site en cours",
+    "noWebsite": "Aucun site sélectionné",
+    "selectToPreview": "Sélectionnez un site pour voir l'aperçu",
+    "backToDashboard": "Retour au dashboard"
+  },
+  "previews": {
+    "hidden": "Masqué",
+    "hero": {
+      "defaultName": "Votre Nom",
+      "defaultTitle": "Développeur Full-Stack",
+      "defaultTagline": "Transformez vos idées en réalité",
+      "contactMe": "Me contacter",
+      "viewProjects": "Voir projets",
+      "availability": {
+        "available": "Disponible",
+        "busy": "Occupé",
+        "unavailable": "Indisponible"
+      }
+    },
+    "services": {
+      "defaults": {
+        "webApps": {
+          "title": "Applications Web",
+          "description": "Développement sur mesure"
+        },
+        "apis": {
+          "title": "APIs & Backend",
+          "description": "Architecture robuste"
+        },
+        "consulting": {
+          "title": "Consulting",
+          "description": "Accompagnement technique"
+        }
+      }
+    },
+    "process": {
+      "defaults": {
+        "discovery": {
+          "title": "Découverte",
+          "description": "Échange sur vos besoins"
+        },
+        "proposal": {
+          "title": "Proposition",
+          "description": "Devis détaillé"
+        },
+        "development": {
+          "title": "Développement",
+          "description": "Réalisation itérative"
+        },
+        "delivery": {
+          "title": "Livraison",
+          "description": "Mise en production"
+        }
+      }
+    },
+    "proof": {
+      "defaults": {
+        "projects": "Projets livrés",
+        "clients": "Clients satisfaits",
+        "experience": "Ans d'expérience"
+      }
+    },
+    "about": {
+      "defaultBio": "Passionné par le développement web depuis plusieurs années, je me spécialise dans la création d'applications modernes...",
+      "years": "ans"
+    },
+    "contact": {
+      "contactButton": "Contacter"
+    },
+    "generic": {
+      "elementType": "Élément de type \"{{type}}\""
+    },
+    "navigation": {
+      "login": "Connexion"
+    },
+    "landingHero": {
+      "defaultHeadline1": "Créez votre site web",
+      "defaultHeadline2": "en quelques minutes",
+      "cta": "Commencer",
+      "demo": "Démo"
+    },
+    "features": {
+      "badge": "Fonctionnalités",
+      "defaultHeadline": "Tout ce dont vous avez besoin"
+    },
+    "howItWorks": {
+      "badge": "Simple",
+      "title": "Comment ça marche"
+    },
+    "pricing": {
+      "badge": "Tarifs",
+      "title": "Plans et tarification",
+      "popular": "Populaire"
+    },
+    "testimonials": {
+      "badge": "Avis",
+      "title": "Ce que disent nos clients"
+    },
+    "cta": {
+      "defaultHeadline": "Prêt à commencer ?",
+      "defaultButton": "S'inscrire gratuitement"
+    },
+    "footer": {
+      "rights": "Tous droits réservés."
+    }
+  }
+}

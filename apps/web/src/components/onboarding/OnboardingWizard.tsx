@@ -6,6 +6,7 @@
  */
 
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { OnboardingLayout } from './OnboardingLayout';
 import { GitHubConnectStep } from './GitHubConnectStep';
 import { ImportProjectsStep } from './ImportProjectsStep';
@@ -29,6 +30,7 @@ interface OnboardingWizardProps {
 }
 
 export function OnboardingWizard({ websiteId, initialStep = 'github_connect' }: OnboardingWizardProps) {
+  const { t } = useTranslation(['onboarding', 'common']);
   // State
   const [currentStep, setCurrentStep] = React.useState<OnboardingStep>(initialStep);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -76,15 +78,15 @@ export function OnboardingWizard({ websiteId, initialStep = 'github_connect' }: 
       console.error('GitHub OAuth error:', error);
       // Check if GitHub is not configured yet (V1)
       if (error?.response?.status === 503 || error?.message?.includes('GitHub OAuth not configured')) {
-        toast.info('L\'intégration GitHub sera disponible prochainement. Vous pouvez ajouter vos projets manuellement.');
+        toast.info(t('wizard.toasts.githubComingSoon'));
         // Skip to profile editing
         setCurrentStep('review_profile');
       } else if (error?.response?.status === 401 || error?.response?.status === 400) {
         // Not authenticated or invalid website ID - skip to profile for demo mode
-        toast.info('Mode démo: ajoutez vos projets manuellement');
+        toast.info(t('wizard.toasts.demoMode'));
         setCurrentStep('review_profile');
       } else {
-        toast.error('Erreur lors de la connexion GitHub');
+        toast.error(t('wizard.toasts.githubConnectError'));
       }
     } finally {
       setIsLoading(false);
@@ -98,21 +100,21 @@ export function OnboardingWizard({ websiteId, initialStep = 'github_connect' }: 
       if (websiteId === 'demo' || websiteId === 'new') {
         trackEvent('github_skipped', websiteId);
         setCurrentStep('review_profile');
-        toast.info('Vous pourrez ajouter des projets manuellement');
+        toast.info(t('wizard.toasts.manualProjects'));
         return;
       }
       await onboardingAPI.skipGitHubImport(websiteId);
       trackEvent('github_skipped', websiteId);
       setCurrentStep('review_profile');
-      toast.info('Vous pourrez ajouter des projets manuellement');
+      toast.info(t('wizard.toasts.manualProjects'));
     } catch (error: any) {
       console.error('Skip error:', error);
       // In case of auth error, just proceed locally
       if (error?.response?.status === 401 || error?.response?.status === 400) {
         setCurrentStep('review_profile');
-        toast.info('Vous pourrez ajouter des projets manuellement');
+        toast.info(t('wizard.toasts.manualProjects'));
       } else {
-        toast.error('Une erreur est survenue');
+        toast.error(t('wizard.toasts.error'));
       }
     } finally {
       setIsLoading(false);
@@ -146,7 +148,7 @@ export function OnboardingWizard({ websiteId, initialStep = 'github_connect' }: 
       setSelectedRepoIds(recommended);
     } catch (error) {
       console.error('Error loading repos:', error);
-      toast.error('Erreur lors du chargement des repositories');
+      toast.error(t('wizard.toasts.reposLoadError'));
     } finally {
       setIsLoadingRepos(false);
     }
@@ -154,7 +156,7 @@ export function OnboardingWizard({ websiteId, initialStep = 'github_connect' }: 
 
   const handleImportProjects = async () => {
     if (selectedRepoIds.length === 0) {
-      toast.error('Sélectionnez au moins un repository');
+      toast.error(t('wizard.toasts.selectAtLeastOne'));
       return;
     }
 
@@ -176,11 +178,11 @@ export function OnboardingWizard({ websiteId, initialStep = 'github_connect' }: 
         fromGithub: true,
       });
       
-      toast.success(`${importedProjects.length} projet(s) importé(s) !`);
+      toast.success(t('wizard.toasts.projectsImported', { count: importedProjects.length }));
       setCurrentStep('review_profile');
     } catch (error) {
       console.error('Import error:', error);
-      toast.error('Erreur lors de l\'import des projets');
+      toast.error(t('wizard.toasts.importError'));
     } finally {
       setIsImporting(false);
     }
@@ -207,11 +209,11 @@ export function OnboardingWizard({ websiteId, initialStep = 'github_connect' }: 
   const handleNextFromReview = () => {
     // Validate minimum requirements
     if (!profile.identity.name) {
-      toast.error('Veuillez entrer votre nom');
+      toast.error(t('wizard.toasts.enterName'));
       return;
     }
     if (!profile.contact.email) {
-      toast.error('Veuillez entrer votre email de contact');
+      toast.error(t('wizard.toasts.enterEmail'));
       return;
     }
     
@@ -229,7 +231,7 @@ export function OnboardingWizard({ websiteId, initialStep = 'github_connect' }: 
   
   const handlePublish = async () => {
     if (!subdomain) {
-      toast.error('Veuillez choisir un sous-domaine');
+      toast.error(t('wizard.toasts.chooseSubdomain'));
       return;
     }
 
@@ -252,10 +254,10 @@ export function OnboardingWizard({ websiteId, initialStep = 'github_connect' }: 
         serviceCount: profile.services.length,
       });
       
-      toast.success('Portfolio publié avec succès !');
+      toast.success(t('wizard.toasts.publishSuccess'));
     } catch (error) {
       console.error('Publish error:', error);
-      toast.error('Erreur lors de la publication');
+      toast.error(t('wizard.toasts.publishError'));
     } finally {
       setIsPublishing(false);
     }

@@ -21,6 +21,11 @@ export interface Website {
   data: WebsiteData;
   created_at?: string;
   updated_at?: string;
+  // SEO fields (optional, may not be returned by API)
+  description?: string;
+  favicon?: string;
+  og_image?: string;
+  is_indexable?: boolean;
 }
 
 export interface CreateWebsiteRequest {
@@ -35,6 +40,12 @@ export interface UpdateWebsiteRequest {
   title?: string;
   tagline?: string;
   metadata?: JsonObject;
+  status?: 'draft' | 'published';
+  // SEO fields
+  description?: string;
+  favicon?: string;
+  og_image?: string;
+  is_indexable?: boolean;
 }
 
 // ============================================
@@ -45,6 +56,7 @@ export interface UpdateWebsiteRequest {
  * Profile data structure for websites
  */
 export interface WebsiteProfile {
+  version?: number;
   name?: string;
   title?: string;
   bio?: string;
@@ -59,6 +71,9 @@ export interface WebsiteProfile {
     website?: string;
     [key: string]: string | undefined;
   };
+  // Dynamic fields from presets
+  projects?: unknown[];
+  [key: string]: unknown;
 }
 
 /**
