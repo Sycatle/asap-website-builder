@@ -30,10 +30,10 @@ impl NotificationPublisher for WorkerNotificationPublisher {
         let payload = serde_json::to_string(&event)?;
         
         let mut conn = self.redis.clone();
-        redis::cmd("PUBLISH")
+        let _: i64 = redis::cmd("PUBLISH")
             .arg(CHANNEL_NOTIFICATIONS)
             .arg(&payload)
-            .query_async::<i64>(&mut conn)
+            .query_async(&mut conn)
             .await?;
         
         tracing::debug!("Published notification event to Redis");

@@ -281,7 +281,7 @@ async fn main() -> anyhow::Result<()> {
 
 async fn process_events_parallel_wrapper(
     event_processor: &Arc<EventProcessor>,
-    registry: &Arc<module_executor::ModuleExecutorRegistry>,
+    registry: &Arc<extension_executor::ExtensionExecutorRegistry>,
     config: &ParallelProcessorConfig,
 ) -> anyhow::Result<parallel_processor::ProcessingStats> {
     // Fetch unprocessed events

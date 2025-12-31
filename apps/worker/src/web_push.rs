@@ -7,8 +7,8 @@ use anyhow::{Context, Result};
 use sqlx::PgPool;
 use uuid::Uuid;
 use web_push::{
-    ContentEncoding, SubscriptionInfo, VapidSignatureBuilder, WebPushClient,
-    WebPushMessageBuilder,
+    ContentEncoding, IsahcWebPushClient, SubscriptionInfo, VapidSignatureBuilder,
+    WebPushClient, WebPushMessageBuilder,
 };
 
 /// VAPID keys loaded from database or environment
@@ -47,7 +47,7 @@ pub struct PushPayload {
 
 /// Web Push sender
 pub struct WebPushSender {
-    client: WebPushClient,
+    client: IsahcWebPushClient,
     vapid_keys: VapidKeys,
     subject: String,
 }
@@ -55,7 +55,7 @@ pub struct WebPushSender {
 impl WebPushSender {
     /// Create a new WebPushSender
     pub fn new(vapid_keys: VapidKeys, subject: String) -> Result<Self> {
-        let client = WebPushClient::new()?;
+        let client = IsahcWebPushClient::new()?;
         Ok(Self {
             client,
             vapid_keys,

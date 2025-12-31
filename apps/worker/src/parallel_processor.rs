@@ -7,7 +7,7 @@
 use anyhow::Result;
 use asap_core_domain::events::Event;
 use crate::event_processor::EventProcessor;
-use crate::module_executor::ModuleExecutorRegistry;
+use crate::extension_executor::ExtensionExecutorRegistry;
 use std::sync::Arc;
 
 /// Configuration for parallel event processing
@@ -65,7 +65,7 @@ impl ProcessingStats {
 /// dramatically improving throughput for I/O-bound operations.
 pub async fn process_events_parallel(
     event_processor: Arc<EventProcessor>,
-    registry: Arc<ModuleExecutorRegistry>,
+    registry: Arc<ExtensionExecutorRegistry>,
     events: Vec<Event>,
     config: ParallelProcessorConfig,
 ) -> Result<ProcessingStats> {
@@ -147,7 +147,7 @@ pub async fn process_events_parallel(
 /// Process a single event with proper error handling
 async fn process_single_event(
     processor: Arc<EventProcessor>,
-    registry: Arc<ModuleExecutorRegistry>,
+    registry: Arc<ExtensionExecutorRegistry>,
     event: Event,
 ) -> Result<()> {
     tracing::debug!(
