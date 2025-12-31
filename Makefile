@@ -15,6 +15,7 @@ SHELL := /bin/bash
 DOCKER_COMPOSE = docker compose
 COMPOSE_FILE = -f infra/docker-compose.yml
 COMPOSE_DEV = -f infra/docker-compose.yml -f infra/docker-compose.dev.yml
+COMPOSE_PROD = -f infra/docker-compose.prod.yml --env-file infra/.env.prod
 INFRA_DIR = infra
 
 # Colors for output
@@ -61,7 +62,15 @@ help:
 	@echo "$(GREEN)Build Commands:$(NC)"
 	@echo "  make build           - Build Docker images for dev"
 	@echo "  make build-prod      - Build production Docker images"
+	@echo "  make build-prod-full - Full production build (no cache)"
 	@echo "  make rebuild         - Force rebuild Docker images (no cache)"
+	@echo ""
+	@echo "$(GREEN)Production Commands:$(NC)"
+	@echo "  make prod            - Build and start production environment"
+	@echo "  make prod-up         - Start production environment"
+	@echo "  make prod-down       - Stop production environment"
+	@echo "  make prod-logs       - View production logs"
+	@echo "  make prod-ps         - Show production containers"
 	@echo ""
 	@echo "$(GREEN)Test Commands:$(NC)"
 	@echo "  make test            - Run all tests in Docker"
@@ -221,7 +230,7 @@ db-shell:
 # =============================================================================
 # Build Commands (Docker-based)
 # =============================================================================
-.PHONY: build build-prod rebuild
+.PHONY: build build-prod rebuild build-prod-full
 
 build:
 	@echo "$(CYAN)Building Docker images for development...$(NC)"
@@ -230,13 +239,70 @@ build:
 
 build-prod:
 	@echo "$(CYAN)Building production Docker images...$(NC)"
-	$(DOCKER_COMPOSE) $(COMPOSE_FILE) build
+	$(DOCKER_COMPOSE) $(COMPOSE_PROD) build
 	@echo "$(GREEN)✓ Production images built$(NC)"
+
+build-prod-full:
+	@echo "$(CYAN)╔══════════════════════════════════════════════════════════════╗$(NC)"
+	@echo "$(CYAN)║       ASAP v2 - Full Production Build                        ║$(NC)"
+	@echo "$(CYAN)╚══════════════════════════════════════════════════════════════╝$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Building all production images from scratch...$(NC)"
+	@echo ""
+	@echo "$(CYAN)[1/4] Building API (Rust)...$(NC)"
+	$(DOCKER_COMPOSE) $(COMPOSE_PROD) build --no-cache api
+	@echo "$(GREEN)✓ API built$(NC)"
+	@echo ""
+	@echo "$(CYAN)[2/4] Building Worker (Rust)...$(NC)"
+	$(DOCKER_COMPOSE) $(COMPOSE_PROD) build --no-cache worker
+	@echo "$(GREEN)✓ Worker built$(NC)"
+	@echo ""
+	@echo "$(CYAN)[3/4] Building Web Dashboard (Astro/React)...$(NC)"
+	$(DOCKER_COMPOSE) $(COMPOSE_PROD) build --no-cache web
+	@echo "$(GREEN)✓ Web built$(NC)"
+	@echo ""
+	@echo "$(CYAN)[4/4] Building Sites (Astro/React)...$(NC)"
+	$(DOCKER_COMPOSE) $(COMPOSE_PROD) build --no-cache sites
+	@echo "$(GREEN)✓ Sites built$(NC)"
+	@echo ""
+	@echo "$(GREEN)╔══════════════════════════════════════════════════════════════╗$(NC)"
+	@echo "$(GREEN)║       ✓ All production images built successfully!            ║$(NC)"
+	@echo "$(GREEN)╚══════════════════════════════════════════════════════════════╝$(NC)"
+	@echo ""
+	@docker images | grep asap- | head -10
 
 rebuild:
 	@echo "$(CYAN)Rebuilding Docker images (no cache)...$(NC)"
 	$(DOCKER_COMPOSE) $(COMPOSE_DEV) build --no-cache
 	@echo "$(GREEN)✓ Docker images rebuilt$(NC)"
+
+# =============================================================================
+# Production Commands
+# =============================================================================
+.PHONY: prod prod-up prod-down prod-logs prod-ps
+
+prod: build-prod prod-up
+	@echo "$(GREEN)✓ Production environment ready$(NC)"
+
+prod-up:
+	@echo "$(CYAN)Starting production environment...$(NC)"
+	$(DOCKER_COMPOSE) $(COMPOSE_PROD) up -d
+	@echo "$(GREEN)✓ Production environment started$(NC)"
+	@echo ""
+	@echo "  API:   http://localhost:$${API_PORT:-3000}"
+	@echo "  Web:   http://localhost:$${WEB_PORT:-4321}"
+	@echo "  Sites: http://localhost:$${SITES_PORT:-4322}"
+
+prod-down:
+	@echo "$(CYAN)Stopping production environment...$(NC)"
+	$(DOCKER_COMPOSE) $(COMPOSE_PROD) down
+	@echo "$(GREEN)✓ Production environment stopped$(NC)"
+
+prod-logs:
+	$(DOCKER_COMPOSE) $(COMPOSE_PROD) logs -f
+
+prod-ps:
+	$(DOCKER_COMPOSE) $(COMPOSE_PROD) ps
 
 # =============================================================================
 # Test Commands (Docker-based)
