@@ -66,15 +66,27 @@ pub fn generate_token_with_jti(
     .map_err(SharedError::from)
 }
 
+/// JWT issuer constant for token validation
+pub const JWT_ISSUER: &str = "asap-auth";
+pub const JWT_AUDIENCE: &str = "asap-api";
+
 /// Validate and decode a JWT token
 pub fn validate_token(
     token: &str,
     config: &SharedConfig,
 ) -> Result<Claims> {
+    // Configure validation with audience and issuer
+    let mut validation = Validation::default();
+    validation.set_audience(&[JWT_AUDIENCE]);
+    validation.set_issuer(&[JWT_ISSUER]);
+    // Note: For backward compatibility, we don't require these claims yet
+    // TODO: Once all tokens include aud/iss, enable strict validation
+    validation.validate_aud = false;
+    
     let token_data = decode::<Claims>(
         token,
         &DecodingKey::from_secret(config.jwt_secret.as_ref()),
-        &Validation::default(),
+        &validation,
     )?;
 
     Ok(token_data.claims)

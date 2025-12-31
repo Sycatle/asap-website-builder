@@ -18,6 +18,31 @@ const DEFAULT_CREATION_MODE: &str = "from_scratch";
 /// Default tagline for new websites
 const DEFAULT_TAGLINE: &str = "";
 
+/// JWT issuer constant for token validation
+pub const JWT_ISSUER: &str = "asap-auth";
+pub const JWT_AUDIENCE: &str = "asap-api";
+
+/// Validate password strength
+/// Returns Ok(()) if valid, Err with error message if invalid
+fn validate_password_strength(password: &str) -> Result<(), &'static str> {
+    if password.len() < 8 {
+        return Err("Password must be at least 8 characters");
+    }
+    if password.len() > 128 {
+        return Err("Password must be at most 128 characters");
+    }
+    if !password.chars().any(|c| c.is_uppercase()) {
+        return Err("Password must contain at least one uppercase letter");
+    }
+    if !password.chars().any(|c| c.is_lowercase()) {
+        return Err("Password must contain at least one lowercase letter");
+    }
+    if !password.chars().any(|c| c.is_ascii_digit()) {
+        return Err("Password must contain at least one number");
+    }
+    Ok(())
+}
+
 #[derive(Debug, Deserialize)]
 pub struct SignupRequest {
     pub email: String,
@@ -277,10 +302,10 @@ pub async fn signup(
         }))).into_response();
     }
 
-    // Validate password length
-    if payload.password.len() < 8 {
+    // Validate password strength
+    if let Err(e) = validate_password_strength(&payload.password) {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "Password must be at least 8 characters"
+            "error": e
         }))).into_response();
     }
 
@@ -357,8 +382,9 @@ pub async fn signup(
     if let Err(e) = account_result {
         tracing::error!("Failed to create account: {}", e);
         let _ = tx.rollback().await;
-        return (StatusCode::CONFLICT, Json(serde_json::json!({
-            "error": "Email already exists"
+        // SECURITY: Generic error to prevent account enumeration
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "Unable to create account. Please try a different email or contact support."
         }))).into_response();
     }
 
@@ -722,10 +748,10 @@ pub async fn change_password(
         }
     };
 
-    // Validate new password length
-    if payload.new_password.len() < 8 {
+    // Validate new password strength
+    if let Err(e) = validate_password_strength(&payload.new_password) {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "New password must be at least 8 characters"
+            "error": e
         }))).into_response();
     }
 
@@ -921,10 +947,10 @@ pub async fn reset_password(
     Extension(config): Extension<SharedConfig>,
     Json(payload): Json<ResetPasswordRequest>,
 ) -> impl IntoResponse {
-    // Validate new password length
-    if payload.new_password.len() < 8 {
+    // Validate new password strength
+    if let Err(e) = validate_password_strength(&payload.new_password) {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "Password must be at least 8 characters"
+            "error": e
         }))).into_response();
     }
 
