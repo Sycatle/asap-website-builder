@@ -11,10 +11,15 @@
  * Structure:
  * - types.ts: Shared type definitions (re-exported from @asap/shared)
  * - utils.ts: Helper functions (getData, cn, etc.)
- * - components/: Shared UI primitives (Button, Card, Badge, Icons)
- * - saas-adapters.tsx: SaaS landing page section renderers
- * - freelance-renderer.tsx: Portfolio/Freelance full page renderer
+ * - components/ui/: Atomic UI primitives (Button, Card, Badge, etc.)
+ * - components/icons.tsx: Icon components library
+ * - components/saas/: Modular SaaS section components (self-contained)
  * - renderers.tsx: Main registry and SectionRenderer component
+ * 
+ * Component Architecture:
+ * - Atomic Design: ui/ contains basic building blocks
+ * - Self-contained: saas/ components handle their own data extraction
+ * - Single registry: renderers.tsx maps section types to components
  */
 
 // Core types
@@ -23,14 +28,8 @@ export * from './types';
 // Utility functions
 export * from './utils';
 
-// Shared UI components
+// Shared UI components (atomic + composed)
 export * from './components';
 
-// Main renderers and registry
+// Main renderer and registry
 export * from './renderers';
-
-// Freelance Portfolio Renderer (full page)
-export * from './freelance-renderer';
-
-// SaaS Section Renderers (modular, uses CSS variables)
-export * from './saas-adapters';
