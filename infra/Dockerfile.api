@@ -1,4 +1,5 @@
-FROM rustlang/rust:nightly-slim AS builder
+# Build stage - Use Debian bookworm for consistency
+FROM rust:1.87-slim-bookworm AS builder
 
 WORKDIR /app
 
@@ -14,6 +15,7 @@ COPY core/shared/Cargo.toml ./core/shared/
 COPY core/domain/Cargo.toml ./core/domain/
 COPY core/api/Cargo.toml ./core/api/
 COPY core/notifications/Cargo.toml ./core/notifications/
+COPY core/payments/Cargo.toml ./core/payments/
 COPY apps/api/Cargo.toml ./apps/api/
 COPY apps/worker/Cargo.toml ./apps/worker/
 COPY extensions/analytics/Cargo.toml ./extensions/analytics/
@@ -29,7 +31,7 @@ COPY .sqlx ./.sqlx
 ENV SQLX_OFFLINE=true
 RUN cargo build --release --bin asap-api
 
-# Runtime stage
+# Runtime stage - Same Debian version for library compatibility
 FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y \

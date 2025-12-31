@@ -1,4 +1,5 @@
-FROM rustlang/rust:nightly-slim AS builder
+# Build stage - Use Debian bookworm for consistency
+FROM rust:1.87-slim-bookworm AS builder
 
 WORKDIR /app
 
@@ -29,7 +30,7 @@ COPY .sqlx ./.sqlx
 ENV SQLX_OFFLINE=true
 RUN cargo build --release --bin asap-worker
 
-# Runtime stage
+# Runtime stage - Same Debian version for library compatibility
 FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y \
