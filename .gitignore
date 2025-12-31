@@ -89,3 +89,4 @@ build/
 # Editor/workspace storage
 .vscode/**/workspaceStorage/
 
+infra/.env.prod
