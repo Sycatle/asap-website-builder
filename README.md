@@ -61,9 +61,9 @@ ASAP est une plateforme SaaS de création de sites web modulaires. Elle permet a
 | Concept | Description |
 |---------|-------------|
 | **Core + Extensions** | Le core gère les données, les extensions ajoutent les fonctionnalités |
-| **Website → Sections** | Structure modulaire avec 14 types de sections (Hero, Projects, Skills...) |
-| **Presets** | Templates prêts à l'emploi pour démarrer instantanément |
-| **Projections** | Fichiers JSON statiques pour des performances optimales |
+| **Website → Sections** | Structure modulaire avec 14+ types de sections (Hero, Projects, Skills...) |
+| **Presets** | Templates prêts à l'emploi (Portfolio Freelance, Landing SaaS) |
+| **Single Source of Truth** | `@asap/renderers` utilisé par Studio et Sites publics |
 | **Event-driven** | Architecture réactive avec workers asynchrones |
 
 ---
@@ -72,10 +72,10 @@ ASAP est une plateforme SaaS de création de sites web modulaires. Elle permet a
 
 | Couche | Technologies |
 |--------|--------------|
-| **Backend** | Rust, Axum, SQLx, Tokio |
-| **Frontend** | Astro, React, TypeScript, TailwindCSS |
-| **Base de données** | PostgreSQL 15+, Redis 7+ |
-| **Infrastructure** | Docker, Docker Compose |
+| **Backend** | Rust 1.87, Axum, SQLx, Tokio |
+| **Frontend** | Astro, React 19, TypeScript 5, TailwindCSS, shadcn/ui |
+| **Base de données** | PostgreSQL 15, Redis 7 |
+| **Infrastructure** | Docker Compose, pnpm workspaces |
 | **Paiements** | Stripe |
 | **PWA** | Service Worker, Web Push |
 
@@ -93,27 +93,29 @@ asap/
 │   └── notifications/      # Notifications (core extension)
 │
 ├── extensions/              # Extensions (Rust)
-│   ├── github-sync/        # Github Sync - Import projets GitHub
+│   ├── github-sync/        # Import projets GitHub
 │   └── analytics/          # Tracking & stats
 │
 ├── packages/                # Packages partagés (TypeScript)
-│   ├── shared/             # @asap/shared - Types & utils
-│   └── renderers/          # @asap/renderers - 14 renderers sections
+│   ├── shared/             # @asap/shared - Types, constantes, utils
+│   └── renderers/          # @asap/renderers - Renderers sections React
 │
 ├── apps/                    # Applications
-│   ├── api/                # Serveur API (Rust)
-│   ├── worker/             # Worker async (Rust)
-│   ├── web/                # Dashboard (Astro + React)
-│   └── sites/              # Sites publics (Astro)
+│   ├── api/                # Serveur API (Rust/Axum)
+│   ├── worker/             # Worker async (Rust/Tokio)
+│   ├── web/                # Dashboard (Astro + React + i18n)
+│   └── sites/              # Sites publics (Astro + React)
 │
 ├── infra/                   # Infrastructure
-│   ├── docker-compose.yml
-│   ├── migrations/         # Migrations SQL
-│   └── env.example/        # Templates d'environnement
+│   ├── docker-compose.yml      # Base services
+│   ├── docker-compose.dev.yml  # Dev avec hot reload
+│   ├── docker-compose.prod.yml # Production optimisé
+│   ├── Dockerfile.*            # Images Docker
+│   └── migrations/             # Migrations SQL
 │
-├── data/                    # Runtime (non versionné)
-│   └── sites/              # Projections JSON générées
-│
+├── package.json             # pnpm workspace root
+├── pnpm-workspace.yaml      # Workspace config
+├── Makefile                 # Commandes de développement
 └── docs/                    # Documentation complète
 ```
 
@@ -123,10 +125,11 @@ asap/
 
 ### Prérequis
 
-- **Rust** 1.70+
-- **Node.js** 18+
-- **Docker** & Docker Compose
-- **Make** (optionnel)
+- **Rust** 1.87+ (stable)
+- **Node.js** 20+
+- **pnpm** 9.15+
+- **Docker** & Docker Compose v2+
+- **Make**
 
 ### Installation
 
@@ -134,16 +137,27 @@ asap/
 # 1. Cloner le repository
 git clone https://github.com/votre-org/asap.git && cd asap
 
-# 2. Copier les fichiers d'environnement
-cp infra/env.example/api.env infra/api.env
-cp infra/env.example/worker.env infra/worker.env
-cp infra/env.example/web.env infra/web.env
+# 2. Copier le fichier d'environnement production
+cp infra/.env.prod.example infra/.env.prod
+# Éditer infra/.env.prod avec vos valeurs
 
-# 3. Lancer tous les services (PostgreSQL, Redis, API, Worker)
-docker compose -f infra/docker-compose.yml up -d
+# 3. Lancer l'environnement de développement (Docker)
+make dev
 
-# 4. Lancer le frontend
-cd apps/web && npm install && npm run dev
+# URLs disponibles :
+# - API:      http://localhost:3000
+# - Web:      http://localhost:4321
+# - Sites:    http://localhost:4322
+```
+
+### Commandes principales
+
+```bash
+make dev              # Démarrer l'env de dev
+make down             # Arrêter les services
+make logs             # Voir les logs
+make build-prod-full  # Build production complet
+make test             # Lancer les tests
 ```
 
 ### Développement local (sans Docker)
