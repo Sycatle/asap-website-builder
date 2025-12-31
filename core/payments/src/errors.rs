@@ -17,6 +17,9 @@ pub enum PaymentError {
     #[error("Invalid configuration: {0}")]
     InvalidConfiguration(String),
     
+    #[error("Payment provider not configured: {0}")]
+    Configuration(String),
+    
     #[error("Database error: {0}")]
     DatabaseError(String),
     

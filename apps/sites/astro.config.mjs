@@ -19,6 +19,12 @@ export default defineConfig({
   // Compression and performance
   compressHTML: true,
   
+  // Prefetch configuration for faster navigation
+  prefetch: {
+    prefetchAll: false, // Don't prefetch everything, use selective prefetch
+    defaultStrategy: 'hover', // Prefetch on hover for better UX
+  },
+  
   integrations: [
     react(),
     tailwind({
@@ -46,6 +52,8 @@ export default defineConfig({
   build: {
     // Inline small CSS for faster FCP
     inlineStylesheets: 'auto',
+    // Concurrent build for faster builds
+    concurrency: 4,
   },
   
   vite: {
@@ -71,6 +79,10 @@ export default defineConfig({
           manualChunks: {
             'react-vendor': ['react', 'react-dom'],
           },
+          // Add hash to filenames for cache busting
+          entryFileNames: 'assets/[name].[hash].js',
+          chunkFileNames: 'assets/[name].[hash].js',
+          assetFileNames: 'assets/[name].[hash].[ext]',
         },
       },
       // Enable CSS code splitting
@@ -78,7 +90,11 @@ export default defineConfig({
       // Minify output
       minify: 'esbuild',
       // Target modern browsers for smaller bundles
-      target: 'es2020',
+      target: 'es2022',
+      // Enable source maps for production debugging (optional)
+      sourcemap: false,
+      // Reduce chunk size warnings threshold
+      chunkSizeWarningLimit: 500,
     },
   },
 });

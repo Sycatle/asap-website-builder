@@ -22,3 +22,9 @@ export { SectionHeader, type SectionHeaderProps } from './section-header';
 export { Container, type ContainerProps } from './container';
 export { Avatar, AvatarGroup, type AvatarProps } from './avatar';
 export { IconBox, type IconBoxProps } from './icon-box';
+export { 
+  OptimizedImage, 
+  BackgroundImage, 
+  type OptimizedImageProps, 
+  type BackgroundImageProps 
+} from './optimized-image';

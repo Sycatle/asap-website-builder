@@ -104,6 +104,30 @@ const criticalCss = `
     
     <!-- Manifest for PWA support -->
     <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Speculation Rules API for instant navigation (Chrome 109+) -->
+    <script type="speculationrules">
+      {
+        "prerender": [
+          {
+            "source": "document",
+            "where": {
+              "selector_matches": "a[href^='/']:not([rel=external])"
+            },
+            "eagerness": "moderate"
+          }
+        ],
+        "prefetch": [
+          {
+            "source": "document",
+            "where": {
+              "selector_matches": "a[href^='/']:not([rel=external])"
+            },
+            "eagerness": "moderate"
+          }
+        ]
+      }
+    </script>
   </head>
   <body class="min-h-screen flex flex-col antialiased">
     <main class="flex-1">
@@ -163,6 +187,48 @@ const criticalCss = `
           requestIdleCallback(observeSections);
         } else {
           setTimeout(observeSections, 1);
+        }
+      }
+    </script>
+    
+    <!-- Intelligent link prefetch for browsers without Speculation Rules -->
+    <script>
+      // Only run if Speculation Rules not supported
+      if (!HTMLScriptElement.supports?.('speculationrules')) {
+        const prefetchCache = new Set();
+        
+        const prefetchLink = (url) => {
+          if (prefetchCache.has(url)) return;
+          if (url.startsWith('/') && !url.includes('#')) {
+            prefetchCache.add(url);
+            const link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = url;
+            link.as = 'document';
+            document.head.appendChild(link);
+          }
+        };
+        
+        // Prefetch on hover with debounce
+        let hoverTimer;
+        document.addEventListener('mouseover', (e) => {
+          const anchor = e.target.closest('a[href^="/"]');
+          if (anchor && !anchor.rel?.includes('external')) {
+            hoverTimer = setTimeout(() => prefetchLink(anchor.href), 65);
+          }
+        });
+        
+        document.addEventListener('mouseout', (e) => {
+          if (e.target.closest('a')) clearTimeout(hoverTimer);
+        });
+        
+        // Prefetch visible links in navigation
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(() => {
+            document.querySelectorAll('nav a[href^="/"]').forEach(link => {
+              prefetchLink(link.href);
+            });
+          });
         }
       }
     </script>

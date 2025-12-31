@@ -95,14 +95,18 @@ pub async fn get_website_extension_data(
     .fetch_optional(&pool)
     .await;
 
-    if let Err(e) = website_check {
-        tracing::error!("Database error checking website: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Internal server error"
-        }))).into_response();
-    }
+    let website_exists = match website_check {
+        Ok(Some(_)) => true,
+        Ok(None) => false,
+        Err(e) => {
+            tracing::error!("Database error checking website: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Internal server error"
+            }))).into_response();
+        }
+    };
 
-    if website_check.unwrap().is_none() {
+    if !website_exists {
         return (StatusCode::NOT_FOUND, Json(serde_json::json!({
             "error": "Website not found"
         }))).into_response();

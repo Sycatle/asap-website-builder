@@ -22,20 +22,25 @@ async fn security_headers_middleware(request: Request<Body>, next: Next) -> Resp
     let headers = response.headers_mut();
     
     // Prevent clickjacking
-    headers.insert("x-frame-options", "DENY".parse().unwrap());
+    if let Ok(value) = "DENY".parse() {
+        headers.insert("x-frame-options", value);
+    }
     
     // Prevent MIME type sniffing
-    headers.insert("x-content-type-options", "nosniff".parse().unwrap());
+    if let Ok(value) = "nosniff".parse() {
+        headers.insert("x-content-type-options", value);
+    }
     
     // XSS protection (legacy but still useful)
-    headers.insert("x-xss-protection", "1; mode=block".parse().unwrap());
+    if let Ok(value) = "1; mode=block".parse() {
+        headers.insert("x-xss-protection", value);
+    }
     
     // Only in production: HSTS (requires HTTPS)
     if std::env::var("ENVIRONMENT").map(|e| e == "production").unwrap_or(false) {
-        headers.insert(
-            "strict-transport-security",
-            "max-age=31536000; includeSubDomains".parse().unwrap()
-        );
+        if let Ok(value) = "max-age=31536000; includeSubDomains".parse() {
+            headers.insert("strict-transport-security", value);
+        }
     }
     
     response
@@ -205,7 +210,7 @@ async fn main() -> anyhow::Result<()> {
         .layer(TraceLayer::new_for_http())
         .layer(axum::middleware::from_fn(security_headers_middleware));
 
-    // Start server
+    // Start server with graceful shutdown
     let addr = SocketAddr::from((
         config.server_host.parse::<std::net::IpAddr>()?,
         config.server_port
@@ -213,7 +218,47 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app).await?;
+    
+    // Graceful shutdown signal handler
+    let shutdown_signal = async {
+        let ctrl_c = async {
+            tokio::signal::ctrl_c()
+                .await
+                .expect("Failed to install Ctrl+C handler");
+        };
+
+        #[cfg(unix)]
+        let terminate = async {
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                .expect("Failed to install SIGTERM handler")
+                .recv()
+                .await;
+        };
+
+        #[cfg(not(unix))]
+        let terminate = std::future::pending::<()>();
+
+        tokio::select! {
+            _ = ctrl_c => {},
+            _ = terminate => {},
+        }
+
+        tracing::info!("Shutdown signal received, starting graceful shutdown...");
+    };
+    
+    // Serve with graceful shutdown (allows in-flight requests to complete)
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal)
+        .await?;
+    
+    // Cleanup after server stops
+    tracing::info!("Server stopped, cleaning up connections...");
+    
+    // Close database pool gracefully
+    pool.close().await;
+    tracing::info!("Database pool closed");
+    
+    tracing::info!("Graceful shutdown complete");
 
     Ok(())
 }

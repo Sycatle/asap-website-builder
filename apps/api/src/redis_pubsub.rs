@@ -125,14 +125,27 @@ impl RedisNotificationSubscriber {
 }
 
 /// Start the Redis subscriber as a background task
+/// Uses exponential backoff for reconnection attempts
 pub fn spawn_redis_subscriber(ws_state: Arc<WsState>, redis_url: String) {
     tokio::spawn(async move {
+        let mut backoff_secs = 1u64;
+        const MAX_BACKOFF_SECS: u64 = 60;
+        
         loop {
             let subscriber = RedisNotificationSubscriber::new(ws_state.clone());
             
-            if let Err(e) = subscriber.run(&redis_url).await {
-                error!("Redis subscriber error: {}. Reconnecting in 5s...", e);
-                tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+            match subscriber.run(&redis_url).await {
+                Ok(_) => {
+                    // Clean exit, reset backoff
+                    backoff_secs = 1;
+                }
+                Err(e) => {
+                    error!("Redis subscriber error: {}. Reconnecting in {}s...", e, backoff_secs);
+                    tokio::time::sleep(tokio::time::Duration::from_secs(backoff_secs)).await;
+                    
+                    // Exponential backoff with cap
+                    backoff_secs = (backoff_secs * 2).min(MAX_BACKOFF_SECS);
+                }
             }
         }
     });
@@ -261,14 +274,27 @@ impl RedisSyncSubscriber {
 }
 
 /// Start the Redis sync subscriber as a background task
+/// Uses exponential backoff for reconnection attempts
 pub fn spawn_redis_sync_subscriber(ws_state: Arc<WsState>, redis_url: String) {
     tokio::spawn(async move {
+        let mut backoff_secs = 1u64;
+        const MAX_BACKOFF_SECS: u64 = 60;
+        
         loop {
             let subscriber = RedisSyncSubscriber::new(ws_state.clone());
             
-            if let Err(e) = subscriber.run(&redis_url).await {
-                error!("Redis sync subscriber error: {}. Reconnecting in 5s...", e);
-                tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+            match subscriber.run(&redis_url).await {
+                Ok(_) => {
+                    // Clean exit, reset backoff
+                    backoff_secs = 1;
+                }
+                Err(e) => {
+                    error!("Redis sync subscriber error: {}. Reconnecting in {}s...", e, backoff_secs);
+                    tokio::time::sleep(tokio::time::Duration::from_secs(backoff_secs)).await;
+                    
+                    // Exponential backoff with cap
+                    backoff_secs = (backoff_secs * 2).min(MAX_BACKOFF_SECS);
+                }
             }
         }
     });

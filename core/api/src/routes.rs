@@ -36,17 +36,23 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
     // Initialize file storage service
     let storage_service = std::sync::Arc::new(crate::storage::FileStorageService::new(pool.clone()));
 
-    // Initialize payment gateway (Stripe)
+    // Initialize payment gateway (Stripe) - graceful fallback if init fails
     let payment_gateway: std::sync::Arc<dyn asap_core_payments::PaymentGateway> = {
         let stripe_api_key = std::env::var("STRIPE_API_KEY")
             .unwrap_or_else(|_| "sk_test_placeholder".to_string());
         let stripe_webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET")
             .unwrap_or_else(|_| "whsec_placeholder".to_string());
         
-        std::sync::Arc::new(
-            asap_core_payments::StripeProvider::new(stripe_api_key, stripe_webhook_secret)
-                .expect("Failed to initialize Stripe provider")
-        )
+        match asap_core_payments::StripeProvider::new(stripe_api_key, stripe_webhook_secret) {
+            Ok(provider) => {
+                tracing::info!("Stripe payment provider initialized successfully");
+                std::sync::Arc::new(provider)
+            }
+            Err(e) => {
+                tracing::error!("Failed to initialize Stripe provider: {}. Using no-op provider.", e);
+                std::sync::Arc::new(asap_core_payments::NoOpPaymentGateway::new())
+            }
+        }
     };
 
     // Authenticated routes (require JWT)
@@ -149,7 +155,10 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         // CSRF protection for state-changing requests
         .layer(middleware::from_fn_with_state(config.clone(), crate::csrf::csrf_middleware));
 
-    // Public routes (no auth required)
+    // Public routes (no auth required) - with body size limits to prevent DoS
+    // Auth requests: 16KB max (username/password/email)
+    // Webhook: 1MB max (Stripe events can be large)
+    // Metrics: 64KB max (batch events)
     let public_routes = Router::new()
         .route("/", get(root))
         .route("/auth/signup", post(crate::auth::signup))
@@ -165,11 +174,11 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         .route("/public/websites/:slug/pages", get(crate::websites::get_public_website_pages))
         // File download (auth via query param for media embeds)
         .route("/files/:file_id", get(crate::files::download_file))
-        // Webhook routes (public but signature verified)
-        .route("/payments/webhook/stripe", post(crate::webhooks::stripe_webhook))
-        // Metrics events (public - fire-and-forget tracking)
-        .route("/metrics/events", post(crate::metrics::track_event))
-        .route("/metrics/events/batch", post(crate::metrics::track_events_batch))
+        // Webhook routes (public but signature verified) - larger limit for Stripe events
+        .route("/payments/webhook/stripe", post(crate::webhooks::stripe_webhook).layer(DefaultBodyLimit::max(1024 * 1024)))
+        // Metrics events (public - fire-and-forget tracking) - moderate limit for batches
+        .route("/metrics/events", post(crate::metrics::track_event).layer(DefaultBodyLimit::max(64 * 1024)))
+        .route("/metrics/events/batch", post(crate::metrics::track_events_batch).layer(DefaultBodyLimit::max(64 * 1024)))
         .layer(Extension(storage_service))
         .layer(Extension(payment_gateway))
         .layer(Extension(config.clone()))
@@ -177,7 +186,9 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         // Rate limiting for auth endpoints (applied before CSRF)
         .layer(middleware::from_fn_with_state(rate_limiter, crate::rate_limit::auth_rate_limit_middleware))
         // CSRF protection for public routes (login/signup)
-        .layer(middleware::from_fn_with_state(config, crate::csrf::csrf_middleware));
+        .layer(middleware::from_fn_with_state(config.clone(), crate::csrf::csrf_middleware))
+        // Global body limit for auth routes (16KB) - applied last, acts as default
+        .layer(DefaultBodyLimit::max(16 * 1024));
 
     // Combine routers
     Router::new()

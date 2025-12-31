@@ -33,6 +33,8 @@ export function Avatar({
       <img 
         src={src} 
         alt={alt}
+        loading="lazy"
+        decoding="async"
         className={cn(
           'rounded-full object-cover border-2 border-background',
           sizes[size],

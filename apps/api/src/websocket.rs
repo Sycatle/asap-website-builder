@@ -48,6 +48,16 @@ pub struct WebsitePresenceUser {
     pub current_page: Option<String>,
 }
 
+/// Cache entry for website access checks
+#[derive(Clone)]
+struct AccessCacheEntry {
+    has_access: bool,
+    cached_at: std::time::Instant,
+}
+
+/// TTL for access cache entries (5 minutes)
+const ACCESS_CACHE_TTL: std::time::Duration = std::time::Duration::from_secs(300);
+
 /// Shared state for WebSocket connections
 #[derive(Clone)]
 pub struct WsState {
@@ -60,11 +70,17 @@ pub struct WsState {
     pub website_presence: Arc<RwLock<HashMap<String, Vec<WebsitePresenceUser>>>>,
     /// Map of client to website: client_id -> website_id
     pub client_websites: Arc<RwLock<HashMap<uuid::Uuid, String>>>,
+    /// Cache for website access checks: (account_id, website_id) -> AccessCacheEntry
+    access_cache: Arc<RwLock<HashMap<(String, String), AccessCacheEntry>>>,
 }
+
+/// Broadcast channel capacity - sized for peak load
+/// At 1000 concurrent users with 1 msg/sec each, this gives 1 second buffer
+const BROADCAST_CHANNEL_CAPACITY: usize = 1024;
 
 impl WsState {
     pub fn new(config: SharedConfig, pool: sqlx::PgPool) -> Self {
-        let (tx, _) = broadcast::channel(100);
+        let (tx, _) = broadcast::channel(BROADCAST_CHANNEL_CAPACITY);
         Self {
             tx,
             config: Arc::new(config),
@@ -72,7 +88,76 @@ impl WsState {
             authenticated_clients: Arc::new(RwLock::new(HashMap::new())),
             website_presence: Arc::new(RwLock::new(HashMap::new())),
             client_websites: Arc::new(RwLock::new(HashMap::new())),
+            access_cache: Arc::new(RwLock::new(HashMap::new())),
         }
+    }
+    
+    /// Check if user has access to website (with caching)
+    pub async fn check_website_access(&self, account_id: &str, website_id: &str) -> bool {
+        let cache_key = (account_id.to_string(), website_id.to_string());
+        
+        // Check cache first
+        {
+            let cache = self.access_cache.read().await;
+            if let Some(entry) = cache.get(&cache_key) {
+                if entry.cached_at.elapsed() < ACCESS_CACHE_TTL {
+                    return entry.has_access;
+                }
+            }
+        }
+        
+        // Cache miss or expired - query database
+        let has_access = match (uuid::Uuid::parse_str(website_id), uuid::Uuid::parse_str(account_id)) {
+            (Ok(website_uuid), Ok(account_uuid)) => {
+                sqlx::query_scalar::<_, bool>(
+                    r#"
+                    SELECT EXISTS (
+                        SELECT 1 
+                        FROM websites w
+                        WHERE w.id = $1 
+                          AND (w.account_id = $2 
+                               OR EXISTS (
+                                   SELECT 1 
+                                   FROM website_administrators wa 
+                                   WHERE wa.website_id = w.id 
+                                     AND wa.account_id = $2 
+                                     AND wa.status = 'active'
+                               ))
+                    )
+                    "#
+                )
+                .bind(website_uuid)
+                .bind(account_uuid)
+                .fetch_one(&self.pool)
+                .await
+                .unwrap_or(false)
+            }
+            _ => false,
+        };
+        
+        // Update cache
+        {
+            let mut cache = self.access_cache.write().await;
+            cache.insert(cache_key, AccessCacheEntry {
+                has_access,
+                cached_at: std::time::Instant::now(),
+            });
+            
+            // Cleanup old entries periodically (if cache > 1000 entries)
+            if cache.len() > 1000 {
+                let now = std::time::Instant::now();
+                cache.retain(|_, entry| entry.cached_at.elapsed() < ACCESS_CACHE_TTL);
+            }
+        }
+        
+        has_access
+    }
+    
+    /// Invalidate access cache for a website (call when permissions change)
+    #[allow(dead_code)]
+    pub async fn invalidate_website_access_cache(&self, website_id: &str) {
+        let mut cache = self.access_cache.write().await;
+        cache.retain(|(_, wid), _| wid != website_id);
     }
     
     /// Register an authenticated client
@@ -348,13 +433,78 @@ impl WsBroadcaster for WsState {
     }
 }
 
+/// Maximum concurrent WebSocket connections per IP
+const MAX_CONNECTIONS_PER_IP: usize = 10;
+
+/// Maximum total concurrent WebSocket connections
+const MAX_TOTAL_CONNECTIONS: usize = 10_000;
+
+/// Connection tracking for rate limiting
+static CONNECTION_COUNTS: std::sync::LazyLock<tokio::sync::RwLock<std::collections::HashMap<std::net::IpAddr, usize>>> = 
+    std::sync::LazyLock::new(|| tokio::sync::RwLock::new(std::collections::HashMap::new()));
+
+static TOTAL_CONNECTIONS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
 /// WebSocket handler - upgrades HTTP connection to WebSocket
+/// Includes rate limiting to prevent DoS attacks
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
+    axum::extract::ConnectInfo(addr): axum::extract::ConnectInfo<std::net::SocketAddr>,
     State(state): State<Arc<WsState>>,
 ) -> Response {
-    info!("WebSocket connection upgrade requested");
-    ws.on_upgrade(|socket| handle_socket(socket, state))
+    let client_ip = addr.ip();
+    
+    // Check total connection limit
+    let total = TOTAL_CONNECTIONS.load(std::sync::atomic::Ordering::Relaxed);
+    if total >= MAX_TOTAL_CONNECTIONS {
+        warn!("WebSocket connection rejected: server at capacity ({} connections)", total);
+        return axum::response::Response::builder()
+            .status(axum::http::StatusCode::SERVICE_UNAVAILABLE)
+            .body(axum::body::Body::from("Server at capacity"))
+            .unwrap();
+    }
+    
+    // Check per-IP connection limit
+    {
+        let counts = CONNECTION_COUNTS.read().await;
+        if let Some(&count) = counts.get(&client_ip) {
+            if count >= MAX_CONNECTIONS_PER_IP {
+                warn!("WebSocket connection rejected: IP {} has {} connections (max {})", 
+                      client_ip, count, MAX_CONNECTIONS_PER_IP);
+                return axum::response::Response::builder()
+                    .status(axum::http::StatusCode::TOO_MANY_REQUESTS)
+                    .body(axum::body::Body::from("Too many connections from this IP"))
+                    .unwrap();
+            }
+        }
+    }
+    
+    // Increment counters
+    {
+        let mut counts = CONNECTION_COUNTS.write().await;
+        *counts.entry(client_ip).or_insert(0) += 1;
+    }
+    TOTAL_CONNECTIONS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    
+    info!("WebSocket connection upgrade requested from {}", client_ip);
+    ws.on_upgrade(move |socket| handle_socket_with_cleanup(socket, state, client_ip))
+}
+
+/// Handle socket with connection cleanup on disconnect
+async fn handle_socket_with_cleanup(socket: WebSocket, state: Arc<WsState>, client_ip: std::net::IpAddr) {
+    handle_socket(socket, state).await;
+    
+    // Decrement counters on disconnect
+    {
+        let mut counts = CONNECTION_COUNTS.write().await;
+        if let Some(count) = counts.get_mut(&client_ip) {
+            *count = count.saturating_sub(1);
+            if *count == 0 {
+                counts.remove(&client_ip);
+            }
+        }
+    }
+    TOTAL_CONNECTIONS.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
 }
 
 /// Handle individual WebSocket connection
@@ -373,10 +523,37 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
     let auth_clone = authenticated_account.clone();
     let auth_for_cleanup = authenticated_account.clone();
 
+    // Connection timeout configuration
+    const PING_INTERVAL: std::time::Duration = std::time::Duration::from_secs(30);
+    const PONG_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+    const AUTH_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+    
+    // Track last pong received
+    let last_pong = Arc::new(tokio::sync::RwLock::new(std::time::Instant::now()));
+    let last_pong_clone = last_pong.clone();
+
     // Task to send messages to this client (both direct and broadcast)
+    // Also handles ping/pong for connection health
     let mut send_task = tokio::spawn(async move {
+        let mut ping_interval = tokio::time::interval(PING_INTERVAL);
+        ping_interval.tick().await; // Skip first immediate tick
+        
         loop {
             tokio::select! {
+                // Send periodic pings to check connection health
+                _ = ping_interval.tick() => {
+                    // Check if we received a pong recently
+                    let last = *last_pong_clone.read().await;
+                    if last.elapsed() > PING_INTERVAL + PONG_TIMEOUT {
+                        warn!("WebSocket client {} timed out (no pong received)", client_id);
+                        break;
+                    }
+                    
+                    // Send ping
+                    if sender.send(Message::Ping(vec![])).await.is_err() {
+                        break;
+                    }
+                }
                 // Handle direct messages (always sent)
                 Some(msg) = direct_rx.recv() => {
                     if let Ok(json) = serde_json::to_string(&msg) {
@@ -499,72 +676,36 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                             ws_msg.data.get("website_id").and_then(|v| v.as_str()),
                                             ws_msg.data.get("user")
                                         ) {
-                                            // Verify user has access to this website (owner or active administrator)
-                                            match uuid::Uuid::parse_str(website_id) {
-                                                Ok(website_uuid) => {
-                                                    match uuid::Uuid::parse_str(account_id) {
-                                                        Ok(account_uuid) => {
-                                                            // Check access using the verify_website_access query
-                                                            let has_access = sqlx::query_scalar::<_, bool>(
-                                                                r#"
-                                                                SELECT EXISTS (
-                                                                    SELECT 1 
-                                                                    FROM websites w
-                                                                    WHERE w.id = $1 
-                                                                      AND (w.account_id = $2 
-                                                                           OR EXISTS (
-                                                                               SELECT 1 
-                                                                               FROM website_administrators wa 
-                                                                               WHERE wa.website_id = w.id 
-                                                                                 AND wa.account_id = $2 
-                                                                                 AND wa.status = 'active'
-                                                                           ))
-                                                                )
-                                                                "#
-                                                            )
-                                                            .bind(website_uuid)
-                                                            .bind(account_uuid)
-                                                            .fetch_one(&state.pool)
-                                                            .await
-                                                            .unwrap_or(false);
+                                            // Verify user has access to this website (cached)
+                                            let has_access = state.check_website_access(account_id, website_id).await;
                                                             
-                                                            if !has_access {
-                                                                warn!("User {} attempted to join website {} without access", account_id, website_id);
-                                                                let error_msg = WsMessage {
-                                                                    msg_type: "error".to_string(),
-                                                                    data: serde_json::json!({
-                                                                        "message": "You don't have access to this website"
-                                                                    }),
-                                                                };
-                                                                let _ = direct_tx.send(error_msg).await;
-                                                                continue;
-                                                            }
-                                                            
-                                                            // User has access, proceed with joining
-                                                            let user = WebsitePresenceUser {
-                                                                id: account_id.clone(),
-                                                                email: user_data.get("email").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                                                                name: user_data.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                                                                avatar: user_data.get("avatar").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                                                                joined_at: Utc::now().to_rfc3339(),
-                                                                current_page: user_data.get("current_page").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                                                            };
-                                                            state.join_website(client_id, website_id.to_string(), user).await;
-                                                            info!("User {} joined website {} presence", account_id, website_id);
-                                                            
-                                                            // Note: We don't send the users list here anymore
-                                                            // The client will request it explicitly via presence:get-website-users
-                                                            // when it's ready to receive it (after setting up listeners)
-                                                        }
-                                                        Err(_) => {
-                                                            warn!("Invalid account_id UUID: {}", account_id);
-                                                        }
-                                                    }
-                                                }
-                                                Err(_) => {
-                                                    warn!("Invalid website_id UUID: {}", website_id);
-                                                }
+                                            if !has_access {
+                                                warn!("User {} attempted to join website {} without access", account_id, website_id);
+                                                let error_msg = WsMessage {
+                                                    msg_type: "error".to_string(),
+                                                    data: serde_json::json!({
+                                                        "message": "You don't have access to this website"
+                                                    }),
+                                                };
+                                                let _ = direct_tx.send(error_msg).await;
+                                                continue;
                                             }
+                                            
+                                            // User has access, proceed with joining
+                                            let user = WebsitePresenceUser {
+                                                id: account_id.clone(),
+                                                email: user_data.get("email").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                                name: user_data.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                                                avatar: user_data.get("avatar").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                                                joined_at: Utc::now().to_rfc3339(),
+                                                current_page: user_data.get("current_page").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                                            };
+                                            state.join_website(client_id, website_id.to_string(), user).await;
+                                            info!("User {} joined website {} presence", account_id, website_id);
+                                                            
+                                            // Note: We don't send the users list here anymore
+                                            // The client will request it explicitly via presence:get-website-users
+                                            // when it's ready to receive it (after setting up listeners)
                                         }
                                     }
                                 }
@@ -576,47 +717,19 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                 "presence:get-website-users" => {
                                     if let Some(account_id) = authenticated_account.read().await.as_ref() {
                                         if let Some(website_id) = ws_msg.data.get("website_id").and_then(|v| v.as_str()) {
-                                            // Verify user has access to this website
-                                            match (uuid::Uuid::parse_str(website_id), uuid::Uuid::parse_str(account_id)) {
-                                                (Ok(website_uuid), Ok(account_uuid)) => {
-                                                    let has_access = sqlx::query_scalar::<_, bool>(
-                                                        r#"
-                                                        SELECT EXISTS (
-                                                            SELECT 1 
-                                                            FROM websites w
-                                                            WHERE w.id = $1 
-                                                              AND (w.account_id = $2 
-                                                                   OR EXISTS (
-                                                                       SELECT 1 
-                                                                       FROM website_administrators wa 
-                                                                       WHERE wa.website_id = w.id 
-                                                                         AND wa.account_id = $2 
-                                                                         AND wa.status = 'active'
-                                                                   ))
-                                                        )
-                                                        "#
-                                                    )
-                                                    .bind(website_uuid)
-                                                    .bind(account_uuid)
-                                                    .fetch_one(&state.pool)
-                                                    .await
-                                                    .unwrap_or(false);
+                                            // Verify user has access to this website (cached)
+                                            let has_access = state.check_website_access(account_id, website_id).await;
                                                     
-                                                    if has_access {
-                                                        let users = state.get_website_users(website_id).await;
-                                                        let users_msg = WsMessage {
-                                                            msg_type: "presence:website:users".to_string(),
-                                                            data: serde_json::json!({
-                                                                "website_id": website_id,
-                                                                "users": users
-                                                            }),
-                                                        };
-                                                        let _ = direct_tx.send(users_msg).await;
-                                                    }
-                                                }
-                                                _ => {
-                                                    warn!("Invalid UUID in presence:get-website-users");
-                                                }
+                                            if has_access {
+                                                let users = state.get_website_users(website_id).await;
+                                                let users_msg = WsMessage {
+                                                    msg_type: "presence:website:users".to_string(),
+                                                    data: serde_json::json!({
+                                                        "website_id": website_id,
+                                                        "users": users
+                                                    }),
+                                                };
+                                                let _ = direct_tx.send(users_msg).await;
                                             }
                                         }
                                     }
@@ -644,11 +757,12 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                 }
                 Message::Ping(_data) => {
                     // WebSocket protocol ping - Axum handles pong automatically
-                    info!("Received WebSocket ping from client {}", client_id);
+                    tracing::trace!("Received WebSocket ping from client {}", client_id);
                 }
                 Message::Pong(_) => {
-                    // Client responded to our ping
-                    info!("Received WebSocket pong from client {}", client_id);
+                    // Client responded to our ping - update last_pong timestamp
+                    *last_pong.write().await = std::time::Instant::now();
+                    tracing::trace!("Received WebSocket pong from client {}", client_id);
                 }
                 _ => {}
             }
