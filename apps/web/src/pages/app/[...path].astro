@@ -5,6 +5,16 @@ import AppRouter from '../../components/app-router';
 ---
 
 <BaseLayout title="ASAP">
+  <!-- Redirect to login if not authenticated -->
+  <script>
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      // User is not logged in, redirect to login with redirect param
+      const currentPath = window.location.pathname + window.location.search;
+      const redirectUrl = encodeURIComponent(currentPath);
+      window.location.replace(`/login?redirect=${redirectUrl}`);
+    }
+  </script>
   <div id="app-root">
     <AppRouter client:only="react" />
   </div>
