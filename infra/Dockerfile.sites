@@ -1,0 +1,84 @@
+# ============================================================================
+# Dockerfile for ASAP Sites (Public Portfolio Sites)
+# Multi-stage build for optimized production image
+# ============================================================================
+
+FROM node:20-alpine AS base
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# ============================================================================
+# Dependencies stage - Install all workspace dependencies
+# ============================================================================
+FROM base AS deps
+
+WORKDIR /app
+
+# Copy workspace root files
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+
+# Copy package.json files for all workspace packages
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/renderers/package.json ./packages/renderers/
+COPY apps/sites/package.json ./apps/sites/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# ============================================================================
+# Builder stage - Build the application
+# ============================================================================
+FROM base AS builder
+
+WORKDIR /app
+
+# Copy everything from deps (simpler approach for pnpm workspaces)
+COPY --from=deps /app ./
+
+# Copy source code
+COPY packages/shared ./packages/shared
+COPY packages/renderers ./packages/renderers
+COPY apps/sites ./apps/sites
+
+# Build the sites application (skip type checking for faster builds)
+WORKDIR /app/apps/sites
+RUN pnpm astro build
+
+# ============================================================================
+# Runtime stage - Minimal production image
+# ============================================================================
+FROM base AS runtime
+
+WORKDIR /app
+
+# Create non-root user for security
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 astro
+
+# Copy package files for production dependencies
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/renderers/package.json ./packages/renderers/
+COPY apps/sites/package.json ./apps/sites/
+
+# Install all dependencies (React is needed at runtime for SSR)
+RUN pnpm install --frozen-lockfile
+
+# Copy built application to the sites app directory (for proper module resolution)
+COPY --from=builder --chown=astro:nodejs /app/apps/sites/dist ./apps/sites/dist
+
+# Environment variables
+ENV HOST=0.0.0.0
+ENV PORT=4322
+ENV NODE_ENV=production
+
+# Switch to non-root user
+USER astro
+
+# Working directory must be apps/sites for proper node_modules resolution
+WORKDIR /app/apps/sites
+
+EXPOSE 4322
+
+CMD ["node", "./dist/server/entry.mjs"]
