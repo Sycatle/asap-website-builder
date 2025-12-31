@@ -8,7 +8,7 @@
 
 import React from 'react';
 import type { SectionRendererProps } from '@asap/renderers';
-import { CustomRenderer, renderers, getRenderer, hasRenderer } from '@asap/renderers';
+import { renderers, getRenderer, hasRenderer, SectionRenderer } from '@asap/renderers';
 
 export type SectionRendererComponent = React.ComponentType<SectionRendererProps>;
 
@@ -39,7 +39,7 @@ export const UnknownSectionRenderer: SectionRendererComponent = ({ section }) =>
   </section>
 );
 
-export const defaultSectionRenderer: SectionRendererComponent = CustomRenderer;
+export const defaultSectionRenderer: SectionRendererComponent = SectionRenderer;
 
 // Re-export for convenience
-export { renderers, hasRenderer };
+export { renderers, hasRenderer, SectionRenderer };

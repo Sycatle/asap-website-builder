@@ -15,14 +15,14 @@ import React from 'react';
 import type { WebsiteElement } from "@/lib/api";
 import type { Element } from '@asap/shared';
 import {
-  NavigationSaaSRenderer,
-  HeroSaaSRenderer,
-  FeaturesSaaSRenderer,
-  HowItWorksSaaSRenderer,
-  PricingSaaSRenderer,
-  TestimonialsSaaSRenderer,
-  CTASaaSRenderer,
-  FooterSaaSRenderer,
+  NavigationSection,
+  HeroSection,
+  FeaturesSection,
+  HowItWorksSection,
+  PricingSection,
+  TestimonialsSection,
+  CTASection,
+  FooterSection,
 } from '@asap/renderers';
 
 // ============================================
@@ -56,33 +56,33 @@ function toSection(element: WebsiteElement): Element {
 // ============================================
 
 export function LandingNavigationPreview({ element }: LandingPreviewProps) {
-  return <NavigationSaaSRenderer section={toSection(element)} />;
+  return <NavigationSection section={toSection(element)} />;
 }
 
 export function LandingHeroPreview({ element }: LandingPreviewProps) {
-  return <HeroSaaSRenderer section={toSection(element)} />;
+  return <HeroSection section={toSection(element)} />;
 }
 
 export function LandingFeaturesPreview({ element }: LandingPreviewProps) {
-  return <FeaturesSaaSRenderer section={toSection(element)} />;
+  return <FeaturesSection section={toSection(element)} />;
 }
 
 export function LandingHowItWorksPreview({ element }: LandingPreviewProps) {
-  return <HowItWorksSaaSRenderer section={toSection(element)} />;
+  return <HowItWorksSection section={toSection(element)} />;
 }
 
 export function LandingPricingPreview({ element }: LandingPreviewProps) {
-  return <PricingSaaSRenderer section={toSection(element)} />;
+  return <PricingSection section={toSection(element)} />;
 }
 
 export function LandingTestimonialsPreview({ element }: LandingPreviewProps) {
-  return <TestimonialsSaaSRenderer section={toSection(element)} />;
+  return <TestimonialsSection section={toSection(element)} />;
 }
 
 export function LandingCTAPreview({ element }: LandingPreviewProps) {
-  return <CTASaaSRenderer section={toSection(element)} />;
+  return <CTASection section={toSection(element)} />;
 }
 
 export function LandingFooterPreview({ element }: LandingPreviewProps) {
-  return <FooterSaaSRenderer section={toSection(element)} />;
+  return <FooterSection section={toSection(element)} />;
 }

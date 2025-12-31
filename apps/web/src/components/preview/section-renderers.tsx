@@ -21,31 +21,16 @@ export {
   renderers,
 } from '@asap/renderers';
 
-// Re-export individual renderers for direct use
+// Re-export individual section components for direct use
 export {
-  // SaaS Sections
-  NavigationSaaSRenderer,
-  HeroSaaSRenderer,
-  FeaturesSaaSRenderer,
-  HowItWorksSaaSRenderer,
-  PricingSaaSRenderer,
-  TestimonialsSaaSRenderer,
-  CTASaaSRenderer,
-  FooterSaaSRenderer,
-  // Portfolio Sections
-  HeroRenderer,
-  AboutRenderer,
-  SkillsRenderer,
-  ProjectsRenderer,
-  ExperienceRenderer,
-  EducationRenderer,
-  ContactRenderer,
-  ServicesRenderer,
-  PricingRenderer,
-  FAQRenderer,
-  GalleryRenderer,
-  BlogRenderer,
-  CustomRenderer,
+  NavigationSection,
+  HeroSection,
+  FeaturesSection,
+  HowItWorksSection,
+  PricingSection,
+  TestimonialsSection,
+  CTASection,
+  FooterSection,
 } from '@asap/renderers';
 
 // Re-export types
