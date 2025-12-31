@@ -171,11 +171,11 @@ function useWebsitePresence({ websiteId, user, enabled, currentPage }: UseWebsit
       ))
     }
 
-    // Subscribe to events BEFORE joining
-    ws.on('presence:website:users', handleUsersUpdate)
-    ws.on('presence:website:user-joined', handleUserJoined)
-    ws.on('presence:website:user-left', handleUserLeft)
-    ws.on('presence:website:user-page-updated', handleUserPageUpdated)
+    // Subscribe to events BEFORE joining - use returned unsubscribe functions to prevent memory leaks
+    const unsubUsers = ws.on('presence:website:users', handleUsersUpdate)
+    const unsubJoined = ws.on('presence:website:user-joined', handleUserJoined)
+    const unsubLeft = ws.on('presence:website:user-left', handleUserLeft)
+    const unsubPageUpdated = ws.on('presence:website:user-page-updated', handleUserPageUpdated)
 
     // Join the website with current page
     ws.send('presence:join-website', {
@@ -204,11 +204,11 @@ function useWebsitePresence({ websiteId, user, enabled, currentPage }: UseWebsit
     return () => {
       clearTimeout(requestTimer)
 
-      // Unsubscribe from events
-      ws.off('presence:website:users', handleUsersUpdate)
-      ws.off('presence:website:user-joined', handleUserJoined)
-      ws.off('presence:website:user-left', handleUserLeft)
-      ws.off('presence:website:user-page-updated', handleUserPageUpdated)
+      // Unsubscribe from events using captured references
+      unsubUsers?.()
+      unsubJoined?.()
+      unsubLeft?.()
+      unsubPageUpdated?.()
 
       // Leave the website if connected
       if (sessionRef.current && ws.isConnected) {

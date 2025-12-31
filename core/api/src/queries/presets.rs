@@ -6,6 +6,36 @@ use serde_json::Value as JsonValue;
 
 use super::types::PresetRow;
 
+/// Batch insert data for pages
+struct PageBatch {
+    id: Uuid,
+    website_id: Uuid,
+    slug: String,
+    title: String,
+    description: String,
+    is_homepage: bool,
+    order: i32,
+}
+
+/// Batch insert data for elements
+struct ElementBatch {
+    id: Uuid,
+    website_id: Uuid,
+    element_type: String,
+    slug: String,
+    title: String,
+    order: i32,
+    layout: String,
+    settings: JsonValue,
+}
+
+/// Batch insert data for page-element links
+struct PageElementBatch {
+    page_id: Uuid,
+    element_id: Uuid,
+    order: i32,
+}
+
 /// List available presets
 pub async fn list_presets(
     pool: &PgPool,
@@ -110,6 +140,11 @@ pub async fn create_website_from_preset(
     }
 
     // Create pages and elements from preset config (new page-based structure)
+    // Collect all data first, then batch insert for performance (100+ queries → 3 queries)
+    let mut page_batches: Vec<PageBatch> = Vec::new();
+    let mut element_batches: Vec<ElementBatch> = Vec::new();
+    let mut page_element_batches: Vec<PageElementBatch> = Vec::new();
+
     if let Some(pages) = config.get("pages").and_then(|p| p.as_array()) {
         for (page_order, page) in pages.iter().enumerate() {
             let page_slug = page.get("slug").and_then(|s| s.as_str()).unwrap_or("");
@@ -117,29 +152,21 @@ pub async fn create_website_from_preset(
             let page_description = page.get("description").and_then(|s| s.as_str()).unwrap_or("");
             let is_homepage = page.get("is_homepage").and_then(|h| h.as_bool()).unwrap_or(false);
 
-            // Create the page
             let page_id = Uuid::new_v4();
-            sqlx::query(
-                r#"
-                INSERT INTO website_pages (id, website_id, slug, title, description, is_homepage, "order", visible)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, true)
-                "#
-            )
-            .bind(page_id)
-            .bind(website_id)
-            .bind(page_slug)
-            .bind(page_title)
-            .bind(page_description)
-            .bind(is_homepage)
-            .bind(page_order as i32)
-            .execute(&mut *tx)
-            .await?;
+            page_batches.push(PageBatch {
+                id: page_id,
+                website_id,
+                slug: page_slug.to_string(),
+                title: page_title.to_string(),
+                description: page_description.to_string(),
+                is_homepage,
+                order: page_order as i32,
+            });
 
-            // Create elements for this page (supports both "elements" and "sections" keys)
+            // Collect elements for this page (supports both "elements" and "sections" keys)
             if let Some(elements) = page.get("elements").and_then(|s| s.as_array())
                 .or_else(|| page.get("sections").and_then(|s| s.as_array())) {
                 for (element_order, element) in elements.iter().enumerate() {
-                    // Support both "element_type" and "section_type" keys
                     let element_type = element.get("element_type").and_then(|s| s.as_str())
                         .or_else(|| element.get("section_type").and_then(|s| s.as_str()))
                         .unwrap_or("custom");
@@ -147,60 +174,43 @@ pub async fn create_website_from_preset(
                     let element_title = element.get("title").and_then(|s| s.as_str()).unwrap_or("Element");
                     let layout = element.get("layout").and_then(|l| l.as_str()).unwrap_or("full");
                     let default_settings = serde_json::json!({});
-                    let settings = element.get("settings").unwrap_or(&default_settings);
+                    let settings = element.get("settings").unwrap_or(&default_settings).clone();
 
-                    // Create element in website_elements
                     let element_id = Uuid::new_v4();
-                    sqlx::query(
-                        r#"
-                        INSERT INTO website_elements (id, website_id, element_type, slug, title, "order", layout, settings)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                        "#
-                    )
-                    .bind(element_id)
-                    .bind(website_id)
-                    .bind(element_type)
-                    .bind(element_slug)
-                    .bind(element_title)
-                    .bind(element_order as i32)
-                    .bind(layout)
-                    .bind(settings)
-                    .execute(&mut *tx)
-                    .await?;
+                    element_batches.push(ElementBatch {
+                        id: element_id,
+                        website_id,
+                        element_type: element_type.to_string(),
+                        slug: element_slug.to_string(),
+                        title: element_title.to_string(),
+                        order: element_order as i32,
+                        layout: layout.to_string(),
+                        settings,
+                    });
 
-                    // Link element to page via page_elements
-                    sqlx::query(
-                        r#"
-                        INSERT INTO page_elements (page_id, element_id, "order", visible)
-                        VALUES ($1, $2, $3, true)
-                        "#
-                    )
-                    .bind(page_id)
-                    .bind(element_id)
-                    .bind(element_order as i32)
-                    .execute(&mut *tx)
-                    .await?;
+                    page_element_batches.push(PageElementBatch {
+                        page_id,
+                        element_id,
+                        order: element_order as i32,
+                    });
                 }
             }
         }
     } else if let Some(elements) = config.get("elements").and_then(|s| s.as_array())
                 .or_else(|| config.get("sections").and_then(|s| s.as_array())) {
         // Fallback: Legacy support for old presets with elements/sections at root level
-        // Create a default homepage with all elements
         let page_id = Uuid::new_v4();
-        sqlx::query(
-            r#"
-            INSERT INTO website_pages (id, website_id, slug, title, description, is_homepage, "order", visible)
-            VALUES ($1, $2, '', 'Accueil', 'Page d''accueil', true, 0, true)
-            "#
-        )
-        .bind(page_id)
-        .bind(website_id)
-        .execute(&mut *tx)
-        .await?;
+        page_batches.push(PageBatch {
+            id: page_id,
+            website_id,
+            slug: String::new(),
+            title: "Accueil".to_string(),
+            description: "Page d'accueil".to_string(),
+            is_homepage: true,
+            order: 0,
+        });
 
         for (order, element) in elements.iter().enumerate() {
-            // Support both "element_type" and "section_type" keys
             let element_type = element.get("element_type").and_then(|s| s.as_str())
                 .or_else(|| element.get("section_type").and_then(|s| s.as_str()))
                 .unwrap_or("custom");
@@ -208,40 +218,103 @@ pub async fn create_website_from_preset(
             let element_title = element.get("title").and_then(|s| s.as_str()).unwrap_or("Element");
             let layout = element.get("layout").and_then(|l| l.as_str()).unwrap_or("full");
             let default_settings = serde_json::json!({});
-            let settings = element.get("settings").unwrap_or(&default_settings);
+            let settings = element.get("settings").unwrap_or(&default_settings).clone();
 
-            // Create element
             let element_id = Uuid::new_v4();
-            sqlx::query(
-                r#"
-                INSERT INTO website_elements (id, website_id, element_type, slug, title, "order", layout, settings)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                "#
-            )
-            .bind(element_id)
-            .bind(website_id)
-            .bind(element_type)
-            .bind(element_slug)
-            .bind(element_title)
-            .bind(order as i32)
-            .bind(layout)
-            .bind(settings)
-            .execute(&mut *tx)
-            .await?;
+            element_batches.push(ElementBatch {
+                id: element_id,
+                website_id,
+                element_type: element_type.to_string(),
+                slug: element_slug.to_string(),
+                title: element_title.to_string(),
+                order: order as i32,
+                layout: layout.to_string(),
+                settings,
+            });
 
-            // Link to homepage
-            sqlx::query(
-                r#"
-                INSERT INTO page_elements (page_id, element_id, "order", visible)
-                VALUES ($1, $2, $3, true)
-                "#
-            )
-            .bind(page_id)
-            .bind(element_id)
-            .bind(order as i32)
-            .execute(&mut *tx)
-            .await?;
+            page_element_batches.push(PageElementBatch {
+                page_id,
+                element_id,
+                order: order as i32,
+            });
         }
+    }
+
+    // Batch insert pages (single query with UNNEST)
+    if !page_batches.is_empty() {
+        let ids: Vec<Uuid> = page_batches.iter().map(|p| p.id).collect();
+        let website_ids: Vec<Uuid> = page_batches.iter().map(|p| p.website_id).collect();
+        let slugs: Vec<String> = page_batches.iter().map(|p| p.slug.clone()).collect();
+        let titles: Vec<String> = page_batches.iter().map(|p| p.title.clone()).collect();
+        let descriptions: Vec<String> = page_batches.iter().map(|p| p.description.clone()).collect();
+        let is_homepages: Vec<bool> = page_batches.iter().map(|p| p.is_homepage).collect();
+        let orders: Vec<i32> = page_batches.iter().map(|p| p.order).collect();
+
+        sqlx::query(
+            r#"
+            INSERT INTO website_pages (id, website_id, slug, title, description, is_homepage, "order", visible)
+            SELECT * FROM UNNEST($1::uuid[], $2::uuid[], $3::text[], $4::text[], $5::text[], $6::bool[], $7::int[], ARRAY_FILL(true, ARRAY[$8::int]))
+            "#
+        )
+        .bind(&ids)
+        .bind(&website_ids)
+        .bind(&slugs)
+        .bind(&titles)
+        .bind(&descriptions)
+        .bind(&is_homepages)
+        .bind(&orders)
+        .bind(ids.len() as i32)
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    // Batch insert elements (single query with UNNEST)
+    if !element_batches.is_empty() {
+        let ids: Vec<Uuid> = element_batches.iter().map(|e| e.id).collect();
+        let website_ids: Vec<Uuid> = element_batches.iter().map(|e| e.website_id).collect();
+        let element_types: Vec<String> = element_batches.iter().map(|e| e.element_type.clone()).collect();
+        let slugs: Vec<String> = element_batches.iter().map(|e| e.slug.clone()).collect();
+        let titles: Vec<String> = element_batches.iter().map(|e| e.title.clone()).collect();
+        let orders: Vec<i32> = element_batches.iter().map(|e| e.order).collect();
+        let layouts: Vec<String> = element_batches.iter().map(|e| e.layout.clone()).collect();
+        let settings: Vec<JsonValue> = element_batches.iter().map(|e| e.settings.clone()).collect();
+
+        sqlx::query(
+            r#"
+            INSERT INTO website_elements (id, website_id, element_type, slug, title, "order", layout, settings)
+            SELECT * FROM UNNEST($1::uuid[], $2::uuid[], $3::text[], $4::text[], $5::text[], $6::int[], $7::text[], $8::jsonb[])
+            "#
+        )
+        .bind(&ids)
+        .bind(&website_ids)
+        .bind(&element_types)
+        .bind(&slugs)
+        .bind(&titles)
+        .bind(&orders)
+        .bind(&layouts)
+        .bind(&settings)
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    // Batch insert page-element links (single query with UNNEST)
+    if !page_element_batches.is_empty() {
+        let page_ids: Vec<Uuid> = page_element_batches.iter().map(|pe| pe.page_id).collect();
+        let element_ids: Vec<Uuid> = page_element_batches.iter().map(|pe| pe.element_id).collect();
+        let orders: Vec<i32> = page_element_batches.iter().map(|pe| pe.order).collect();
+
+        sqlx::query(
+            r#"
+            INSERT INTO page_elements (page_id, element_id, "order", visible)
+            SELECT * FROM UNNEST($1::uuid[], $2::uuid[], $3::int[], ARRAY_FILL(true, ARRAY[$4::int]))
+            "#
+        )
+        .bind(&page_ids)
+        .bind(&element_ids)
+        .bind(&orders)
+        .bind(page_ids.len() as i32)
+        .execute(&mut *tx)
+        .await?;
     }
 
     tx.commit().await?;

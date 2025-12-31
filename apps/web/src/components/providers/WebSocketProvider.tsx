@@ -231,12 +231,23 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     setIsWsAuthenticated(false)
   }, [])
 
-  // Subscribe to event
+  // Subscribe to event - returns unsubscribe function to prevent memory leaks
   const on = useCallback((event: string, handler: (data: any) => void) => {
     if (!eventHandlers.current.has(event)) {
       eventHandlers.current.set(event, new Set())
     }
     eventHandlers.current.get(event)!.add(handler)
+    
+    // Return cleanup function that captures the exact reference
+    return () => {
+      const handlers = eventHandlers.current.get(event)
+      if (handlers) {
+        handlers.delete(handler)
+        if (handlers.size === 0) {
+          eventHandlers.current.delete(event)
+        }
+      }
+    }
   }, [])
 
   // Unsubscribe from event

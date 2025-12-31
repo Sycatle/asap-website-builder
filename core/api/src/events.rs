@@ -4,21 +4,50 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use sqlx::PgPool;
 use uuid::Uuid;
 use chrono;
 
 use asap_core_shared::Claims;
 
+// Custom serializers to avoid intermediate String allocations
+fn serialize_uuid<S>(uuid: &Uuid, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&uuid.to_string())
+}
+
+fn serialize_datetime<S>(dt: &chrono::DateTime<chrono::Utc>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&dt.to_rfc3339())
+}
+
+fn serialize_option_datetime<S>(dt: &Option<chrono::DateTime<chrono::Utc>>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match dt {
+        Some(d) => serializer.serialize_some(&d.to_rfc3339()),
+        None => serializer.serialize_none(),
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct Event {
-    pub id: String,
-    pub account_id: String,
+    #[serde(serialize_with = "serialize_uuid")]
+    pub id: Uuid,
+    #[serde(serialize_with = "serialize_uuid")]
+    pub account_id: Uuid,
     pub event_type: String,
     pub payload: serde_json::Value,
-    pub created_at: String,
-    pub processed_at: Option<String>,
+    #[serde(serialize_with = "serialize_datetime")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    #[serde(serialize_with = "serialize_option_datetime")]
+    pub processed_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -109,12 +138,12 @@ pub async fn get_events(
         .map(|row| {
             use sqlx::Row;
             Event {
-                id: row.get::<Uuid, _>("id").to_string(),
-                account_id: row.get::<Uuid, _>("account_id").to_string(),
+                id: row.get("id"),
+                account_id: row.get("account_id"),
                 event_type: row.get("event_type"),
                 payload: row.get("payload"),
-                created_at: row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_string(),
-                processed_at: row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("processed_at").map(|t| t.to_string()),
+                created_at: row.get("created_at"),
+                processed_at: row.get("processed_at"),
             }
         })
         .collect();
