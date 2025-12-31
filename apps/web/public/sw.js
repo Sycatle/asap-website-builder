@@ -113,15 +113,15 @@ function shouldHandle(request) {
 }
 
 /**
- * Limit cache size by removing oldest entries
+ * Limit cache size by removing oldest entries (iterative approach)
  */
 async function limitCacheSize(cacheName, maxSize) {
   const cache = await caches.open(cacheName);
   const keys = await cache.keys();
   
-  if (keys.length > maxSize) {
-    await cache.delete(keys[0]);
-    await limitCacheSize(cacheName, maxSize);
+  // Remove excess entries iteratively
+  while (keys.length > maxSize) {
+    await cache.delete(keys.shift());
   }
 }
 
@@ -520,10 +520,14 @@ self.addEventListener('periodicsync', event => {
             
             // Update badge
             if ('setAppBadge' in self.navigator) {
-              if (unreadCount > 0) {
-                self.navigator.setAppBadge(unreadCount);
-              } else {
-                self.navigator.clearAppBadge();
+              try {
+                if (unreadCount > 0) {
+                  await self.navigator.setAppBadge(unreadCount);
+                } else {
+                  await self.navigator.clearAppBadge();
+                }
+              } catch (error) {
+                console.warn('[SW] Failed to update app badge:', error);
               }
             }
             

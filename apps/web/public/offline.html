@@ -301,13 +301,18 @@
     
     // Check for cached pages
     if ('caches' in window) {
-      caches.open('asap-dynamic-v3').then(cache => {
-        cache.keys().then(requests => {
-          if (requests.length > 0) {
-            const cachedPages = document.getElementById('cached-pages');
-            const pageList = document.getElementById('page-list');
-            
-            cachedPages.style.display = 'block';
+      // Find the dynamic cache (version-agnostic)
+      caches.keys().then(cacheNames => {
+        const dynamicCache = cacheNames.find(name => name.includes('asap-dynamic'));
+        if (!dynamicCache) return;
+        
+        caches.open(dynamicCache).then(cache => {
+          cache.keys().then(requests => {
+            if (requests.length > 0) {
+              const cachedPages = document.getElementById('cached-pages');
+              const pageList = document.getElementById('page-list');
+              
+              cachedPages.style.display = 'block';
             
             const commonPages = [
               { url: '/app/dashboard', title: 'Tableau de bord' },
@@ -327,6 +332,7 @@
           }
         });
       });
+    });
     }
     
     // Retry with loading indicator
