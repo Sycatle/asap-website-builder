@@ -40,9 +40,9 @@ pub fn generate_password_reset_token(secret: &str) -> Result<PasswordResetToken,
         .map_err(|e| SharedError::AuthError(format!("Time error: {}", e)))?
         .as_secs();
     
-    // Generate random bytes (32 bytes for security)
+    // Generate random bytes (32 bytes for security) using OS entropy
     let mut random_bytes = [0u8; 32];
-    rand::thread_rng().fill_bytes(&mut random_bytes);
+    rand::rngs::OsRng.fill_bytes(&mut random_bytes);
     
     // Create message to sign: timestamp + random bytes
     let mut message = timestamp.to_be_bytes().to_vec();

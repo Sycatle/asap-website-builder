@@ -99,7 +99,10 @@ pub async fn list_files(
     let files = storage
         .list_account_files(account_id, limit, offset)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| {
+            tracing::error!("Failed to list files: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to list files".to_string())
+        })?;
 
     let responses = files
         .into_iter()
@@ -122,7 +125,10 @@ pub async fn delete_file(
     storage
         .delete_file(account_id, file_id)
         .await
-        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+        .map_err(|e| {
+            tracing::error!("Failed to delete file {}: {}", file_id, e);
+            (StatusCode::BAD_REQUEST, "Failed to delete file".to_string())
+        })?;
 
     // Broadcast file deleted event to all connected clients for this account
     ws_broadcaster.sync_file_deleted(

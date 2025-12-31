@@ -48,9 +48,9 @@ pub struct RefreshToken {
 /// * `family_id` - Optional family ID for token rotation (pass None for new family)
 /// * `remember_me` - If true, uses 7-day lifetime; if false, uses 24-hour lifetime
 pub fn generate_refresh_token(secret: &str, family_id: Option<&str>, remember_me: bool) -> Result<RefreshToken> {
-    // Generate 32 random bytes
+    // Generate 32 random bytes using OS entropy for security
     let mut random_bytes = [0u8; 32];
-    rand::thread_rng().fill_bytes(&mut random_bytes);
+    rand::rngs::OsRng.fill_bytes(&mut random_bytes);
     
     // Create timestamp
     let timestamp = Utc::now().timestamp();

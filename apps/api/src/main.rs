@@ -8,12 +8,38 @@ mod redis_pubsub;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
-use axum::{Router, routing::get, Json, extract::State};
+use axum::{Router, routing::get, Json, extract::State, middleware::Next, response::Response, body::Body, http::Request};
 use serde_json::json;
 use sqlx::PgPool;
 use tower_http::cors::{CorsLayer, Any};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+/// Security headers middleware
+/// Adds important security headers to all responses
+async fn security_headers_middleware(request: Request<Body>, next: Next) -> Response {
+    let mut response = next.run(request).await;
+    let headers = response.headers_mut();
+    
+    // Prevent clickjacking
+    headers.insert("x-frame-options", "DENY".parse().unwrap());
+    
+    // Prevent MIME type sniffing
+    headers.insert("x-content-type-options", "nosniff".parse().unwrap());
+    
+    // XSS protection (legacy but still useful)
+    headers.insert("x-xss-protection", "1; mode=block".parse().unwrap());
+    
+    // Only in production: HSTS (requires HTTPS)
+    if std::env::var("ENVIRONMENT").map(|e| e == "production").unwrap_or(false) {
+        headers.insert(
+            "strict-transport-security",
+            "max-age=31536000; includeSubDomains".parse().unwrap()
+        );
+    }
+    
+    response
+}
 
 async fn health(State(pool): State<PgPool>) -> Json<serde_json::Value> {
     let db_status = match db::health_check(&pool).await {
@@ -165,7 +191,8 @@ async fn main() -> anyhow::Result<()> {
         .merge(ws_router)
         .nest("/api", api_router)
         .layer(cors)
-        .layer(TraceLayer::new_for_http());
+        .layer(TraceLayer::new_for_http())
+        .layer(axum::middleware::from_fn(security_headers_middleware));
 
     // Start server
     let addr = SocketAddr::from((

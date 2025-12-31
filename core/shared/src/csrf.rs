@@ -29,9 +29,9 @@ pub fn generate_csrf_token(secret: &str) -> Result<CsrfToken, SharedError> {
         .map_err(|e| SharedError::CsrfError(format!("Time error: {}", e)))?
         .as_secs();
     
-    // Generate random bytes
+    // Generate random bytes using OS entropy for security
     let mut random_bytes = [0u8; 16];
-    rand::thread_rng().fill_bytes(&mut random_bytes);
+    rand::rngs::OsRng.fill_bytes(&mut random_bytes);
     
     // Create message to sign: timestamp + random bytes
     let mut message = timestamp.to_be_bytes().to_vec();
