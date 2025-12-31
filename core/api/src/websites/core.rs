@@ -110,6 +110,18 @@ pub async fn create_website(
         }
     };
 
+    // Validate title length (prevent DoS via huge payloads)
+    if payload.title.len() > 200 {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "Title must be under 200 characters"
+        }))).into_response();
+    }
+    if payload.tagline.as_ref().map_or(false, |t| t.len() > 500) {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "Tagline must be under 500 characters"
+        }))).into_response();
+    }
+
     // Validate slug
     let slug = payload.slug.trim().to_lowercase();
     if slug.is_empty() || slug.len() < 3 || slug.len() > 50 {

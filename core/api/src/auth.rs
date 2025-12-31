@@ -816,6 +816,16 @@ pub async fn change_password(
 
     match update_result {
         Ok(_) => {
+            // Invalidate all existing refresh tokens (security: forces re-login on all devices)
+            if let Err(e) = sqlx::query!(
+                "UPDATE refresh_tokens SET revoked_at = NOW(), revoked_reason = 'password_changed' WHERE account_id = $1 AND revoked_at IS NULL",
+                account_id
+            )
+            .execute(&pool)
+            .await {
+                tracing::error!("Failed to revoke refresh tokens on password change: {}", e);
+            }
+
             // Create notification for password change
             if let Err(e) = crate::notifications::create_password_changed_notification(&pool, account_id).await {
                 tracing::error!("Failed to create password change notification: {}", e);
@@ -1072,6 +1082,16 @@ pub async fn reset_password(
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
             "error": "Internal server error"
         }))).into_response();
+    }
+
+    // Invalidate all existing refresh tokens (security: forces re-login on all devices)
+    if let Err(e) = sqlx::query!(
+        "UPDATE refresh_tokens SET revoked_at = NOW(), revoked_reason = 'password_reset' WHERE account_id = $1 AND revoked_at IS NULL",
+        token_record.account_id
+    )
+    .execute(&pool)
+    .await {
+        tracing::error!("Failed to revoke refresh tokens on password reset: {}", e);
     }
 
     // Create notification for password change

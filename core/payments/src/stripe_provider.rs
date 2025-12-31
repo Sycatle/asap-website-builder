@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use reqwest::Client;
+use reqwest::{Client, Url};
 use uuid::Uuid;
 use std::collections::HashMap;
 use sha2::{Sha256, Digest};
@@ -10,6 +10,36 @@ use crate::{
 };
 
 type HmacSha256 = Hmac<Sha256>;
+
+/// Validate that a redirect URL is on an allowed domain (prevents open redirect attacks)
+fn validate_redirect_url(url: &str) -> Result<(), &'static str> {
+    let allowed_domains: &[&str] = &[
+        "asap.cool",
+        "localhost",
+        "127.0.0.1",
+    ];
+    
+    let parsed = Url::parse(url).map_err(|_| "Invalid URL format")?;
+    
+    // Only allow https in production (http allowed for localhost)
+    let scheme = parsed.scheme();
+    if scheme != "https" && scheme != "http" {
+        return Err("URL must use http or https scheme");
+    }
+    
+    let host = parsed.host_str().ok_or("URL must have a host")?;
+    
+    // Check if host matches allowed domains
+    let is_allowed = allowed_domains.iter().any(|allowed| {
+        host == *allowed || host.ends_with(&format!(".{}", allowed))
+    });
+    
+    if !is_allowed {
+        return Err("Redirect URL must be on an allowed domain");
+    }
+    
+    Ok(())
+}
 
 pub struct StripeProvider {
     client: Client,
@@ -76,6 +106,14 @@ impl PaymentGateway for StripeProvider {
         request: CheckoutSessionRequest,
     ) -> Result<CheckoutSessionResponse, PaymentError> {
         tracing::info!("Creating Stripe checkout session for account {}", request.account_id);
+
+        // Validate redirect URLs to prevent open redirect attacks
+        if let Err(e) = validate_redirect_url(&request.success_url) {
+            return Err(PaymentError::Unknown(format!("Invalid success_url: {}", e)));
+        }
+        if let Err(e) = validate_redirect_url(&request.cancel_url) {
+            return Err(PaymentError::Unknown(format!("Invalid cancel_url: {}", e)));
+        }
 
         // Ensure customer exists
         let customer_id = self.get_customer_id(request.account_id).await?
