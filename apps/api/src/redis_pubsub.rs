@@ -104,19 +104,23 @@ impl RedisNotificationSubscriber {
     
     /// Handle a notification event from Redis
     fn handle_event(&self, event: NotificationPubSubEvent) {
+        let account_id = event.account_id().to_string();
         let ws_msg = event.to_ws_message();
         
-        // Convert to WsMessage and broadcast
+        // Convert to WsMessage and broadcast to specific account
         let msg = crate::websocket::WsMessage {
             msg_type: ws_msg["type"].as_str().unwrap_or("unknown").to_string(),
             data: ws_msg["data"].clone(),
         };
         
-        // TODO: In the future, filter by account_id to send only to relevant clients
-        // For now, broadcast to all authenticated clients
-        self.ws_state.broadcast(msg);
+        // Send only to the target account's connected clients
+        let ws_state = self.ws_state.clone();
+        let account_id_clone = account_id.clone();
+        tokio::spawn(async move {
+            ws_state.broadcast_to_account(&account_id_clone, msg).await;
+        });
         
-        tracing::debug!("Forwarded notification event to WebSocket");
+        tracing::debug!("Forwarded notification event to account {}", account_id);
     }
 }
 

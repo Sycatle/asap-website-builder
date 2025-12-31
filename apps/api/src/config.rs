@@ -9,6 +9,8 @@ pub struct Config {
     pub jwt_expiration_hours: i64,
     pub server_host: String,
     pub server_port: u16,
+    pub allowed_origins: Vec<String>,
+    pub frontend_url: String,
 }
 
 impl Config {
@@ -33,6 +35,14 @@ impl Config {
                 .unwrap_or_else(|_| "3000".to_string())
                 .parse()
                 .context("ASAP_API_PORT/SERVER_PORT must be a valid port number (0-65535)")?,
+            allowed_origins: env::var("ALLOWED_ORIGINS")
+                .unwrap_or_else(|_| "http://localhost:4321,http://localhost:4322".to_string())
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect(),
+            frontend_url: env::var("FRONTEND_URL")
+                .unwrap_or_else(|_| "http://localhost:4321".to_string()),
         })
     }
 }

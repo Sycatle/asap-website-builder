@@ -137,7 +137,9 @@ pub async fn initiate_github_oauth(
     // V1 MVP: GitHub OAuth not implemented yet
     // Return a placeholder URL that will show a "coming soon" message
     // In production, this would be the actual GitHub OAuth URL
-    let redirect_uri = format!("http://localhost:4321/onboarding/{}", website_id);
+    let frontend_url = std::env::var("FRONTEND_URL")
+        .unwrap_or_else(|_| "http://localhost:4321".to_string());
+    let redirect_uri = format!("{}/onboarding/{}", frontend_url, website_id);
     let oauth_url = format!(
         "https://github.com/login/oauth/authorize?client_id=PLACEHOLDER&redirect_uri={}&state={}&scope=read:user,repo",
         redirect_uri.replace(":", "%3A").replace("/", "%2F"),

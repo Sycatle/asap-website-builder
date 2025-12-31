@@ -139,8 +139,15 @@ async fn main() -> anyhow::Result<()> {
     // Create main app router by merging routers
     // CORS configuration - explicitly list headers for Firefox compatibility
     use axum::http::header::{AUTHORIZATION, CONTENT_TYPE, ACCEPT, ORIGIN, HeaderName};
+    use tower_http::cors::AllowOrigin;
+    
+    // Build allowed origins from config
+    let allowed_origins: Vec<_> = config.allowed_origins.iter()
+        .filter_map(|s| s.parse().ok())
+        .collect();
+    
     let cors = CorsLayer::new()
-        .allow_origin(Any)
+        .allow_origin(AllowOrigin::list(allowed_origins))
         .allow_methods(Any)
         .allow_headers([
             AUTHORIZATION,
@@ -150,6 +157,7 @@ async fn main() -> anyhow::Result<()> {
             HeaderName::from_static("x-requested-with"),
             HeaderName::from_static("x-csrf-token"),
         ])
+        .allow_credentials(true)
         .expose_headers(Any);
 
     let app = Router::new()
