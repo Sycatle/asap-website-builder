@@ -156,6 +156,9 @@ importers:
       '@tanstack/react-table':
         specifier: ^8.21.3
         version: 8.21.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@types/dompurify':
+        specifier: ^3.0.5
+        version: 3.2.0
       astro:
         specifier: ^5.16.4
         version: 5.16.6(@types/node@25.0.3)(jiti@1.21.7)(rollup@4.54.0)(typescript@5.9.3)(yaml@2.8.2)
@@ -174,6 +177,9 @@ importers:
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
+      dompurify:
+        specifier: ^3.3.1
+        version: 3.3.1
       framer-motion:
         specifier: ^12.23.26
         version: 12.23.26(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
