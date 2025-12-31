@@ -1,17 +1,18 @@
 # Architecture Overview
 
-**Dernière mise à jour :** 17 décembre 2025
+**Dernière mise à jour :** 31 décembre 2025
 
 ## Contexte global
 
-ASAP est une plateforme de génération de sites web ultra-rapides basée sur une architecture **core + modules**. Le core expose une API unifiée de gestion des utilisateurs et des données, tandis que les modules implémentent toutes les fonctionnalités (générateurs, rendus, analytics, etc.).
+ASAP est une plateforme de génération de sites web ultra-rapides basée sur une architecture **core + extensions**. Le core expose une API unifiée de gestion des utilisateurs et des données, tandis que les extensions implémentent toutes les fonctionnalités (générateurs, rendus, analytics, etc.).
 
 Cette approche permet :
 
 - **Séparation des préoccupations** : le core gère l'authentification, l'isolation multi-tenant et la persistance
-- **Réutilisabilité** : les modules peuvent être développés indépendamment et consommer les données du core
+- **Réutilisabilité** : les extensions peuvent être développées indépendamment et consommer les données du core
 - **Extensibilité** : ajouter de nouvelles fonctionnalités sans modifier le core
 - **DRY/KISS** : packages partagés pour éviter la duplication de code
+- **Parité rendu** : même composants React pour preview (Studio) et production (Sites publics)
 
 ---
 
@@ -260,9 +261,10 @@ Package central contenant tous les types, constantes et utilitaires partagés en
 ```
 packages/shared/
 ├── src/
-│   ├── types.ts      # Types: Section, Website, Page, Theme, etc.
+│   ├── types.ts      # Types: Section, Website, Page, Theme, Preset, etc.
 │   ├── constants.ts  # SECTION_TYPES, SECTION_LAYOUTS, ASAP_DOMAIN
 │   ├── utils.ts      # slugify, validateSlug, hexToRgb, buildThemeStyles
+│   ├── presets.ts    # Définitions des presets (portfolio, saas-landing, etc.)
 │   └── index.ts      # Re-exports
 ├── package.json
 └── tsconfig.json
@@ -272,23 +274,44 @@ packages/shared/
 
 ### @asap/renderers
 
-Package contenant les 14 renderers de sections React, utilisés à la fois par le preview dashboard et les sites publics.
+Package central contenant tous les composants de rendu, utilisés par le preview dashboard et les sites publics.
 
 ```
 packages/renderers/
 ├── src/
-│   ├── renderers.tsx # HeroRenderer, AboutRenderer, etc.
-│   ├── types.ts      # Re-export depuis @asap/shared
-│   ├── utils.ts      # Re-export depuis @asap/shared
-│   └── index.ts      # Re-exports
+│   ├── components/
+│   │   ├── saas/           # Composants landing SaaS
+│   │   │   ├── Navigation.tsx
+│   │   │   ├── Hero.tsx
+│   │   │   ├── Features.tsx
+│   │   │   ├── HowItWorks.tsx
+│   │   │   ├── Pricing.tsx
+│   │   │   ├── Testimonials.tsx
+│   │   │   ├── CTA.tsx
+│   │   │   └── Footer.tsx
+│   │   └── ui/             # Composants UI de base
+│   │       ├── button.tsx
+│   │       ├── icons.tsx
+│   │       └── index.ts
+│   ├── renderers/
+│   │   ├── index.tsx       # Registry principal
+│   │   ├── landing.tsx     # LandingSectionRenderer (SaaS)
+│   │   └── standard.tsx    # HeroRenderer, AboutRenderer, etc.
+│   ├── types.ts            # Re-export depuis @asap/shared
+│   ├── utils.ts            # Utilitaires rendu
+│   └── index.ts            # Re-exports
 ├── package.json
 └── tsconfig.json
 ```
 
-**Principe KISS :** Un seul renderer par type de section, réutilisé partout.
+**Architecture Single Source of Truth :** Un seul package pour tous les composants de rendu.
+- Prévisualisation identique au rendu final
+- Partage de styles et logique entre dashboard et sites publics
+- Support multi-catégories (portfolio, SaaS landing, etc.)
 
 ### Types de Sections Supportés
 
+#### Portfolio / Freelance
 | Type | Description | Layouts |
 |------|-------------|---------|
 | `hero` | Section d'accueil principale | full |
@@ -306,6 +329,73 @@ packages/renderers/
 | `blog` | Articles de blog | list, grid |
 | `custom` | Section personnalisée | full, split, grid, cards, list |
 
+#### Landing SaaS (nouveau)
+| Type | Description |
+|------|-------------|
+| `navigation` | Header sticky avec logo, nav, auth buttons |
+| `hero` | Hero avec headline, CTAs, social proof |
+| `features` | Grille de fonctionnalités avec icônes |
+| `how-it-works` | Process step-by-step |
+| `pricing` | Comparaison des plans |
+| `testimonials` | Témoignages clients |
+| `cta` | Call-to-action section |
+| `footer` | Footer avec liens et réseaux sociaux |
+
+---
+
+## Infrastructure Docker
+
+### Configuration Multi-environnement
+
+```
+infra/
+├── docker-compose.yml          # Services de base (postgres, redis, migrations)
+├── docker-compose.dev.yml      # Overrides dev (hot reload, volumes)
+├── docker-compose.prod.yml     # Production (healthchecks, limits, networking)
+├── .env.prod.example           # Template variables production
+├── Dockerfile.api              # Build API Rust
+├── Dockerfile.worker           # Build Worker Rust
+├── Dockerfile.web              # Build Dashboard Astro (pnpm workspaces)
+├── Dockerfile.sites            # Build Sites Astro (pnpm workspaces)
+└── migrations/                 # Migrations SQL
+```
+
+### Services Production
+
+| Service | Image | Port | Description |
+|---------|-------|------|-------------|
+| `postgres` | postgres:15-alpine | - | Base de données (réseau interne uniquement) |
+| `redis` | redis:7-alpine | - | Cache & Pub/Sub |
+| `migrations` | postgres:15-alpine | - | Exécution migrations au démarrage |
+| `api` | asap-api:latest | 3000 | API Rust/Axum |
+| `worker` | asap-worker:latest | - | Worker Rust/Tokio |
+| `web` | asap-web:latest | 4321 | Dashboard Astro |
+| `sites` | asap-sites:latest | 4322 | Sites publics Astro |
+
+### Caractéristiques Production
+
+- **Healthchecks** : Tous les services avec health endpoints
+- **Resource limits** : Memory limits par conteneur (256M-512M)
+- **Network isolation** : Réseau dédié `asap-prod-network`
+- **Persistent volumes** : `postgres_data_prod`, `redis_data_prod`
+- **Non-root users** : Containers web/sites s'exécutent en user `astro`
+- **Multi-stage builds** : Images optimisées (base → deps → builder → runtime)
+
+### Commandes Makefile
+
+```bash
+# Développement
+make dev              # Start full dev environment
+make dev-build        # Rebuild and start
+make logs             # View logs
+
+# Production
+make build-prod-full  # Build all production images (no cache)
+make prod-up          # Start production
+make prod-down        # Stop production
+make prod-logs        # View production logs
+```
+
 ---
 
 ## Applications Frontend
@@ -318,22 +408,22 @@ Application Astro + React pour le dashboard utilisateur.
 apps/web/
 ├── src/
 │   ├── components/
-│   │   ├── sections/       # SectionCard, AddSectionModal, SectionEditor
-│   │   ├── preview/        # PreviewPage, property-editors
-│   │   ├── ui/             # Button, Card, Badge, Modal, etc.
-│   │   └── *.tsx           # CreateWebsiteModal, SiteSwitcher, PagesList
-│   ├── hooks/
-│   │   ├── usePresets.ts   # Gestion presets
-│   │   ├── useSections.ts  # CRUD sections
-│   │   ├── usePages.ts     # CRUD pages
-│   │   └── *.ts            # Autres hooks
-│   ├── contexts/
-│   │   └── WebsiteContext.tsx  # État website sélectionné
+│   │   ├── features/       # Modules: dashboard, cloud, analytics, notifications
+│   │   ├── studio/         # Éditeur visuel (studio-page/)
+│   │   ├── onboarding/     # Flow onboarding (presets/, ui/)
+│   │   ├── shared/         # command-palette, confirm-dialog, stat-card
+│   │   ├── ui/             # shadcn/ui components
+│   │   └── layouts/        # AppShell, Sidebar
+│   ├── i18n/
+│   │   ├── locales/        # en/, fr/
+│   │   └── hooks/          # useLanguage
 │   ├── lib/
-│   │   ├── api/            # Clients API (auth, websites, sections, etc.)
-│   │   └── constants/      # Constantes UI (SECTION_ICONS)
+│   │   ├── api/            # Clients API
+│   │   └── store/          # State management
 │   └── pages/
-│       └── app/            # Routes dashboard
+│       ├── index.astro     # Landing page
+│       ├── login.astro     # Login
+│       └── app/[...path].astro  # SPA dashboard
 ├── package.json
 └── astro.config.mjs
 ```
@@ -346,15 +436,21 @@ Application Astro dédiée au rendu des sites publiés.
 apps/sites/
 ├── src/
 │   ├── components/
-│   │   └── SEO.astro       # Meta tags, Open Graph, JSON-LD
+│   │   ├── rendering/      # SectionRenderer, SectionsWrapper
+│   │   └── site/           # PageNavigation
 │   ├── layouts/
 │   │   └── BaseLayout.astro
 │   ├── lib/
-│   │   └── api.ts          # Client API public
+│   │   ├── api.ts          # Client API public
+│   │   ├── site-data.ts    # Data fetching
+│   │   └── rendering/      # Registry, normalize
 │   ├── pages/
-│   │   └── [slug].astro    # Route dynamique
+│   │   ├── index.astro     # Root redirect
+│   │   ├── 404.astro       # 404 page
+│   │   ├── [slug].astro    # Site homepage
+│   │   └── [slug]/[page].astro  # Site subpages
 │   └── styles/
-│       └── global.css      # Styles TailwindCSS
+│       └── global.css
 ├── package.json
 └── astro.config.mjs
 ```
@@ -362,6 +458,7 @@ apps/sites/
 **Séparation des responsabilités :**
 - `apps/web` = Interface d'administration (authentifiée)
 - `apps/sites` = Rendu public (non authentifié)
+- `@asap/renderers` = Single source of truth pour le rendu
 
 ---
 

@@ -1,5 +1,72 @@
 # Changelog - ASAP v2
 
+## 31 Décembre 2025 - Production Infrastructure & pnpm Monorepo
+
+### 🏗️ Infrastructure Production
+
+#### Docker Production Setup
+- ✅ **Nouveau `docker-compose.prod.yml`** - Configuration optimisée pour la production
+  - Healthchecks pour tous les services
+  - Resource limits (memory) par conteneur
+  - Réseau dédié `asap-prod-network`
+  - Volumes persistants séparés
+  - Migrations automatiques au démarrage
+
+- ✅ **Dockerfiles optimisés**
+  - `Dockerfile.web` - Multi-stage build avec pnpm workspaces
+  - `Dockerfile.sites` - Nouvelle app sites publics
+  - `Dockerfile.api` & `Dockerfile.worker` - Passage à Rust stable 1.87
+
+#### pnpm Monorepo
+- ✅ **Migration vers pnpm 9.15** comme gestionnaire de packages
+  - Root `package.json` avec scripts workspace
+  - `pnpm-workspace.yaml` pour `apps/*` et `packages/*`
+  - Build parallèle avec `pnpm -r build`
+  - Node.js 20+ requis
+
+#### Makefile Étendu
+- ✅ **Nouvelles commandes production**
+  - `make prod` - Build + start production
+  - `make prod-up` / `make prod-down` - Start/stop production
+  - `make prod-logs` / `make prod-ps` - Logs et status
+  - `make build-prod-full` - Build complet sans cache
+
+### 🔄 Refactoring Worker
+- ✅ Renommage `ModuleExecutor` → `ExtensionExecutor`
+- ✅ Migration `WebPushClient` → `IsahcWebPushClient`
+- ✅ Fix type annotations Redis `query_async`
+
+### 📦 Dépendances Web
+- ✅ Ajout `@types/react` et `@types/react-dom` v19
+- ✅ Ajout `@radix-ui/react-visually-hidden`
+
+---
+
+## 29 Décembre 2025 - SaaS Landing Page Preset & Rendering Parity
+
+### 🎨 Nouveau Preset "Landing SaaS"
+- ✅ **Schema complet** dans `@asap/shared/landing-saas-schema.ts`
+  - Navigation, Hero, Features, How-it-works
+  - Pricing, Testimonials, CTA, Footer
+- ✅ **Composants modulaires** dans `@asap/renderers/components/saas/`
+  - Architecture UI réutilisable (Button, Card, Badge, Container)
+  - Icons centralisés
+
+### 🔧 Parité Rendu Studio/Sites
+- ✅ **`@asap/renderers` comme single source of truth**
+  - Studio (apps/web) et Sites publics (apps/sites) partagent les mêmes composants
+  - Garantie 100% de parité visuelle
+- ✅ **Suppression des adaptateurs legacy**
+  - Plus de couche d'adaptation entre preview et production
+
+### 🌐 Internationalisation (i18n)
+- ✅ **Setup i18next complet**
+  - Support FR/EN avec détection automatique
+  - Namespaces: common, dashboard, editor, settings, onboarding, notifications, errors, auth
+  - Hook `useLanguage` pour changement de langue
+
+---
+
 ## 17 Décembre 2025 - DRY/KISS Refactoring
 
 ### 🏗️ Consolidation des Types et Utilitaires

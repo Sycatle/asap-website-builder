@@ -1,8 +1,10 @@
 # Structure du Monorepo ASAP
 
-Ce document décrit la structure initiale du monorepo ASAP basée sur une architecture **core + modules**.
+Ce document décrit la structure du monorepo ASAP basée sur une architecture **core + extensions**.
 
-**Public visé :** Développeur senior qui doit poser les fondations clean du projet.
+**Dernière mise à jour :** 31 décembre 2025
+
+**Public visé :** Développeur senior qui doit comprendre l'architecture du projet.
 
 ## Objectifs
 
@@ -10,6 +12,7 @@ Ce document décrit la structure initiale du monorepo ASAP basée sur une archit
 - **Extensions réutilisables** : toutes les fonctionnalités viennent d'extensions
 - **Données centralisées** : les données utilisateur vivent dans le core, les extensions les consomment
 - **Extensibilité** : ajouter de nouvelles fonctionnalités sans modifier le core
+- **Parité rendu** : même code pour preview (Studio) et production (Sites publics)
 
 ---
 
@@ -17,19 +20,26 @@ Ce document décrit la structure initiale du monorepo ASAP basée sur une archit
 
 ```
 asap/
-├── core/           # Core - structure & données utilisateur (open-source)
+├── core/           # Core backend Rust (API, domain, shared)
 ├── extensions/     # Extensions backend Rust
-├── packages/       # Packages partagés TypeScript
+├── packages/       # Packages partagés TypeScript (@asap/shared, @asap/renderers)
 ├── apps/           # Applications exécutables
-├── infra/          # Infrastructure
-├── data/           # Runtime data
-├── scripts/        # Utilitaires
-└── docs/           # Documentation
+│   ├── api/       # Serveur API Rust
+│   ├── worker/    # Worker Rust (events)
+│   ├── web/       # Dashboard Astro+React
+│   └── sites/     # Sites publics Astro+React
+├── infra/          # Docker, migrations, configs
+├── data/           # Runtime data (logs, sites générés)
+├── scripts/        # Utilitaires shell
+├── docs/           # Documentation
+├── package.json    # Root pnpm workspace
+├── pnpm-workspace.yaml
+└── Makefile        # Commandes de développement
 ```
 
 ---
 
-## 2. `core/` – Le cœur (Open-source)
+## 2. `core/` – Le cœur Backend (Rust)
 
 Le core expose une API centralisée pour :
 
@@ -230,15 +240,24 @@ packages/
 │       ├── types.ts        # Section, Website, Page, Theme, etc.
 │       ├── constants.ts    # SECTION_TYPES, SECTION_LAYOUTS
 │       ├── utils.ts        # slugify, validateSlug, etc.
+│       ├── landing-saas-schema.ts  # Schema preset Landing SaaS
+│       ├── site-rendering.ts       # Rendering utilities
 │       └── index.ts
 │
-└── renderers/              # 14 renderers de sections React
+└── renderers/              # Renderers de sections React (Single Source of Truth)
     ├── package.json
     └── src/
-        ├── renderers.tsx   # HeroRenderer, AboutRenderer, etc.
-        ├── types.ts        # Re-export depuis @asap/shared
-        ├── utils.ts        # Re-export depuis @asap/shared
-        └── index.ts
+        ├── index.ts            # Main exports
+        ├── types.ts            # Re-export depuis @asap/shared
+        ├── utils.ts            # getData, cn, etc.
+        ├── renderers.tsx       # Main registry et SectionRenderer
+        ├── components/
+        │   ├── index.ts        # Component exports
+        │   ├── ui.tsx          # Shared UI (Button, Card, Badge)
+        │   ├── icons.tsx       # Centralized icons
+        │   ├── ui/             # Primitives (avatar, badge, button, card, etc.)
+        │   └── saas/           # SaaS landing sections (hero, features, pricing, etc.)
+        └── freelance-renderer.tsx  # Portfolio renderer (deprecated)
 ```
 
 ---
@@ -264,51 +283,52 @@ apps/
 │       ├── config.rs
 │       ├── db.rs
 │       ├── event_processor.rs      # Écoute core events
-│       ├── extension_executor.rs   # Exécute les extensions
+│       ├── extension_executor.rs   # Exécute les extensions (anciennement module_executor)
 │       ├── parallel_processor.rs   # Traitement parallèle
 │       ├── registry.rs             # Extension registry
 │       ├── file_cleanup.rs         # Nettoyage fichiers
 │       ├── notification_publisher.rs  # Notifications
-│       ├── web_push.rs             # Push notifications
+│       ├── web_push.rs             # Push notifications (IsahcWebPushClient)
 │       └── payment_reconciliation.rs  # Stripe sync
 │
-├── web/              # Dashboard Frontend (Astro + React)
+├── web/              # Dashboard Frontend (Astro + React + shadcn)
 │   └── src/
 │       ├── pages/
 │       │   ├── index.astro       # Landing page
-│       │   └── app/
-│       │       └── dashboard.astro
+│       │   ├── login.astro       # Login page
+│       │   └── app/[...path].astro  # SPA dashboard
 │       ├── components/
-│       │   ├── sections/        # Section editors
-│       │   ├── preview/         # Preview system
-│       │   ├── studio/          # Visual editor
+│       │   ├── features/        # Feature modules (dashboard, cloud, analytics, etc.)
+│       │   ├── studio/          # Visual editor (studio-page/)
+│       │   ├── onboarding/      # Onboarding flow (presets, ui/)
+│       │   ├── shared/          # Shared components (command-palette, confirm-dialog, etc.)
 │       │   ├── ui/              # UI components (shadcn)
+│       │   ├── layouts/         # App shell, sidebar
 │       │   └── landing/         # Landing page components
-│       ├── hooks/
-│       │   ├── useSections.ts
-│       │   ├── usePages.ts
-│       │   ├── usePresets.ts
-│       │   ├── useWebSocket.ts
-│       │   ├── useNotifications.ts
-│       │   └── usePWA.ts
-│       ├── contexts/
-│       │   └── WebsiteContext.tsx
+│       ├── i18n/                # Internationalization
+│       │   ├── locales/         # en/, fr/
+│       │   └── hooks/           # useLanguage
 │       └── lib/
 │           ├── api/              # API clients
 │           ├── store/            # State management
-│           ├── websocket/        # WebSocket client
-│           └── constants/        # UI constants
+│           └── websocket/        # WebSocket client
 │
-└── sites/            # Sites publics (Astro)
+└── sites/            # Sites publics (Astro + React)
     └── src/
         ├── pages/
-        │   └── [slug].astro      # Route dynamique
+        │   ├── index.astro           # Root redirect
+        │   ├── 404.astro             # 404 page
+        │   ├── [slug].astro          # Site homepage
+        │   └── [slug]/[page].astro   # Site subpages
         ├── components/
-        │   └── SEO.astro
+        │   ├── rendering/            # SectionRenderer, SectionsWrapper
+        │   └── site/                 # PageNavigation
         ├── layouts/
         │   └── BaseLayout.astro
         └── lib/
-            └── api.ts            # Client API public
+            ├── api.ts               # API client
+            ├── site-data.ts         # Data fetching
+            └── rendering/           # Registry, normalize
 ```
 
 ---
@@ -317,7 +337,9 @@ apps/
 
 ```
 infra/
-├── docker-compose.yml
+├── docker-compose.yml         # Base services
+├── docker-compose.dev.yml     # Dev overrides (hot reload)
+├── docker-compose.prod.yml    # Production config (healthchecks, limits)
 ├── docker-compose.dev.yml
 ├── Dockerfile.api
 ├── Dockerfile.api.dev

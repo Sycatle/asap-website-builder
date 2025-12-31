@@ -2,82 +2,136 @@
 
 This guide covers the development setup and workflow for ASAP v2.
 
+**Dernière mise à jour :** 31 décembre 2025
+
 ## Prerequisites
 
-- **Rust** 1.70+
-- **Docker** & Docker Compose
-- **PostgreSQL** 15+ (via Docker or local)
-- **Node.js** 18+ (for future frontend)
-- **Make** (optional, for command shortcuts)
+- **Rust** 1.87+ (stable)
+- **Docker** & Docker Compose v2+
+- **PostgreSQL** 15+ (via Docker)
+- **Node.js** 20+
+- **pnpm** 9.15+
+- **Make** (for command shortcuts)
 
-## Quick Start
+## Quick Start (Docker-first)
 
-### 1. Initialize Database (One-time Setup)
-
-```bash
-# Start PostgreSQL and apply migrations
-make setup-db
-
-# Or manually:
-bash scripts/setup-db.sh
-
-# Verify connection
-docker exec asap-postgres psql -U asap -d asap -c "SELECT 1;"
-```
-
-### 2. Set Environment Variables
+Le développement utilise Docker par défaut. Une seule commande suffit :
 
 ```bash
-# Load database configuration
-export DATABASE_URL="postgresql://asap:asap@localhost:5432/asap"
+# Démarrer tout l'environnement de développement
+make dev
 
-# Or add to .bashrc/.zshrc for persistence
-echo 'export DATABASE_URL="postgresql://asap:asap@localhost:5432/asap"' >> ~/.bashrc
+# URLs disponibles :
+# - API:      http://localhost:3000
+# - Web:      http://localhost:4321
+# - Sites:    http://localhost:4322
+# - Postgres: localhost:5432
+# - Redis:    localhost:6379
 ```
 
-### 3. Run Tests
+### Commandes Makefile principales
 
 ```bash
-# All unit tests
-make test
+# Development
+make dev             # Start full dev environment (hot reload)
+make dev-build       # Rebuild and start dev environment
+make down            # Stop all services
+make logs            # View logs from all services
 
-# Test by component
-make test-domain      # Core domain models (31 tests)
-make test-extensions  # All extensions (36 tests)
+# Database
+make db-shell        # Open psql shell
+make migrate         # Run migrations
+
+# Production
+make prod            # Build and start production
+make build-prod-full # Full production build (no cache)
+make prod-logs       # View production logs
+
+# Testing
+make test            # Run all tests
+make test-domain     # Test core domain
 ```
-
-### 4. Development Workflow
-
-Start the services in separate terminals:
-
-```bash
-# Terminal 1 - API
-export DATABASE_URL="postgresql://asap:asap@localhost:5432/asap"
-cargo run -p asap-api
-
-# Terminal 2 - Worker
-export DATABASE_URL="postgresql://asap:asap@localhost:5432/asap"
-cargo run -p asap-worker
-```
-
-The API will be available at `http://localhost:3000`.
 
 ## Project Structure
 
 ```
 asap-v2/
-├── core/                   # Core domain and API
+├── core/                   # Core domain and API (Rust)
 │   ├── domain/            # Domain models (Account, Website, Event, etc.)
 │   ├── api/               # HTTP routes and handlers
-│   └── notifications/     # Core notifications extension
-├── extensions/            # Feature extensions
-│   ├── github-sync/       # Github Sync - Import GitHub repos
+│   ├── shared/            # Shared utilities (auth, config, pubsub)
+│   ├── notifications/     # Core notifications
+│   └── payments/          # Stripe integration
+├── extensions/            # Feature extensions (Rust)
+│   ├── github-sync/       # Import GitHub repos
 │   └── analytics/         # Usage tracking
 ├── apps/                  # Executable applications
-│   ├── api/              # Core API server
-│   ├── worker/           # Event processor
-│   └── web/              # Frontend (Astro + React)
+│   ├── api/              # Core API server (Rust/Axum)
+│   ├── worker/           # Event processor (Rust/Tokio)
+│   ├── web/              # Dashboard (Astro + React)
+│   └── sites/            # Public sites (Astro + React)
+├── packages/             # Shared TypeScript packages
+│   ├── shared/           # Types, constants, utils
+│   └── renderers/        # Section renderers (React)
 ├── infra/                # Infrastructure
+│   ├── docker-compose.yml
+│   ├── docker-compose.dev.yml
+│   ├── docker-compose.prod.yml
+│   ├── Dockerfile.*
+│   └── migrations/
+├── package.json          # Root pnpm workspace
+├── pnpm-workspace.yaml   # Workspace config
+├── Makefile              # Development commands
+└── docs/                 # Documentation
+```
+
+## Frontend Development
+
+### pnpm Workspace
+
+Le projet utilise pnpm workspaces pour gérer les dépendances :
+
+```bash
+# Install all dependencies
+pnpm install
+
+# Build all packages
+pnpm build
+
+# Build specific app
+pnpm --filter @asap/web build
+pnpm --filter @asap/sites build
+
+# Run dev mode (via Docker)
+make dev
+```
+
+### Package Structure
+
+| Package | Description |
+|---------|-------------|
+| `@asap/shared` | Types, constants, utilities partagés |
+| `@asap/renderers` | Composants React de rendu de sections |
+| `@asap/web` | Dashboard application (Astro + React) |
+| `@asap/sites` | Public sites application (Astro + React) |
+
+## Testing
+
+### Unit Tests
+
+```bash
+# Run all unit tests
+make test
+
+# Test core domain
+make test-domain
+
+# Test extensions
+make test-extensions
+
+# Run specific test
+cargo test test_user_creation -- --exact
+```
 │   ├── migrations/       # Database migrations
 │   ├── docker-compose.yml
 │   └── env.example/      # Environment templates
