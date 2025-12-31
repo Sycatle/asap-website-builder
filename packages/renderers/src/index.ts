@@ -29,7 +29,7 @@ export * from './components';
 // Main renderers and registry
 export * from './renderers';
 
-// V1 MVP: Freelance Portfolio Renderer (full page)
+// Freelance Portfolio Renderer (full page)
 export * from './freelance-renderer';
 
 // SaaS Section Renderers (modular, uses CSS variables)

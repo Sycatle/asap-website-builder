@@ -86,15 +86,3 @@ export function LandingCTAPreview({ element }: LandingPreviewProps) {
 export function LandingFooterPreview({ element }: LandingPreviewProps) {
   return <FooterSaaSRenderer section={toSection(element)} />;
 }
-
-// Re-export with Landing prefix for backward compatibility
-export {
-  LandingNavigationPreview as NavigationPreview,
-  LandingHeroPreview as HeroPreview,
-  LandingFeaturesPreview as FeaturesPreview,
-  LandingHowItWorksPreview as HowItWorksPreview,
-  LandingPricingPreview as PricingPreview,
-  LandingTestimonialsPreview as TestimonialsPreview,
-  LandingCTAPreview as CTAPreview,
-  LandingFooterPreview as FooterPreview,
-};
