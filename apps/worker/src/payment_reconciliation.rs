@@ -32,17 +32,17 @@ impl PaymentReconciliation {
 
         let mut stats = ReconciliationStats::default();
 
-        // Fetch all accounts with Stripe customer IDs
-        let accounts = sqlx::query_scalar::<_, Uuid>(
-            "SELECT id FROM accounts WHERE stripe_customer_id IS NOT NULL"
+        // Fetch all accounts with Stripe customer IDs in a single query (avoids N+1)
+        let accounts = sqlx::query_as::<_, (Uuid, String)>(
+            "SELECT id, stripe_customer_id FROM accounts WHERE stripe_customer_id IS NOT NULL"
         )
         .fetch_all(&self.pool)
         .await?;
 
         stats.total_accounts = accounts.len();
 
-        for account_id in accounts {
-            match self.reconcile_account(account_id).await {
+        for (account_id, customer_id) in accounts {
+            match self.reconcile_account_with_customer(account_id, &customer_id).await {
                 Ok(_) => {
                     stats.successful += 1;
                 }
@@ -63,7 +63,19 @@ impl PaymentReconciliation {
         Ok(stats)
     }
 
-    /// Reconcile a specific account's subscription status
+    /// Reconcile a specific account with known customer ID (no extra DB query)
+    async fn reconcile_account_with_customer(&self, account_id: Uuid, customer_id: &str) -> anyhow::Result<()> {
+        tracing::debug!("Reconciling account {} with customer {}", account_id, customer_id);
+
+        // Fetch active subscriptions from Stripe
+        // Note: In a real implementation, we'd need to call Stripe API to list subscriptions
+        // For now, we'll skip this as it requires more complex API interaction
+        tracing::debug!("Would fetch subscriptions for customer {}", customer_id);
+
+        Ok(())
+    }
+
+    /// Reconcile a specific account's subscription status (legacy, fetches customer_id)
     pub async fn reconcile_account(&self, account_id: Uuid) -> anyhow::Result<()> {
         tracing::debug!("Reconciling account: {}", account_id);
 
@@ -80,12 +92,7 @@ impl PaymentReconciliation {
             return Ok(());
         };
 
-        // Fetch active subscriptions from Stripe
-        // Note: In a real implementation, we'd need to call Stripe API to list subscriptions
-        // For now, we'll skip this as it requires more complex API interaction
-        tracing::debug!("Would fetch subscriptions for customer {}", customer_id);
-
-        Ok(())
+        self.reconcile_account_with_customer(account_id, &customer_id).await
     }
 
     /// Check if an account needs reconciliation (dubious status)

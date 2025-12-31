@@ -108,11 +108,13 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // Create Redis cache (optional - will log warning if not available)
+    // TODO: Integrate cache into public website routes for 10-30x latency improvement
+    // See apps/api/src/website_cache.rs for ready-to-use WebsiteCacheService
     let _cache = match std::env::var("REDIS_URL") {
         Ok(redis_url) => {
             match db::create_redis_cache(&redis_url).await {
                 Ok(cache_service) => {
-                    tracing::info!("Redis cache initialized");
+                    tracing::info!("Redis cache initialized successfully");
                     Some(cache_service)
                 }
                 Err(e) => {
