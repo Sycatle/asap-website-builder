@@ -8,10 +8,10 @@ mod redis_pubsub;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
-use axum::{Router, routing::get, Json, extract::State, middleware::Next, response::Response, body::Body, http::Request};
+use axum::{Router, routing::get, Json, extract::State, middleware::Next, response::Response, body::Body, http::{Request, Method}};
 use serde_json::json;
 use sqlx::PgPool;
-use tower_http::cors::{CorsLayer, Any};
+use tower_http::cors::{CorsLayer, AllowOrigin};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -174,7 +174,14 @@ async fn main() -> anyhow::Result<()> {
     
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::list(allowed_origins))
-        .allow_methods(Any)
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::PATCH,
+            Method::DELETE,
+            Method::OPTIONS,
+        ])
         .allow_headers([
             AUTHORIZATION,
             CONTENT_TYPE,
@@ -184,7 +191,9 @@ async fn main() -> anyhow::Result<()> {
             HeaderName::from_static("x-csrf-token"),
         ])
         .allow_credentials(true)
-        .expose_headers(Any);
+        .expose_headers([
+            HeaderName::from_static("x-request-id"),
+        ]);
 
     let app = Router::new()
         .merge(health_router)
