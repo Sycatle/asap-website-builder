@@ -166,7 +166,7 @@ export function HeroSaaSRenderer({ section }: SectionRendererProps) {
       )}
 
       <div className="container mx-auto px-4 py-20 md:py-32">
-        <div className="mx-auto max-w-4xl text-center">
+        <div className="mx-auto max-w-3xl text-center">
           {/* Badge */}
           {showBadge && badgeText && (
             <Badge variant="secondary" className="mb-6 px-4 py-2">
