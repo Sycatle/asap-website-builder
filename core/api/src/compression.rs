@@ -17,39 +17,44 @@ pub const MIN_COMPRESSION_SIZE: usize = 5 * 1024;
 /// Maximum compression overhead ratio (150% = no benefit if file stays larger)
 pub const MAX_COMPRESSION_OVERHEAD_RATIO: f64 = 1.50;
 
-/// List of MIME types that should NOT be compressed (already compressed)
-pub fn get_incompressible_types() -> Vec<&'static str> {
-    vec![
-        // Images
-        "image/jpeg",
-        "image/png",
-        "image/gif",
-        "image/webp",
-        "image/avif",
-        "image/x-icon",
-        "image/svg+xml",
-        // Archives
-        "application/zip",
-        "application/x-rar",
-        "application/x-7z-compressed",
-        "application/gzip",
-        "application/x-tar",
-        "application/x-bzip2",
-        "application/x-xz",
-        // Audio/Video
-        "audio/mpeg",
-        "audio/aac",
-        "audio/ogg",
-        "audio/wav",
-        "video/mp4",
-        "video/mpeg",
-        "video/webm",
-        "video/ogg",
-        "video/quicktime",
-        "video/x-msvideo",
-        // Already compressed documents
-        "application/pdf",
-    ]
+/// Static list of MIME types that should NOT be compressed (already compressed)
+/// Using a static slice avoids Vec allocation on every call
+pub const INCOMPRESSIBLE_TYPES: &[&str] = &[
+    // Images
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "image/avif",
+    "image/x-icon",
+    "image/svg+xml",
+    // Archives
+    "application/zip",
+    "application/x-rar",
+    "application/x-7z-compressed",
+    "application/gzip",
+    "application/x-tar",
+    "application/x-bzip2",
+    "application/x-xz",
+    // Audio/Video
+    "audio/mpeg",
+    "audio/aac",
+    "audio/ogg",
+    "audio/wav",
+    "video/mp4",
+    "video/mpeg",
+    "video/webm",
+    "video/ogg",
+    "video/quicktime",
+    "video/x-msvideo",
+    // Already compressed documents
+    "application/pdf",
+];
+
+/// Check if a MIME type is incompressible (O(n) but static, no allocation)
+#[inline]
+pub fn is_incompressible(mime_type: &str) -> bool {
+    INCOMPRESSIBLE_TYPES.contains(&mime_type)
 }
 
 /// Streaming compressor for efficient memory usage

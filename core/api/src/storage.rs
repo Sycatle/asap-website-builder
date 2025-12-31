@@ -133,9 +133,8 @@ impl FileStorageService {
             return false;
         }
 
-        // Skip compression for already-compressed formats
-        let incompressible = crate::compression::get_incompressible_types();
-        if incompressible.iter().any(|t| mime_type == *t) {
+        // Skip compression for already-compressed formats (uses static slice, no allocation)
+        if crate::compression::is_incompressible(mime_type) {
             return false;
         }
 

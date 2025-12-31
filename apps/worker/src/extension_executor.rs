@@ -141,14 +141,17 @@ pub struct GitHubIntegrationExecutor {
     pool: PgPool,
     #[allow(dead_code)]
     core_api_url: String,
+    /// Reusable HTTP client for GitHub API (avoids TLS/connection overhead per request)
+    github_client: asap_github_sync::GitHubClient,
 }
 
 impl GitHubIntegrationExecutor {
-    pub fn new(pool: PgPool, core_api_url: String) -> Self {
-        Self {
+    pub fn new(pool: PgPool, core_api_url: String) -> Result<Self> {
+        Ok(Self {
             pool,
             core_api_url,
-        }
+            github_client: asap_github_sync::GitHubClient::new()?,
+        })
     }
 }
 
@@ -309,13 +312,13 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
         tracing::info!("Fetching GitHub repos for account: {} (account_id: {})", github_username, account_id);
 
         // Fetch repos from GitHub (using the github-sync extension)
-        let github_client = asap_github_sync::GitHubClient::new()?;
+        // Reuse the stored client to avoid TLS/connection overhead
         
         // Fetch user profile, organizations and repos in parallel
         let (user_result, orgs_result, repos) = tokio::join!(
-            github_client.fetch_user(&github_username),
-            github_client.fetch_orgs(&github_username),
-            github_client.fetch_repos(&github_username)
+            self.github_client.fetch_user(&github_username),
+            self.github_client.fetch_orgs(&github_username),
+            self.github_client.fetch_repos(&github_username)
         );
 
         let repos = repos?;

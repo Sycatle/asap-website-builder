@@ -71,7 +71,7 @@ pub fn register_all_modules(config: ModuleRegistryConfig) -> Result<ExtensionExe
         let github_executor = GitHubIntegrationExecutor::new(
             config.pool.clone(),
             config.core_api_url.clone(),
-        );
+        )?;
         
         log_module_registration(&github_executor);
         registry.register(Box::new(github_executor));

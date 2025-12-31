@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useWebsitesQuery } from '@/lib/query';
 import { PageHeader } from '@/components/shared/page-header';
 import { 
@@ -97,7 +97,6 @@ export default function ThemePage() {
   const [originalTheme, setOriginalTheme] = useState<ThemeSettings>(defaultTheme);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
 
   // Load theme from website data
   useEffect(() => {
@@ -121,9 +120,12 @@ export default function ThemePage() {
     loadTheme();
   }, [currentWebsite?.id]);
 
-  // Check for changes
-  useEffect(() => {
-    setHasChanges(JSON.stringify(theme) !== JSON.stringify(originalTheme));
+  // Check for changes using useMemo to avoid double JSON.stringify + setState overhead
+  const hasChanges = useMemo(() => {
+    // Fast path: referential equality
+    if (theme === originalTheme) return false;
+    // Slow path: deep comparison only when references differ
+    return JSON.stringify(theme) !== JSON.stringify(originalTheme);
   }, [theme, originalTheme]);
 
   // Update theme value
