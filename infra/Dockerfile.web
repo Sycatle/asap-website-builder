@@ -1,35 +1,83 @@
-FROM node:20-alpine as builder
+# ============================================================================
+# Dockerfile for ASAP Web (Dashboard Application)
+# Multi-stage build for optimized production image
+# ============================================================================
+
+FROM node:20-alpine AS base
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# ============================================================================
+# Dependencies stage - Install all workspace dependencies
+# ============================================================================
+FROM base AS deps
 
 WORKDIR /app
 
-# Copy package files
-COPY apps/web/package.json apps/web/package-lock.json* ./
+# Copy workspace root files
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+
+# Copy package.json files for all workspace packages
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/renderers/package.json ./packages/renderers/
+COPY apps/web/package.json ./apps/web/
 
 # Install dependencies
-RUN npm ci
+RUN pnpm install --frozen-lockfile
 
-# Copy source code
-COPY apps/web/ ./
-
-# Build the application
-RUN npm run build
-
-# Runtime stage
-FROM node:20-alpine
+# ============================================================================
+# Builder stage - Build the application
+# ============================================================================
+FROM base AS builder
 
 WORKDIR /app
 
-# Copy built assets
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package.json ./
+# Copy everything from deps (simpler approach for pnpm workspaces)
+COPY --from=deps /app ./
 
-# Install only production dependencies
-RUN npm ci --omit=dev 2>/dev/null || npm install --omit=dev || true
+# Copy source code
+COPY packages/shared ./packages/shared
+COPY packages/renderers ./packages/renderers
+COPY apps/web ./apps/web
+
+# Build the web application (skip type checking for faster builds)
+WORKDIR /app/apps/web
+RUN pnpm astro build
+
+# ============================================================================
+# Runtime stage - Minimal production image
+# ============================================================================
+FROM base AS runtime
+
+WORKDIR /app
+
+# Create non-root user for security
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 astro
+
+# Copy package files for production dependencies
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/renderers/package.json ./packages/renderers/
+COPY apps/web/package.json ./apps/web/
+
+# Install all dependencies (React is needed at runtime for SSR)
+RUN pnpm install --frozen-lockfile
+
+# Copy built application to the web app directory (for proper module resolution)
+COPY --from=builder --chown=astro:nodejs /app/apps/web/dist ./apps/web/dist
 
 # Environment variables
 ENV HOST=0.0.0.0
 ENV PORT=4321
 ENV NODE_ENV=production
+
+# Switch to non-root user
+USER astro
+
+# Working directory must be apps/web for proper node_modules resolution
+WORKDIR /app/apps/web
 
 EXPOSE 4321
 
