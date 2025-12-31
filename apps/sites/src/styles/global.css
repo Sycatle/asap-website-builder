@@ -205,6 +205,71 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Optimize rendering for better Core Web Vitals */
+  .content-visibility-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 500px;
+  }
+
+  /* Will-change hints for animations */
+  .will-change-transform {
+    will-change: transform;
+  }
+
+  /* Reduce motion for accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Font rendering optimization */
+  .font-smooth {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Image loading optimization */
+  .img-lazy {
+    opacity: 0;
+    transition: opacity 0.3s ease-in;
+  }
+  .img-lazy.loaded {
+    opacity: 1;
+  }
+
+  /* Skeleton loading for better perceived performance */
+  .skeleton {
+    @apply animate-pulse bg-muted rounded;
+  }
+}
+
+/* Critical above-the-fold styles (inlined for FCP) */
+@layer base {
+  /* Prevent layout shift from images */
+  img {
+    content-visibility: auto;
+  }
+
+  /* Smooth scrolling with reduced motion respect */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Optimize large content blocks */
+  section {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 500px;
+  }
 }
 
 /* Print styles */

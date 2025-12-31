@@ -1,6 +1,7 @@
 ---
 /**
  * SEO Head component - Implements comprehensive SEO meta tags
+ * Optimized for Core Web Vitals and search engine ranking
  */
 
 export interface SEOProps {
@@ -19,6 +20,12 @@ export interface SEOProps {
   canonicalUrl?: string;
   publishedTime?: string;
   modifiedTime?: string;
+  // Enhanced SEO props
+  organizationName?: string;
+  organizationLogo?: string;
+  socialLinks?: string[];
+  breadcrumbs?: { name: string; url: string }[];
+  faqItems?: { question: string; answer: string }[];
 }
 
 const {
@@ -37,13 +44,162 @@ const {
   canonicalUrl,
   publishedTime,
   modifiedTime,
+  organizationName,
+  organizationLogo,
+  socialLinks = [],
+  breadcrumbs = [],
+  faqItems = [],
 } = Astro.props as SEOProps;
 
 const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`;
 const robotsContent = [
   noIndex ? 'noindex' : 'index',
   noFollow ? 'nofollow' : 'follow',
+  'max-image-preview:large',
+  'max-snippet:-1',
+  'max-video-preview:-1',
 ].join(', ');
+
+// Build comprehensive JSON-LD structured data
+const baseSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [] as object[],
+};
+
+// Website schema
+baseSchema['@graph'].push({
+  '@type': 'WebSite',
+  '@id': `${url || canonicalUrl}#website`,
+  name: siteName,
+  url: url || canonicalUrl,
+  description: description,
+  inLanguage: locale.replace('_', '-'),
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: `${url || canonicalUrl}?s={search_term_string}`,
+    },
+    'query-input': 'required name=search_term_string',
+  },
+});
+
+// WebPage schema
+const webPageSchema: Record<string, unknown> = {
+  '@type': 'WebPage',
+  '@id': `${url || canonicalUrl}#webpage`,
+  url: url || canonicalUrl,
+  name: fullTitle,
+  description: description,
+  isPartOf: { '@id': `${url || canonicalUrl}#website` },
+  inLanguage: locale.replace('_', '-'),
+};
+
+if (publishedTime) webPageSchema.datePublished = publishedTime;
+if (modifiedTime) webPageSchema.dateModified = modifiedTime;
+if (image) webPageSchema.primaryImageOfPage = { '@id': `${url || canonicalUrl}#primaryimage` };
+
+baseSchema['@graph'].push(webPageSchema);
+
+// Organization schema (if provided)
+if (organizationName || siteName) {
+  baseSchema['@graph'].push({
+    '@type': 'Organization',
+    '@id': `${url || canonicalUrl}#organization`,
+    name: organizationName || siteName,
+    url: url || canonicalUrl,
+    ...(organizationLogo && {
+      logo: {
+        '@type': 'ImageObject',
+        '@id': `${url || canonicalUrl}#logo`,
+        url: organizationLogo,
+        contentUrl: organizationLogo,
+        caption: organizationName || siteName,
+      },
+    }),
+    ...(socialLinks.length > 0 && { sameAs: socialLinks }),
+  });
+}
+
+// Person schema (for profile type or if author is provided)
+if (type === 'profile' || author) {
+  baseSchema['@graph'].push({
+    '@type': 'Person',
+    '@id': `${url || canonicalUrl}#person`,
+    name: author || siteName,
+    url: url || canonicalUrl,
+    ...(image && { image: image }),
+    ...(socialLinks.length > 0 && { sameAs: socialLinks }),
+  });
+}
+
+// Article schema (for blog posts)
+if (type === 'article' && publishedTime) {
+  baseSchema['@graph'].push({
+    '@type': 'Article',
+    '@id': `${url || canonicalUrl}#article`,
+    headline: title,
+    description: description,
+    url: url || canonicalUrl,
+    datePublished: publishedTime,
+    ...(modifiedTime && { dateModified: modifiedTime }),
+    ...(author && {
+      author: { '@type': 'Person', name: author },
+    }),
+    ...(image && {
+      image: {
+        '@type': 'ImageObject',
+        '@id': `${url || canonicalUrl}#primaryimage`,
+        url: image,
+      },
+    }),
+    isPartOf: { '@id': `${url || canonicalUrl}#webpage` },
+    mainEntityOfPage: { '@id': `${url || canonicalUrl}#webpage` },
+  });
+}
+
+// Primary image schema
+if (image) {
+  baseSchema['@graph'].push({
+    '@type': 'ImageObject',
+    '@id': `${url || canonicalUrl}#primaryimage`,
+    url: image,
+    contentUrl: image,
+    width: 1200,
+    height: 630,
+    caption: title,
+  });
+}
+
+// BreadcrumbList schema
+if (breadcrumbs.length > 0) {
+  baseSchema['@graph'].push({
+    '@type': 'BreadcrumbList',
+    '@id': `${url || canonicalUrl}#breadcrumb`,
+    itemListElement: breadcrumbs.map((crumb, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: crumb.name,
+      item: crumb.url,
+    })),
+  });
+}
+
+// FAQ schema (great for rich snippets)
+if (faqItems.length > 0) {
+  baseSchema['@graph'].push({
+    '@type': 'FAQPage',
+    '@id': `${url || canonicalUrl}#faq`,
+    mainEntity: faqItems.map(item => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer,
+      },
+    })),
+  });
+}
 ---
 
 <!-- Primary Meta Tags -->
@@ -53,9 +209,10 @@ const robotsContent = [
 {keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
 {author && <meta name="author" content={author} />}
 
-<!-- Robots -->
+<!-- Robots & Indexing -->
 <meta name="robots" content={robotsContent} />
 <meta name="googlebot" content={robotsContent} />
+<meta name="bingbot" content={robotsContent} />
 
 <!-- Canonical URL -->
 {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
@@ -69,11 +226,13 @@ const robotsContent = [
 {description && <meta property="og:description" content={description} />}
 {url && <meta property="og:url" content={url} />}
 {image && <meta property="og:image" content={image} />}
+{image && <meta property="og:image:secure_url" content={image} />}
 {image && <meta property="og:image:alt" content={title} />}
 {image && <meta property="og:image:width" content="1200" />}
 {image && <meta property="og:image:height" content="630" />}
+{image && <meta property="og:image:type" content="image/png" />}
 
-<!-- Article specific (for blog posts) -->
+<!-- Article specific -->
 {publishedTime && <meta property="article:published_time" content={publishedTime} />}
 {modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
 {author && type === 'article' && <meta property="article:author" content={author} />}
@@ -87,18 +246,22 @@ const robotsContent = [
 {image && <meta name="twitter:image" content={image} />}
 {image && <meta name="twitter:image:alt" content={title} />}
 
-<!-- Additional SEO -->
+<!-- Additional SEO & Mobile -->
 <meta name="format-detection" content="telephone=no" />
 <meta name="theme-color" content="rgb(var(--color-primary))" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content={siteName} />
 
-<!-- Structured Data - JSON-LD -->
-<script type="application/ld+json" set:html={JSON.stringify({
-  '@context': 'https://schema.org',
-  '@type': type === 'profile' ? 'Person' : type === 'article' ? 'Article' : 'WebSite',
-  name: title,
-  description: description,
-  url: url || canonicalUrl,
-  ...(image && { image: image }),
-  ...(author && { author: { '@type': 'Person', name: author } }),
-  ...(siteName && { publisher: { '@type': 'Organization', name: siteName } }),
-})} />
+<!-- Geo & Language -->
+<meta name="geo.region" content="FR" />
+<meta name="language" content={locale.split('_')[0]} />
+<meta http-equiv="content-language" content={locale.replace('_', '-')} />
+
+<!-- Security -->
+<meta http-equiv="X-Content-Type-Options" content="nosniff" />
+<meta name="referrer" content="strict-origin-when-cross-origin" />
+
+<!-- Structured Data - JSON-LD (comprehensive graph) -->
+<script type="application/ld+json" set:html={JSON.stringify(baseSchema)} />

@@ -1,6 +1,7 @@
 ---
 /**
  * Base Layout - Shared HTML structure for all public sites
+ * Optimized for Core Web Vitals (LCP, FID, CLS) and SEO
  */
 import '@/styles/global.css';
 import SEO from '@/components/SEO.astro';
@@ -12,51 +13,99 @@ interface Props {
   theme?: Theme;
   favicon?: string;
   fontFamily?: string;
+  socialImage?: string;
 }
 
-const { seo, theme, favicon, fontFamily } = Astro.props;
+const { seo, theme, favicon, fontFamily, socialImage } = Astro.props;
 
 const themeClass = theme?.mode === 'light' ? 'light' : 'dark';
 const themeStyles = buildThemeStyles(theme);
-const fontUrl = fontFamily 
-  ? `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily)}:wght@400;500;600;700;800&display=swap`
-  : 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap';
+
+// Font optimization: Use font-display: swap and preload critical fonts
+const fontName = fontFamily || 'Inter';
+const fontUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@400;500;600;700;800&display=swap`;
+
+// Critical CSS inlined for faster FCP
+const criticalCss = `
+  :root { ${themeStyles || ''} }
+  html { scroll-behavior: smooth; }
+  body { 
+    font-family: '${fontName}', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  /* Prevent CLS from font loading */
+  .font-loading body { visibility: hidden; }
+  .fonts-loaded body { visibility: visible; }
+  /* Reduce CLS from images */
+  img, video { max-width: 100%; height: auto; aspect-ratio: attr(width) / attr(height); }
+`;
 ---
 
 <!DOCTYPE html>
-<html lang="fr" class={themeClass}>
+<html lang="fr" class={`${themeClass} font-loading`}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- SEO -->
+    <!-- SEO Component (meta tags, OG, Twitter, JSON-LD) -->
     <SEO {...seo} />
     
-    <!-- Favicon -->
+    <!-- Favicon with multiple sizes for better compatibility -->
     {favicon ? (
-      <link rel="icon" type="image/png" href={favicon} />
+      <>
+        <link rel="icon" type="image/png" sizes="32x32" href={favicon} />
+        <link rel="icon" type="image/png" sizes="16x16" href={favicon} />
+        <link rel="apple-touch-icon" href={favicon} />
+      </>
     ) : (
-      <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+      <>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
+      </>
     )}
     
-    <!-- Fonts -->
+    <!-- Preconnect to critical origins (high priority) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href={fontUrl} rel="stylesheet" />
     
-    <!-- Theme CSS Variables -->
-    {themeStyles && (
-      <style set:html={`:root { ${themeStyles} }`} />
-    )}
-    
-    <!-- Performance hints -->
+    <!-- DNS prefetch for third-party resources -->
     <link rel="dns-prefetch" href="//fonts.googleapis.com" />
     <link rel="dns-prefetch" href="//fonts.gstatic.com" />
+    <link rel="dns-prefetch" href="//www.googletagmanager.com" />
     
-    <!-- Canonical and alternates -->
+    <!-- Preload critical font (improves LCP) -->
+    <link 
+      rel="preload" 
+      href={`https://fonts.gstatic.com/s/${fontName.toLowerCase().replace(' ', '')}/v13/KFOmCnqEu92Fr1Mu4mxK.woff2`}
+      as="font" 
+      type="font/woff2" 
+      crossorigin
+    />
+    
+    <!-- Preload social image for OG/Twitter (if provided) -->
+    {(socialImage || seo.image) && (
+      <link rel="preload" href={socialImage || seo.image} as="image" />
+    )}
+    
+    <!-- Critical CSS inline (improves FCP) -->
+    <style set:html={criticalCss} />
+    
+    <!-- Load fonts with display=swap for better FCP -->
+    <link href={fontUrl} rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript>
+      <link href={fontUrl} rel="stylesheet" />
+    </noscript>
+    
+    <!-- Resource hints for better performance -->
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
     <link rel="alternate" type="application/rss+xml" title="RSS Feed" href="/rss.xml" />
+    
+    <!-- Manifest for PWA support -->
+    <link rel="manifest" href="/manifest.json" />
   </head>
-  <body class="min-h-screen flex flex-col">
+  <body class="min-h-screen flex flex-col antialiased">
     <main class="flex-1">
       <slot />
     </main>
@@ -73,9 +122,23 @@ const fontUrl = fontFamily
       </a>
     </footer>
     
-    <!-- Smooth scroll polyfill for older browsers -->
+    <!-- Font loading detection (prevents CLS) -->
     <script>
-      // Add intersection observer for section animations
+      // Mark fonts as loaded when ready
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+          document.documentElement.classList.remove('font-loading');
+          document.documentElement.classList.add('fonts-loaded');
+        });
+      } else {
+        // Fallback for browsers without Font Loading API
+        document.documentElement.classList.remove('font-loading');
+        document.documentElement.classList.add('fonts-loaded');
+      }
+    </script>
+    
+    <!-- Intersection Observer for lazy animations (improves FID) -->
+    <script>
       if ('IntersectionObserver' in window) {
         const observer = new IntersectionObserver(
           (entries) => {
@@ -86,12 +149,21 @@ const fontUrl = fontFamily
               }
             });
           },
-          { threshold: 0.1 }
+          { threshold: 0.1, rootMargin: '50px' }
         );
         
-        document.querySelectorAll('section').forEach(section => {
-          observer.observe(section);
-        });
+        // Use requestIdleCallback for non-critical work
+        const observeSections = () => {
+          document.querySelectorAll('section[data-animate]').forEach(section => {
+            observer.observe(section);
+          });
+        };
+        
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(observeSections);
+        } else {
+          setTimeout(observeSections, 1);
+        }
       }
     </script>
   </body>

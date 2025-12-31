@@ -3,6 +3,8 @@ import { defineConfig } from 'astro/config';
 import node from '@astrojs/node';
 import react from '@astrojs/react';
 import tailwind from '@astrojs/tailwind';
+import sitemap from '@astrojs/sitemap';
+import compressor from 'astro-compressor';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
@@ -13,13 +15,39 @@ export default defineConfig({
     mode: 'standalone'
   }),
   site: 'https://asap.cool',
+  
+  // Compression and performance
+  compressHTML: true,
+  
   integrations: [
     react(),
-    tailwind(),
+    tailwind({
+      // Disable injecting base styles (we handle them in global.css)
+      applyBaseStyles: false,
+    }),
+    // Generate sitemaps
+    sitemap({
+      changefreq: 'weekly',
+      priority: 0.7,
+      lastmod: new Date(),
+    }),
+    // Compress HTML, CSS, JS at build time
+    compressor({
+      gzip: true,
+      brotli: true,
+    }),
   ],
+  
   server: {
     port: 4322,
   },
+  
+  // Build optimizations
+  build: {
+    // Inline small CSS for faster FCP
+    inlineStylesheets: 'auto',
+  },
+  
   vite: {
     resolve: {
       alias: {
@@ -35,6 +63,22 @@ export default defineConfig({
     },
     optimizeDeps: {
       include: ['@asap/shared', '@asap/renderers'],
+    },
+    build: {
+      // Optimize chunk splitting for better caching
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'react-vendor': ['react', 'react-dom'],
+          },
+        },
+      },
+      // Enable CSS code splitting
+      cssCodeSplit: true,
+      // Minify output
+      minify: 'esbuild',
+      // Target modern browsers for smaller bundles
+      target: 'es2020',
     },
   },
 });

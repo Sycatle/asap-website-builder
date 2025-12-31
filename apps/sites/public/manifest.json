@@ -1,0 +1,21 @@
+{
+  "name": "ASAP Site",
+  "short_name": "ASAP",
+  "description": "Site créé avec ASAP - Créez votre présence en ligne en quelques minutes",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["portfolio", "business", "productivity"],
+  "lang": "fr-FR",
+  "dir": "ltr"
+}
