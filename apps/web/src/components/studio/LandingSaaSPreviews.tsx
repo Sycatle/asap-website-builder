@@ -832,7 +832,7 @@ export function PricingPreview({ element }: LandingPreviewProps) {
                   variant={plan.popular ? 'default' : 'outline'}
                   size={isMobile ? 'sm' : 'default'}
                 >
-                  Commencer
+                  {(plan as Record<string, unknown>).cta_text as string || 'Commencer'}
                 </Button>
               </CardFooter>
             </Card>
@@ -984,8 +984,8 @@ export function CTAPreview({ element }: LandingPreviewProps) {
   
   const settings = (element.settings || {}) as Record<string, unknown>;
   const headline = getString(settings, 'headline', 'Prêt à créer votre site ?');
-  const subtitle1 = getString(settings, 'subtitle_line1', 'Rejoignez des milliers de créateurs.');
-  const subtitle2 = getString(settings, 'subtitle_line2', 'C\'est gratuit pour commencer.');
+  const subheadlineLine1 = getString(settings, 'subheadline_line1', 'Rejoignez des milliers de créateurs.');
+  const subheadlineLine2 = getString(settings, 'subheadline_line2', 'C\'est gratuit pour commencer.');
   const ctaPrimaryText = getString(settings, 'cta_primary_text', 'Créer mon site gratuitement');
   const ctaSecondaryText = getString(settings, 'cta_secondary_text', 'Voir les tarifs');
 
@@ -1018,10 +1018,10 @@ export function CTAPreview({ element }: LandingPreviewProps) {
               desktop: 'text-lg mb-8',
             })
           )}>
-            {subtitle1}
+            {subheadlineLine1}
             {!isMobile && <br />}
             {isMobile && ' '}
-            {subtitle2}
+            {subheadlineLine2}
           </p>
           <div className={cn(
             "flex items-center justify-center gap-3",

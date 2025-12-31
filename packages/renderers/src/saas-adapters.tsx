@@ -316,9 +316,9 @@ export function FeaturesSaaSRenderer({ section }: SectionRendererProps) {
 
         <div className={cn(
           'grid gap-6',
-          columns === '2' && 'md:grid-cols-2',
-          columns === '3' && 'md:grid-cols-2 lg:grid-cols-3',
-          columns === '4' && 'md:grid-cols-2 lg:grid-cols-4'
+          columns === '2' ? 'md:grid-cols-2' : 
+          columns === '4' ? 'md:grid-cols-2 lg:grid-cols-4' : 
+          'md:grid-cols-2 lg:grid-cols-3'
         )}>
           {features.map((feature, i) => {
             const FeatureIcon = feature.icon ? getIcon(feature.icon) : null;
@@ -583,37 +583,39 @@ export function CTASaaSRenderer({ section }: SectionRendererProps) {
 
   return (
     <section id="cta" className="py-20 md:py-32 bg-primary scroll-mt-16">
-      <div className="container mx-auto px-4 text-center">
-        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-primary-foreground mb-4">
-          {headline}
-        </h2>
-        {(subheadlineLine1 || subheadlineLine2) && (
-          <p className="text-lg md:text-xl text-primary-foreground/80 max-w-2xl mx-auto mb-8">
-            {subheadlineLine1}
-            {subheadlineLine2 && <span className="block">{subheadlineLine2}</span>}
-          </p>
-        )}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Button 
-            size="lg" 
-            variant="secondary"
-            className="w-full sm:w-auto text-base px-8" 
-            href={ctaPrimaryHref}
-          >
-            {PrimaryIcon && <PrimaryIcon className="mr-2 h-4 w-4" />}
-            {ctaPrimaryText}
-          </Button>
-          {ctaSecondaryText && (
+      <div className="container mx-auto px-4">
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-primary-foreground mb-6">
+            {headline}
+          </h2>
+          {(subheadlineLine1 || subheadlineLine2) && (
+            <p className="text-lg text-primary-foreground/90 mb-8">
+              {subheadlineLine1}
+              {subheadlineLine2 && <><br />{subheadlineLine2}</>}
+            </p>
+          )}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button 
               size="lg" 
-              variant="outline" 
-              className="w-full sm:w-auto text-base px-8 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" 
-              href={ctaSecondaryHref}
+              variant="secondary"
+              className="w-full sm:w-auto text-base px-8" 
+              href={ctaPrimaryHref}
             >
-              {ctaSecondaryText}
-              {SecondaryIcon && <SecondaryIcon className="ml-2 h-4 w-4" />}
+              {PrimaryIcon && <PrimaryIcon className="mr-2 h-4 w-4" />}
+              {ctaPrimaryText}
             </Button>
-          )}
+            {ctaSecondaryText && (
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="w-full sm:w-auto text-base px-8 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" 
+                href={ctaSecondaryHref}
+              >
+                {ctaSecondaryText}
+                {SecondaryIcon && <SecondaryIcon className="ml-2 h-4 w-4" />}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </section>
