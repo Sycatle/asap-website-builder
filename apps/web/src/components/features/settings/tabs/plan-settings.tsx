@@ -207,9 +207,6 @@ export function PlanSettings({ quota, websites, extensions, isLoading }: PlanSet
         <Button className="flex-1 h-9 sm:h-10 text-sm">
           Passer au plan Pro
         </Button>
-        <Button variant="outline" className="h-9 sm:h-10 text-sm" asChild>
-          <a href="/#pricing">Voir les plans</a>
-        </Button>
       </div>
 
       {/* Cancel - only show for paid plans */}
