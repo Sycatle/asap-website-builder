@@ -2,6 +2,10 @@ import { defineConfig } from 'astro/config';
 import node from '@astrojs/node';
 import react from '@astrojs/react';
 import { visualizer } from 'rollup-plugin-visualizer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // https://astro.build/config
 export default defineConfig({
@@ -32,13 +36,16 @@ export default defineConfig({
     },
     resolve: {
       alias: {
-        '@': '/src',
-        // In Docker: packages is mounted at /packages
-        // Locally: use relative path
-        '@asap/renderers': process.env.NODE_ENV === 'development' 
-          ? '/packages/renderers/src' 
-          : '../../packages/renderers/src',
+        '@': path.resolve(__dirname, 'src'),
+        '@asap/renderers': path.resolve(__dirname, '../../packages/renderers/src'),
+        '@asap/shared': path.resolve(__dirname, '../../packages/shared/src'),
+        // Resolve dependencies from renderers package to this project's node_modules
+        'dompurify': path.resolve(__dirname, 'node_modules/dompurify'),
       },
+      dedupe: ['react', 'react-dom'],
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'dompurify'],
     },
     build: {
       // Optimize chunk splitting

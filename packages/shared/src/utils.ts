@@ -5,8 +5,8 @@
  * Import from here instead of duplicating utility functions.
  */
 
-import { SLUG_MIN_LENGTH, SLUG_REGEX, ASAP_DOMAIN } from './constants.ts';
-import type { Element, Theme } from './types.ts';
+import { SLUG_MIN_LENGTH, SLUG_REGEX, ASAP_DOMAIN } from './constants';
+import type { Element, Theme } from './types';
 
 // ============================================
 // Constants
@@ -86,11 +86,13 @@ export function getWebsiteDisplayUrl(slug: string): string {
 
 /**
  * Get data from element with fallback to default value
- * Supports both 'data' and 'content' fields for compatibility
+ * Supports 'settings', 'data' and 'content' fields for compatibility
  */
 export function getData<T>(element: Element, key: string, defaultValue: T): T {
+  // Check settings first (SaaS sections), then data/content (legacy)
+  const settings = (element as { settings?: Record<string, unknown> }).settings ?? {};
   const data = element.data ?? element.content ?? {};
-  return (data[key] as T) ?? defaultValue;
+  return (settings[key] as T) ?? (data[key] as T) ?? defaultValue;
 }
 
 /**

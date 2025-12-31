@@ -31,7 +31,8 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
-// Import Landing SaaS previews
+// Import Landing SaaS renderers from the unified renderer wrapper
+// This uses @asap/renderers as the single source of truth
 import {
   LandingNavigationPreview,
   LandingHeroPreview,
@@ -41,7 +42,7 @@ import {
   LandingTestimonialsPreview,
   LandingCTAPreview,
   LandingFooterPreview,
-} from './LandingSaaSPreviews';
+} from './LandingSaaSRendererWrapper';
 
 // ============================================
 // Types
@@ -536,7 +537,7 @@ export {
   GenericPreview,
 };
 
-// Re-export Landing SaaS previews
+// Re-export Landing SaaS previews from the unified renderer wrapper
 export {
   LandingNavigationPreview,
   LandingHeroPreview,
@@ -546,4 +547,4 @@ export {
   LandingTestimonialsPreview,
   LandingCTAPreview,
   LandingFooterPreview,
-} from './LandingSaaSPreviews';
+} from './LandingSaaSRendererWrapper';

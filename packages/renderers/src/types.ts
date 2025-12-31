@@ -1,9 +1,8 @@
 /**
  * Shared types for element data
- * Re-exports from @asap/shared for backward compatibility
+ * Re-exports from @asap/shared
  */
 
-// Re-export all types from @asap/shared
 export type {
   Element,
   ElementType,
@@ -40,5 +39,5 @@ export type {
   CustomContent,
 } from '@asap/shared';
 
-// V1 backward compatibility: Section is now Element
+// Section is an alias for Element (used in renderers)
 export type { Element as Section } from '@asap/shared';

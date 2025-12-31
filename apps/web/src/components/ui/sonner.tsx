@@ -1,13 +1,16 @@
 "use client"
 
 import { Toaster as Sonner } from "sonner"
+import { useTheme } from "next-themes"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
 const Toaster = ({ ...props }: ToasterProps) => {
+  const { resolvedTheme } = useTheme()
+
   return (
     <Sonner
-      theme="light"
+      theme={resolvedTheme as "light" | "dark" | "system"}
       className="toaster group"
       position="bottom-right"
       richColors
@@ -22,10 +25,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground group-[.toast]:transition-all group-[.toast]:duration-200 group-[.toast]:hover:opacity-90 group-[.toast]:active:scale-95",
           cancelButton:
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground group-[.toast]:transition-all group-[.toast]:duration-200 group-[.toast]:hover:opacity-90 group-[.toast]:active:scale-95",
-          success: "group-[.toaster]:border-green-500/20 group-[.toaster]:bg-green-50 dark:group-[.toaster]:bg-green-950/50",
-          error: "group-[.toaster]:border-red-500/20 group-[.toaster]:bg-red-50 dark:group-[.toaster]:bg-red-950/50",
-          warning: "group-[.toaster]:border-yellow-500/20 group-[.toaster]:bg-yellow-50 dark:group-[.toaster]:bg-yellow-950/50",
-          info: "group-[.toaster]:border-blue-500/20 group-[.toaster]:bg-blue-50 dark:group-[.toaster]:bg-blue-950/50",
+          success: "group-[.toaster]:border-green-500/30 dark:group-[.toaster]:border-green-500/40 group-[.toaster]:bg-green-50 dark:group-[.toaster]:bg-green-950/50 group-[.toaster]:text-green-900 dark:group-[.toaster]:text-green-100",
+          error: "group-[.toaster]:border-red-500/30 dark:group-[.toaster]:border-red-500/40 group-[.toaster]:bg-red-50 dark:group-[.toaster]:bg-red-950/50 group-[.toaster]:text-red-900 dark:group-[.toaster]:text-red-100",
+          warning: "group-[.toaster]:border-yellow-500/30 dark:group-[.toaster]:border-yellow-500/40 group-[.toaster]:bg-yellow-50 dark:group-[.toaster]:bg-yellow-950/50 group-[.toaster]:text-yellow-900 dark:group-[.toaster]:text-yellow-100",
+          info: "group-[.toaster]:border-blue-500/30 dark:group-[.toaster]:border-blue-500/40 group-[.toaster]:bg-blue-50 dark:group-[.toaster]:bg-blue-950/50 group-[.toaster]:text-blue-900 dark:group-[.toaster]:text-blue-100",
         },
       }}
       {...props}
