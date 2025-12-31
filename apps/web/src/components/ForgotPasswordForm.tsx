@@ -12,6 +12,7 @@ import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
 import { forgotPasswordSchema, type ForgotPasswordFormData } from "@/lib/validations/auth";
 import { authAPI } from "@/lib/api/auth";
 import { RateLimitError } from "@/lib/api/client";
+import { escapeHtml } from "@/lib/utils/security";
 
 export default function ForgotPasswordForm({
   className,
@@ -68,7 +69,7 @@ export default function ForgotPasswordForm({
           </div>
           <div>
             <h1 className="text-xl font-bold">{t('auth.emailSent')}</h1>
-            <p className="text-sm text-muted-foreground mt-2" dangerouslySetInnerHTML={{ __html: t('auth.emailSentDesc', { email }) }} />
+            <p className="text-sm text-muted-foreground mt-2" dangerouslySetInnerHTML={{ __html: t('auth.emailSentDesc', { email: escapeHtml(email) }) }} />
           </div>
           <p className="text-xs text-muted-foreground">
             {t('auth.checkSpam')}

@@ -169,13 +169,20 @@ pub async fn download_file(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // Build response with proper headers
+    // SECURITY: Escape filename for Content-Disposition header to prevent header injection
+    let safe_filename = file.filename
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\r', "")
+        .replace('\n', "");
+    
     let response = Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, &file.mime_type)
         .header(header::CONTENT_LENGTH, content.len())
         .header(
             header::CONTENT_DISPOSITION,
-            format!("inline; filename=\"{}\"", file.filename)
+            format!("inline; filename=\"{}\"", safe_filename)
         )
         .header(header::CACHE_CONTROL, "private, max-age=3600")
         .body(Body::from(content))

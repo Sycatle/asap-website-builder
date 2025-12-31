@@ -99,10 +99,17 @@ pub async fn get_csrf_token(
                 "csrf_token": token.token
             })).into_response();
             
+            // Add Secure flag in production (when not localhost)
+            let is_secure = std::env::var("ENVIRONMENT")
+                .map(|e| e == "production")
+                .unwrap_or(false);
+            let secure_flag = if is_secure { "; Secure" } else { "" };
+            
             // Also set as cookie for convenience
             let cookie = format!(
-                "csrf_token={}; Path=/; HttpOnly; SameSite=Strict; Max-Age=3600",
-                token.token
+                "csrf_token={}; Path=/; HttpOnly; SameSite=Strict; Max-Age=3600{}",
+                token.token,
+                secure_flag
             );
             response.headers_mut().insert(
                 header::SET_COOKIE,

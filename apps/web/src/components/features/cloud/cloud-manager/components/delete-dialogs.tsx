@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/responsive-dialog";
 import { Trash2, AlertTriangle } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
+import { escapeHtml } from "@/lib/utils/security";
 import type { DeleteConfirmDialogProps, BulkDeleteDialogProps } from "../types";
 
 /**
@@ -34,7 +35,7 @@ export function DeleteConfirmDialog({
             {t('dashboard:cloud.delete.title')}
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription className="pt-2">
-            <span dangerouslySetInnerHTML={{ __html: t('dashboard:cloud.delete.description', { filename: deleteConfirm?.file.filename }) }} />
+            <span dangerouslySetInnerHTML={{ __html: t('dashboard:cloud.delete.description', { filename: escapeHtml(deleteConfirm?.file.filename) }) }} />
             <br />
             <span className="text-muted-foreground">{t('dashboard:cloud.delete.irreversible')}</span>
           </ResponsiveDialogDescription>

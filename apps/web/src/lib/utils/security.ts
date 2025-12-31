@@ -100,3 +100,17 @@ export function safeNavigate(url: string, options?: { newTab?: boolean }): boole
 export function openExternalUrl(url: string): void {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
+
+/**
+ * Escape HTML special characters to prevent XSS
+ * Use this when interpolating user data into i18n strings rendered with dangerouslySetInnerHTML
+ */
+export function escapeHtml(str: string | null | undefined): string {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}

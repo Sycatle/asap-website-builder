@@ -7,7 +7,7 @@ import { websitesAPI } from '@/lib/api';
 import { queryKeys } from '@/lib/query';
 import { useQueryClient } from '@tanstack/react-query';
 import { getWebsiteDisplayUrl, getWebsiteUrl } from '@/lib/utils/formatters';
-import { openExternalUrl } from '@/lib/utils/security';
+import { openExternalUrl, escapeHtml } from '@/lib/utils/security';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -282,7 +282,7 @@ export function WebsiteCard({ website, onSelect }: WebsiteCardProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>{t('dashboard:websites.card.confirmDelete')}</AlertDialogTitle>
             <AlertDialogDescription>
-              <span dangerouslySetInnerHTML={{ __html: t('dashboard:websites.card.confirmDeleteDescription', { title: website.title }) }} />
+              <span dangerouslySetInnerHTML={{ __html: t('dashboard:websites.card.confirmDeleteDescription', { title: escapeHtml(website.title) }) }} />
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
