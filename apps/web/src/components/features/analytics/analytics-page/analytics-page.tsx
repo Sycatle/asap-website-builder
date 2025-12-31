@@ -69,7 +69,7 @@ export function AnalyticsPage() {
             <BarChart3 className="h-5 w-5 text-white" />
           </div>
         }
-        backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
+        backHref={currentWebsiteId ? `/${currentWebsiteId}` : '/'}
         actions={[
           {
             label: t('dashboard:analytics.export'),

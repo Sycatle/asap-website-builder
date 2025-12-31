@@ -21,18 +21,18 @@ export default function WebsiteSelector() {
   // Auto-redirect if only one website
   useEffect(() => {
     if (!isLoading && websites.length === 1) {
-      navigate(`/app/${websites[0].id}`)
+      navigate(`/${websites[0].id}`)
     }
   }, [isLoading, websites])
 
   const handleCreateSuccess = (websiteId: string) => {
     queryClient.invalidateQueries({ queryKey: queryKeys.websites.all })
     setShowCreateModal(false)
-    navigate(`/app/${websiteId}`)
+    navigate(`/${websiteId}`)
   }
 
   const handleSelectWebsite = (websiteId: string) => {
-    navigate(`/app/${websiteId}`)
+    navigate(`/${websiteId}`)
   }
 
   const getStatusInfo = (status: string) => {

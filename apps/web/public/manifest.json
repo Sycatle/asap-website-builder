@@ -2,7 +2,7 @@
   "name": "ASAP - Site web en 5 minutes",
   "short_name": "ASAP",
   "description": "Créez votre site web professionnel en 5 minutes avec ASAP",
-  "start_url": "/app/dashboard?source=pwa",
+  "start_url": "/dashboard?source=pwa",
   "id": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui", "browser"],
@@ -92,33 +92,33 @@
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "Accéder au tableau de bord",
-      "url": "/app/dashboard?source=shortcut",
+      "url": "/dashboard?source=shortcut",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Extensions",
       "short_name": "Extensions",
       "description": "Gérer vos extensions",
-      "url": "/app/extensions?source=shortcut",
+      "url": "/extensions?source=shortcut",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Cloud",
       "short_name": "Cloud",
       "description": "Accéder à vos fichiers",
-      "url": "/app/cloud?source=shortcut",
+      "url": "/cloud?source=shortcut",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Notifications",
       "short_name": "Notifs",
       "description": "Voir vos notifications",
-      "url": "/app/notifications?source=shortcut",
+      "url": "/notifications?source=shortcut",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ],
   "share_target": {
-    "action": "/app/cloud?source=share",
+    "action": "/cloud?source=share",
     "method": "POST",
     "enctype": "multipart/form-data",
     "params": {
@@ -135,7 +135,7 @@
   },
   "file_handlers": [
     {
-      "action": "/app/cloud?source=file-handler",
+      "action": "/cloud?source=file-handler",
       "accept": {
         "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico"],
         "application/pdf": [".pdf"],
@@ -148,7 +148,7 @@
   "protocol_handlers": [
     {
       "protocol": "web+asap",
-      "url": "/app/handle?protocol=%s"
+      "url": "/handle?protocol=%s"
     }
   ],
   "launch_handler": {

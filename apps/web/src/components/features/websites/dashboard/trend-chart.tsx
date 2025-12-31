@@ -41,7 +41,7 @@ export function TrendChart({ websiteId, trendData }: TrendChartProps) {
             <BarChart3 className="h-4 w-4 text-primary" />
             {t('dashboard:dashboard.chart.trendTitle')}
           </CardTitle>
-          <Link href={`/app/${websiteId}/analytics`}>
+          <Link href={`/${websiteId}/analytics`}>
             <Button variant="ghost" size="sm" className="text-xs h-7">
               Analytics
               <ChevronRight className="h-3 w-3 ml-1" />

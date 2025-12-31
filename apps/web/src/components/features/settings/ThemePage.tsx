@@ -190,7 +190,7 @@ export default function ThemePage() {
             <Palette className="h-5 w-5 text-white" />
           </div>
         }
-        backHref={currentWebsite ? `/app/${currentWebsite.id}` : '/app'}
+        backHref={currentWebsite ? `/${currentWebsite.id}` : '/'}
         actions={[
           ...(hasChanges ? [{
             label: 'Annuler',

@@ -253,7 +253,7 @@ export default function ExtensionsManager() {
           label: t('dashboard:extensions.available', { count: catalogExtensions.length }),
           variant: 'outline',
         }}
-        backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
+        backHref={currentWebsiteId ? `/${currentWebsiteId}` : '/'}
         stickyContent={
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
@@ -330,7 +330,7 @@ export default function ExtensionsManager() {
                     </div>
                     <div className="flex gap-2">
                       <Button asChild variant="secondary" size="sm" className="flex-1 h-8 sm:h-9 text-xs sm:text-sm group/btn">
-                        <Link href={`/app/${currentWebsiteId}/extensions/${catalogExtension.slug}`}>
+                        <Link href={`/${currentWebsiteId}/extensions/${catalogExtension.slug}`}>
                           <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 transition-transform group-hover/btn:rotate-90" />
                           {t('dashboard:extensions.actions.configure')}
                         </Link>
@@ -365,7 +365,7 @@ export default function ExtensionsManager() {
               </ContextMenuTrigger>
               <ContextMenuContent className="w-56">
                 <ContextMenuItem asChild>
-                  <Link href={`/app/${currentWebsiteId}/extensions/${catalogExtension.slug}`}>
+                  <Link href={`/${currentWebsiteId}/extensions/${catalogExtension.slug}`}>
                     <Settings className="mr-2 h-4 w-4" />
                     {t('dashboard:extensions.actions.configure')}
                   </Link>

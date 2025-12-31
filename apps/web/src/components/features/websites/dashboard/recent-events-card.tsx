@@ -70,7 +70,7 @@ export function RecentEventsCard({ websiteId }: RecentEventsCardProps) {
             <Bell className="h-4 w-4 text-primary" />
             {t('dashboard:dashboard.activity.title')}
           </CardTitle>
-          <Link href={`/app/${websiteId}/analytics`}>
+          <Link href={`/${websiteId}/analytics`}>
             <Button variant="ghost" size="sm" className="text-xs h-7">
               {t('dashboard:dashboard.activity.viewAll')}
               <ChevronRight className="h-3 w-3 ml-1" />

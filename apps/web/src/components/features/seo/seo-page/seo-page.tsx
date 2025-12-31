@@ -100,7 +100,7 @@ export function SeoPage() {
                      seoData.seoScore >= 50 ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
                      'bg-red-500/10 text-red-600 border-red-500/20',
         }}
-        backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
+        backHref={currentWebsiteId ? `/${currentWebsiteId}` : '/'}
         actions={[
           {
             label: t('dashboard:seo.export'),

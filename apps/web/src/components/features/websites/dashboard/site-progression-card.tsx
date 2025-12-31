@@ -27,12 +27,12 @@ export function SiteProgressionCard({
   const { t } = useTranslation(['common', 'dashboard']);
 
   const steps = [
-    { id: 'pages', label: t('dashboard:dashboard.progression.addPage'), completed: pagesCount > 0, href: `/app/${websiteId}/pages` },
-    { id: 'sections', label: t('dashboard:dashboard.progression.createSections'), completed: sectionsCount > 0, href: `/app/${websiteId}/studio` },
-    { id: 'theme', label: t('dashboard:dashboard.progression.customizeTheme'), completed: hasTheme, href: `/app/${websiteId}/theme` },
-    { id: 'seo', label: t('dashboard:dashboard.progression.configureSeo'), completed: hasSEO, href: `/app/${websiteId}/settings` },
-    { id: 'extensions', label: t('dashboard:dashboard.progression.activateExtension'), completed: extensionsCount > 0, href: `/app/${websiteId}/extensions` },
-    { id: 'publish', label: t('dashboard:dashboard.progression.publishSite'), completed: isPublished, href: `/app/${websiteId}/settings` },
+    { id: 'pages', label: t('dashboard:dashboard.progression.addPage'), completed: pagesCount > 0, href: `/${websiteId}/pages` },
+    { id: 'sections', label: t('dashboard:dashboard.progression.createSections'), completed: sectionsCount > 0, href: `/${websiteId}/studio` },
+    { id: 'theme', label: t('dashboard:dashboard.progression.customizeTheme'), completed: hasTheme, href: `/${websiteId}/theme` },
+    { id: 'seo', label: t('dashboard:dashboard.progression.configureSeo'), completed: hasSEO, href: `/${websiteId}/settings` },
+    { id: 'extensions', label: t('dashboard:dashboard.progression.activateExtension'), completed: extensionsCount > 0, href: `/${websiteId}/extensions` },
+    { id: 'publish', label: t('dashboard:dashboard.progression.publishSite'), completed: isPublished, href: `/${websiteId}/settings` },
   ];
 
   const completedCount = steps.filter(s => s.completed).length;

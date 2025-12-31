@@ -36,7 +36,7 @@ const CACHE_NAMES = {
 // Static assets to precache
 const PRECACHE_ASSETS = [
   '/',
-  '/app/dashboard',
+  '/dashboard',
   '/manifest.json',
   '/favicon.svg',
   '/icons/icon-192x192.png',
@@ -613,7 +613,7 @@ self.addEventListener('notificationclick', event => {
       }
       
       // Open new window
-      const urlToOpen = event.notification.data?.url || '/app/dashboard';
+      const urlToOpen = event.notification.data?.url || '/dashboard';
       return self.clients.openWindow(urlToOpen);
     })()
   );
@@ -729,7 +729,7 @@ self.addEventListener('fetch', event => {
   
   // Handle share target
   if (
-    url.pathname === '/app/cloud' &&
+    url.pathname === '/cloud' &&
     url.searchParams.get('source') === 'share' &&
     event.request.method === 'POST'
   ) {
@@ -752,10 +752,10 @@ self.addEventListener('fetch', event => {
           );
           
           // Redirect to the app
-          return Response.redirect('/app/cloud?shared=true', 303);
+          return Response.redirect('/cloud?shared=true', 303);
         } catch (error) {
           console.error('[SW] Share target failed:', error);
-          return Response.redirect('/app/cloud', 303);
+          return Response.redirect('/cloud', 303);
         }
       })()
     );

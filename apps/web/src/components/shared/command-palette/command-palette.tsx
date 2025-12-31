@@ -190,7 +190,7 @@ function WebsiteSwitcher({ websites, currentWebsiteId, onSelect }: WebsiteSwitch
         {otherWebsites.map((website) => (
           <CommandItem
             key={website.id}
-            onSelect={() => onSelect(() => navigate(`/app/${website.id}`))}
+            onSelect={() => onSelect(() => navigate(`/${website.id}`))}
           >
             <Globe className="mr-2 h-4 w-4" />
             <span>{website.title}</span>
@@ -212,7 +212,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const { currentWebsiteId, currentWebsite, websites } = useWebsiteContext()
   const [search, setSearch] = useState("")
 
-  const baseUrl = currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'
+  const baseUrl = currentWebsiteId ? `/${currentWebsiteId}` : '/'
 
   // Get commands
   const navigationCommands = useNavigationCommands(baseUrl)

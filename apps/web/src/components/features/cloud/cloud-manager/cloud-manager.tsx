@@ -244,7 +244,7 @@ export function CloudManager() {
           label: `${formatBytes(quota.total_size_used)} / ${formatBytes(quota.quota_limit)}`,
           variant: 'outline',
         } : undefined}
-        backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
+        backHref={currentWebsiteId ? `/${currentWebsiteId}` : '/'}
         actions={[
           {
             label: isUploading ? (uploadProgress.total > 1 ? `${uploadProgress.completed}/${uploadProgress.total}` : t('dashboard:cloud.upload.uploading')) : t('dashboard:cloud.upload.button'),

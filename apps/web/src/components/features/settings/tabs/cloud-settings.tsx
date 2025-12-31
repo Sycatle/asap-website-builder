@@ -218,7 +218,7 @@ export function CloudSettings({ quota, files, isLoading, websiteId, onClose }: C
         onClick={() => {
           onClose()
           if (websiteId) {
-            navigate(`/app/${websiteId}/cloud`)
+            navigate(`/${websiteId}/cloud`)
           }
         }}
       >

@@ -228,7 +228,7 @@ export default function Dashboard() {
           {
             label: t('dashboard:dashboard.studio'),
             icon: <Edit className="h-4 w-4" />,
-            href: `/app/${currentWebsiteId}/studio`,
+            href: `/${currentWebsiteId}/studio`,
             className: 'shadow-md',
           },
           ...(website ? [{
@@ -398,7 +398,7 @@ function StickyHeaderContent({
           </Button>
         )}
         <Button variant="default" size="sm" className="h-8" asChild>
-          <Link href={`/app/${currentWebsiteId}/studio`}>
+          <Link href={`/${currentWebsiteId}/studio`}>
             <Edit className="h-3.5 w-3.5" />
             <span className="hidden sm:inline ml-1.5">{t('dashboard:dashboard.studio')}</span>
           </Link>

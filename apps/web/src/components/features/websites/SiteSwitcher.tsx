@@ -51,7 +51,7 @@ export function SiteSwitcher({
   const handleWebsiteSelect = useCallback((website: Website) => {
     if (website.id !== currentWebsite?.id) {
       // Navigate to the new website's dashboard
-      navigate(`/app/${website.id}`)
+      navigate(`/${website.id}`)
     }
     setIsDropdownOpen(false)
   }, [currentWebsite?.id])
@@ -61,7 +61,7 @@ export function SiteSwitcher({
     queryClient.invalidateQueries({ queryKey: queryKeys.websites.all })
     setIsDropdownOpen(false)
     // Navigate to the newly created website
-    navigate(`/app/${websiteId}`)
+    navigate(`/${websiteId}`)
   }, [queryClient])
 
   // Get first letter of title for avatar

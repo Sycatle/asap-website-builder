@@ -219,7 +219,7 @@ function AppShellContent({
       key: 'd',
       action: () => {
         if (pendingGoTo && currentWebsiteId) {
-          navigate(`/app/${currentWebsiteId}`)
+          navigate(`/${currentWebsiteId}`)
           setPendingGoTo(false)
         }
       }
@@ -228,7 +228,7 @@ function AppShellContent({
       key: 'e',
       action: () => {
         if (pendingGoTo && currentWebsiteId) {
-          navigate(`/app/${currentWebsiteId}/extensions`)
+          navigate(`/${currentWebsiteId}/extensions`)
           setPendingGoTo(false)
         }
       }
@@ -237,7 +237,7 @@ function AppShellContent({
       key: 'c',
       action: () => {
         if (pendingGoTo && currentWebsiteId) {
-          navigate(`/app/${currentWebsiteId}/cloud`)
+          navigate(`/${currentWebsiteId}/cloud`)
           setPendingGoTo(false)
         }
       }
@@ -254,7 +254,7 @@ function AppShellContent({
   ])
 
   // Build base URL for current website
-  const baseUrl = currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'
+  const baseUrl = currentWebsiteId ? `/${currentWebsiteId}` : '/'
 
   return (
     <>

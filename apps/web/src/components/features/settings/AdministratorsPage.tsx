@@ -266,7 +266,7 @@ export default function AdministratorsPage() {
           label: `${stats.total} collaborateur${stats.total > 1 ? 's' : ''}`,
           variant: 'outline',
         }}
-        backHref={currentWebsite ? `/app/${currentWebsite.id}` : '/app'}
+        backHref={currentWebsite ? `/${currentWebsite.id}` : '/'}
         stickyContent={
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">

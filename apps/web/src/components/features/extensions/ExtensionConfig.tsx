@@ -518,7 +518,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
         <h3 className="text-xl font-semibold text-foreground mb-2">{t('dashboard:extensions.config.notFound')}</h3>
         <p className="text-muted-foreground mb-6">{t('dashboard:extensions.config.notFoundDescription', { slug })}</p>
         <Link 
-          href={`/app/${websiteId}/extensions`} 
+          href={`/${websiteId}/extensions`} 
           className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-medium"
         >
           {Icons.back}
@@ -540,7 +540,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
     <div className="max-w-4xl mx-auto">
       {/* Back link */}
       <Link 
-        href={`/app/${websiteId}/extensions`} 
+        href={`/${websiteId}/extensions`} 
         className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground hover:text-foreground mb-4 sm:mb-6 transition-colors"
       >
         {Icons.back}

@@ -72,7 +72,7 @@ export function AsapSidebar({
   // Build URL helper
   const buildUrl = (path: string) => {
     if (!currentWebsiteId) return '/app'
-    return `/app/${currentWebsiteId}${path}`
+    return `/${currentWebsiteId}${path}`
   }
 
   return (

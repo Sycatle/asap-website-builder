@@ -236,7 +236,7 @@ export default function SettingsPage() {
             <Settings className="h-5 w-5 text-white" />
           </div>
         }
-        backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
+        backHref={currentWebsiteId ? `/${currentWebsiteId}` : '/'}
         stickyContent={
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">

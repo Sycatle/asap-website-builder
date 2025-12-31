@@ -88,7 +88,7 @@ function parseRoute(pathname: string): Route {
   const pageName = segments[1]
   
   if (!pageName) {
-    // /app/{uuid} = dashboard
+    // /{uuid} = dashboard
     return { page: "dashboard", websiteId }
   }
   
@@ -171,9 +171,9 @@ Link.displayName = "Link"
 // Build app URL helper
 export function buildAppUrl(websiteId: string, page?: string): string {
   if (!page) {
-    return `/app/${websiteId}`
+    return `/${websiteId}`
   }
-  return `/app/${websiteId}/${page}`
+  return `/${websiteId}/${page}`
 }
 
 // Loading fallback
@@ -238,7 +238,7 @@ function getPageBreadcrumbs(route: Route, websiteId: string | null): { label: st
     case "extension":
       if (route.page === "extension") {
         return [
-          { label: "Extensions", href: `/app/${websiteId}/extensions` },
+          { label: "Extensions", href: `/${websiteId}/extensions` },
           { label: route.slug }
         ]
       }

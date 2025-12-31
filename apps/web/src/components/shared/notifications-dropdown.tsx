@@ -329,7 +329,7 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
                   />
                 </Field>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => window.location.href = '/app/notifications'}>
+                <DropdownMenuItem onClick={() => window.location.href = '/notifications'}>
                   <Settings className="mr-2 h-4 w-4" />
                   {t('notifications:settings.all')}
                 </DropdownMenuItem>
@@ -450,7 +450,7 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
               variant="ghost"
               className="w-full text-xs"
               onClick={() => {
-                window.location.href = '/app/notifications'
+                window.location.href = '/notifications'
                 setOpen(false)
               }}
             >
