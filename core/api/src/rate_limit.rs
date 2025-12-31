@@ -104,6 +104,9 @@ pub struct RateLimiter {
     last_cleanup: Arc<RwLock<Instant>>,
 }
 
+/// Maximum number of IPs to track (prevents memory exhaustion during DDoS)
+const MAX_TRACKED_IPS: usize = 100_000;
+
 impl Default for RateLimiter {
     fn default() -> Self {
         Self::new()
@@ -130,6 +133,19 @@ impl RateLimiter {
         self.maybe_cleanup().await;
 
         let mut entries = self.entries.write().await;
+        
+        // Enforce maximum entries to prevent memory exhaustion during DDoS
+        if entries.len() >= MAX_TRACKED_IPS && !entries.contains_key(ip) {
+            // Emergency cleanup: remove oldest 10%
+            self.emergency_cleanup(&mut entries);
+            
+            // If still at capacity after cleanup, temporarily block new IPs
+            if entries.len() >= MAX_TRACKED_IPS {
+                tracing::warn!("Rate limiter at capacity ({}), temporarily blocking new IP", MAX_TRACKED_IPS);
+                return (false, 0, 60); // Block for 60 seconds
+            }
+        }
+        
         let ip_entries = entries.entry(ip.to_string()).or_insert_with(HashMap::new);
 
         let now = Instant::now();
@@ -210,6 +226,41 @@ impl RateLimiter {
         });
 
         tracing::debug!("Rate limiter cleanup complete, {} IPs tracked", entries.len());
+    }
+
+    /// Emergency cleanup when at capacity - removes oldest 20% of entries
+    fn emergency_cleanup(&self, entries: &mut HashMap<String, HashMap<String, RateLimitEntry>>) {
+        let to_remove = entries.len() / 5; // Remove 20%
+        if to_remove == 0 {
+            return;
+        }
+
+        // Collect IPs with their oldest window_start
+        let mut ip_ages: Vec<(String, Instant)> = entries
+            .iter()
+            .map(|(ip, ip_entries)| {
+                let oldest = ip_entries
+                    .values()
+                    .map(|e| e.window_start)
+                    .min()
+                    .unwrap_or_else(Instant::now);
+                (ip.clone(), oldest)
+            })
+            .collect();
+
+        // Sort by age (oldest first)
+        ip_ages.sort_by(|a, b| a.1.cmp(&b.1));
+
+        // Remove oldest entries
+        for (ip, _) in ip_ages.into_iter().take(to_remove) {
+            entries.remove(&ip);
+        }
+
+        tracing::warn!(
+            "Emergency rate limiter cleanup: removed {} oldest IPs, {} remaining",
+            to_remove,
+            entries.len()
+        );
     }
 
     /// Reset rate limit for an IP (e.g., after successful login with 2FA)

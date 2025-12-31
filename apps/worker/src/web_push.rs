@@ -176,18 +176,13 @@ impl WebPushSender {
         let mut sent = 0;
         let mut failed = 0;
         let mut expired = Vec::new();
+        let mut successful_ids = Vec::new();
 
         for subscription in &subscriptions {
             match self.send_push(subscription, payload).await {
                 Ok(_) => {
                     sent += 1;
-                    // Update last_used_at
-                    let _ = sqlx::query(
-                        "UPDATE push_subscriptions SET last_used_at = NOW() WHERE id = $1",
-                    )
-                    .bind(subscription.id)
-                    .execute(pool)
-                    .await;
+                    successful_ids.push(subscription.id);
                 }
                 Err(e) => {
                     // Check if subscription expired (410 Gone)
@@ -210,14 +205,22 @@ impl WebPushSender {
             }
         }
 
-        // Clean up expired subscriptions
+        // Batch UPDATE for successful sends (instead of N individual queries)
+        if !successful_ids.is_empty() {
+            let _ = sqlx::query(
+                "UPDATE push_subscriptions SET last_used_at = NOW() WHERE id = ANY($1)",
+            )
+            .bind(&successful_ids)
+            .execute(pool)
+            .await;
+        }
+
+        // Batch DELETE for expired subscriptions (instead of N individual queries)
         if !expired.is_empty() {
-            for sub_id in &expired {
-                let _ = sqlx::query("DELETE FROM push_subscriptions WHERE id = $1")
-                    .bind(sub_id)
-                    .execute(pool)
-                    .await;
-            }
+            let _ = sqlx::query("DELETE FROM push_subscriptions WHERE id = ANY($1)")
+                .bind(&expired)
+                .execute(pool)
+                .await;
             tracing::info!("Removed {} expired push subscriptions", expired.len());
         }
 

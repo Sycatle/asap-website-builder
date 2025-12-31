@@ -47,11 +47,14 @@ pub async fn get_website_with_data(
     .await
 }
 
-/// List websites for account with data
+/// List websites for account with data (limited to prevent memory issues)
+/// For accounts with many websites, use pagination
 pub async fn list_websites_with_data(
     pool: &PgPool,
     account_id: Uuid,
 ) -> Result<Vec<WebsiteWithData>, sqlx::Error> {
+    // Limit to 100 websites max to prevent memory exhaustion
+    // Power users should use the paginated endpoint
     sqlx::query_as::<_, WebsiteWithData>(
         r#"
         SELECT DISTINCT
@@ -64,6 +67,7 @@ pub async fn list_websites_with_data(
         WHERE w.account_id = $1 
            OR (wa.account_id = $1 AND wa.status = 'active')
         ORDER BY w.created_at DESC
+        LIMIT 100
         "#
     )
     .bind(account_id)
