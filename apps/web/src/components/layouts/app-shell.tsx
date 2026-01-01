@@ -334,7 +334,7 @@ function AppShellContent({
           tabIndex={-1}
           className={cn(
             "flex-1 focus:outline-none",
-            isStudioPage ? "p-0 overflow-hidden" : "px-3 sm:px-4 md:px-6 pt-2 sm:pt-3 md:pt-4 pb-3 sm:pb-4 md:pb-6 overflow-auto"
+            isStudioPage ? "p-0 overflow-hidden" : "px-3 sm:px-4 md:px-6 pt-2 sm:pt-3 md:pt-5 pb-3 sm:pb-4 md:pb-6 overflow-auto"
           )}
         >
           {children}
