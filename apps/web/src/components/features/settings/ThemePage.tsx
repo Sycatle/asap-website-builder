@@ -166,7 +166,7 @@ export default function ThemePage() {
   if (websitesLoading || isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <ArrowClockwise className="h-8 w-8 animate-spin text-muted-foreground" />
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -174,7 +174,7 @@ export default function ThemePage() {
   if (!currentWebsite) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <Palette className="h-12 w-12 text-muted-foreground" weight="fill" />
+        <Palette className="h-12 w-12 text-muted-foreground" />
         <p className="text-muted-foreground">Sélectionnez un site pour personnaliser le thème</p>
       </div>
     );
@@ -191,13 +191,13 @@ export default function ThemePage() {
         actions={[
           ...(hasChanges ? [{
             label: 'Annuler',
-            icon: <ArrowCounterClockwise className="h-4 w-4" weight="bold" />,
+            icon: <RotateCcw className="h-4 w-4 stroke-[2.5]" />,
             variant: 'outline' as const,
             onClick: handleRevert,
           }] : []),
           {
             label: 'Enregistrer',
-            icon: isSaving ? <ArrowClockwise className="h-4 w-4 animate-spin" /> : <FloppyDisk className="h-4 w-4" weight="fill" />,
+            icon: isSaving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />,
             onClick: handleSave,
             disabled: !hasChanges || isSaving,
           }
@@ -214,7 +214,7 @@ export default function ThemePage() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="outline" size="sm" onClick={handleRevert} className="h-8">
-                        <ArrowCounterClockwise className="h-4 w-4 mr-1.5" weight="bold" />
+                        <RotateCcw className="h-4 w-4 mr-1.5 stroke-[2.5]" />
                         <span className="hidden sm:inline">Annuler</span>
                       </Button>
                     </TooltipTrigger>
@@ -228,7 +228,7 @@ export default function ThemePage() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button size="sm" onClick={handleSave} disabled={!hasChanges || isSaving} className="h-8">
-                      {isSaving ? <ArrowClockwise className="h-4 w-4 animate-spin mr-1.5" /> : <FloppyDisk className="h-4 w-4 mr-1.5" weight="fill" />}
+                      {isSaving ? <RefreshCw className="h-4 w-4 animate-spin mr-1.5" /> : <Save className="h-4 w-4 mr-1.5" />}
                       <span className="hidden sm:inline">Enregistrer</span>
                     </Button>
                   </TooltipTrigger>
