@@ -97,7 +97,7 @@ export function PageIcon({ page, size = "lg", isActive, className }: PageIconPro
         className={cn(
           "shrink-0 transition-all duration-200",
           sizeClass.iconClass,
-          isActive ? "text-primary stroke-[2.5]" : "text-muted-foreground",
+          isActive ? "text-primary fill-primary" : "text-muted-foreground",
           className
         )}
       />
@@ -139,7 +139,7 @@ export function ExtensionIcon({ category, size = "lg", isActive, className }: Ex
         className={cn(
           "shrink-0 transition-all duration-200",
           sizeClass.iconClass,
-          isActive ? "text-primary stroke-[2.5]" : "text-muted-foreground",
+          isActive ? "text-primary fill-primary" : "text-muted-foreground",
           className
         )}
       />
