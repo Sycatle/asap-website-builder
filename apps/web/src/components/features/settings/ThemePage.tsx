@@ -1,15 +1,16 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useWebsitesQuery } from '@/lib/query';
 import { PageHeader } from '@/components/shared/page-header';
+import { PageIcon } from '@/lib/navigation-config';
 import { 
-  Palette, 
   RefreshCw,
   Sun,
   Moon,
   Type,
   Paintbrush,
   Save,
-  RotateCcw
+  RotateCcw,
+  Palette,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -165,7 +166,7 @@ export default function ThemePage() {
   if (websitesLoading || isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+        <ArrowClockwise className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -173,7 +174,7 @@ export default function ThemePage() {
   if (!currentWebsite) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <Palette className="h-12 w-12 text-muted-foreground" />
+        <Palette className="h-12 w-12 text-muted-foreground" weight="fill" />
         <p className="text-muted-foreground">Sélectionnez un site pour personnaliser le thème</p>
       </div>
     );
@@ -185,22 +186,18 @@ export default function ThemePage() {
       <PageHeader
         title="Thème"
         subtitle="Personnalisez l'apparence de votre site"
-        icon={
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg">
-            <Palette className="h-5 w-5 text-white" />
-          </div>
-        }
+        icon={<PageIcon page="theme" />}
         backHref={currentWebsite ? `/${currentWebsite.id}` : '/'}
         actions={[
           ...(hasChanges ? [{
             label: 'Annuler',
-            icon: <RotateCcw className="h-4 w-4" />,
+            icon: <ArrowCounterClockwise className="h-4 w-4" weight="bold" />,
             variant: 'outline' as const,
             onClick: handleRevert,
           }] : []),
           {
             label: 'Enregistrer',
-            icon: isSaving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />,
+            icon: isSaving ? <ArrowClockwise className="h-4 w-4 animate-spin" /> : <FloppyDisk className="h-4 w-4" weight="fill" />,
             onClick: handleSave,
             disabled: !hasChanges || isSaving,
           }
@@ -208,9 +205,7 @@ export default function ThemePage() {
         stickyContent={
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
-                <Palette className="h-4 w-4 text-white" />
-              </div>
+              <PageIcon page="theme" size="md" />
               <p className="text-sm font-semibold hidden sm:block">Thème</p>
             </div>
             <div className="flex items-center gap-2">
@@ -219,7 +214,7 @@ export default function ThemePage() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="outline" size="sm" onClick={handleRevert} className="h-8">
-                        <RotateCcw className="h-4 w-4 mr-1.5" />
+                        <ArrowCounterClockwise className="h-4 w-4 mr-1.5" weight="bold" />
                         <span className="hidden sm:inline">Annuler</span>
                       </Button>
                     </TooltipTrigger>
@@ -233,7 +228,7 @@ export default function ThemePage() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button size="sm" onClick={handleSave} disabled={!hasChanges || isSaving} className="h-8">
-                      {isSaving ? <RefreshCw className="h-4 w-4 animate-spin mr-1.5" /> : <Save className="h-4 w-4 mr-1.5" />}
+                      {isSaving ? <ArrowClockwise className="h-4 w-4 animate-spin mr-1.5" /> : <FloppyDisk className="h-4 w-4 mr-1.5" weight="fill" />}
                       <span className="hidden sm:inline">Enregistrer</span>
                     </Button>
                   </TooltipTrigger>
@@ -250,15 +245,15 @@ export default function ThemePage() {
       <Tabs defaultValue="colors" className="space-y-6">
         <TabsList>
           <TabsTrigger value="colors" className="gap-2">
-            <Paintbrush className="h-4 w-4" />
+            <PaintBrush className="h-4 w-4" weight="fill" />
             Couleurs
           </TabsTrigger>
           <TabsTrigger value="typography" className="gap-2">
-            <Type className="h-4 w-4" />
+            <TextT className="h-4 w-4" weight="bold" />
             Typographie
           </TabsTrigger>
           <TabsTrigger value="options" className="gap-2">
-            <Sun className="h-4 w-4" />
+            <Sun className="h-4 w-4" weight="fill" />
             Options
           </TabsTrigger>
         </TabsList>
@@ -499,9 +494,9 @@ export default function ThemePage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {theme.enable_dark_mode ? (
-                      <Moon className="h-5 w-5 text-muted-foreground" />
+                      <Moon className="h-5 w-5 text-muted-foreground" weight="fill" />
                     ) : (
-                      <Sun className="h-5 w-5 text-muted-foreground" />
+                      <Sun className="h-5 w-5 text-muted-foreground" weight="fill" />
                     )}
                     <span>Mode sombre {theme.enable_dark_mode ? 'activé' : 'désactivé'}</span>
                   </div>
@@ -555,7 +550,7 @@ export default function ThemePage() {
             </CardHeader>
             <CardContent>
               <Button variant="outline" onClick={handleReset}>
-                <RotateCcw className="h-4 w-4 mr-2" />
+                <ArrowCounterClockwise className="h-4 w-4 mr-2" />
                 Réinitialiser le thème
               </Button>
             </CardContent>

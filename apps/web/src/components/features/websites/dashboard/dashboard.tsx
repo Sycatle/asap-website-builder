@@ -12,9 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
+import { PageIcon } from "@/lib/navigation-config";
 import { Spinner } from "@/components/ui/spinner";
 import { 
-  Globe, 
   Edit, 
   ExternalLink, 
   CheckCircle2,
@@ -202,11 +202,7 @@ export default function Dashboard() {
       <PageHeader
         title={website?.title || t('dashboard:dashboard.mySite')}
         subtitle={website?.slug ? `${website.slug}.asap.cool` : undefined}
-        icon={
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center shadow-lg">
-            <Globe className="h-5 w-5 text-white" />
-          </div>
-        }
+        icon={<PageIcon page="home" />}
         badge={website?.status === 'published' ? {
           label: t('dashboard:websites.status.online'),
           className: 'bg-green-500/10 text-green-600 border-green-500/20',
@@ -345,9 +341,7 @@ function StickyHeaderContent({
       {/* Left - Site info */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center shrink-0">
-            <Globe className="h-4 w-4 text-white" />
-          </div>
+          <PageIcon page="home" size="md" />
           <div className="hidden sm:block">
             <p className="text-sm font-semibold leading-none">{website?.title || t('dashboard:dashboard.mySite')}</p>
             <p className="text-[11px] text-muted-foreground font-mono">{website?.slug}.asap.cool</p>

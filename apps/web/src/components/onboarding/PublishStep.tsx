@@ -67,7 +67,7 @@ export function PublishStep({
           <CardContent className="py-12 text-center">
             <div className="mb-6">
               <div className="mx-auto h-20 w-20 rounded-full bg-green-500/20 flex items-center justify-center animate-in zoom-in duration-500">
-                <PartyPopper className="h-10 w-10 text-green-500" />
+                <PartyPopper className="h-10 w-10 text-green-500 fill-green-500" />
               </div>
             </div>
             <h2 className="text-2xl font-bold mb-2">
@@ -99,7 +99,7 @@ export function PublishStep({
                 onClick={() => openExternalUrl(fullUrl)}
                 className="flex-shrink-0"
               >
-                <ExternalLink className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4 stroke-[2.5]" />
               </Button>
             </div>
           </CardContent>
@@ -119,11 +119,11 @@ export function PublishStep({
           <CardContent>
             <div className="flex flex-wrap gap-3">
               <Button variant="outline" onClick={shareOnTwitter} className="gap-2">
-                <Twitter className="h-4 w-4" />
+                <Twitter className="h-4 w-4 fill-current" />
                 Partager sur Twitter
               </Button>
               <Button variant="outline" onClick={shareOnLinkedin} className="gap-2">
-                <Linkedin className="h-4 w-4" />
+                <Linkedin className="h-4 w-4 fill-current" />
                 Partager sur LinkedIn
               </Button>
               <Button variant="outline" onClick={copyToClipboard} className="gap-2">
@@ -181,10 +181,10 @@ export function PublishStep({
         {/* CTA */}
         <div className="flex justify-center gap-4">
           <Button variant="outline" onClick={() => openExternalUrl(fullUrl)} className="gap-2">
-            <ExternalLink className="h-4 w-4" />
+            <ExternalLink className="h-4 w-4 stroke-[2.5]" />
             Voir mon portfolio
           </Button>
-          <Button onClick={() => window.location.href = '/app'} className="gap-2">
+          <Button onClick={() => window.location.href = '/'} className="gap-2">
             Accéder au dashboard
           </Button>
         </div>

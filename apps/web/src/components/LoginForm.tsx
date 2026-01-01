@@ -63,7 +63,7 @@ export default function LoginForm({
     if (redirect && isValidRedirectUrl(redirect)) {
       return redirect;
     }
-    return '/app';
+    return '/';
   };
 
   // Format seconds to mm:ss

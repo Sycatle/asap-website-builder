@@ -382,7 +382,7 @@ export function GenericSiteOnboarding({ presetId, onComplete }: GenericSiteOnboa
         label: t('generic.publish.button'),
         loadingLabel: t('generic.publish.creating'),
         onClick: handlePublish,
-        icon: <Sparkles className="h-4 w-4" aria-hidden="true" />,
+        icon: <Sparkle className="h-4 w-4" weight="fill" aria-hidden="true" />,
       };
     }
     return {

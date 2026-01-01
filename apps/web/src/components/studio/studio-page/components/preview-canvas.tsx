@@ -12,7 +12,7 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
-  Settings2,
+  Settings,
   Smartphone,
   Tablet,
 } from "lucide-react";
@@ -217,7 +217,7 @@ function PreviewToolbar({
         aria-pressed={rightPanelOpen}
       >
         <span className="text-xs">{t('editor:properties.title')}</span>
-        {rightPanelOpen ? <ChevronRight className="h-4 w-4" aria-hidden="true" /> : <Settings2 className="h-4 w-4" aria-hidden="true" />}
+        {rightPanelOpen ? <ChevronRight className="h-4 w-4" aria-hidden="true" /> : <Settings className="h-4 w-4" aria-hidden="true" />}
       </Button>
       <div className="md:hidden w-8" /> {/* Spacer for mobile */}
     </div>

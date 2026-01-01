@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useTranslation } from 'react-i18next';
 import { useWebsiteContext } from "@/contexts/WebsiteContext";
 import { PageHeader } from "@/components/shared/page-header";
+import { PageIcon } from "@/lib/navigation-config";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -89,11 +90,7 @@ export function SeoPage() {
       <PageHeader
         title={t('dashboard:seo.title')}
         subtitle={t('dashboard:seo.subtitle')}
-        icon={
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg">
-            <Search className="h-5 w-5 text-white" />
-          </div>
-        }
+        icon={<PageIcon page="seo" />}
         badge={{
           label: `Score ${seoData.seoScore}`,
           className: seoData.seoScore >= 80 ? 'bg-green-500/10 text-green-600 border-green-500/20' :
@@ -111,9 +108,7 @@ export function SeoPage() {
         stickyContent={
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
-                <Search className="h-4 w-4 text-white" />
-              </div>
+              <PageIcon page="seo" size="md" />
               <div className="hidden sm:flex items-center gap-3">
                 <p className="text-sm font-semibold">SEO</p>
                 <Badge className={seoData.seoScore >= 80 ? 'bg-green-500/10 text-green-600 border-green-500/20 text-[10px] h-5' :

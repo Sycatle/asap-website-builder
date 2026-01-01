@@ -125,7 +125,7 @@ export function ReviewProfileStep({
             <span className="hidden sm:inline">Projets</span>
           </TabsTrigger>
           <TabsTrigger value="contact" className="gap-2">
-            <Mail className="h-4 w-4" />
+            <Mail className="h-4 w-4 fill-current" />
             <span className="hidden sm:inline">Contact</span>
           </TabsTrigger>
         </TabsList>
@@ -207,7 +207,7 @@ export function ReviewProfileStep({
 
               {/* AI Suggestion */}
               <div className="bg-muted/50 rounded-lg p-4 flex items-start gap-3">
-                <Sparkles className="h-5 w-5 text-primary mt-0.5" />
+                <Sparkles className="h-5 w-5 text-primary mt-0.5 fill-primary" />
                 <div>
                   <p className="font-medium text-sm">💡 Suggestion</p>
                   <p className="text-sm text-muted-foreground">

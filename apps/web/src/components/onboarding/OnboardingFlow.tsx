@@ -30,7 +30,7 @@ import {
   ArrowRight, 
   Sparkles, 
   Rocket, 
-  CheckCircle2,
+  CheckCircle,
   User,
   Briefcase,
   Code,
@@ -513,7 +513,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         <Card className="border-2 border-green-500/20">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-500/10 flex items-center justify-center">
-              <CheckCircle2 className="h-8 w-8 text-green-600" />
+              <CheckCircle className="h-8 w-8 text-green-600 fill-green-600" />
             </div>
             <CardTitle className="text-2xl">{t('flow.completed.title')}</CardTitle>
             <CardDescription className="text-base">
@@ -530,7 +530,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 className="font-mono font-semibold text-green-600 hover:underline flex items-center justify-center gap-1"
               >
                 {slug || t('flow.publish.defaultSlug')}.asap.cool
-                <ExternalLink className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4 stroke-[2.5]" />
               </a>
             </div>
 

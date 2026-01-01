@@ -60,7 +60,7 @@ export default function SignupForm({
     if (redirect && isValidRedirectUrl(redirect)) {
       return redirect;
     }
-    return '/app';
+    return '/';
   };
 
   // Format seconds to mm:ss

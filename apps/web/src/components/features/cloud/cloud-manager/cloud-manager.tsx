@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { FileMetadata } from '@/lib/api';
 import { formatBytes } from '@/lib/utils/formatters';
 import { PageHeader } from '@/components/shared/page-header';
+import { PageIcon } from '@/lib/navigation-config';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -18,7 +19,6 @@ import {
   Upload, 
   LayoutGrid,
   List,
-  HardDrive,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { useFilesQuery, useQuotaQuery, useUploadFileMutation, useDeleteFileMutation, useDeleteFilesMutation } from '@/lib/query';
@@ -235,11 +235,7 @@ export function CloudManager() {
       <PageHeader
         title={t('dashboard:cloud.title')}
         subtitle={t('dashboard:cloud.subtitle')}
-        icon={
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
-            <HardDrive className="h-5 w-5 text-white" />
-          </div>
-        }
+        icon={<PageIcon page="cloud" />}
         badge={quota ? {
           label: `${formatBytes(quota.total_size_used)} / ${formatBytes(quota.quota_limit)}`,
           variant: 'outline',
@@ -256,9 +252,7 @@ export function CloudManager() {
         stickyContent={
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                <HardDrive className="h-4 w-4 text-white" />
-              </div>
+              <PageIcon page="cloud" size="md" />
               <div className="hidden sm:block">
                 <p className="text-sm font-semibold">{t('dashboard:cloud.filesLabel')}</p>
                 {quota && <p className="text-[11px] text-muted-foreground">{formatBytes(quota.total_size_used)} / {formatBytes(quota.quota_limit)}</p>}

@@ -67,8 +67,8 @@ type Route =
 
 // Parse route from pathname
 function parseRoute(pathname: string): Route {
-  // Remove /app prefix
-  const path = pathname.replace(/^\/app\/?/, "")
+  // Remove leading slash
+  const path = pathname.replace(/^\//, "")
   
   // Empty path = website selector
   if (!path) {
@@ -150,8 +150,10 @@ export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(
         return
       }
       
-      // Only handle internal /app routes
-      if (href.startsWith('/app')) {
+      // Only handle internal app routes (not auth pages)
+      const isAuthPage = href.startsWith('/login') || href.startsWith('/signup') || 
+                         href.startsWith('/forgot-password') || href.startsWith('/reset-password')
+      if (!isAuthPage && href.startsWith('/')) {
         e.preventDefault()
         navigate(href)
       }
@@ -335,7 +337,7 @@ export default function AppRouter() {
           <div className="flex flex-col items-center justify-center h-[50vh] gap-4">
             <h1 className="text-2xl font-bold">Page non trouvée</h1>
             <p className="text-muted-foreground">La page que vous cherchez n'existe pas.</p>
-            <Link href="/app" className="text-primary hover:underline">
+            <Link href="/" className="text-primary hover:underline">
               Retourner à l'accueil
             </Link>
           </div>

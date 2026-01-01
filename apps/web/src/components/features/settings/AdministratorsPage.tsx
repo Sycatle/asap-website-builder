@@ -2,19 +2,20 @@ import { useEffect, useState, useMemo } from 'react';
 import { useWebsitesQuery } from '@/lib/query';
 import { formatDate } from '@/lib/utils/formatters';
 import { PageHeader } from '@/components/shared/page-header';
+import { PageIcon } from '@/lib/navigation-config';
 import { 
-  Users, 
   UserPlus, 
   Shield, 
-  Mail, 
+  Mail,
   MoreHorizontal,
   RefreshCw,
   Trash2,
-  Edit,
+  Pencil,
   Crown,
   Check,
   Clock,
-  X
+  X,
+  Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -237,7 +238,7 @@ export default function AdministratorsPage() {
   if (websitesLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+        <ArrowClockwise className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -257,11 +258,7 @@ export default function AdministratorsPage() {
       <PageHeader
         title="Administrateurs"
         subtitle="Gérez les accès et permissions des collaborateurs de votre site"
-        icon={
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
-            <Users className="h-5 w-5 text-white" />
-          </div>
-        }
+        icon={<PageIcon page="administrators" />}
         badge={{
           label: `${stats.total} collaborateur${stats.total > 1 ? 's' : ''}`,
           variant: 'outline',
@@ -270,9 +267,7 @@ export default function AdministratorsPage() {
         stickyContent={
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-                <Users className="h-4 w-4 text-white" />
-              </div>
+              <PageIcon page="administrators" size="md" />
               <div className="hidden sm:flex items-center gap-3">
                 <p className="text-sm font-semibold">Administrateurs</p>
                 <div className="flex items-center gap-2">
@@ -386,7 +381,7 @@ export default function AdministratorsPage() {
                   </SelectItem>
                   <SelectItem value="editor">
                     <div className="flex items-center gap-2">
-                      <Edit className="h-4 w-4" />
+                      <PencilSimple className="h-4 w-4" weight="fill" />
                       Éditeur
                     </div>
                   </SelectItem>
@@ -402,9 +397,9 @@ export default function AdministratorsPage() {
             <div className="flex items-end">
               <Button type="submit" disabled={isInviting || !inviteEmail}>
                 {isInviting ? (
-                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                  <ArrowClockwise className="h-4 w-4 animate-spin mr-2" />
                 ) : (
-                  <Mail className="h-4 w-4 mr-2" />
+                  <Envelope className="h-4 w-4 mr-2" weight="fill" />
                 )}
                 Envoyer l'invitation
               </Button>
@@ -429,7 +424,7 @@ export default function AdministratorsPage() {
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
-              <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+              <ArrowClockwise className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : administrators.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 gap-2 text-muted-foreground">
@@ -480,7 +475,7 @@ export default function AdministratorsPage() {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
+                                <DotsThree className="h-4 w-4" weight="bold" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -490,14 +485,14 @@ export default function AdministratorsPage() {
                                   setEditDialog({ open: true, admin });
                                 }}
                               >
-                                <Edit className="h-4 w-4 mr-2" />
+                                <PencilSimple className="h-4 w-4 mr-2" weight="fill" />
                                 Modifier le rôle
                               </DropdownMenuItem>
                               {admin.status === 'pending' && (
                                 <DropdownMenuItem
                                   onClick={() => handleResendInvitation(admin)}
                                 >
-                                  <Mail className="h-4 w-4 mr-2" />
+                                  <Envelope className="h-4 w-4 mr-2" weight="fill" />
                                   Renvoyer l'invitation
                                 </DropdownMenuItem>
                               )}
@@ -506,7 +501,7 @@ export default function AdministratorsPage() {
                                 className="text-destructive"
                                 onClick={() => setDeleteDialog({ open: true, admin })}
                               >
-                                <Trash2 className="h-4 w-4 mr-2" />
+                                <Trash className="h-4 w-4 mr-2" weight="fill" />
                                 Supprimer
                               </DropdownMenuItem>
                             </DropdownMenuContent>

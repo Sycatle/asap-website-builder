@@ -38,12 +38,10 @@ import {
   ArrowLeft,
   Sparkles, 
   Rocket, 
-  CheckCircle2,
   User,
   Briefcase,
   Code,
   Mail,
-  ExternalLink,
   Plus,
   X,
   Globe,
@@ -55,15 +53,11 @@ import {
   Clock,
   Zap,
   Palette,
-  Server,
+  HardDrive,
   Smartphone,
   Database,
   Cloud,
-  MessageSquare,
-  Star,
-  ChevronRight,
-  Eye,
-  Share2,
+  MessageCircle,
   Copy,
   Check,
 } from 'lucide-react';
@@ -85,16 +79,16 @@ interface FreelanceDevOnboardingProps {
   onComplete: (websiteId: string) => void;
 }
 
-// Service icons
-const serviceIcons = {
+// Service icons (available for future use)
+const _serviceIcons = {
   code: Code,
   globe: Globe,
   mobile: Smartphone,
-  server: Server,
+  server: HardDrive,
   database: Database,
   cloud: Cloud,
   design: Palette,
-  consulting: MessageSquare,
+  consulting: MessageCircle,
 };
 
 // ============================================
@@ -426,7 +420,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
-                <Sparkles className="h-5 w-5 text-primary-foreground" />
+                <Sparkles className="h-5 w-5 text-primary-foreground fill-primary-foreground" />
               </div>
               <div>
                 <h1 className="text-xl font-semibold">{t('header.title')}</h1>
@@ -636,7 +630,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
               <Card className="border-2 border-primary/10">
                 <CardHeader className="text-center pb-2">
                   <div className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-gradient-to-br from-violet-500/20 to-violet-500/5 flex items-center justify-center">
-                    <Zap className="h-8 w-8 text-violet-500" />
+                    <Zap className="h-8 w-8 text-violet-500 fill-violet-500" />
                   </div>
                   <CardTitle className="text-2xl">{t('services.title')}</CardTitle>
                   <CardDescription className="text-base">
@@ -650,7 +644,7 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
                       <p className="text-muted-foreground mb-4">{t('services.empty')}</p>
                       <div className="flex flex-col sm:flex-row gap-2 justify-center">
                         <Button variant="outline" onClick={addDefaultServices}>
-                          <Sparkles className="h-4 w-4 mr-2" />
+                          <Sparkles className="h-4 w-4 mr-2 fill-current" />
                           {t('services.useExamples')}
                         </Button>
                         <Button variant="outline" onClick={addService}>
