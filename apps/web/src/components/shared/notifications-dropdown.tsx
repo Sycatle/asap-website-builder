@@ -95,9 +95,10 @@ const priorityColors: Record<NotificationPriority, string> = {
 
 interface NotificationsDropdownProps {
   className?: string
+  trigger?: React.ReactNode
 }
 
-export function NotificationsDropdown({ className }: NotificationsDropdownProps) {
+export function NotificationsDropdown({ className, trigger }: NotificationsDropdownProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [pushEnabled, setPushEnabled] = useState(false)
@@ -233,36 +234,38 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(
-            "relative h-9 w-9 transition-all",
-            hasNewNotifications && "animate-pulse",
-            className
-          )}
-          aria-label="Notifications"
-        >
-          {hasNewNotifications || unreadCount > 0 ? (
-            <BellRing className={cn(
-              "h-5 w-5",
-              hasNewNotifications && "text-primary animate-bounce"
-            )} />
-          ) : (
-            <Bell className="h-5 w-5" />
-          )}
-          {unreadCount > 0 && (
-            <Badge 
-              variant="destructive" 
-              className={cn(
-                "absolute -top-1 -right-1 h-5 min-w-[20px] px-1.5 text-xs font-bold",
-                hasNewNotifications && "animate-pulse"
-              )}
-            >
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </Badge>
-          )}
-        </Button>
+        {trigger || (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "relative h-9 w-9 transition-all",
+              hasNewNotifications && "animate-pulse",
+              className
+            )}
+            aria-label="Notifications"
+          >
+            {hasNewNotifications || unreadCount > 0 ? (
+              <BellRing className={cn(
+                "h-5 w-5",
+                hasNewNotifications && "text-primary animate-bounce"
+              )} />
+            ) : (
+              <Bell className="h-5 w-5" />
+            )}
+            {unreadCount > 0 && (
+              <Badge 
+                variant="destructive" 
+                className={cn(
+                  "absolute -top-1 -right-1 h-5 min-w-[20px] px-1.5 text-xs font-bold",
+                  hasNewNotifications && "animate-pulse"
+                )}
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </Badge>
+            )}
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent 
         className="w-[400px] p-0" 
