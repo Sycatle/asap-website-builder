@@ -1,2 +1,2 @@
 // Command Palette - barrel export
-export { CommandPalette, useCommandPalette, type CommandPaletteProps } from './command-palette'
+export { CommandPalette, CommandPaletteProvider, useCommandPalette, type CommandPaletteProps } from './command-palette'

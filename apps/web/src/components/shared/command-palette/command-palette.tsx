@@ -44,14 +44,20 @@ interface CommandItem {
 }
 
 // ============================================================================
-// Hooks
+// Context for shared state
 // ============================================================================
 
+interface CommandPaletteContextValue {
+  open: boolean
+  setOpen: (open: boolean) => void
+}
+
+const CommandPaletteContext = React.createContext<CommandPaletteContextValue | null>(null)
+
 /**
- * Hook to manage command palette state with keyboard shortcuts
- * Opens with Cmd+K / Ctrl+K or "/" key
+ * Provider to share command palette state across components
  */
-export function useCommandPalette() {
+export function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -72,7 +78,27 @@ export function useCommandPalette() {
     return () => document.removeEventListener("keydown", down)
   }, [])
 
-  return { open, setOpen }
+  return (
+    <CommandPaletteContext.Provider value={{ open, setOpen }}>
+      {children}
+    </CommandPaletteContext.Provider>
+  )
+}
+
+// ============================================================================
+// Hooks
+// ============================================================================
+
+/**
+ * Hook to access command palette state from context
+ * Must be used within CommandPaletteProvider
+ */
+export function useCommandPalette() {
+  const context = React.useContext(CommandPaletteContext)
+  if (!context) {
+    throw new Error('useCommandPalette must be used within a CommandPaletteProvider')
+  }
+  return context
 }
 
 // ============================================================================
