@@ -2,6 +2,7 @@ import * as React from "react"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { AsapSidebar } from "@/components/layouts/asap-sidebar"
+import { BottomNav } from "@/components/layouts/bottom-nav"
 import { SidebarProvider, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
@@ -29,7 +30,7 @@ import { Keyboard, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SkipLink } from "@/components/ui/accessibility"
 import { PresenceAvatars } from "@/components/shared/presence-avatars"
-import { CommandPalette, useCommandPalette } from "@/components/shared/command-palette"
+import { CommandPalette, CommandPaletteProvider, useCommandPalette } from "@/components/shared/command-palette"
 
 interface AppShellProps {
   children: React.ReactNode
@@ -75,20 +76,22 @@ export function AppShell({
 
   return (
     <WebsiteProvider websiteId={websiteId}>
-      <SidebarProvider defaultOpen={!isStudioPage && showSidebar}>
-        <AppShellContent 
-          title={title} 
-          breadcrumbs={breadcrumbs}
-          showShortcutsHelp={showShortcutsHelp}
-          setShowShortcutsHelp={setShowShortcutsHelp}
-          isStudioPage={isStudioPage}
-          showSidebar={showSidebar}
-          websiteId={websiteId}
-          currentPage={currentPage}
-        >
-          {children}
-        </AppShellContent>
-      </SidebarProvider>
+      <CommandPaletteProvider>
+        <SidebarProvider defaultOpen={!isStudioPage && showSidebar}>
+          <AppShellContent 
+            title={title} 
+            breadcrumbs={breadcrumbs}
+            showShortcutsHelp={showShortcutsHelp}
+            setShowShortcutsHelp={setShowShortcutsHelp}
+            isStudioPage={isStudioPage}
+            showSidebar={showSidebar}
+            websiteId={websiteId}
+            currentPage={currentPage}
+          >
+            {children}
+          </AppShellContent>
+        </SidebarProvider>
+      </CommandPaletteProvider>
     </WebsiteProvider>
   )
 }
@@ -273,15 +276,15 @@ function AppShellContent({
           {showSidebar && (
             <>
               <SidebarTrigger className="-ml-1" />
-              <Separator orientation="vertical" className="h-4" />
+              <Separator orientation="vertical" className="h-4 hidden sm:block" />
             </>
           )}
           
-          {/* Center section: Search trigger - opens command palette */}
+          {/* Center section: Search trigger - hidden on mobile (available in bottom nav) */}
           <div className="flex-1 flex items-center min-w-0">
             <button 
               onClick={() => setCommandOpen(true)}
-              className="relative w-full max-w-md group"
+              className="relative w-full max-w-md group hidden sm:block"
             >
               <div className="flex items-center gap-2 w-full bg-muted/50 hover:bg-muted/70 rounded-md px-3 h-9 text-sm text-muted-foreground transition-colors cursor-pointer">
                 <Search className="h-4 w-4 shrink-0" />
@@ -291,17 +294,21 @@ function AppShellContent({
                 </Kbd>
               </div>
             </button>
+            {/* Mobile: Show current website name or app name */}
+            <span className="sm:hidden text-sm font-medium truncate">
+              {currentWebsite?.name || 'ASAP'}
+            </span>
           </div>
           
-          {/* Right section: Actions - always right-aligned */}
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {/* Right section: Actions - hidden on mobile (available in bottom nav) */}
+          <div className="hidden sm:flex items-center gap-1 sm:gap-2 shrink-0">
             {/* Keyboard shortcuts - desktop only */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="hidden sm:flex h-8 w-8 text-muted-foreground hover:text-foreground"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
                   onClick={() => setShowShortcutsHelp(true)}
                 >
                   <Keyboard className="h-4 w-4" />
@@ -320,11 +327,10 @@ function AppShellContent({
                 currentPage={currentPage}
                 maxAvatars={2}
                 size="sm"
-                className="hidden xs:flex"
               />
             )}
             
-            {/* User menu - always visible */}
+            {/* User menu */}
             <HeaderUser />
           </div>
         </header>
@@ -334,12 +340,15 @@ function AppShellContent({
           tabIndex={-1}
           className={cn(
             "flex-1 focus:outline-none",
-            isStudioPage ? "p-0 overflow-hidden" : "px-3 sm:px-4 md:px-6 pt-2 sm:pt-3 md:pt-5 pb-3 sm:pb-4 md:pb-6 overflow-auto"
+            isStudioPage ? "p-0 overflow-hidden" : "px-3 sm:px-4 md:px-6 pt-2 sm:pt-3 md:pt-4 pb-20 md:pb-6 overflow-auto"
           )}
         >
           {children}
         </main>
       </SidebarInset>
+      
+      {/* Bottom Navigation - Mobile only */}
+      {showSidebar && <BottomNav />}
       
       {/* Command Palette */}
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
