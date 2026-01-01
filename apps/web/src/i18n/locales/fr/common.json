@@ -159,7 +159,10 @@
     "billing": "Facturation",
     "keyboardShortcuts": "Raccourcis clavier",
     "searchPlaceholder": "Rechercher...",
-    "goTo": "Aller à..."
+    "goTo": "Aller à...",
+    "search": "Rechercher",
+    "notifications": "Notifications",
+    "bottomNav": "Navigation principale"
   },
   "shortcuts": {
     "navigation": "Navigation",

@@ -1,11 +1,22 @@
 {
   "title": "Notifications",
   "enablePush": "Enable push notifications",
+  "unreadCount": "{{count}} unread",
+  "unreadCount_one": "{{count}} unread",
+  "unreadCount_other": "{{count}} unread",
   "empty": {
     "title": "No notifications",
     "description": "You're all caught up! Check back later."
   },
   "markAllRead": "Mark all as read",
+  "toast": {
+    "markedAllRead": "All notifications marked as read",
+    "markAllError": "Failed to mark all as read",
+    "deleteError": "Failed to delete notification",
+    "pushEnabled": "Push notifications enabled",
+    "pushError": "Failed to enable push notifications",
+    "permissionDenied": "Notification permission denied"
+  },
   "settings": {
     "title": "Settings",
     "sound": "Sound",

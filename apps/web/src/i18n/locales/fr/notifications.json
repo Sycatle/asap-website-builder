@@ -1,11 +1,22 @@
 {
   "title": "Notifications",
   "enablePush": "Activer les notifications push",
+  "unreadCount": "{{count}} non lue(s)",
+  "unreadCount_one": "{{count}} non lue",
+  "unreadCount_other": "{{count}} non lues",
   "empty": {
     "title": "Aucune notification",
     "description": "Vous êtes à jour ! Revenez plus tard."
   },
   "markAllRead": "Tout marquer comme lu",
+  "toast": {
+    "markedAllRead": "Toutes les notifications marquées comme lues",
+    "markAllError": "Échec du marquage comme lu",
+    "deleteError": "Échec de la suppression",
+    "pushEnabled": "Notifications push activées",
+    "pushError": "Échec de l'activation des notifications push",
+    "permissionDenied": "Permission de notification refusée"
+  },
   "settings": {
     "title": "Paramètres",
     "sound": "Son",

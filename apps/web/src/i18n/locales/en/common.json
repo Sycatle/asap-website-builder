@@ -159,7 +159,10 @@
     "billing": "Billing",
     "keyboardShortcuts": "Keyboard shortcuts",
     "searchPlaceholder": "Search...",
-    "goTo": "Go to..."
+    "goTo": "Go to...",
+    "search": "Search",
+    "notifications": "Notifications",
+    "bottomNav": "Main navigation"
   },
   "shortcuts": {
     "navigation": "Navigation",
