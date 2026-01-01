@@ -245,15 +245,15 @@ export default function ThemePage() {
       <Tabs defaultValue="colors" className="space-y-6">
         <TabsList>
           <TabsTrigger value="colors" className="gap-2">
-            <PaintBrush className="h-4 w-4" weight="fill" />
+            <Paintbrush className="h-4 w-4" />
             Couleurs
           </TabsTrigger>
           <TabsTrigger value="typography" className="gap-2">
-            <TextT className="h-4 w-4" weight="bold" />
+            <Type className="h-4 w-4" />
             Typographie
           </TabsTrigger>
           <TabsTrigger value="options" className="gap-2">
-            <Sun className="h-4 w-4" weight="fill" />
+            <Sun className="h-4 w-4" />
             Options
           </TabsTrigger>
         </TabsList>
@@ -494,9 +494,9 @@ export default function ThemePage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {theme.enable_dark_mode ? (
-                      <Moon className="h-5 w-5 text-muted-foreground" weight="fill" />
+                      <Moon className="h-5 w-5 text-muted-foreground" />
                     ) : (
-                      <Sun className="h-5 w-5 text-muted-foreground" weight="fill" />
+                      <Sun className="h-5 w-5 text-muted-foreground" />
                     )}
                     <span>Mode sombre {theme.enable_dark_mode ? 'activé' : 'désactivé'}</span>
                   </div>
@@ -550,7 +550,7 @@ export default function ThemePage() {
             </CardHeader>
             <CardContent>
               <Button variant="outline" onClick={handleReset}>
-                <ArrowCounterClockwise className="h-4 w-4 mr-2" />
+                <RotateCcw className="h-4 w-4 mr-2" />
                 Réinitialiser le thème
               </Button>
             </CardContent>

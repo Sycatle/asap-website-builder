@@ -87,5 +87,10 @@
       "description": "The site is temporarily unavailable for maintenance.",
       "backSoon": "We'll be back very soon!"
     }
+  },
+  "section": {
+    "errorIn": "Error in {{section}}",
+    "loadingError": "Loading error",
+    "contentDisplayFailed": "Content could not be displayed"
   }
 }

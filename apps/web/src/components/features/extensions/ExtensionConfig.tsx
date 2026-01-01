@@ -738,7 +738,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Warning className="h-5 w-5" weight="fill" />
+              <AlertTriangle className="h-5 w-5" />
               {t('dashboard:extensions.config.confirm.title')}
             </DialogTitle>
             <DialogDescription className="pt-2">

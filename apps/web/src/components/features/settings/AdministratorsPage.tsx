@@ -381,7 +381,7 @@ export default function AdministratorsPage() {
                   </SelectItem>
                   <SelectItem value="editor">
                     <div className="flex items-center gap-2">
-                      <PencilSimple className="h-4 w-4" weight="fill" />
+                      <Pencil className="h-4 w-4" />
                       Éditeur
                     </div>
                   </SelectItem>
@@ -397,9 +397,9 @@ export default function AdministratorsPage() {
             <div className="flex items-end">
               <Button type="submit" disabled={isInviting || !inviteEmail}>
                 {isInviting ? (
-                  <ArrowClockwise className="h-4 w-4 animate-spin mr-2" />
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                 ) : (
-                  <Envelope className="h-4 w-4 mr-2" weight="fill" />
+                  <Mail className="h-4 w-4 mr-2" />
                 )}
                 Envoyer l'invitation
               </Button>
@@ -424,7 +424,7 @@ export default function AdministratorsPage() {
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
-              <ArrowClockwise className="h-6 w-6 animate-spin text-muted-foreground" />
+              <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : administrators.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 gap-2 text-muted-foreground">
@@ -475,7 +475,7 @@ export default function AdministratorsPage() {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
-                                <DotsThree className="h-4 w-4" weight="bold" />
+                                <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -485,14 +485,14 @@ export default function AdministratorsPage() {
                                   setEditDialog({ open: true, admin });
                                 }}
                               >
-                                <PencilSimple className="h-4 w-4 mr-2" weight="fill" />
+                                <Pencil className="h-4 w-4 mr-2" />
                                 Modifier le rôle
                               </DropdownMenuItem>
                               {admin.status === 'pending' && (
                                 <DropdownMenuItem
                                   onClick={() => handleResendInvitation(admin)}
                                 >
-                                  <Envelope className="h-4 w-4 mr-2" weight="fill" />
+                                  <Mail className="h-4 w-4 mr-2" />
                                   Renvoyer l'invitation
                                 </DropdownMenuItem>
                               )}
@@ -501,7 +501,7 @@ export default function AdministratorsPage() {
                                 className="text-destructive"
                                 onClick={() => setDeleteDialog({ open: true, admin })}
                               >
-                                <Trash className="h-4 w-4 mr-2" weight="fill" />
+                                <Trash2 className="h-4 w-4 mr-2" />
                                 Supprimer
                               </DropdownMenuItem>
                             </DropdownMenuContent>
