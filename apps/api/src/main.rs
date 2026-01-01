@@ -251,7 +251,8 @@ async fn main() -> anyhow::Result<()> {
     };
     
     // Serve with graceful shutdown (allows in-flight requests to complete)
-    axum::serve(listener, app)
+    // Use into_make_service_with_connect_info to enable ConnectInfo<SocketAddr> for WebSocket handler
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
         .with_graceful_shutdown(shutdown_signal)
         .await?;
     
