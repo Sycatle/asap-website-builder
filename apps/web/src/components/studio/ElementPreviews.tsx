@@ -208,7 +208,7 @@ function ProjectsPreview({ element }: ElementPreviewProps) {
                 ))}
               </div>
             </div>
-            <ArrowSquareOut className="h-4 w-4 text-muted-foreground" />
+            <ExternalLink className="h-4 w-4 text-muted-foreground" />
           </div>
         ))}
       </div>
