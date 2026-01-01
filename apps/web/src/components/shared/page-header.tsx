@@ -143,7 +143,7 @@ export function PageHeader({
       <div ref={sentinelRef} className="h-0 w-full" aria-hidden="true" />
 
       {/* Main Header - Normal flow */}
-      <div ref={headerRef} className={cn("relative mb-4 sm:mb-6", className)}>
+      <div ref={headerRef} className={cn("relative mb-4 sm:mb-0", className)}>
         {/* Back button - Mobile: icon only, Desktop: with label */}
         {showBackButton && (
           <div className="mb-2 sm:mb-3">
@@ -160,10 +160,10 @@ export function PageHeader({
         {/* Header content - Mobile first layout */}
         <div className="flex items-start justify-between gap-3">
           {/* Left side: Icon + Title + Badge */}
-          <div className="flex items-start gap-3 min-w-0 flex-1">
-            {/* Icon - Smaller on mobile */}
+          <div className="flex items-start gap-2 sm:gap-3 min-w-0 flex-1">
+            {/* Icon - Matches bottom nav size on mobile (h-8 w-8), larger on desktop */}
             {icon && (
-              <div className="shrink-0 [&>div]:h-9 [&>div]:w-9 sm:[&>div]:h-10 sm:[&>div]:w-10 [&_svg]:h-4 [&_svg]:w-4 sm:[&_svg]:h-5 sm:[&_svg]:w-5">
+              <div className="shrink-0 [&>div]:h-8 [&>div]:w-8 sm:[&>div]:h-10 sm:[&>div]:w-10 [&_svg]:h-[18px] [&_svg]:w-[18px] sm:[&_svg]:h-[22px] sm:[&_svg]:w-[22px]">
                 {icon}
               </div>
             )}

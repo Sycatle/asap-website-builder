@@ -68,13 +68,14 @@ export function getExtensionIconConfig(category: string) {
 // Shared icon component props
 interface PageIconProps {
   page: PageKey
-  size?: "sm" | "md" | "lg"
+  size?: "xs" | "sm" | "md" | "lg"
   isActive?: boolean
   className?: string
 }
 
 // Size mappings
 const sizeClasses = {
+  xs: { container: "h-8 w-8 rounded-lg", iconSize: 18, iconClass: "size-[18px]" },
   sm: { container: "h-6 w-6 rounded-md", iconSize: 22, iconClass: "size-[22px]" },
   md: { container: "h-8 w-8 rounded-lg", iconSize: 20, iconClass: "size-5" },
   lg: { container: "h-10 w-10 rounded-xl shadow-lg", iconSize: 22, iconClass: "size-[22px]" },
@@ -122,7 +123,7 @@ export function PageIcon({ page, size = "lg", isActive, className }: PageIconPro
 // Extension icon component
 interface ExtensionIconProps {
   category: string
-  size?: "sm" | "md" | "lg"
+  size?: "xs" | "sm" | "md" | "lg"
   isActive?: boolean
   className?: string
 }
