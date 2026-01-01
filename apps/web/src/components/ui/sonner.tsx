@@ -11,7 +11,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme={resolvedTheme as "light" | "dark" | "system"}
-      className="toaster group"
+      className="toaster group !bottom-20 md:!bottom-4"
       position="bottom-right"
       richColors
       visibleToasts={4}
