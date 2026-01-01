@@ -143,7 +143,7 @@ export function PageHeader({
       <div ref={sentinelRef} className="h-0 w-full" aria-hidden="true" />
 
       {/* Main Header - Normal flow */}
-      <div ref={headerRef} className={cn("relative", className)}>
+      <div ref={headerRef} className={cn("relative mb-4 sm:mb-6", className)}>
         {/* Back button - Mobile: icon only, Desktop: with label */}
         {showBackButton && (
           <div className="mb-2 sm:mb-3">
