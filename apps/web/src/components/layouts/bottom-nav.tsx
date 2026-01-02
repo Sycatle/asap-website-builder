@@ -8,7 +8,6 @@ import { useWebsiteContext } from "@/contexts/WebsiteContext"
 import { useCommandPalette } from "@/components/shared/command-palette"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { SettingsModal } from "@/components/features/settings"
-import { NotificationsDropdown } from "@/components/shared"
 import { 
   useAuthStore, 
   useUserData,
@@ -27,17 +26,24 @@ interface NavItemContentProps {
 
 function NavItemContent({ icon: Icon, label, active }: NavItemContentProps) {
   return (
-    <div className="flex flex-col items-center justify-center gap-0.5 py-2 px-3 min-w-[64px]">
+    <div 
+      className={cn(
+        "flex flex-col items-center justify-center gap-1 py-2 px-4 min-w-[72px] rounded-xl transition-all duration-200",
+        active 
+          ? "bg-primary/10 text-primary" 
+          : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+      )}
+    >
       <Icon 
         className={cn(
-          "h-6 w-6 transition-all duration-200",
-          active ? "text-primary stroke-[2.5]" : "text-muted-foreground"
+          "h-5 w-5 transition-all duration-200",
+          active && "stroke-[2.5]"
         )} 
       />
       <span 
         className={cn(
-          "text-[10px] font-medium transition-colors duration-200",
-          active ? "text-primary" : "text-muted-foreground"
+          "text-[11px] font-medium transition-colors duration-200",
+          active && "font-semibold"
         )}
       >
         {label}
@@ -74,10 +80,21 @@ export function BottomNav({ className }: BottomNavProps) {
     }
   }, [])
 
-  // Build URL helper
+  // Build URL helper - uses currentWebsiteId or falls back to last visited website
   const buildUrl = (path: string) => {
-    if (!currentWebsiteId) return '/'
-    return `/${currentWebsiteId}${path}`
+    // Try current website first
+    if (currentWebsiteId) {
+      return `/${currentWebsiteId}${path}`
+    }
+    // Fallback to last visited website stored in localStorage
+    const lastWebsiteId = typeof window !== 'undefined' 
+      ? localStorage.getItem('last_website_id') 
+      : null
+    if (lastWebsiteId) {
+      return `/${lastWebsiteId}${path}`
+    }
+    // No website available, go to selector
+    return '/'
   }
   
   // Check if a path is active
@@ -87,6 +104,11 @@ export function BottomNav({ className }: BottomNavProps) {
       return currentPath === fullPath || currentPath === `${fullPath}/`
     }
     return currentPath.startsWith(fullPath)
+  }
+  
+  // Check if a global path is active (not tied to a website)
+  const isGlobalActive = (path: string) => {
+    return currentPath === path || currentPath.startsWith(`${path}/`)
   }
 
   const handleUserUpdate = (updatedData: Parameters<typeof updateUserData>[0]) => {
@@ -107,18 +129,18 @@ export function BottomNav({ className }: BottomNavProps) {
       <nav 
         className={cn(
           "fixed bottom-0 left-0 right-0 z-50 md:hidden",
-          "bg-background/95 backdrop-blur-md border-t",
+          "bg-background/80 backdrop-blur-xl border-t border-border/50",
           "safe-area-inset-bottom",
           className
         )}
         role="navigation"
         aria-label={t('navigation.bottomNav')}
       >
-        <div className="flex items-center justify-around h-16 px-2">
+        <div className="flex items-center justify-around h-[72px] px-2 max-w-md mx-auto">
           {/* Home */}
           <Link
             href={buildUrl('')}
-            className="flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+            className="flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-xl active:scale-95 transition-transform"
             aria-label={t('navigation.home')}
             aria-current={isActive('') ? 'page' : undefined}
           >
@@ -128,38 +150,41 @@ export function BottomNav({ className }: BottomNavProps) {
           {/* Search - Opens Command Palette */}
           <button
             onClick={() => setCommandOpen(true)}
-            className="flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+            className="flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-xl active:scale-95 transition-transform"
             aria-label={t('navigation.search')}
           >
             <NavItemContent icon={Search} label={t('navigation.search')} />
           </button>
 
-          {/* Notifications - Uses same component as header */}
-          <NotificationsDropdown 
-            trigger={
-              <button
-                className="flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
-                aria-label={t('navigation.notifications')}
-              >
-                <NavItemContent icon={Bell} label={t('navigation.notifications')} />
-              </button>
-            }
-          />
+          {/* Notifications - Direct link to notifications page */}
+          <Link
+            href="/notifications"
+            className="flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-xl active:scale-95 transition-transform"
+            aria-label={t('navigation.notifications')}
+            aria-current={isGlobalActive('/notifications') ? 'page' : undefined}
+          >
+            <NavItemContent icon={Bell} label={t('navigation.notifications')} active={isGlobalActive('/notifications')} />
+          </Link>
 
           {/* Profile - Opens Settings Modal directly */}
           <button
             onClick={() => setSettingsOpen(true)}
-            className="flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+            className="flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-xl active:scale-95 transition-transform"
             aria-label={t('navigation.profile')}
           >
-            <div className="flex flex-col items-center justify-center gap-0.5 py-2 px-3 min-w-[64px]">
-              <Avatar className="h-6 w-6">
+            <div 
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 py-2 px-4 min-w-[72px] rounded-xl transition-all duration-200",
+                "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              )}
+            >
+              <Avatar className="h-5 w-5 ring-2 ring-muted-foreground/30">
                 <AvatarImage src={userData?.avatar} alt={userData?.name || ''} />
-                <AvatarFallback className="bg-primary text-primary-foreground text-[10px]">
+                <AvatarFallback className="bg-primary text-primary-foreground text-[9px] font-semibold">
                   {getInitials(userData?.name || userData?.email || '')}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-[10px] font-medium text-muted-foreground">
+              <span className="text-[11px] font-medium">
                 {t('navigation.profile')}
               </span>
             </div>
