@@ -37,6 +37,7 @@ help:
 	@echo "  make dev-build       - Rebuild and start dev environment"
 	@echo "  make dev-api         - Start only API with dependencies"
 	@echo "  make dev-web         - Start only Web with dependencies"
+	@echo "  make dev-accounts    - Start only Accounts with dependencies"
 	@echo "  make dev-sites       - Start only Sites with dependencies"
 	@echo "  make dev-worker      - Start only Worker with dependencies"
 	@echo ""
@@ -48,6 +49,7 @@ help:
 	@echo "  make logs            - View logs from all services"
 	@echo "  make logs-api        - View API logs"
 	@echo "  make logs-web        - View Web logs"
+	@echo "  make logs-accounts   - View Accounts logs"
 	@echo "  make logs-sites      - View Sites logs"
 	@echo "  make logs-worker     - View Worker logs"
 	@echo "  make ps              - Show running containers"
@@ -100,9 +102,10 @@ help:
 
 dev:
 	@echo "$(CYAN)Starting full dev environment with Docker...$(NC)"
-	@echo "$(YELLOW)Ensuring local ports are free: 4322, 4321, 3000$(NC)"
+	@echo "$(YELLOW)Ensuring local ports are free: 4322, 4321, 4323, 3000$(NC)"
 	@fuser -k 4322/tcp 2>/dev/null || true
 	@fuser -k 4321/tcp 2>/dev/null || true
+	@fuser -k 4323/tcp 2>/dev/null || true
 	@fuser -k 3000/tcp 2>/dev/null || true
 	@echo "$(YELLOW)Killed local processes on those ports (if any).$(NC)"
 	$(DOCKER_COMPOSE) $(COMPOSE_DEV) up -d
@@ -110,6 +113,7 @@ dev:
 	@echo ""
 	@echo "  API:      http://localhost:3000"
 	@echo "  Web:      http://localhost:4321"
+	@echo "  Accounts: http://localhost:4323"
 	@echo "  Sites:    http://localhost:4322"
 	@echo "  Postgres: localhost:5432"
 	@echo "  Redis:    localhost:6379"
@@ -130,6 +134,11 @@ dev-web:
 	@echo "$(CYAN)Starting Web with Docker...$(NC)"
 	$(DOCKER_COMPOSE) $(COMPOSE_DEV) up -d web
 	@echo "$(GREEN)✓ Web started at http://localhost:4321$(NC)"
+
+dev-accounts:
+	@echo "$(CYAN)Starting Accounts with Docker...$(NC)"
+	$(DOCKER_COMPOSE) $(COMPOSE_DEV) up -d accounts
+	@echo "$(GREEN)✓ Accounts started at http://localhost:4323$(NC)"
 
 dev-worker:
 	@echo "$(CYAN)Starting Worker with Docker...$(NC)"
@@ -179,6 +188,9 @@ logs-api:
 
 logs-web:
 	$(DOCKER_COMPOSE) $(COMPOSE_DEV) logs -f web
+
+logs-accounts:
+	$(DOCKER_COMPOSE) $(COMPOSE_DEV) logs -f accounts
 
 logs-sites:
 	$(DOCKER_COMPOSE) $(COMPOSE_DEV) logs -f sites
