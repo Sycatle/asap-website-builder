@@ -45,6 +45,7 @@ const ThemePage = lazyWithRetry(() => import("@/components/features/settings/The
 const WebsiteSelector = lazyWithRetry(() => import("@/components/pages/WebsiteSelector"))
 const AnalyticsPage = lazyWithRetry(() => import("@/components/features/analytics/analytics-page"))
 const SeoPage = lazyWithRetry(() => import("@/components/features/seo/SeoPage"))
+const NotificationsPage = lazyWithRetry(() => import("@/components/features/notifications"))
 
 // UUID regex pattern
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -52,6 +53,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 // Route types
 type Route =
   | { page: "select" }
+  | { page: "notifications" }
   | { page: "dashboard"; websiteId: string }
   | { page: "extensions"; websiteId: string }
   | { page: "extension"; websiteId: string; slug: string }
@@ -76,6 +78,11 @@ function parseRoute(pathname: string): Route {
   }
   
   const segments = path.split("/").filter(Boolean)
+  
+  // Global routes (not tied to a specific website)
+  if (segments[0] === "notifications") {
+    return { page: "notifications" }
+  }
   
   // First segment should be websiteId (UUID)
   const websiteId = segments[0]
@@ -205,6 +212,8 @@ function getPageTitle(route: Route): string {
   switch (route.page) {
     case "select":
       return "Sélectionner un site"
+    case "notifications":
+      return "Notifications"
     case "dashboard":
       return "Accueil"
     case "extensions":
@@ -297,6 +306,9 @@ export default function AppRouter() {
     switch (route.page) {
       case "select":
         return <WebsiteSelector />
+      
+      case "notifications":
+        return <NotificationsPage />
       
       case "dashboard":
         return <Dashboard />
