@@ -21,6 +21,9 @@ pub enum SharedError {
     #[error("CSRF error: {0}")]
     CsrfError(String),
 
+    #[error("Cookie error: {0}")]
+    CookieError(String),
+
     #[error("Internal error: {0}")]
     InternalError(String),
 }

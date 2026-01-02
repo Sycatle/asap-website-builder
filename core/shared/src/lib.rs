@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod config;
+pub mod cookies;
 pub mod errors;
 pub mod extension_catalog;
 pub mod websocket;
@@ -11,6 +12,11 @@ pub mod refresh_token;
 // Re-export commonly used types
 pub use auth::{generate_token, generate_token_with_jti, validate_token, Claims};
 pub use config::SharedConfig;
+pub use cookies::{
+    CookieBuilder, CookieConfig, AuthCookies,
+    AUTH_ACCESS_TOKEN_COOKIE, AUTH_REFRESH_TOKEN_COOKIE,
+    clear_cookie,
+};
 pub use errors::SharedError;
 pub use csrf::{generate_csrf_token, validate_csrf_token, CsrfToken, CSRF_HEADER, CSRF_COOKIE};
 pub use password_reset::{
