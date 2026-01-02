@@ -10,6 +10,7 @@ services:
     container_name: asap-api
     volumes:
       # Mount source code for hot reload
+      - ../Cargo.toml:/app/Cargo.toml
       - ../core:/app/core
       - ../apps/api:/app/apps/api
       - ../modules:/app/modules
@@ -25,7 +26,7 @@ services:
       ASAP_API_PORT: 3000
       ASAP_API_HOST: 0.0.0.0
       JWT_SECRET: ${JWT_SECRET:-dev_secret_key_change_in_production_12345}
-      CORS_ALLOWED_ORIGINS: http://localhost:4321,http://web:4321
+      CORS_ALLOWED_ORIGINS: http://localhost:4321,http://localhost:4322,http://localhost:4323,http://web:4321,http://sites:4322,http://accounts:4323
       # SQLX_OFFLINE disabled to use live DB verification in dev
     ports:
       - "3000:3000"
@@ -96,7 +97,7 @@ services:
     image: node:20-alpine
     container_name: asap-sites
     working_dir: /app/apps/sites
-    command: sh -c "npm install -g pnpm && pnpm install && rm -rf node_modules/.vite && pnpm exec astro dev --host 0.0.0.0 --port 4322"
+    command: sh -c "npm install -g pnpm && pnpm install --force && rm -rf node_modules/.vite && pnpm exec astro dev --host 0.0.0.0 --port 4322"
     ports:
       - "4322:4322"
     environment:
@@ -113,6 +114,29 @@ services:
     networks:
       - asap-network
 
+  # Accounts application in dev mode with hot reload
+  accounts:
+    image: node:20-alpine
+    container_name: asap-accounts
+    working_dir: /app/apps/accounts
+    command: sh -c "npm install -g pnpm && pnpm install --force && rm -rf node_modules/.vite && pnpm exec astro dev --host 0.0.0.0 --port 4323"
+    ports:
+      - "4323:4323"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 4323
+      PUBLIC_API_URL: http://localhost:3000/api
+      PUBLIC_APP_URL: http://localhost:4321
+      PUBLIC_ACCOUNTS_URL: http://localhost:4323
+      NODE_ENV: development
+    volumes:
+      - ..:/app
+      - accounts-node-modules:/app/apps/accounts/node_modules
+    depends_on:
+      - api
+    networks:
+      - asap-network
+
 volumes:
   cargo-cache:
   cargo-git:
@@ -120,3 +144,4 @@ volumes:
   worker-target:
   web-node-modules:
   sites-node-modules:
+  accounts-node-modules:

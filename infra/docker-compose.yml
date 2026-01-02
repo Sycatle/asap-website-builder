@@ -70,7 +70,7 @@ services:
       ASAP_API_PORT: 3000
       ASAP_API_HOST: 0.0.0.0
       JWT_SECRET: ${JWT_SECRET:-dev_secret_key_change_in_production_12345}
-      CORS_ALLOWED_ORIGINS: http://localhost:4321,http://web:4321
+      CORS_ALLOWED_ORIGINS: http://localhost:4321,http://localhost:4322,http://localhost:4323,http://web:4321,http://sites:4322,http://accounts:4323
     depends_on:
       migrations:
         condition: service_completed_successfully
