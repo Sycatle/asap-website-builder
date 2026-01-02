@@ -38,7 +38,6 @@ export const NAMESPACES = [
   'errors',
   'notifications',
   'onboarding',
-  'auth',
 ] as const;
 
 export type Namespace = (typeof NAMESPACES)[number];

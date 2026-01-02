@@ -7,11 +7,8 @@ import { Link } from "@/components/app-router"
 import { useWebsiteContext } from "@/contexts/WebsiteContext"
 import { useCommandPalette } from "@/components/shared/command-palette"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { SettingsModal } from "@/components/features/settings"
-import { 
-  useAuthStore, 
-  useUserData,
-} from "@/lib/store/authStore"
+import { useUserData } from "@/lib/store/authStore"
+import { getSettingsUrl } from "@/lib/utils/auth-redirect"
 
 interface BottomNavProps {
   className?: string
@@ -60,12 +57,8 @@ export function BottomNav({ className }: BottomNavProps) {
     typeof window !== 'undefined' ? window.location.pathname : ''
   )
   
-  // Settings modal state
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  
   // User data from auth store
   const userData = useUserData()
-  const { updateUserData } = useAuthStore()
   
   // Track current path for active state
   useEffect(() => {
@@ -111,8 +104,9 @@ export function BottomNav({ className }: BottomNavProps) {
     return currentPath === path || currentPath.startsWith(`${path}/`)
   }
 
-  const handleUserUpdate = (updatedData: Parameters<typeof updateUserData>[0]) => {
-    updateUserData(updatedData)
+  // Redirect to accounts app settings
+  const openSettings = () => {
+    window.location.href = getSettingsUrl('profile')
   }
 
   const getInitials = (name: string) => {
@@ -166,9 +160,9 @@ export function BottomNav({ className }: BottomNavProps) {
             <NavItemContent icon={Bell} label={t('navigation.notifications')} active={isGlobalActive('/notifications')} />
           </Link>
 
-          {/* Profile - Opens Settings Modal directly */}
+          {/* Profile - Opens accounts settings */}
           <button
-            onClick={() => setSettingsOpen(true)}
+            onClick={openSettings}
             className="flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-xl active:scale-95 transition-transform"
             aria-label={t('navigation.profile')}
           >
@@ -191,15 +185,6 @@ export function BottomNav({ className }: BottomNavProps) {
           </button>
         </div>
       </nav>
-
-      {/* Settings Modal */}
-      <SettingsModal
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        user={userData || { id: "", email: "", name: "" }}
-        onUserUpdate={handleUserUpdate}
-        defaultTab="account"
-      />
     </>
   )
 }

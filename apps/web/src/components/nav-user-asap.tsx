@@ -8,6 +8,7 @@ import {
   LogOut,
   Settings,
   CreditCard,
+  ExternalLink,
 } from "lucide-react"
 
 import {
@@ -30,9 +31,9 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { SettingsModal } from "@/components/features/settings"
 import { LogoutConfirmDialog } from "@/components/shared"
 import { authAPI, websitesAPI, accountsAPI, type Website } from "@/lib/api"
+import { getSettingsUrl } from "@/lib/utils/auth-redirect"
 
 interface UserData {
   id: string
@@ -49,8 +50,6 @@ interface NavUserAsapProps {
 export function NavUserAsap({ user: initialUser }: NavUserAsapProps) {
   const { t } = useTranslation(['common'])
   const { isMobile } = useSidebar()
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [settingsTab, setSettingsTab] = useState<'account' | 'billing'>('account')
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState<UserData>({
@@ -125,13 +124,9 @@ export function NavUserAsap({ user: initialUser }: NavUserAsapProps) {
     setLogoutDialogOpen(true)
   }
 
-  const handleUserUpdate = (updatedData: Partial<UserData>) => {
-    setUser(prev => ({ ...prev, ...updatedData }))
-  }
-
-  const openSettings = (tab: 'account' | 'billing' = 'account') => {
-    setSettingsTab(tab)
-    setSettingsOpen(true)
+  // Redirect to accounts app settings
+  const openSettings = (section?: string) => {
+    window.location.href = getSettingsUrl(section)
   }
 
   const getInitials = (name: string) => {
@@ -204,13 +199,15 @@ export function NavUserAsap({ user: initialUser }: NavUserAsapProps) {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => openSettings('account')}>
+              <DropdownMenuItem onClick={() => openSettings('profile')}>
                 <Settings className="mr-2 h-4 w-4" />
                 {t('user.settings')}
+                <ExternalLink className="ml-auto h-3 w-3 text-muted-foreground" />
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => openSettings('billing')}>
                 <CreditCard className="mr-2 h-4 w-4" />
                 {t('user.billing')}
+                <ExternalLink className="ml-auto h-3 w-3 text-muted-foreground" />
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
@@ -221,15 +218,6 @@ export function NavUserAsap({ user: initialUser }: NavUserAsapProps) {
           </DropdownMenu>
         </SidebarMenuItem>
       </SidebarMenu>
-
-      {/* Settings Modal */}
-      <SettingsModal
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        user={user}
-        onUserUpdate={handleUserUpdate}
-        defaultTab={settingsTab}
-      />
 
       {/* Logout Confirmation Dialog */}
       <LogoutConfirmDialog

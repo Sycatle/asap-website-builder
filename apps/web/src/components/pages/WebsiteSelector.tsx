@@ -18,10 +18,26 @@ export default function WebsiteSelector() {
   const queryClient = useQueryClient()
   const [showCreateModal, setShowCreateModal] = useState(false)
 
-  // Auto-redirect if only one website
+  // Auto-redirect to last visited page or single website
   useEffect(() => {
-    if (!isLoading && websites.length === 1) {
-      navigate(`/${websites[0].id}`)
+    if (isLoading) return;
+    
+    // Check for last visited path
+    const lastPath = localStorage.getItem('last_path');
+    const lastWebsiteId = localStorage.getItem('last_website_id');
+    
+    if (lastPath && lastWebsiteId) {
+      // Verify the website still exists
+      const websiteExists = websites.some(w => w.id === lastWebsiteId);
+      if (websiteExists) {
+        navigate(lastPath);
+        return;
+      }
+    }
+    
+    // Fallback: redirect if only one website
+    if (websites.length === 1) {
+      navigate(`/${websites[0].id}`);
     }
   }, [isLoading, websites])
 

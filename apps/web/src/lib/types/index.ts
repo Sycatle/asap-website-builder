@@ -63,23 +63,13 @@ export {
   type ExtensionDataPayload,
 } from './extension';
 
-// Auth types
+// Auth types (minimal - login/signup handled by accounts app)
 export {
-  type SignupRequest,
-  type SignupResponse,
-  type LoginRequest,
-  type LoginResponse,
   type MeResponse,
-  type ChangePasswordRequest,
-  type ForgotPasswordRequest,
-  type ResetPasswordRequest,
-  type RefreshTokenRequest,
   type TokenPairResponse,
-  type UpdateGitHubIntegrationRequest,
   type UserData,
   type SessionInfo,
   type ListSessionsResponse,
-  type RevokeSessionRequest,
 } from './auth';
 
 // File types

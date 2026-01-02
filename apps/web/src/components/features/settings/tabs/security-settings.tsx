@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/card"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { getPasswordStrength } from "@/lib/validations/auth"
+import { getPasswordStrength } from "@/lib/utils/password"
 import { authAPI } from "@/lib/api"
 import type { SessionInfo } from "@/lib/types"
 import { formatRelativeTimeFr } from "@/lib/utils/formatters"

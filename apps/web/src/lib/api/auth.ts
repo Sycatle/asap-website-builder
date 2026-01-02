@@ -1,47 +1,25 @@
 import { apiClient } from './client';
 import type {
-  SignupRequest,
-  SignupResponse,
-  LoginRequest,
-  LoginResponse,
   MeResponse,
-  ChangePasswordRequest,
-  ForgotPasswordRequest,
-  ResetPasswordRequest,
-  RefreshTokenRequest,
   TokenPairResponse,
-  UpdateGitHubIntegrationRequest,
   ListSessionsResponse,
-  RevokeSessionRequest,
 } from '../types';
 
 // Storage keys
 const ACCESS_TOKEN_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 
+/**
+ * Auth API for the web app.
+ * Note: Login, signup, password reset are handled by the accounts app.
+ * This module only handles token management, session info, and logout.
+ */
 export const authAPI = {
-  async signup(data: SignupRequest): Promise<SignupResponse> {
-    return apiClient.post<SignupResponse>('/auth/signup', data);
-  },
-
-  async login(data: LoginRequest): Promise<LoginResponse> {
-    return apiClient.post<LoginResponse>('/auth/login', data);
-  },
-
+  /**
+   * Get current user info
+   */
   async me(): Promise<MeResponse> {
     return apiClient.get<MeResponse>('/auth/me');
-  },
-
-  async changePassword(data: ChangePasswordRequest): Promise<{ message: string }> {
-    return apiClient.post<{ message: string }>('/auth/change-password', data);
-  },
-
-  async forgotPassword(data: ForgotPasswordRequest): Promise<{ message: string }> {
-    return apiClient.post<{ message: string }>('/auth/forgot-password', data);
-  },
-
-  async resetPassword(data: ResetPasswordRequest): Promise<{ message: string }> {
-    return apiClient.post<{ message: string }>('/auth/reset-password', data);
   },
 
   /**
@@ -112,22 +90,6 @@ export const authAPI = {
     if (typeof window !== 'undefined') {
       localStorage.setItem(REFRESH_TOKEN_KEY, token);
     }
-  },
-
-  /**
-   * Store tokens from login/signup response
-   */
-  setTokens(response: LoginResponse | SignupResponse) {
-    const accessToken = response.access_token || response.token;
-    this.setToken(accessToken);
-    
-    if (response.refresh_token) {
-      this.setRefreshToken(response.refresh_token);
-    }
-  },
-
-  async updateGitHubIntegration(accountId: string, data: UpdateGitHubIntegrationRequest): Promise<void> {
-    return apiClient.put<void>(`/accounts/${accountId}/integrations/github`, data);
   },
 
   /**
