@@ -35,8 +35,9 @@ impl Config {
                 .unwrap_or_else(|_| "3000".to_string())
                 .parse()
                 .context("ASAP_API_PORT/SERVER_PORT must be a valid port number (0-65535)")?,
-            allowed_origins: env::var("ALLOWED_ORIGINS")
-                .unwrap_or_else(|_| "http://localhost:4321,http://localhost:4322".to_string())
+            allowed_origins: env::var("CORS_ALLOWED_ORIGINS")
+                .or_else(|_| env::var("ALLOWED_ORIGINS"))
+                .unwrap_or_else(|_| "http://localhost:4321,http://localhost:4322,http://localhost:4323".to_string())
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
