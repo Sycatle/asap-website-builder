@@ -1,0 +1,28 @@
+# Development Dockerfile for Accounts app
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy workspace files
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY packages/shared/package.json ./packages/shared/
+COPY apps/accounts/package.json ./apps/accounts/
+
+# Install dependencies
+RUN pnpm install
+
+# Copy source files
+COPY packages/shared ./packages/shared
+COPY apps/accounts ./apps/accounts
+
+WORKDIR /app/apps/accounts
+
+ENV HOST=0.0.0.0
+ENV PORT=4323
+
+EXPOSE 4323
+
+CMD ["pnpm", "dev", "--host", "0.0.0.0"]

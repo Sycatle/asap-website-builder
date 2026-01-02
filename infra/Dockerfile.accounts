@@ -1,0 +1,42 @@
+# Build stage
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy workspace files
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY packages/shared/package.json ./packages/shared/
+COPY apps/accounts/package.json ./apps/accounts/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source files
+COPY packages/shared ./packages/shared
+COPY apps/accounts ./apps/accounts
+
+# Build
+WORKDIR /app/apps/accounts
+RUN pnpm build
+
+# Production stage
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# Copy built files
+COPY --from=builder /app/apps/accounts/dist ./dist
+COPY --from=builder /app/apps/accounts/package.json ./
+
+# Install production dependencies only
+RUN npm install -g pnpm && pnpm install --prod
+
+ENV HOST=0.0.0.0
+ENV PORT=4323
+
+EXPOSE 4323
+
+CMD ["node", "./dist/server/entry.mjs"]
