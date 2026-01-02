@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { 
   useWebsitesQuery, 
@@ -65,6 +65,13 @@ interface WebsiteProviderProps {
 
 export function WebsiteProvider({ children, websiteId }: WebsiteProviderProps) {
   const queryClient = useQueryClient();
+  
+  // Store last visited website ID in localStorage for navigation fallback
+  useEffect(() => {
+    if (websiteId) {
+      localStorage.setItem('last_website_id', websiteId);
+    }
+  }, [websiteId]);
   
   // Use React Query hooks directly
   const { 
