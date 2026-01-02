@@ -1,0 +1,26 @@
+---
+import AuthLayout from '../layouts/AuthLayout.astro';
+import SignupForm from '../components/auth/SignupForm';
+import { Card, CardContent } from '@/components/ui/card';
+---
+
+<AuthLayout title="Créer un compte - ASAP">
+  <!-- Redirect if already authenticated -->
+  <script>
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      const params = new URLSearchParams(window.location.search);
+      const redirect = params.get('redirect');
+      if (redirect && (redirect.startsWith('/') || redirect.includes('asap.cool'))) {
+        window.location.replace(redirect);
+      } else {
+        window.location.replace(import.meta.env.PUBLIC_APP_URL || 'http://localhost:4321');
+      }
+    }
+  </script>
+  <Card className="overflow-hidden">
+    <CardContent className="p-6 md:p-8">
+      <SignupForm client:load />
+    </CardContent>
+  </Card>
+</AuthLayout>

@@ -1,0 +1,51 @@
+---
+import '../styles/globals.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'ASAP - Authentification' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={description} />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    
+    <!-- Theme -->
+    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="color-scheme" content="dark light" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    
+    <title>{title}</title>
+    
+    <!-- Dark mode script -->
+    <script is:inline>
+      const theme = localStorage.getItem('theme') || 
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+    </script>
+  </head>
+  <body class="min-h-screen bg-muted font-sans antialiased">
+    <div class="flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
+      <div class="flex w-full max-w-sm flex-col gap-6">
+        <slot />
+        <div class="text-balance text-center text-xs text-muted-foreground">
+          En continuant, vous acceptez nos{' '}
+          <a href="#" class="underline underline-offset-4 hover:text-primary">Conditions d'utilisation</a>
+          {' '}et notre{' '}
+          <a href="#" class="underline underline-offset-4 hover:text-primary">Politique de confidentialité</a>.
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

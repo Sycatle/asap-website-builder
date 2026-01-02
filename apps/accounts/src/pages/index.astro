@@ -1,0 +1,25 @@
+---
+// Index page redirects to login or app based on auth status
+---
+
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>ASAP Accounts</title>
+  </head>
+  <body>
+    <script>
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        // Authenticated - redirect to app
+        window.location.replace(import.meta.env.PUBLIC_APP_URL || 'http://localhost:4321');
+      } else {
+        // Not authenticated - show login
+        window.location.replace('/login');
+      }
+    </script>
+    <noscript>
+      <meta http-equiv="refresh" content="0; url=/login" />
+    </noscript>
+  </body>
+</html>

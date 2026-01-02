@@ -1,0 +1,71 @@
+---
+import AuthLayout from '../layouts/AuthLayout.astro';
+import LoginForm from '../components/auth/LoginForm';
+import { Card, CardContent } from '@/components/ui/card';
+---
+
+<AuthLayout title="Se connecter - ASAP">
+  <!-- Redirect if already authenticated (validate token first) -->
+  <script>
+    (async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+      
+      // Validate token with API before redirecting
+      try {
+        const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
+        const response = await fetch(`${apiUrl}/auth/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+          // Token invalid, clear it and stay on login page
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('refresh_token');
+          return;
+        }
+        
+        // Token valid, redirect
+        const params = new URLSearchParams(window.location.search);
+        const redirect = params.get('redirect');
+        const appUrl = import.meta.env.PUBLIC_APP_URL || 'http://localhost:4321';
+        
+        // Build redirect with tokens for cross-origin
+        let targetUrl = redirect || appUrl;
+        
+        // Validate redirect URL
+        const allowedHosts = ['localhost:4321', 'localhost:4322', 'localhost:4323', 'app.asap.cool', 'asap.cool'];
+        try {
+          const parsed = new URL(targetUrl);
+          if (!allowedHosts.includes(parsed.host)) {
+            targetUrl = appUrl;
+          }
+        } catch {
+          if (!targetUrl.startsWith('/')) {
+            targetUrl = appUrl;
+          }
+        }
+        
+        // Add tokens to hash for cross-origin redirect
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (refreshToken) {
+          const url = new URL(targetUrl.startsWith('/') ? `${window.location.origin}${targetUrl}` : targetUrl);
+          if (url.origin !== window.location.origin) {
+            url.hash = `auth=${encodeURIComponent(token)}&refresh=${encodeURIComponent(refreshToken)}`;
+          }
+          window.location.replace(url.toString());
+        } else {
+          window.location.replace(targetUrl);
+        }
+      } catch (e) {
+        // Network error, stay on login page
+        console.error('Auth check failed:', e);
+      }
+    })();
+  </script>
+  <Card className="overflow-hidden">
+    <CardContent className="p-6 md:p-8">
+      <LoginForm client:load />
+    </CardContent>
+  </Card>
+</AuthLayout>

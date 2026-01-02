@@ -1,0 +1,8 @@
+---
+import AuthLayout from '../../layouts/AuthLayout.astro';
+import OAuthCallback from '../../components/auth/OAuthCallback';
+---
+
+<AuthLayout title="Connexion en cours - ASAP">
+  <OAuthCallback client:load />
+</AuthLayout>
