@@ -351,6 +351,14 @@ pub trait WsBroadcaster: Send + Sync {
 /// Type alias for the shared broadcaster
 pub type SharedWsBroadcaster = Arc<dyn WsBroadcaster>;
 
+/// Implementation of WsBroadcaster for Arc<dyn WsBroadcaster>
+/// This allows calling trait methods on the shared broadcaster type
+impl WsBroadcaster for Arc<dyn WsBroadcaster> {
+    fn broadcast_to_user(&self, account_id: &str, msg: WsBroadcastMessage) {
+        (**self).broadcast_to_user(account_id, msg);
+    }
+}
+
 /// No-op implementation for when WebSocket is not available
 #[derive(Clone)]
 pub struct NoOpBroadcaster;
