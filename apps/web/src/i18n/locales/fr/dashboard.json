@@ -257,7 +257,9 @@
       "successMultiple": "{{count}} fichiers uploadés avec succès !",
       "error": "Échec de l'upload de {{filename}}",
       "errorMultiple": "Échec de l'upload de {{count}} fichiers",
-      "partial": "{{success}} fichier(s) uploadé(s), {{failed}} échec(s)"
+      "partial": "{{success}} fichier(s) uploadé(s), {{failed}} échec(s)",
+      "dropHere": "Déposez vos fichiers ici",
+      "dropHint": "Relâchez pour uploader"
     },
     "delete": {
       "title": "Confirmer la suppression",
@@ -311,7 +313,47 @@
       "copyLink": "Copier le lien",
       "download": "Télécharger",
       "openNewTab": "Ouvrir dans un nouvel onglet",
-      "delete": "Supprimer"
+      "delete": "Supprimer",
+      "moveTo": "Déplacer vers...",
+      "visibility": "Visibilité"
+    },
+    "operations": {
+      "moveSuccess": "Fichier déplacé avec succès",
+      "moveMultipleSuccess": "{{count}} fichier(s) déplacé(s) avec succès",
+      "moveMultipleFailed": "{{count}} fichier(s) n'ont pas pu être déplacés",
+      "visibilitySuccess": "Visibilité mise à jour",
+      "renameSuccess": "Fichier renommé avec succès"
+    },
+    "websiteSubtitle": "Gérez les fichiers de ce site",
+    "folders": {
+      "root": "Mes Fichiers",
+      "files": "fichiers",
+      "create": "Nouveau Dossier",
+      "createTitle": "Créer un dossier",
+      "createIn": "Créer un nouveau dossier dans {{folder}}",
+      "createInRoot": "Créer un nouveau dossier à la racine",
+      "namePlaceholder": "Nom du dossier",
+      "createSuccess": "Dossier \"{{name}}\" créé",
+      "createError": "Échec de la création du dossier",
+      "open": "Ouvrir",
+      "empty": "Dossier vide",
+      "deleteTitle": "Supprimer le dossier",
+      "deleteDescription": "Voulez-vous vraiment supprimer ce dossier ?",
+      "deleteWithContents": "Supprimer le dossier et son contenu"
+    },
+    "filters": {
+      "all": "Tous",
+      "visibility": "Visibilité",
+      "type": "Type de fichier",
+      "clear": "Effacer les filtres"
+    },
+    "visibility": {
+      "private": "Privé",
+      "public": "Public",
+      "website": "Site web"
+    },
+    "search": {
+      "placeholder": "Rechercher des fichiers..."
     }
   },
   "pages": {

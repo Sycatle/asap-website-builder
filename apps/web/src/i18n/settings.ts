@@ -32,6 +32,7 @@ export const LANGUAGE_STORAGE_KEY = 'asap-language';
  */
 export const NAMESPACES = [
   'common',
+  'auth',
   'dashboard',
   'settings',
   'editor',
