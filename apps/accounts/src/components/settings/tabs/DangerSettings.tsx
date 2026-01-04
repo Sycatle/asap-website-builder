@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuthStore } from '@/lib/store/authStore';
+import { apiClient } from '@/lib/api/client';
 
 export default function DangerSettings() {
   const { t } = useTranslation(['common']);
@@ -24,12 +25,23 @@ export default function DangerSettings() {
 
     setIsDeleting(true);
     try {
-      // TODO: Implement account deletion API
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!user?.id) {
+        throw new Error('Not authenticated');
+      }
+
+      await apiClient.delete(`/accounts/${user.id}`);
+
       toast.success(t('settings.danger.accountDeleted'));
+      // Wait a moment for user to see the success message
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Logout and clear all data
       await logout(true);
+      // Redirect to home or login page
+      window.location.href = '/';
     } catch (error: any) {
-      toast.error(error.message || t('settings.danger.deleteFailed'));
+      console.error('Delete account error:', error);
+      const errorMessage = error.data?.error || error.message || t('settings.danger.deleteFailed');
+      toast.error(errorMessage);
     } finally {
       setIsDeleting(false);
     }
