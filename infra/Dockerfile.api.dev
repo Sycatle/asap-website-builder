@@ -1,4 +1,5 @@
 # Development Dockerfile for API with hot reload
+# Use Rust nightly for development (required for latest cargo-watch)
 FROM rustlang/rust:nightly-slim
 
 WORKDIR /app
