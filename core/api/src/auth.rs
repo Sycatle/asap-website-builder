@@ -48,10 +48,10 @@ fn build_auth_response_with_cookies<T: Serialize>(
     let mut response = (status, Json(body)).into_response();
     
     // Set auth cookies
-    if let Ok(access_header) = access_cookie.parse::<axum::http::header::HeaderValue>() {
+    if let Ok(access_header) = header::HeaderValue::from_str(&access_cookie) {
         response.headers_mut().append(header::SET_COOKIE, access_header);
     }
-    if let Ok(refresh_header) = refresh_cookie.parse::<axum::http::header::HeaderValue>() {
+    if let Ok(refresh_header) = header::HeaderValue::from_str(&refresh_cookie) {
         response.headers_mut().append(header::SET_COOKIE, refresh_header);
     }
     
@@ -67,10 +67,10 @@ fn build_logout_response() -> axum::response::Response {
         "message": "Logged out successfully"
     }))).into_response();
     
-    if let Ok(access_header) = clear_access.parse::<axum::http::header::HeaderValue>() {
+    if let Ok(access_header) = header::HeaderValue::from_str(&clear_access) {
         response.headers_mut().append(header::SET_COOKIE, access_header);
     }
-    if let Ok(refresh_header) = clear_refresh.parse::<axum::http::header::HeaderValue>() {
+    if let Ok(refresh_header) = header::HeaderValue::from_str(&clear_refresh) {
         response.headers_mut().append(header::SET_COOKIE, refresh_header);
     }
     
