@@ -9,14 +9,23 @@ use axum::{
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use asap_core_shared::{Claims, extension_catalog};
+use asap_core_shared::{Claims, ExtensionRegistry};
 
 /// List available extensions from the code-defined catalog
 /// Extensions are no longer stored in database - schemas are defined in code
 pub async fn list_available_extensions(
     Extension(_claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    let extensions = extension_catalog::get_user_extensions();
+    let registry = match ExtensionRegistry::load_from_workspace() {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::error!("Failed to load extension registry: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Failed to load extensions"
+            }))).into_response();
+        }
+    };
+    let extensions = registry.get_user_extensions();
     
     let response: Vec<serde_json::Value> = extensions.into_iter().map(|e| {
         serde_json::json!({
@@ -40,7 +49,16 @@ pub async fn get_extension_by_slug(
     Extension(_claims): Extension<Claims>,
     Path(slug): Path<String>,
 ) -> impl IntoResponse {
-    match extension_catalog::get_extension_by_slug(&slug) {
+    let registry = match ExtensionRegistry::load_from_workspace() {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::error!("Failed to load extension registry: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Failed to load extensions"
+            }))).into_response();
+        }
+    };
+    match registry.get_by_slug(&slug) {
         Some(e) => {
             (StatusCode::OK, Json(serde_json::json!({
                 "id": e.slug.clone(),
@@ -112,7 +130,17 @@ pub async fn get_website_extension_data(
         }))).into_response();
     }
 
-    let extension_def = match extension_catalog::get_extension_by_slug(&extension_slug) {
+    let registry = match ExtensionRegistry::load_from_workspace() {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::error!("Failed to load extension registry: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                "error": "Failed to load extensions"
+            }))).into_response();
+        }
+    };
+
+    let extension_def = match registry.get_by_slug(&extension_slug) {
         Some(e) => e,
         None => {
             return (StatusCode::NOT_FOUND, Json(serde_json::json!({

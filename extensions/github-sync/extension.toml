@@ -1,0 +1,97 @@
+# GitHub Sync Extension Configuration
+
+[extension]
+slug = "github-sync"
+name = "Github Sync"
+version = "1.0.0"
+description = "Synchronise vos projets GitHub pour les afficher sur votre site"
+category = "integration"
+icon = "github"
+user_configurable = true
+sidebar_order = 10
+sidebar_label = "Github Sync"
+
+[default_settings]
+github_username = ""
+auto_sync = false
+include_forks = false
+max_repos = 10
+
+[[fields]]
+id = "github_username"
+type = "text"
+label = "Nom d'utilisateur GitHub"
+description = "Votre nom d'utilisateur GitHub pour synchroniser vos projets"
+placeholder = "ex: octocat"
+required = true
+
+[[fields]]
+id = "auto_sync"
+type = "boolean"
+label = "Synchronisation automatique"
+description = "Synchroniser automatiquement vos projets toutes les 24h"
+default = false
+
+[[fields]]
+id = "include_forks"
+type = "boolean"
+label = "Inclure les forks"
+description = "Inclure les repositories forkés dans la liste"
+default = false
+
+[[fields]]
+id = "max_repos"
+type = "number"
+label = "Nombre maximum de repos"
+description = "Limite du nombre de projets à afficher"
+default = 10
+
+[fields.max_repos.validation]
+min = 1
+max = 50
+
+[[actions]]
+id = "sync"
+label = "Synchroniser maintenant"
+endpoint = "/sync"
+description = "Récupérer les dernières données depuis GitHub"
+primary = true
+refresh_after = true
+
+[[data_display]]
+id = "projects"
+type = "list"
+title = "Projets synchronisés"
+empty_message = "Aucun projet synchronisé. Configurez votre nom d'utilisateur GitHub et lancez une synchronisation."
+
+[[data_display.fields]]
+id = "name"
+type = "link"
+label = "Nom"
+link_to = "url"
+
+[[data_display.fields]]
+id = "description"
+type = "text"
+label = "Description"
+
+[[data_display.fields]]
+id = "language"
+type = "badge"
+label = "Langage"
+
+[[data_display.fields]]
+id = "stars"
+type = "number"
+label = "Stars"
+
+[[data_display.fields]]
+id = "forks"
+type = "number"
+label = "Forks"
+
+[[sections]]
+id = "github_config"
+title = "Configuration GitHub"
+description = "Connectez votre compte GitHub pour synchroniser vos projets"
+fields = ["github_username", "auto_sync", "include_forks", "max_repos"]

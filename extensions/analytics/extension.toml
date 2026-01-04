@@ -1,0 +1,120 @@
+# Analytics Extension Configuration
+
+[extension]
+slug = "analytics"
+name = "Analytics"
+version = "1.0.0"
+description = "Suivez les statistiques de visite de votre site avec des analytics respectueux de la vie privée"
+category = "analytics"
+icon = "chart"
+user_configurable = true
+sidebar_order = 40
+sidebar_label = "Analytics"
+
+[default_settings]
+tracking_enabled = true
+track_outbound_links = false
+track_file_downloads = false
+exclude_paths = []
+data_retention_days = 90
+
+[[fields]]
+id = "tracking_enabled"
+type = "boolean"
+label = "Activer le tracking"
+description = "Activer ou désactiver le suivi des visiteurs"
+default = true
+
+[[fields]]
+id = "track_outbound_links"
+type = "boolean"
+label = "Suivre les liens externes"
+description = "Suivre les clics sur les liens pointant vers d'autres sites"
+default = false
+
+[[fields]]
+id = "track_file_downloads"
+type = "boolean"
+label = "Suivre les téléchargements"
+description = "Suivre les téléchargements de fichiers (PDF, ZIP, etc.)"
+default = false
+
+[[fields]]
+id = "exclude_paths"
+type = "array"
+label = "Chemins exclus"
+description = "Liste des chemins à exclure du tracking (ex: /admin, /test)"
+default = []
+
+[[fields]]
+id = "data_retention_days"
+type = "number"
+label = "Rétention des données (jours)"
+description = "Nombre de jours pendant lesquels conserver les données analytiques"
+default = 90
+
+[fields.data_retention_days.validation]
+min = 7
+max = 730
+
+[[data_display]]
+id = "overview"
+type = "stats"
+title = "Vue d'ensemble"
+
+[[data_display.fields]]
+id = "total_views"
+type = "number"
+label = "Pages vues"
+period = "30d"
+
+[[data_display.fields]]
+id = "unique_visitors"
+type = "number"
+label = "Visiteurs uniques"
+period = "30d"
+
+[[data_display.fields]]
+id = "avg_session_duration"
+type = "duration"
+label = "Durée moyenne"
+period = "30d"
+
+[[data_display.fields]]
+id = "bounce_rate"
+type = "percentage"
+label = "Taux de rebond"
+period = "30d"
+
+[[data_display]]
+id = "top_pages"
+type = "list"
+title = "Pages populaires"
+limit = 10
+
+[[data_display.fields]]
+id = "path"
+type = "text"
+label = "Page"
+
+[[data_display.fields]]
+id = "views"
+type = "number"
+label = "Vues"
+
+[[data_display.fields]]
+id = "unique_views"
+type = "number"
+label = "Vues uniques"
+
+[[sections]]
+id = "tracking_config"
+title = "Configuration du tracking"
+description = "Configurez ce qui doit être suivi sur votre site"
+fields = ["tracking_enabled", "track_outbound_links", "track_file_downloads"]
+
+[[sections]]
+id = "privacy_config"
+title = "Confidentialité et données"
+description = "Gérez la rétention des données et les exclusions"
+fields = ["exclude_paths", "data_retention_days"]

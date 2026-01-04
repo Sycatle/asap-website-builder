@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use asap_core_shared::{Claims, SharedWsBroadcaster, extension_catalog};
+use asap_core_shared::{Claims, SharedWsBroadcaster, ExtensionRegistry};
 
 #[derive(Debug, Serialize)]
 pub struct WebsiteExtensionResponse {
@@ -47,7 +47,9 @@ pub(crate) async fn resolve_extension_id(pool: &PgPool, extension_id_or_slug: &s
     }
     
     // Look up in the extension catalog (source of truth)
-    let extension_def = extension_catalog::get_extension_by_slug(extension_id_or_slug)
+    let registry = ExtensionRegistry::load_from_workspace()
+        .map_err(|e| format!("Failed to load extension registry: {}", e))?;
+    let extension_def = registry.get_by_slug(extension_id_or_slug)
         .ok_or_else(|| format!("Extension not found: {}", extension_id_or_slug))?;
     
     // Check if extension exists in database
