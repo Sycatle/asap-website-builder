@@ -468,6 +468,11 @@ impl FileStorageService {
                 file_hash: r.get(6),
                 storage_key: r.get(7),
                 created_at: r.get(8),
+                folder_id: None,
+                visibility: asap_core_domain::FileVisibility::Private,
+                website_id: None,
+                description: None,
+                tags: vec![],
             }
         }))
     }
@@ -588,24 +593,59 @@ impl FileStorageService {
                 file_hash: r.get(6),
                 storage_key: r.get(7),
                 created_at: r.get(8),
+                folder_id: None,
+                visibility: asap_core_domain::FileVisibility::Private,
+                website_id: None,
+                description: None,
+                tags: vec![],
             }),
             None => Err(anyhow::anyhow!("File not found")),
         }
     }
 
-    /// List account files
-    pub async fn list_account_files(&self, account_id: Uuid, limit: i64, offset: i64) -> Result<Vec<File>> {
-        let rows = sqlx::query(
-            "SELECT id, account_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at
-             FROM files WHERE account_id = $1
-             ORDER BY created_at DESC
-             LIMIT $2 OFFSET $3"
-        )
-        .bind(account_id)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&self.pool)
-        .await?;
+    /// List account files with optional folder filter
+    pub async fn list_account_files(&self, account_id: Uuid, limit: i64, offset: i64, folder_id: Option<Uuid>, filter_root: bool) -> Result<Vec<File>> {
+        let rows = if filter_root {
+            // Filter for files at root level (folder_id IS NULL)
+            sqlx::query(
+                "SELECT id, account_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at, folder_id
+                 FROM files WHERE account_id = $1 AND folder_id IS NULL
+                 ORDER BY created_at DESC
+                 LIMIT $2 OFFSET $3"
+            )
+            .bind(account_id)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?
+        } else if let Some(fid) = folder_id {
+            // Filter for files in specific folder
+            sqlx::query(
+                "SELECT id, account_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at, folder_id
+                 FROM files WHERE account_id = $1 AND folder_id = $2
+                 ORDER BY created_at DESC
+                 LIMIT $3 OFFSET $4"
+            )
+            .bind(account_id)
+            .bind(fid)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?
+        } else {
+            // No filter - return all files
+            sqlx::query(
+                "SELECT id, account_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at, folder_id
+                 FROM files WHERE account_id = $1
+                 ORDER BY created_at DESC
+                 LIMIT $2 OFFSET $3"
+            )
+            .bind(account_id)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?
+        };
 
         let files = rows
             .iter()
@@ -619,6 +659,11 @@ impl FileStorageService {
                 file_hash: r.get(6),
                 storage_key: r.get(7),
                 created_at: r.get(8),
+                folder_id: r.get(9),
+                visibility: asap_core_domain::FileVisibility::Private,
+                website_id: None,
+                description: None,
+                tags: vec![],
             })
             .collect();
 
