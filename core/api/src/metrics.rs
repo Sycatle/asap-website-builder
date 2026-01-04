@@ -64,6 +64,7 @@ pub struct AggregatedMetrics {
 
 #[derive(Debug, FromRow)]
 struct WebsiteWithDataRow {
+    #[allow(dead_code)]
     id: Uuid,
     account_id: Uuid,
     status: String,

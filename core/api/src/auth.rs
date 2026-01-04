@@ -1,16 +1,13 @@
-use axum::{Json, response::IntoResponse, http::StatusCode, extract::{State, Extension, ConnectInfo}, http::{HeaderMap, header}};
+use axum::{Json, response::IntoResponse, http::StatusCode, extract::{State, Extension}, http::{HeaderMap, header}};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
-use std::net::SocketAddr;
 use asap_core_shared::{
     SharedConfig, generate_token, generate_token_with_jti, Claims,
     generate_password_reset_token, validate_password_reset_token, hash_token,
     PASSWORD_RESET_TOKEN_LIFETIME_SECS,
     generate_refresh_token, validate_refresh_token, hash_refresh_token, generate_jti,
-    REFRESH_TOKEN_LIFETIME_SECS,
-    CookieConfig, CookieBuilder, AuthCookies,
-    AUTH_ACCESS_TOKEN_COOKIE, AUTH_REFRESH_TOKEN_COOKIE,
+    CookieConfig, AuthCookies,
 };
 use chrono::{Utc, Duration};
 

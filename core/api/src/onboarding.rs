@@ -38,6 +38,7 @@ pub struct UpdateStepRequest {
 
 #[derive(Debug, FromRow)]
 struct WebsiteRow {
+    #[allow(dead_code)]
     id: Uuid,
     account_id: Uuid,
     status: String,
@@ -45,6 +46,7 @@ struct WebsiteRow {
 
 #[derive(Debug, FromRow)]
 struct WebsiteOwnerRow {
+    #[allow(dead_code)]
     id: Uuid,
     account_id: Uuid,
 }

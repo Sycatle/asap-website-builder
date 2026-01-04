@@ -9,7 +9,7 @@ use uuid::Uuid;
 use std::collections::HashMap;
 
 use crate::storage::FileStorageService;
-use asap_core_shared::{Claims, SharedConfig, SharedWsBroadcaster, WsBroadcaster, validate_token};
+use asap_core_shared::{Claims, SharedConfig, SharedWsBroadcaster, validate_token};
 use asap_core_domain::{FileUploadResponse, StorageQuotaResponse};
 
 /// Upload file handler
@@ -55,7 +55,7 @@ pub async fn upload_file(
         let file = storage
             .upload_file(account_id, &filename, &content_type, &data)
             .await
-            .map_err(|e: anyhow::Error| (StatusCode::BAD_REQUEST, format!("Upload failed: {}", e)))?;;
+            .map_err(|e: anyhow::Error| (StatusCode::BAD_REQUEST, format!("Upload failed: {}", e)))?;
 
         let response = FileUploadResponse::from(file);
         

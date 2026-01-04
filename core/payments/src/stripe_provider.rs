@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use reqwest::{Client, Url};
 use uuid::Uuid;
 use std::collections::HashMap;
-use sha2::{Sha256, Digest};
+use sha2::Sha256;
 use hmac::{Hmac, Mac};
 use crate::{
     PaymentGateway, CheckoutSessionRequest, CheckoutSessionResponse,
@@ -58,12 +58,6 @@ impl StripeProvider {
             webhook_secret,
             customer_cache: tokio::sync::RwLock::new(HashMap::new()),
         })
-    }
-
-    fn compute_payload_hash(payload: &str) -> String {
-        let mut hasher = Sha256::new();
-        hasher.update(payload.as_bytes());
-        format!("{:x}", hasher.finalize())
     }
 
     fn verify_signature(&self, payload: &str, signature_header: &str) -> Result<(), PaymentError> {
