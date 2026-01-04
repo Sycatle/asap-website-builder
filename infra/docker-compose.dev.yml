@@ -11,42 +11,42 @@ services:
       context: ..
       dockerfile: infra/Dockerfile.base.rust
     image: asap-base-rust:dev
-    # Base image doesn't run - just gets built
-    profiles:
-      - base-only
+    command: ["true"]
+    networks:
+      - asap-network
     
   base-node:
     build:
       context: ..
       dockerfile: infra/Dockerfile.base.node
     image: asap-base-node:dev
-    # Base image doesn't run - just gets built
-    profiles:
-      - base-only
+    command: ["true"]
+    networks:
+      - asap-network
 
   # ============================================================================
   # Application Services
   # ============================================================================
   
-  # API in dev mode - uses pre-built base image
+  # API in dev mode
   api:
     build:
       context: ..
       dockerfile: infra/Dockerfile.api.dev
     container_name: asap-api
     depends_on:
+      base-rust:
+        condition: service_completed_successfully
       migrations:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
     volumes:
-      # Mount source code for hot reload
       - ../Cargo.toml:/app/Cargo.toml
       - ../core:/app/core
       - ../apps/api:/app/apps/api
       - ../extensions:/app/extensions
       - ../.sqlx:/app/.sqlx
-      # Cache cargo target (registry is in base image)
       - api-target:/app/target
     environment:
       DATABASE_URL: postgresql://asap:asap_dev_password@postgres:5432/asap
@@ -56,44 +56,41 @@ services:
       ASAP_API_HOST: 0.0.0.0
       JWT_SECRET: ${JWT_SECRET:-dev_secret_key_change_in_production_12345}
       CORS_ALLOWED_ORIGINS: http://localhost:4321,http://localhost:4322,http://localhost:4323,http://web:4321,http://sites:4322,http://accounts:4323
-      # Enable SQLX offline mode to use pre-compiled query metadata
       SQLX_OFFLINE: "true"
     ports:
       - "3000:3000"
-    # Disable healthcheck in dev mode (cargo-watch takes time to compile)
     healthcheck:
       disable: true
     networks:
       - asap-network
 
-  # Worker in dev mode - uses pre-built base image
+  # Worker in dev mode
   worker:
     build:
       context: ..
       dockerfile: infra/Dockerfile.worker.dev
     container_name: asap-worker
     depends_on:
+      base-rust:
+        condition: service_completed_successfully
       migrations:
         condition: service_completed_successfully
     command: ["cargo", "watch", "-x", "run --bin asap-worker", "-w", "apps/worker", "-w", "core", "-w", "extensions"]
     volumes:
-      # Mount source code for hot reload
       - ../core:/app/core
       - ../apps/worker:/app/apps/worker
       - ../extensions:/app/extensions
       - ../.sqlx:/app/.sqlx
-      # Cache cargo target (registry is in base image)
       - worker-target:/app/target
     environment:
       DATABASE_URL: postgresql://asap:asap_dev_password@postgres:5432/asap
       RUST_LOG: asap_worker=debug,sqlx=warn
       POLL_INTERVAL_SECONDS: 5
-      # Enable SQLX offline mode to use pre-compiled query metadata
       SQLX_OFFLINE: "true"
     networks:
       - asap-network
 
-  # Web application in dev mode - uses pre-built base image
+  # Web application in dev mode
   web:
     build:
       context: ..
@@ -101,6 +98,8 @@ services:
       target: dev
     container_name: asap-web
     depends_on:
+      base-node:
+        condition: service_completed_successfully
       api:
         condition: service_started
     ports:
@@ -116,9 +115,8 @@ services:
       - ../apps/web:/app/apps/web
     networks:
       - asap-network
-      - asap-network
 
-  # Sites application in dev mode - uses pre-built base image
+  # Sites application in dev mode
   sites:
     build:
       context: ..
@@ -126,6 +124,8 @@ services:
       target: dev
     container_name: asap-sites
     depends_on:
+      base-node:
+        condition: service_completed_successfully
       api:
         condition: service_started
     ports:
@@ -142,13 +142,15 @@ services:
     networks:
       - asap-network
 
-  # Accounts application in dev mode - uses pre-built base image
+  # Accounts application in dev mode
   accounts:
     build:
       context: ..
       dockerfile: infra/Dockerfile.accounts.dev
     container_name: asap-accounts
     depends_on:
+      base-node:
+        condition: service_completed_successfully
       api:
         condition: service_started
     ports:
