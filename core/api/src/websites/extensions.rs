@@ -252,7 +252,7 @@ pub async fn activate_extension(
             let website_uuid = Uuid::parse_str(&website_id).unwrap();
             if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
                 for acc_id in account_ids {
-                    ws_broadcaster.sync_extension_activated(
+                    (*ws_broadcaster).sync_extension_activated(
                         &acc_id.to_string(),
                         &website_id,
                         &payload.extension_id,
@@ -324,7 +324,7 @@ pub async fn update_website_extension(
             let website_uuid = Uuid::parse_str(&website_id).unwrap();
             if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
                 for acc_id in account_ids {
-                    ws_broadcaster.sync_extension_configured(
+                    (*ws_broadcaster).sync_extension_configured(
                         &acc_id.to_string(),
                         &website_id,
                         &extension_id,
@@ -437,7 +437,7 @@ pub async fn deactivate_extension(
             let website_uuid = Uuid::parse_str(&website_id).unwrap();
             if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
                 for acc_id in account_ids {
-                    ws_broadcaster.sync_extension_deactivated(
+                    (*ws_broadcaster).sync_extension_deactivated(
                         &acc_id.to_string(),
                         &website_id,
                         &extension_id,

@@ -560,7 +560,7 @@ pub async fn signup(
 
     // Generate JWT access token with JTI
     let jti = generate_jti();
-    let access_token = match generate_token_with_jti(&account_id.to_string(), &jti, &config) {
+    let access_token: String = match generate_token_with_jti(&account_id.to_string(), &jti, &config) {
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate access token: {}", e);
@@ -571,7 +571,7 @@ pub async fn signup(
     };
 
     // Also generate legacy token for backward compatibility
-    let legacy_token = match generate_token(&account_id.to_string(), &config) {
+    let legacy_token: String = match generate_token(&account_id.to_string(), &config) {
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate legacy token: {}", e);

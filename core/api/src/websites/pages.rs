@@ -366,7 +366,7 @@ pub async fn create_page(
             let website_uuid = Uuid::parse_str(&website_id).unwrap();
             if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
                 for acc_id in account_ids {
-                    ws_broadcaster.sync_page_created(
+                    (*ws_broadcaster).sync_page_created(
                         &acc_id.to_string(),
                         &website_id,
                         page_data.clone(),
@@ -590,7 +590,7 @@ pub async fn update_page(
             let website_uuid = Uuid::parse_str(&website_id).unwrap();
             if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
                 for acc_id in account_ids {
-                    ws_broadcaster.sync_page_updated(
+                    (*ws_broadcaster).sync_page_updated(
                         &acc_id.to_string(),
                         &website_id,
                         &page_id,
@@ -696,7 +696,7 @@ pub async fn delete_page(
             let website_uuid = Uuid::parse_str(&website_id).unwrap();
             if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
                 for acc_id in account_ids {
-                    ws_broadcaster.sync_page_deleted(
+                    (*ws_broadcaster).sync_page_deleted(
                         &acc_id.to_string(),
                         &website_id,
                         &page_id,
@@ -814,7 +814,7 @@ pub async fn reorder_pages(
     // Broadcast to all users with access (owner + active administrators)
     if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
         for acc_id in account_ids {
-            ws_broadcaster.sync_pages_reordered(
+            (*ws_broadcaster).sync_pages_reordered(
                 &acc_id.to_string(),
                 &website_id,
                 &payload.page_ids,

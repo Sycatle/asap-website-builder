@@ -183,7 +183,7 @@ pub async fn create_element(
             let website_uuid = Uuid::parse_str(&website_id).unwrap();
             if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
                 for acc_id in account_ids {
-                    ws_broadcaster.sync_element_created(
+                    (*ws_broadcaster).sync_element_created(
                         &acc_id.to_string(),
                         &website_id,
                         element_data.clone(),
@@ -258,7 +258,7 @@ pub async fn update_element(
             match queries::get_website_account_ids(&pool, website_uuid).await {
                 Ok(account_ids) => {
                     for acc_id in account_ids {
-                        ws_broadcaster.sync_element_updated(
+                        (*ws_broadcaster).sync_element_updated(
                             &acc_id.to_string(),
                             &website_id,
                             &element_id,
@@ -350,7 +350,7 @@ pub async fn delete_element(
             let website_uuid = Uuid::parse_str(&website_id).unwrap();
             if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
                 for acc_id in account_ids {
-                    ws_broadcaster.sync_element_deleted(
+                    (*ws_broadcaster).sync_element_deleted(
                         &acc_id.to_string(),
                         &website_id,
                         &element_id,
@@ -437,7 +437,7 @@ pub async fn reorder_elements(
             let website_uuid = Uuid::parse_str(&website_id).unwrap();
             if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
                 for acc_id in account_ids {
-                    ws_broadcaster.sync_elements_reordered(
+                    (*ws_broadcaster).sync_elements_reordered(
                         &acc_id.to_string(),
                         &website_id,
                         &payload.element_ids,

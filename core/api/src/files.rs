@@ -55,7 +55,7 @@ pub async fn upload_file(
         let file = storage
             .upload_file(account_id, &filename, &content_type, &data)
             .await
-            .map_err(|e| (StatusCode::BAD_REQUEST, format!("Upload failed: {}", e)))?;
+            .map_err(|e: anyhow::Error| (StatusCode::BAD_REQUEST, format!("Upload failed: {}", e)))?;;
 
         let response = FileUploadResponse::from(file);
         
@@ -99,7 +99,7 @@ pub async fn list_files(
     let files = storage
         .list_account_files(account_id, limit, offset)
         .await
-        .map_err(|e| {
+        .map_err(|e: anyhow::Error| {
             tracing::error!("Failed to list files: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to list files".to_string())
         })?;
