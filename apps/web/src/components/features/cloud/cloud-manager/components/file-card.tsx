@@ -10,6 +10,9 @@ import {
   ContextMenuSeparator,
   ContextMenuShortcut,
   ContextMenuTrigger,
+  ContextMenuSub,
+  ContextMenuSubTrigger,
+  ContextMenuSubContent,
 } from "@/components/ui/context-menu";
 import { 
   Trash2,
@@ -17,14 +20,35 @@ import {
   CheckCircle2,
   Eye,
   ExternalLink,
-  Link2
+  Link2,
+  FolderInput,
+  Globe,
+  Lock,
+  Users,
+  Pencil,
 } from "lucide-react";
 import { formatBytes } from "@/lib/utils/formatters";
 import { isImage, getFileIcon, getFileTypeLabel } from "@/components/shared/file-utils";
 import type { FileCardProps } from "../types";
+import type { FileVisibility, FileFolder } from "@/lib/types";
 
 /**
- * File card component for grid view
+ * Visibility icon helper
+ */
+function getVisibilityIcon(visibility: FileVisibility | undefined) {
+  switch (visibility) {
+    case 'public':
+      return <Globe className="h-3 w-3" />;
+    case 'website':
+      return <Users className="h-3 w-3" />;
+    case 'private':
+    default:
+      return <Lock className="h-3 w-3" />;
+  }
+}
+
+/**
+ * File card component for grid view - simplified UX
  */
 export function FileCard({
   file,
@@ -35,11 +59,25 @@ export function FileCard({
   onDelete,
   onCopyLink,
   onToggleSelection,
+  onMoveToFolder,
+  onChangeVisibility,
+  onRename,
+  folders = [],
   getItemProps,
   getFileUrl,
-}: FileCardProps) {
+  selectedIds,
+}: FileCardProps & { selectedIds?: Set<string> }) {
   const { t } = useTranslation(['common', 'dashboard']);
   const itemProps = getItemProps(file, index);
+
+  // Drag handler - include all selected files if this file is selected
+  const handleDragStart = (e: React.DragEvent) => {
+    const fileIds = selectedIds && selectedIds.has(file.id) && selectedIds.size > 1
+      ? Array.from(selectedIds)
+      : [file.id];
+    e.dataTransfer.setData('application/x-file-ids', JSON.stringify(fileIds));
+    e.dataTransfer.effectAllowed = 'move';
+  };
   
   return (
     <ContextMenu>
@@ -48,10 +86,11 @@ export function FileCard({
           tabIndex={itemProps.tabIndex}
           data-focused={itemProps['data-focused']}
           data-selected={itemProps['data-selected']}
-          className={`group cursor-pointer hover:shadow-lg transition-all duration-300 hover:border-primary/50 hover:-translate-y-1 overflow-hidden animate-fade-in-up outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-            isSelected ? 'ring-2 ring-primary border-primary bg-primary/5 scale-[0.98]' : ''
+          draggable
+          onDragStart={handleDragStart}
+          className={`group cursor-pointer hover:shadow-md transition-shadow overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+            isSelected ? 'ring-2 ring-primary' : ''
           } ${isFocused ? 'ring-2 ring-ring' : ''}`}
-          style={{ animationDelay: `${Math.min(index * 0.03, 0.3)}s`, animationFillMode: 'both' }}
           onFocus={itemProps.onFocus}
           onClick={(e) => {
             if (e.ctrlKey || e.metaKey || e.shiftKey) {
@@ -65,22 +104,16 @@ export function FileCard({
         >
           {/* Selection checkbox */}
           <div 
-            className={`absolute top-2 left-2 z-10 transition-all duration-200 ${
-              isSelected ? 'opacity-100 scale-100' : 'opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100'
-            }`}
+            className={`absolute top-2 left-2 z-10 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
             onClick={(e) => {
               e.stopPropagation();
               onToggleSelection();
             }}
           >
-            <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center cursor-pointer transition-all duration-200 ${
-              isSelected 
-                ? 'bg-primary border-primary' 
-                : 'bg-background/80 backdrop-blur-sm border-muted-foreground/30 hover:border-primary/50 hover:bg-background'
+            <div className={`h-5 w-5 rounded border-2 flex items-center justify-center cursor-pointer ${
+              isSelected ? 'bg-primary border-primary' : 'bg-background/80 border-muted-foreground/30'
             }`}>
-              {isSelected && (
-                <CheckCircle2 className="h-3.5 w-3.5 text-primary-foreground" />
-              )}
+              {isSelected && <CheckCircle2 className="h-3.5 w-3.5 text-primary-foreground" />}
             </div>
           </div>
 
@@ -90,35 +123,34 @@ export function FileCard({
               <img
                 src={getFileUrl(file.id)}
                 alt={file.filename}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                className="w-full h-full object-cover"
                 loading="lazy"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
-                {getFileIcon(file.mime_type, "h-8 w-8 sm:h-12 sm:w-12")}
+              <div className="w-full h-full flex items-center justify-center">
+                {getFileIcon(file.mime_type, "h-10 w-10")}
               </div>
             )}
-            {/* Hover Overlay */}
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
-              <Eye className="h-5 w-5 sm:h-6 sm:w-6 text-white transform scale-0 group-hover:scale-100 transition-transform duration-300" />
-            </div>
+            {/* Visibility Badge - only show if not website default */}
+            {file.visibility && file.visibility !== 'website' && (
+              <div className="absolute top-2 right-2">
+                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] gap-1">
+                  {getVisibilityIcon(file.visibility)}
+                </Badge>
+              </div>
+            )}
           </div>
 
-          {/* File Info */}
-          <CardContent className="p-2 sm:p-3">
-            <p className="text-xs sm:text-sm font-medium truncate">{file.filename}</p>
-            <div className="flex items-center justify-between mt-1">
-              <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 sm:px-2 transition-colors group-hover:bg-primary/10">
-                {getFileTypeLabel(file.mime_type)}
-              </Badge>
-              <span className="text-[10px] sm:text-xs text-muted-foreground">
-                {formatBytes(file.original_size)}
-              </span>
-            </div>
+          {/* File Info - simplified */}
+          <CardContent className="p-2">
+            <p className="text-xs font-medium truncate">{file.filename}</p>
+            <span className="text-[10px] text-muted-foreground">
+              {formatBytes(file.original_size)}
+            </span>
           </CardContent>
         </Card>
       </ContextMenuTrigger>
-      <ContextMenuContent className="w-52">
+      <ContextMenuContent className="w-56">
         <ContextMenuItem onClick={onPreview}>
           <Eye className="mr-2 h-4 w-4" />
           {t('dashboard:cloud.contextMenu.preview')}
@@ -141,6 +173,77 @@ export function FileCard({
             {t('dashboard:cloud.contextMenu.openNewTab')}
           </a>
         </ContextMenuItem>
+        
+        <ContextMenuSeparator />
+        
+        {/* Rename option */}
+        <ContextMenuItem 
+          onClick={() => {
+            if (!onRename) return;
+            const newName = prompt(t('common:prompts.enterNewName'), file.filename);
+            if (newName && newName.trim() !== file.filename) {
+              onRename(newName.trim());
+            }
+          }} 
+          disabled={!onRename}
+        >
+          <Pencil className="mr-2 h-4 w-4" />
+          {t('common:actions.rename')}
+        </ContextMenuItem>
+        
+        {/* Move to folder submenu */}
+        <ContextMenuSub>
+          <ContextMenuSubTrigger disabled={!onMoveToFolder}>
+            <FolderInput className="mr-2 h-4 w-4" />
+            {t('dashboard:cloud.contextMenu.moveTo')}
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent className="w-48">
+            <ContextMenuItem onClick={() => onMoveToFolder?.(null)}>
+              {t('dashboard:cloud.folders.root')}
+            </ContextMenuItem>
+            {folders.length > 0 && <ContextMenuSeparator />}
+            {folders.map((folder) => (
+              <ContextMenuItem 
+                key={folder.id} 
+                onClick={() => onMoveToFolder?.(folder.id)}
+              >
+                {folder.name}
+              </ContextMenuItem>
+            ))}
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        
+        {/* Visibility submenu */}
+        <ContextMenuSub>
+          <ContextMenuSubTrigger disabled={!onChangeVisibility}>
+            {getVisibilityIcon(file.visibility)}
+            <span className="ml-2">{t('dashboard:cloud.contextMenu.visibility')}</span>
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent className="w-40">
+            <ContextMenuItem 
+              onClick={() => onChangeVisibility?.('private')}
+              className={file.visibility === 'private' ? 'bg-accent' : ''}
+            >
+              <Lock className="mr-2 h-4 w-4" />
+              {t('dashboard:cloud.visibility.private')}
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeVisibility?.('public')}
+              className={file.visibility === 'public' ? 'bg-accent' : ''}
+            >
+              <Globe className="mr-2 h-4 w-4" />
+              {t('dashboard:cloud.visibility.public')}
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeVisibility?.('website')}
+              className={file.visibility === 'website' ? 'bg-accent' : ''}
+            >
+              <Users className="mr-2 h-4 w-4" />
+              {t('dashboard:cloud.visibility.website')}
+            </ContextMenuItem>
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        
         <ContextMenuSeparator />
         <ContextMenuItem 
           className="text-destructive focus:text-destructive"

@@ -1,7 +1,7 @@
 "use client"
 
 import type { LucideIcon } from "lucide-react";
-import type { FileMetadata } from "@/lib/api";
+import type { FileMetadata, FileFolder, FileVisibility } from "@/lib/types";
 
 // ============================================================================
 // View Types
@@ -49,6 +49,10 @@ export interface FileCardProps {
   onDelete: () => void;
   onCopyLink: () => void;
   onToggleSelection: () => void;
+  onMoveToFolder?: (folderId: string | null) => void;
+  onChangeVisibility?: (visibility: FileVisibility) => void;
+  onRename?: (newName: string) => void;
+  folders?: FileFolder[];
   getItemProps: (file: FileMetadata, index: number) => {
     tabIndex: number;
     'data-focused': boolean;
@@ -102,5 +106,5 @@ export interface EmptyStateProps {
   onUploadClick: () => void;
 }
 
-// Re-export FileMetadata for convenience
-export type { FileMetadata };
+// Re-export types for convenience
+export type { FileMetadata, FileFolder, FileVisibility };

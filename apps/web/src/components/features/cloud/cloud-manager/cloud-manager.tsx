@@ -128,7 +128,7 @@ export function CloudManager() {
     for (const file of filesArray) {
       try {
         setUploadProgress(prev => ({ ...prev, current: file.name }));
-        await uploadFileMutation.mutateAsync(file);
+        await uploadFileMutation.mutateAsync({ file });
         results.success.push(file.name);
       } catch (error) {
         filesLogger.error(`Failed to upload ${file.name}:`, error);
