@@ -63,8 +63,15 @@ export const queryKeys = {
   // File queries
   files: {
     all: ['files'] as const,
-    list: () => ['files', 'list'] as const,
+    list: (params?: { website_id?: string; folder_id?: string }) => 
+      params 
+        ? ['files', 'list', params] as const 
+        : ['files', 'list'] as const,
     quota: () => ['files', 'quota'] as const,
+    folders: (params?: { parent_id?: string; website_id?: string }) =>
+      params
+        ? ['files', 'folders', params] as const
+        : ['files', 'folders'] as const,
   },
 
   // Notification queries

@@ -1,32 +1,64 @@
 import { apiClient } from './client';
-import type { FileMetadata, QuotaUsage } from '../types';
+import type { 
+  FileMetadata, 
+  QuotaUsage, 
+  FileFolder, 
+  CreateFolderRequest,
+  UpdateFolderRequest,
+  UpdateFileRequest,
+  FileUploadOptions,
+  FileListParams,
+} from '../types';
 
 // Re-export types for backward compatibility
-export type { FileMetadata, QuotaUsage };
+export type { FileMetadata, QuotaUsage, FileFolder };
 
 export const filesAPI = {
-  async list(): Promise<FileMetadata[]> {
-    return apiClient.get<FileMetadata[]>('/files');
+  /**
+   * List files with optional filters
+   */
+  async list(params?: FileListParams): Promise<FileMetadata[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.folder_id) searchParams.set('folder_id', params.folder_id);
+    if (params?.website_id) searchParams.set('website_id', params.website_id);
+    if (params?.visibility) searchParams.set('visibility', params.visibility);
+    if (params?.mime_type) searchParams.set('mime_type', params.mime_type);
+    if (params?.search) searchParams.set('search', params.search);
+    if (params?.tags?.length) searchParams.set('tags', params.tags.join(','));
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    if (params?.offset) searchParams.set('offset', params.offset.toString());
+    
+    const query = searchParams.toString();
+    return apiClient.get<FileMetadata[]>(`/files${query ? `?${query}` : ''}`);
   },
 
-  async upload(file: File): Promise<FileMetadata> {
+  /**
+   * Upload a file with optional metadata
+   */
+  async upload(file: File, options?: FileUploadOptions): Promise<FileMetadata> {
     const formData = new FormData();
     
     // Sanitize filename to avoid multipart parsing issues with special characters
-    // Create a new File object with a sanitized name if needed
     let fileToUpload = file;
     const sanitizedName = file.name
-      .normalize('NFD') // Decompose accented characters
-      .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
-      .replace(/['']/g, '_') // Replace curly quotes
-      .replace(/[^\w\s.-]/g, '_') // Replace other special chars
-      .replace(/\s+/g, '_'); // Replace spaces with underscores
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/['']/g, '_')
+      .replace(/[^\w\s.-]/g, '_')
+      .replace(/\s+/g, '_');
     
     if (sanitizedName !== file.name) {
       fileToUpload = new File([file], sanitizedName, { type: file.type });
     }
     
     formData.append('file', fileToUpload);
+    
+    // Add optional metadata
+    if (options?.folder_id) formData.append('folder_id', options.folder_id);
+    if (options?.website_id) formData.append('website_id', options.website_id);
+    if (options?.visibility) formData.append('visibility', options.visibility);
+    if (options?.description) formData.append('description', options.description);
+    if (options?.tags?.length) formData.append('tags', JSON.stringify(options.tags));
 
     // Get CSRF token for the upload
     let csrfToken = apiClient.getCsrfToken();
@@ -38,7 +70,6 @@ export const filesAPI = {
       'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
     };
 
-    // Add CSRF token if available
     if (csrfToken) {
       headers['X-CSRF-Token'] = csrfToken;
     }
@@ -50,11 +81,9 @@ export const filesAPI = {
     });
 
     if (!response.ok) {
-      // Handle CSRF errors
       if (response.status === 403) {
         const data = await response.json().catch(() => ({}));
         if (data?.code?.startsWith('CSRF_')) {
-          // Clear invalid token and retry once
           apiClient.clearCsrfToken();
           csrfToken = await apiClient.fetchCsrfToken();
           
@@ -64,13 +93,10 @@ export const filesAPI = {
               'X-CSRF-Token': csrfToken,
             };
             
-            const retryFormData = new FormData();
-            retryFormData.append('file', file);
-            
             const retryResponse = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files`, {
               method: 'POST',
               headers: retryHeaders,
-              body: retryFormData,
+              body: formData,
             });
             
             if (!retryResponse.ok) {
@@ -87,11 +113,61 @@ export const filesAPI = {
     return response.json();
   },
 
+  /**
+   * Update file metadata
+   */
+  async update(fileId: string, data: UpdateFileRequest): Promise<FileMetadata> {
+    return apiClient.patch<FileMetadata>(`/files/${fileId}`, data);
+  },
+
+  /**
+   * Delete a file
+   */
   async delete(fileId: string): Promise<void> {
     return apiClient.delete<void>(`/files/${fileId}`);
   },
 
+  /**
+   * Get quota usage
+   */
   async getQuota(): Promise<QuotaUsage> {
     return apiClient.get<QuotaUsage>('/files/quota/usage');
+  },
+  
+  // ============================================
+  // FOLDER OPERATIONS
+  // ============================================
+  
+  /**
+   * List folders with optional filters
+   */
+  async listFolders(params?: { parent_id?: string; website_id?: string }): Promise<FileFolder[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.parent_id) searchParams.set('parent_id', params.parent_id);
+    if (params?.website_id) searchParams.set('website_id', params.website_id);
+    
+    const query = searchParams.toString();
+    return apiClient.get<FileFolder[]>(`/folders${query ? `?${query}` : ''}`);
+  },
+  
+  /**
+   * Create a new folder
+   */
+  async createFolder(data: CreateFolderRequest): Promise<FileFolder> {
+    return apiClient.post<FileFolder>('/folders', data);
+  },
+  
+  /**
+   * Update a folder
+   */
+  async updateFolder(folderId: string, data: UpdateFolderRequest): Promise<FileFolder> {
+    return apiClient.patch<FileFolder>(`/folders/${folderId}`, data);
+  },
+  
+  /**
+   * Delete a folder (and optionally its contents)
+   */
+  async deleteFolder(folderId: string, deleteContents = false): Promise<void> {
+    return apiClient.delete<void>(`/folders/${folderId}?delete_contents=${deleteContents}`);
   },
 };

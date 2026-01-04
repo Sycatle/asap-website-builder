@@ -75,7 +75,14 @@ export {
 // File types
 export {
   type FileMetadata,
+  type FileFolder,
+  type FileVisibility,
   type QuotaUsage,
+  type CreateFolderRequest,
+  type UpdateFolderRequest,
+  type UpdateFileRequest,
+  type FileUploadOptions,
+  type FileListParams,
 } from './file';
 
 // Notification types

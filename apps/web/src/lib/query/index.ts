@@ -74,10 +74,16 @@ export {
 // Files Queries & Mutations
 export {
   useFilesQuery,
+  useWebsiteFilesQuery,
   useQuotaQuery,
+  useFoldersQuery,
   useUploadFileMutation,
+  useUpdateFileMutation,
   useDeleteFileMutation,
   useDeleteFilesMutation,
+  useCreateFolderMutation,
+  useUpdateFolderMutation,
+  useDeleteFolderMutation,
 } from './files';
 
 // Administrator Queries
