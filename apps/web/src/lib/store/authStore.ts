@@ -154,15 +154,17 @@ export const useAuthStore = create<AuthState>()(
           
           // Fetch account data (name, avatar, etc.)
           let accountData: Record<string, any> = {};
+          let avatarUrl: string | undefined;
           try {
-            const account = await accountsAPI.getAccount(meData.id);
-            accountData = account.data || {};
+            const accountResponse = await accountsAPI.getAccount(meData.id);
+            accountData = accountResponse.data || {};
+            // The API now returns avatar_url at the top level
+            avatarUrl = accountResponse.avatar_url;
           } catch (err) {
             console.error('Failed to load account data:', err);
           }
 
-          // Process avatar URL
-          let avatarUrl = accountData.avatar;
+          // Process avatar URL - add token for authentication
           if (avatarUrl && avatarUrl.includes('/files/')) {
             avatarUrl = get().getFileUrl(avatarUrl);
           }
@@ -170,7 +172,7 @@ export const useAuthStore = create<AuthState>()(
           const userData: UserData = {
             id: meData.id,
             email: meData.email,
-            name: accountData.name || meData.email.split('@')[0],
+            name: accountData.display_name || accountData.name || meData.email.split('@')[0],
             avatar: avatarUrl,
             plan: meData.plan,
           };
