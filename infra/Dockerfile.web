@@ -1,8 +1,29 @@
 # ============================================================================
 # Dockerfile for ASAP Web (Dashboard Application)
-# Multi-stage build for optimized production image
+# Development: Uses shared base image with pre-installed dependencies
+# Production: Multi-stage build for optimized image
 # ============================================================================
 
+# For development - use base image
+FROM asap-base-node:dev AS dev
+
+# Copy source code (will be overwritten by volume mounts in docker-compose)
+COPY packages/shared ./packages/shared
+COPY packages/renderers ./packages/renderers
+COPY apps/web ./apps/web
+
+WORKDIR /app/apps/web
+
+ENV HOST=0.0.0.0
+ENV PORT=4321
+
+EXPOSE 4321
+
+CMD ["pnpm", "dev", "--host", "0.0.0.0"]
+
+# ============================================================================
+# For production - separate build (not using base image)
+# ============================================================================
 FROM node:20-alpine AS base
 
 # Install pnpm

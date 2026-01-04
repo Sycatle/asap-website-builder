@@ -1,23 +1,52 @@
-# Development configuration - Full Docker environment
+# Development configuration - Full Docker environment with base images
 # Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 
 services:
-  # API in dev mode - build inside container with hot reload
+  # ============================================================================
+  # Base Images - Shared by multiple services to speed up builds
+  # ============================================================================
+  
+  base-rust:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.base.rust
+    image: asap-base-rust:dev
+    container_name: asap-base-rust
+    command: /bin/true  # Do nothing, just build the image
+    
+  base-node:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.base.node
+    image: asap-base-node:dev
+    container_name: asap-base-node
+    command: /bin/true  # Do nothing, just build the image
+
+  # ============================================================================
+  # Application Services
+  # ============================================================================
+  
+  # API in dev mode - uses pre-built base image
   api:
     build:
       context: ..
       dockerfile: infra/Dockerfile.api.dev
     container_name: asap-api
+    depends_on:
+      base-rust:
+        condition: service_completed_successfully
+      migrations:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     volumes:
       # Mount source code for hot reload
       - ../Cargo.toml:/app/Cargo.toml
       - ../core:/app/core
       - ../apps/api:/app/apps/api
-      - ../modules:/app/modules
+      - ../extensions:/app/extensions
       - ../.sqlx:/app/.sqlx
-      # Cache cargo registry and target
-      - cargo-cache:/usr/local/cargo/registry
-      - cargo-git:/usr/local/cargo/git
+      # Cache cargo target (registry is in base image)
       - api-target:/app/target
     environment:
       DATABASE_URL: postgresql://asap:asap_dev_password@postgres:5432/asap
@@ -31,33 +60,31 @@ services:
       SQLX_OFFLINE: "true"
     ports:
       - "3000:3000"
-    depends_on:
-      migrations:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
     # Disable healthcheck in dev mode (cargo-watch takes time to compile)
     healthcheck:
       disable: true
     networks:
       - asap-network
 
-  # Worker in dev mode - build inside container
+  # Worker in dev mode - uses pre-built base image
   worker:
     build:
       context: ..
       dockerfile: infra/Dockerfile.worker.dev
     container_name: asap-worker
-    command: ["cargo", "watch", "-x", "run --bin asap-worker", "-w", "apps/worker", "-w", "core", "-w", "modules"]
+    depends_on:
+      base-rust:
+        condition: service_completed_successfully
+      migrations:
+        condition: service_completed_successfully
+    command: ["cargo", "watch", "-x", "run --bin asap-worker", "-w", "apps/worker", "-w", "core", "-w", "extensions"]
     volumes:
       # Mount source code for hot reload
       - ../core:/app/core
       - ../apps/worker:/app/apps/worker
-      - ../modules:/app/modules
+      - ../extensions:/app/extensions
       - ../.sqlx:/app/.sqlx
-      # Cache cargo registry and target
-      - cargo-cache:/usr/local/cargo/registry
-      - cargo-git:/usr/local/cargo/git
+      # Cache cargo target (registry is in base image)
       - worker-target:/app/target
     environment:
       DATABASE_URL: postgresql://asap:asap_dev_password@postgres:5432/asap
@@ -67,55 +94,64 @@ services:
       SQLX_OFFLINE: "true"
     depends_on:
       migrations:
-        condition: service_completed_successfully
     networks:
       - asap-network
 
-  # Web application in dev mode with hot reload
+  # Web application in dev mode - uses pre-built base image
   web:
-    image: node:20-alpine
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.web
+      target: dev
     container_name: asap-web
-    working_dir: /app/apps/web
-    command: sh -c "npm install --legacy-peer-deps && npm run dev -- --host 0.0.0.0"
-    ports:
-      - "4321:4321"
+    depends_on:
+      base-node:
+        condition: service_completed_successfully
+      api:
+        condition: service_started
     environment:
       HOST: 0.0.0.0
       PORT: 4321
       PUBLIC_API_URL: http://localhost:3000/api
       PUBLIC_WS_URL: ws://localhost:3000/ws
       NODE_ENV: development
-    volumes:
-      - ..:/app
-      - web-node-modules:/app/apps/web/node_modules
-    depends_on:
-      - api
+    volume/packages:/app/packages
+      - ../apps/web:/app/apps/web
     networks:
       - asap-network
 
-
-  # Sites application in dev mode with hot reload
+  # Sites application in dev mode - uses pre-built base image
   sites:
-    image: node:20-alpine
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.sites
+      target: dev
     container_name: asap-sites
-    working_dir: /app/apps/sites
+    depends_on:
+      base-node:
+        condition: service_completed_successfully
+      api:
+        condition: service_started
     command: sh -c "npm install -g pnpm && pnpm install --force && rm -rf node_modules/.vite && pnpm exec astro dev --host 0.0.0.0 --port 4322"
     ports:
       - "4322:4322"
     environment:
-      HOST: 0.0.0.0
-      PORT: 4322
-      PUBLIC_API_URL: http://localhost:3000/api
-      INTERNAL_API_URL: http://api:3000/api
-      NODE_ENV: development
-    volumes:
-      - ..:/app
-      - sites-node-modules:/app/apps/sites/node_modules
-    depends_on:
-      - api
+      HOST/packages:/app/packages
+      - ../apps/sites:/app/apps/sites
     networks:
       - asap-network
 
+  # Accounts application in dev mode - uses pre-built base image
+  accounts:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.accounts.dev
+    container_name: asap-accounts
+    depends_on:
+      base-node:
+        condition: service_completed_successfully
+      api:
+        condition: service_started
   # Accounts application in dev mode with hot reload
   accounts:
     image: node:20-alpine
@@ -123,21 +159,14 @@ services:
     working_dir: /app/apps/accounts
     command: sh -c "npm install -g pnpm && pnpm install --force && rm -rf node_modules/.vite && pnpm exec astro dev --host 0.0.0.0 --port 4323"
     ports:
-      - "4323:4323"
-    environment:
-      HOST: 0.0.0.0
-      PORT: 4323
-      PUBLIC_API_URL: http://localhost:3000/api
-      PUBLIC_APP_URL: http://localhost:4321
-      PUBLIC_ACCOUNTS_URL: http://localhost:4323
-      NODE_ENV: development
-    volumes:
-      - ..:/app
-      - accounts-node-modules:/app/apps/accounts/node_modules
-    depends_on:
-      - api
+      - "4/packages:/app/packages
+      - ../apps/accounts:/app/apps/accounts
     networks:
       - asap-network
+
+volumes:
+  api-target:
+  worker-target
 
 volumes:
   cargo-cache:
