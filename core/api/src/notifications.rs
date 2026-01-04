@@ -348,10 +348,10 @@ pub async fn mark_as_read(
     if updated > 0 {
         if let Ok(unread_count) = get_unread_count_for_account(&pool, account_id).await {
             if let Some(ids) = notification_ids {
-                ws_broadcaster.notify_batch_read(&account_id.to_string(), &ids, unread_count);
+                (*ws_broadcaster).notify_batch_read(&account_id.to_string(), &ids, unread_count);
             } else {
                 // All marked as read - just send count update
-                ws_broadcaster.notify_unread_count(&account_id.to_string(), unread_count);
+                (*ws_broadcaster).notify_unread_count(&account_id.to_string(), unread_count);
             }
         }
     }
@@ -387,7 +387,7 @@ pub async fn mark_notification_read(
     if result.rows_affected() > 0 {
         // Get updated unread count and broadcast via WebSocket
         if let Ok(unread_count) = get_unread_count_for_account(&pool, account_id).await {
-            ws_broadcaster.notify_notification_read(
+            (*ws_broadcaster).notify_notification_read(
                 &account_id.to_string(),
                 &notification_id.to_string(),
                 unread_count
@@ -423,7 +423,7 @@ pub async fn delete_notification(
     if result.rows_affected() > 0 {
         // Broadcast deletion via WebSocket
         if let Ok(unread_count) = get_unread_count_for_account(&pool, account_id).await {
-            ws_broadcaster.notify_notification_deleted(
+            (*ws_broadcaster).notify_notification_deleted(
                 &account_id.to_string(),
                 &notification_id.to_string(),
                 unread_count

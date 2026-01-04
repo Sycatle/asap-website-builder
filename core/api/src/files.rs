@@ -60,7 +60,7 @@ pub async fn upload_file(
         let response = FileUploadResponse::from(file);
         
         // Broadcast file uploaded event to all connected clients for this account
-        ws_broadcaster.sync_file_uploaded(
+        (*ws_broadcaster).sync_file_uploaded(
             &claims.sub,
             None, // No specific website - files are account-level
             serde_json::to_value(&response).unwrap_or_default(),
@@ -131,7 +131,7 @@ pub async fn delete_file(
         })?;
 
     // Broadcast file deleted event to all connected clients for this account
-    ws_broadcaster.sync_file_deleted(
+    (*ws_broadcaster).sync_file_deleted(
         &claims.sub,
         None, // No specific website - files are account-level
         &file_id.to_string(),
@@ -161,7 +161,7 @@ pub async fn download_file(
     let file = storage
         .get_file(file_id)
         .await
-        .map_err(|_| (StatusCode::NOT_FOUND, "File not found".to_string()))?;
+        .map_err(|_: anyhow::Error| (StatusCode::NOT_FOUND, "File not found".to_string()))?;
 
     // Security: Verify ownership
     if file.account_id != account_id {
@@ -208,7 +208,7 @@ pub async fn get_quota(
     let quota = storage
         .get_account_quota(account_id)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: anyhow::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(StorageQuotaResponse::from(quota)))
 }
