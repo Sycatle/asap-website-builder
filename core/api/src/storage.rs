@@ -474,7 +474,7 @@ impl FileStorageService {
 
     /// Check account quota
     async fn check_user_quota(&self, account_id: Uuid, file_size: i64) -> Result<()> {
-        let quota = self.get_account_quota(account_id).await?;
+        let quota: AccountStorageQuota = self.get_account_quota(account_id).await?;
 
         if !quota.can_upload(file_size) {
             return Err(anyhow::anyhow!(
