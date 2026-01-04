@@ -11,16 +11,18 @@ services:
       context: ..
       dockerfile: infra/Dockerfile.base.rust
     image: asap-base-rust:dev
-    container_name: asap-base-rust
-    command: /bin/true  # Do nothing, just build the image
+    # Base image doesn't run - just gets built
+    profiles:
+      - base-only
     
   base-node:
     build:
       context: ..
       dockerfile: infra/Dockerfile.base.node
     image: asap-base-node:dev
-    container_name: asap-base-node
-    command: /bin/true  # Do nothing, just build the image
+    # Base image doesn't run - just gets built
+    profiles:
+      - base-only
 
   # ============================================================================
   # Application Services
@@ -33,8 +35,6 @@ services:
       dockerfile: infra/Dockerfile.api.dev
     container_name: asap-api
     depends_on:
-      base-rust:
-        condition: service_completed_successfully
       migrations:
         condition: service_completed_successfully
       redis:
@@ -73,8 +73,6 @@ services:
       dockerfile: infra/Dockerfile.worker.dev
     container_name: asap-worker
     depends_on:
-      base-rust:
-        condition: service_completed_successfully
       migrations:
         condition: service_completed_successfully
     command: ["cargo", "watch", "-x", "run --bin asap-worker", "-w", "apps/worker", "-w", "core", "-w", "extensions"]
@@ -92,8 +90,6 @@ services:
       POLL_INTERVAL_SECONDS: 5
       # Enable SQLX offline mode to use pre-compiled query metadata
       SQLX_OFFLINE: "true"
-    depends_on:
-      migrations:
     networks:
       - asap-network
 
@@ -105,19 +101,21 @@ services:
       target: dev
     container_name: asap-web
     depends_on:
-      base-node:
-        condition: service_completed_successfully
       api:
         condition: service_started
+    ports:
+      - "4321:4321"
     environment:
       HOST: 0.0.0.0
       PORT: 4321
       PUBLIC_API_URL: http://localhost:3000/api
       PUBLIC_WS_URL: ws://localhost:3000/ws
       NODE_ENV: development
-    volume/packages:/app/packages
+    volumes:
+      - ../packages:/app/packages
       - ../apps/web:/app/apps/web
     networks:
+      - asap-network
       - asap-network
 
   # Sites application in dev mode - uses pre-built base image
@@ -128,15 +126,18 @@ services:
       target: dev
     container_name: asap-sites
     depends_on:
-      base-node:
-        condition: service_completed_successfully
       api:
         condition: service_started
-    command: sh -c "npm install -g pnpm && pnpm install --force && rm -rf node_modules/.vite && pnpm exec astro dev --host 0.0.0.0 --port 4322"
     ports:
       - "4322:4322"
     environment:
-      HOST/packages:/app/packages
+      HOST: 0.0.0.0
+      PORT: 4322
+      PUBLIC_API_URL: http://localhost:3000/api
+      INTERNAL_API_URL: http://api:3000/api
+      NODE_ENV: development
+    volumes:
+      - ../packages:/app/packages
       - ../apps/sites:/app/apps/sites
     networks:
       - asap-network
@@ -148,31 +149,23 @@ services:
       dockerfile: infra/Dockerfile.accounts.dev
     container_name: asap-accounts
     depends_on:
-      base-node:
-        condition: service_completed_successfully
       api:
         condition: service_started
-  # Accounts application in dev mode with hot reload
-  accounts:
-    image: node:20-alpine
-    container_name: asap-accounts
-    working_dir: /app/apps/accounts
-    command: sh -c "npm install -g pnpm && pnpm install --force && rm -rf node_modules/.vite && pnpm exec astro dev --host 0.0.0.0 --port 4323"
     ports:
-      - "4/packages:/app/packages
+      - "4323:4323"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 4323
+      PUBLIC_API_URL: http://localhost:3000/api
+      PUBLIC_APP_URL: http://localhost:4321
+      PUBLIC_ACCOUNTS_URL: http://localhost:4323
+      NODE_ENV: development
+    volumes:
+      - ../packages:/app/packages
       - ../apps/accounts:/app/apps/accounts
     networks:
       - asap-network
 
 volumes:
   api-target:
-  worker-target
-
-volumes:
-  cargo-cache:
-  cargo-git:
-  api-target:
   worker-target:
-  web-node-modules:
-  sites-node-modules:
-  accounts-node-modules:
