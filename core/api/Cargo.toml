@@ -32,6 +32,7 @@ oauth2 = { workspace = true }
 
 # HTTP client (for OAuth)
 reqwest = { workspace = true }
+urlencoding = "2.1"
 
 # Error handling
 anyhow = { workspace = true }

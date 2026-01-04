@@ -66,6 +66,7 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         // Account routes
         .route("/accounts/:id", get(crate::accounts::get_account))
         .route("/accounts/:id", put(crate::accounts::update_account))
+        .route("/accounts/:id", delete(crate::accounts::delete_account))
         .route("/accounts/:id/integrations", get(crate::integrations::get_integrations))
         .route("/accounts/:id/integrations/github", put(crate::integrations::update_github_integration))
         // Website routes
@@ -166,6 +167,9 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         .route("/auth/refresh", post(crate::auth::refresh_token))
         .route("/auth/forgot-password", post(crate::auth::forgot_password))
         .route("/auth/reset-password", post(crate::auth::reset_password))
+        // OAuth routes (user authentication)
+        .route("/auth/oauth/:provider", get(crate::oauth::initiate_oauth))
+        .route("/auth/oauth/:provider/callback", get(crate::oauth::oauth_callback))
         // CSRF token endpoint (public, needed before login)
         .route("/auth/csrf-token", get(crate::csrf::get_csrf_token))
         // Public website routes
