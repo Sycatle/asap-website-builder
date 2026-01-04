@@ -27,7 +27,8 @@ services:
       ASAP_API_HOST: 0.0.0.0
       JWT_SECRET: ${JWT_SECRET:-dev_secret_key_change_in_production_12345}
       CORS_ALLOWED_ORIGINS: http://localhost:4321,http://localhost:4322,http://localhost:4323,http://web:4321,http://sites:4322,http://accounts:4323
-      # SQLX_OFFLINE disabled to use live DB verification in dev
+      # Enable SQLX offline mode to use pre-compiled query metadata
+      SQLX_OFFLINE: "true"
     ports:
       - "3000:3000"
     depends_on:
@@ -62,7 +63,8 @@ services:
       DATABASE_URL: postgresql://asap:asap_dev_password@postgres:5432/asap
       RUST_LOG: asap_worker=debug,sqlx=warn
       POLL_INTERVAL_SECONDS: 5
-      # SQLX_OFFLINE disabled to use live DB verification in dev
+      # Enable SQLX offline mode to use pre-compiled query metadata
+      SQLX_OFFLINE: "true"
     depends_on:
       migrations:
         condition: service_completed_successfully
