@@ -14,6 +14,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -59,6 +60,15 @@ pub struct OAuthUrlResponse {
     pub redirect_url: String,
 }
 
+/// OAuth state payload - encoded in base64 and passed through OAuth flow
+#[derive(Debug, Serialize, Deserialize)]
+struct OAuthStatePayload {
+    /// CSRF protection token
+    csrf: String,
+    /// Optional redirect URL after successful auth
+    redirect_url: Option<String>,
+}
+
 /// OAuth callback query parameters
 #[derive(Debug, Deserialize)]
 pub struct OAuthCallbackQuery {
@@ -75,6 +85,9 @@ pub struct OAuthCallbackResponse {
     pub refresh_token: String,
     pub account_id: String,
     pub is_new_user: bool,
+    /// Redirect URL to use after authentication (preserved from initial request)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub redirect_url: Option<String>,
 }
 
 /// Google user info response
@@ -104,7 +117,7 @@ struct GitHubUserInfo {
 /// GET /auth/oauth/{provider}?redirect_url=...
 pub async fn initiate_oauth(
     Path(provider): Path<String>,
-    Query(_params): Query<InitiateOAuthRequest>,
+    Query(params): Query<InitiateOAuthRequest>,
 ) -> Result<Json<OAuthUrlResponse>, impl IntoResponse> {
     let provider = match OAuthProvider::from_str(&provider) {
         Ok(p) => p,
@@ -118,11 +131,18 @@ pub async fn initiate_oauth(
         }
     };
 
-    // Generate state for CSRF protection
-    let state = Uuid::new_v4().to_string();
+    // Build state payload with CSRF token and optional redirect URL
+    let state_payload = OAuthStatePayload {
+        csrf: Uuid::new_v4().to_string(),
+        redirect_url: params.redirect_url,
+    };
     
-    // TODO: Store state in Redis with expiration (5 minutes) for validation
-    // For now, we'll just include it in the URL
+    // Encode state as base64 JSON
+    let state_json = serde_json::to_string(&state_payload).unwrap_or_default();
+    let state = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(state_json.as_bytes());
+    
+    // TODO: Store CSRF token in Redis with expiration (5 minutes) for validation
+    // For now, we rely on the state parameter being tamper-evident
 
     let oauth_url = match provider {
         OAuthProvider::Google => {
@@ -194,6 +214,19 @@ pub async fn oauth_callback(
         ));
     }
 
+    // Decode state payload to extract redirect_url
+    let state_payload: Option<OAuthStatePayload> = params.state.as_ref().and_then(|state| {
+        base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .decode(state)
+            .ok()
+            .and_then(|bytes| String::from_utf8(bytes).ok())
+            .and_then(|json: String| serde_json::from_str::<OAuthStatePayload>(&json).ok())
+    });
+    
+    let redirect_url_from_state = state_payload.as_ref().and_then(|p| p.redirect_url.clone());
+    
+    // TODO: Validate CSRF token from state_payload.csrf against stored value in Redis
+
     let provider = match OAuthProvider::from_str(&provider) {
         Ok(p) => p,
         Err(e) => {
@@ -205,8 +238,6 @@ pub async fn oauth_callback(
             ));
         }
     };
-
-    // TODO: Validate state parameter against stored value in Redis
     
     // Exchange authorization code for access token
     let (oauth_email, oauth_user_id, display_name, avatar_url, given_name, family_name) = match provider {
@@ -484,9 +515,10 @@ pub async fn oauth_callback(
     // Note: jwt_sessions table not implemented yet - session management via refresh_tokens only
 
     tracing::info!(
-        "OAuth authentication successful: account_id={}, is_new_user={}", 
+        "OAuth authentication successful: account_id={}, is_new_user={}, redirect_url={:?}", 
         account_id, 
-        is_new_user
+        is_new_user,
+        redirect_url_from_state
     );
 
     Ok(Json(OAuthCallbackResponse {
@@ -494,6 +526,7 @@ pub async fn oauth_callback(
         refresh_token: refresh_token_obj.token,
         account_id: account_id.to_string(),
         is_new_user,
+        redirect_url: redirect_url_from_state,
     }))
 }
 

@@ -67,16 +67,18 @@ export default function OAuthCallback() {
       
       // Redirect after a short delay
       setTimeout(() => {
-        let redirectUrl = data.redirect_url || getAppUrl('/');
+        // Use redirect_url from backend (preserved from initial OAuth request)
+        // This ensures the same behavior as non-OAuth flows
+        let redirectUrl = data.redirect_url;
         
-        // New users go to onboarding
-        if (data.is_new_user && !data.redirect_url) {
-          redirectUrl = getAppUrl('/onboarding');
+        // Fallback: new users go to onboarding, existing users to app
+        if (!redirectUrl) {
+          redirectUrl = data.is_new_user ? getAppUrl('/onboarding') : getAppUrl('/');
         }
         
         // Validate redirect URL
         if (!isValidRedirectUrl(redirectUrl)) {
-          redirectUrl = getAppUrl('/');
+          redirectUrl = data.is_new_user ? getAppUrl('/onboarding') : getAppUrl('/');
         }
         
         // Add tokens to hash for cross-origin redirect
