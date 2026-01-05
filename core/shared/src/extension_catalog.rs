@@ -41,7 +41,6 @@ pub fn get_extension_catalog() -> Vec<ExtensionDefinition> {
         github_sync_extension(),
         blog_engine_extension(),
         contact_form_extension(),
-        analytics_tracker_extension(),
     ]
 }
 
@@ -246,58 +245,6 @@ fn contact_form_extension() -> ExtensionDefinition {
                     "Sécurité",
                     vec!["require_captcha"]
                 ).with_description("Options de protection contre le spam"),
-            ])),
-    }
-}
-
-fn analytics_tracker_extension() -> ExtensionDefinition {
-    ExtensionDefinition {
-        slug: "analytics-tracker".to_string(),
-        name: "Analytics".to_string(),
-        version: "1.0.0".to_string(),
-        description: "Suivez les visites et interactions sur votre site".to_string(),
-        category: "analytics".to_string(),
-        icon: Some("analytics".to_string()),
-        sidebar_order: 40,
-        sidebar_label: Some("Analytics".to_string()),
-        user_configurable: true,
-        default_settings: serde_json::json!({
-            "track_page_views": true,
-            "track_events": true,
-            "anonymize_ip": true,
-            "retention_days": 90
-        }),
-        config_schema: Some(ConfigSchema::new()
-            .with_fields(vec![
-                ConfigField::boolean("track_page_views", "Suivre les pages vues")
-                    .with_description("Enregistrer les pages visitées")
-                    .with_default(true),
-                ConfigField::boolean("track_events", "Suivre les événements")
-                    .with_description("Enregistrer les clics sur les boutons et liens")
-                    .with_default(true),
-                ConfigField::boolean("anonymize_ip", "Anonymiser les IP")
-                    .with_description("Ne pas stocker les adresses IP complètes (RGPD)")
-                    .with_default(true),
-                ConfigField::number("retention_days", "Rétention des données")
-                    .with_description("Nombre de jours de conservation des données")
-                    .with_default(90)
-                    .with_validation(FieldValidation {
-                        min: Some(7),
-                        max: Some(365),
-                        ..Default::default()
-                    }),
-            ])
-            .with_sections(vec![
-                ConfigSection::new(
-                    "tracking",
-                    "Suivi",
-                    vec!["track_page_views", "track_events"]
-                ).with_description("Configurez ce qui est suivi"),
-                ConfigSection::new(
-                    "privacy",
-                    "Confidentialité",
-                    vec!["anonymize_ip", "retention_days"]
-                ).with_description("Options de protection des données"),
             ])),
     }
 }

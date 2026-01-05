@@ -99,7 +99,6 @@ track_detailed_event(event)?;
 
 Test individual extensions:
 ```bash
-cargo test -p asap-extension-analytics
 cargo test -p asap-extension-github-sync
 ```
 
