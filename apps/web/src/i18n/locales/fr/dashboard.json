@@ -338,8 +338,12 @@
       "open": "Ouvrir",
       "empty": "Dossier vide",
       "deleteTitle": "Supprimer le dossier",
-      "deleteDescription": "Voulez-vous vraiment supprimer ce dossier ?",
-      "deleteWithContents": "Supprimer le dossier et son contenu"
+      "deleteDescription": "Voulez-vous vraiment supprimer le dossier <strong>{{name}}</strong> ?",
+      "deleteEmpty": "Supprimer le dossier vide",
+      "deleteWithContents": "Supprimer avec tout le contenu",
+      "deleteSuccess": "Dossier \"{{name}}\" supprimé",
+      "deleteError": "Échec de la suppression du dossier",
+      "deleteNotEmpty": "Ce dossier n'est pas vide. Choisissez de supprimer avec le contenu."
     },
     "filters": {
       "all": "Tous",

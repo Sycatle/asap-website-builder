@@ -338,8 +338,12 @@
       "open": "Open",
       "empty": "Empty folder",
       "deleteTitle": "Delete Folder",
-      "deleteDescription": "Are you sure you want to delete this folder?",
-      "deleteWithContents": "Delete folder and all contents"
+      "deleteDescription": "Are you sure you want to delete the folder <strong>{{name}}</strong>?",
+      "deleteEmpty": "Delete empty folder",
+      "deleteWithContents": "Delete with all contents",
+      "deleteSuccess": "Folder \"{{name}}\" deleted",
+      "deleteError": "Failed to delete folder",
+      "deleteNotEmpty": "This folder is not empty. Choose to delete with contents."
     },
     "filters": {
       "all": "All",
