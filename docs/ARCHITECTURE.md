@@ -26,7 +26,7 @@ Le core expose une API centralisée qui :
 - Centralise les **données utilisateur** (profil, paramètres, intégrations GitHub, etc.)
 - Fournit une **structure unifiée** pour les projets/sites web
 - Émet des **événements métier** pour les modules
-- Gère les **droits d'accès** via tenant_id
+- Gère les **droits d'accès** via account_id
 
 ### 2. Les Modules = Toutes les fonctionnalités
 

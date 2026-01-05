@@ -69,12 +69,12 @@ Packages:
 
 ### Rust Backend
 
-**Multi-tenant Isolation**: Every query MUST filter by `tenant_id`:
+**Account Isolation**: Every query MUST filter by `account_id`:
 ```rust
 // ✓ CORRECT
-sqlx::query!("SELECT * FROM websites WHERE tenant_id = $1", tenant_id)
+sqlx::query!("SELECT * FROM websites WHERE account_id = $1", account_id)
 
-// ✗ WRONG - Violates multi-tenancy
+// ✗ WRONG - Violates account isolation
 sqlx::query!("SELECT * FROM websites WHERE id = $1", id)
 ```
 
@@ -163,7 +163,7 @@ WHERE account_id = $1;
 
 ## Critical Gotchas
 
-1. **Tenant Isolation**: Always add `WHERE tenant_id = $1` to queries. Use RLS policies as last defense.
+1. **Account Isolation**: Always add `WHERE account_id = $1` to queries. Use RLS policies as last defense.
 
 2. **Extension Data Flow**: Extensions fetch user data from Core API, never directly from database:
    ```rust

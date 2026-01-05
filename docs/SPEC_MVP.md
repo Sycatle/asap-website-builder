@@ -28,7 +28,7 @@ Le core expose et implémente :
   - Extensions activables par website (GitHub Sync, Blog Engine, Analytics, etc.)
   - Presets (templates prédéfinis)
 - ✅ **Événements** : création, polling, retry mechanism avec exponential backoff
-- ✅ **Multi-tenant** : isolation stricte par tenant_id + RLS PostgreSQL
+- ✅ **Account isolation** : isolation stricte par account_id + RLS PostgreSQL
 - ✅ **Extension catalog** : catalogue d'extensions avec activation per-website
 
 **Bonus implémentés (non prévus initialement):**
@@ -101,7 +101,7 @@ Le core gère la **structure** du website :
 | Champ | Type | Description | Statut |
 |-------|------|-------------|---------|
 | `id` | `UUID` | Identifiant unique du website | ✅ Implémenté |
-| `tenant_id` | `UUID` | Tenant propriétaire | ✅ Implémenté |
+| `account_id` | `UUID` | Account propriétaire | ✅ Implémenté |
 | `slug` | `string` | URL-friendly slug | ✅ Implémenté |
 | `title` | `string` | Titre (ex. "John Doe") | ✅ Implémenté |
 | `tagline` | `string` | Sous-titre (ex. "Full-Stack Dev") | ✅ Implémenté |

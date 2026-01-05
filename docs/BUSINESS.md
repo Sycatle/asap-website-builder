@@ -102,7 +102,7 @@ Les utilisateurs gèrent tout au même endroit :
        ↓ (API Core centralisée)
        
 Core API + Database PostgreSQL
-(Multi-tenant, RLS, isolé par tenant_id)
+(Account isolation, RLS, isolé par account_id)
        ↓ (Consomment l'API)
 Modules (Sites, IA, Analytics, Cloud, etc.)
 ```
@@ -136,10 +136,10 @@ Chaque utilisateur/client a des **limites** gérées centralement :
 | **API calls** | Rate limiting par plan (Free: 100/min, Pro: 1K/min) |
 | **Custom domains** | Inclus pour Pro+, payant en Free |
 
-### 3.4. Architecture multi-tenante
+### 3.4. Architecture d'isolation par compte
 
 - **Core API** = source de vérité pour toutes les données
-- **Isolation tenant_id** sur toutes les tables sensibles
+- **Isolation account_id** sur toutes les tables sensibles
 - **RLS (Row-Level Security)** au niveau base de données
 - **Quotas vérifiés** avant chaque opération (token usage, storage, rate limits)
 - **Event-driven** : les modules consomment les événements du Core

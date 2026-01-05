@@ -11,7 +11,7 @@ END $$;
 -- File folders table (virtual folder hierarchy)
 CREATE TABLE IF NOT EXISTS file_folders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     parent_id UUID REFERENCES file_folders(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     path TEXT NOT NULL, -- Full path for fast lookups: /photos/vacation/2024
@@ -25,14 +25,14 @@ CREATE TABLE IF NOT EXISTS file_folders (
         (visibility = 'website' AND website_id IS NOT NULL) OR
         (visibility != 'website' AND website_id IS NULL)
     ),
-    -- Unique folder name within same parent and tenant
-    CONSTRAINT unique_folder_name UNIQUE (tenant_id, parent_id, name)
+    -- Unique folder name within same parent and account
+    CONSTRAINT unique_folder_name UNIQUE (account_id, parent_id, name)
 );
 
 -- Add indexes for file_folders
-CREATE INDEX IF NOT EXISTS idx_file_folders_tenant ON file_folders(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_file_folders_account ON file_folders(account_id);
 CREATE INDEX IF NOT EXISTS idx_file_folders_parent ON file_folders(parent_id);
-CREATE INDEX IF NOT EXISTS idx_file_folders_path ON file_folders(tenant_id, path);
+CREATE INDEX IF NOT EXISTS idx_file_folders_path ON file_folders(account_id, path);
 CREATE INDEX IF NOT EXISTS idx_file_folders_website ON file_folders(website_id) WHERE website_id IS NOT NULL;
 
 -- Add new columns to files table
@@ -74,13 +74,12 @@ CREATE TRIGGER file_folders_updated_at
 -- RLS policies for file_folders
 ALTER TABLE file_folders ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS file_folders_tenant_isolation ON file_folders;
-CREATE POLICY file_folders_tenant_isolation ON file_folders
+DROP POLICY IF EXISTS file_folders_account_isolation ON file_folders;
+CREATE POLICY file_folders_account_isolation ON file_folders
     FOR ALL
-    USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
+    USING (account_id = current_setting('app.current_account', true)::uuid);
 
 -- Update RLS policies for files to include visibility
--- Note: files table uses account_id instead of tenant_id
 DROP POLICY IF EXISTS files_tenant_isolation ON files;
 CREATE POLICY files_tenant_isolation ON files
     FOR ALL

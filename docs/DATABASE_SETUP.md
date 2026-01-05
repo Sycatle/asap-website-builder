@@ -234,10 +234,9 @@ Starts a PostgreSQL 15 container with:
 
 Indexes are created on:
 - `accounts.email` (unique)
-- `accounts.tenant_id`
-- `tenants.slug` (unique)
-- `websites.tenant_id`
-- `websites.slug` (unique per tenant)
+- `accounts.id`
+- `websites.account_id`
+- `websites.slug` (unique per account)
 
 ### Connection Pooling
 

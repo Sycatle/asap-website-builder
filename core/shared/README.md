@@ -27,7 +27,7 @@ JWT token generation and validation utilities:
 use asap_core_shared::{generate_token, validate_token, Claims};
 
 // Generate a token
-let token = generate_token(user_id, tenant_id, &config)?;
+let token = generate_token(user_id, account_id, &config)?;
 
 // Validate and extract claims
 let claims = validate_token(&token, &config)?;
@@ -36,7 +36,7 @@ let claims = validate_token(&token, &config)?;
 **Features:**
 - Token generation with configurable expiration
 - Token validation with automatic expiry checking
-- Claims extraction with user_id and tenant_id
+- Claims extraction with user_id and account_id
 
 ### Error Handling (`errors.rs`)
 
@@ -66,7 +66,7 @@ pub async fn signup(
     Extension(config): Extension<SharedConfig>,
     // ... other params
 ) -> impl IntoResponse {
-    let token = generate_token(&user_id, &tenant_id, &config)?;
+    let token = generate_token(&user_id, &account_id, &config)?;
     // ...
 }
 ```

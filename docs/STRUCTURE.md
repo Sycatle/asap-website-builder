@@ -374,7 +374,6 @@ CREATE TABLE accounts (
   id UUID PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
-  tenant_id UUID NOT NULL,
   plan TEXT NOT NULL DEFAULT 'free',
   stripe_customer_id TEXT,
   plan_status TEXT,

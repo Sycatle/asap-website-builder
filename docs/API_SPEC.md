@@ -80,7 +80,6 @@ Retourne le compte courant et ses données.
 {
   "id": "uuid",
   "email": "dev@example.com",
-  "tenant_id": "uuid",
   "plan": "free",
   "data": {
     "integrations": {
