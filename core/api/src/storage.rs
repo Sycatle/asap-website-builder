@@ -370,7 +370,7 @@ impl FileStorageService {
         Ok(file)
     }
 
-    /// Upload file with full metadata (website_id, folder_id, visibility, etc.)
+    /// Upload file with full metadata (website_id optional for personal cloud)
     pub async fn upload_file_with_metadata(
         &self,
         account_id: Uuid,
@@ -389,16 +389,12 @@ impl FileStorageService {
         // Check quota
         self.check_user_quota(account_id, data.len() as i64).await?;
 
-        // Calculate hash (deduplicate by content within the same account)
+        // Calculate hash (deduplicate by content within the same website or personal cloud)
         let file_hash = self.calculate_hash(data);
 
         // Check if file already exists for this account (content deduplication)
-        // For website-scoped files, we check against the same website too
         if let Ok(Some(existing_file)) = self.get_file_by_hash(account_id, &file_hash).await {
-            // If existing file is in same website context, return it
-            if existing_file.website_id == website_id {
-                return Ok(existing_file);
-            }
+            return Ok(existing_file);
         }
 
         // Decide whether to compress based on file type and size
@@ -553,7 +549,7 @@ impl FileStorageService {
     /// Get file by hash for a specific account (for content deduplication)
     async fn get_file_by_hash(&self, account_id: Uuid, file_hash: &str) -> Result<Option<File>> {
         let row = sqlx::query(
-            "SELECT id, account_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at
+            "SELECT id, account_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at, website_id
              FROM files WHERE account_id = $1 AND file_hash = $2"
         )
         .bind(account_id)
@@ -573,8 +569,8 @@ impl FileStorageService {
                 storage_key: r.get(7),
                 created_at: r.get(8),
                 folder_id: None,
-                visibility: asap_core_domain::FileVisibility::Private,
-                website_id: None,
+                visibility: asap_core_domain::FileVisibility::Website,
+                website_id: r.get(9),
                 description: None,
                 tags: vec![],
             }
@@ -707,7 +703,7 @@ impl FileStorageService {
         }
     }
 
-    /// List account files with optional folder and website filter
+    /// List account files with optional website filter (None = personal cloud)
     pub async fn list_account_files(
         &self, 
         account_id: Uuid, 
@@ -740,10 +736,10 @@ impl FileStorageService {
                 .fetch_all(&self.pool)
                 .await?
             }
-            // Root folder, no website filter
+            // Root folder, personal cloud (website_id IS NULL)
             (true, _, None) => {
                 sqlx::query(&format!(
-                    "{} AND folder_id IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3",
+                    "{} AND folder_id IS NULL AND website_id IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3",
                     base_select
                 ))
                 .bind(account_id)
@@ -766,10 +762,10 @@ impl FileStorageService {
                 .fetch_all(&self.pool)
                 .await?
             }
-            // Specific folder, no website filter
+            // Specific folder, personal cloud
             (false, Some(fid), None) => {
                 sqlx::query(&format!(
-                    "{} AND folder_id = $2 ORDER BY created_at DESC LIMIT $3 OFFSET $4",
+                    "{} AND folder_id = $2 AND website_id IS NULL ORDER BY created_at DESC LIMIT $3 OFFSET $4",
                     base_select
                 ))
                 .bind(account_id)
@@ -792,10 +788,10 @@ impl FileStorageService {
                 .fetch_all(&self.pool)
                 .await?
             }
-            // No filters at all
+            // No folder filter, personal cloud
             (false, None, None) => {
                 sqlx::query(&format!(
-                    "{} ORDER BY created_at DESC LIMIT $2 OFFSET $3",
+                    "{} AND website_id IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3",
                     base_select
                 ))
                 .bind(account_id)

@@ -8,6 +8,7 @@ use axum::{
 use uuid::Uuid;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use sqlx::Row;
 
 use crate::storage::FileStorageService;
 use asap_core_shared::{Claims, SharedConfig, SharedWsBroadcaster, validate_token};
@@ -35,7 +36,7 @@ pub struct UpdateFileRequest {
 pub struct CreateFolderRequest {
     pub name: String,
     pub parent_folder_id: Option<Uuid>,
-    pub website_id: Option<Uuid>,
+    pub website_id: Option<Uuid>, // Optional - None for personal cloud
     pub icon: Option<String>,
     pub color: Option<String>,
 }
@@ -159,7 +160,7 @@ pub async fn upload_file(
     // If website_id is provided, verify user has access to this website
     if let Some(wid) = website_id {
         let has_access: Option<bool> = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND account_id = $2)"
+            "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND tenant_id = $2)"
         )
         .bind(wid)
         .bind(account_id)
@@ -201,7 +202,7 @@ pub async fn upload_file(
     // Broadcast file uploaded event to all connected clients for this account
     (*ws_broadcaster).sync_file_uploaded(
         &claims.sub,
-        website_id.map(|w| w.to_string()).as_deref(),
+        website_id.as_ref().map(|w| w.to_string()).as_deref(),
         serde_json::to_value(&response).unwrap_or_default(),
     );
 
@@ -242,7 +243,7 @@ pub async fn list_files(
     });
     let filter_root = params.get("folder_id").map(|s| s == "root").unwrap_or(false);
     
-    // Optional website_id filter
+    // Optional website_id filter - None for personal cloud, Some for website-scoped
     let website_id = params.get("website_id").and_then(|s| Uuid::parse_str(s).ok());
 
     let files = storage
@@ -381,12 +382,12 @@ pub async fn update_file(
     let account_id = uuid::Uuid::parse_str(&claims.sub)
         .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid account ID".to_string()))?;
 
-    // Verify file exists and belongs to user
-    let file = sqlx::query!(
-        "SELECT id, filename, folder_id, visibility::text as visibility, website_id, description, tags FROM files WHERE id = $1 AND account_id = $2",
-        file_id,
-        account_id,
+    // Verify file exists and belongs to user (use dynamic query to avoid SQLx cache issues)
+    let file_row = sqlx::query(
+        "SELECT id, filename, folder_id, visibility::text as visibility, website_id, description, tags FROM files WHERE id = $1 AND account_id = $2"
     )
+    .bind(file_id)
+    .bind(account_id)
     .fetch_optional(&pool)
     .await
     .map_err(|e| {
@@ -395,18 +396,25 @@ pub async fn update_file(
     })?
     .ok_or_else(|| (StatusCode::NOT_FOUND, "File not found".to_string()))?;
 
+    let file_filename: String = file_row.get("filename");
+    let file_folder_id: Option<Uuid> = file_row.get("folder_id");
+    let file_visibility: Option<String> = file_row.get("visibility");
+    let file_website_id: Option<Uuid> = file_row.get("website_id");
+    let file_description: Option<String> = file_row.get("description");
+    let file_tags: Vec<String> = file_row.get::<Option<Vec<String>>, _>("tags").unwrap_or_default();
+
     // Build update query dynamically
-    let new_filename = request.filename.unwrap_or(file.filename);
+    let new_filename = request.filename.unwrap_or(file_filename);
     // Handle folder_id: "root" means move to root (NULL), UUID string means specific folder
     let new_folder_id: Option<Uuid> = match request.folder_id.as_deref() {
         Some("root") => None,  // Explicitly move to root
         Some(id) => Some(Uuid::parse_str(id).map_err(|_| (StatusCode::BAD_REQUEST, "Invalid folder_id".to_string()))?),
-        None => file.folder_id,  // Keep existing
+        None => file_folder_id,  // Keep existing
     };
-    let new_visibility = request.visibility.as_deref().unwrap_or(file.visibility.as_deref().unwrap_or("private"));
-    let new_website_id = if request.website_id.is_some() { request.website_id } else { file.website_id };
-    let new_description = request.description.or(file.description);
-    let new_tags = request.tags.unwrap_or(file.tags);
+    let new_visibility = request.visibility.as_deref().unwrap_or(file_visibility.as_deref().unwrap_or("private"));
+    let new_website_id = request.website_id.or(file_website_id);
+    let new_description = request.description.or(file_description);
+    let new_tags = request.tags.unwrap_or(file_tags);
 
     // Use raw query to handle enum type properly
     sqlx::query(
@@ -485,6 +493,7 @@ pub async fn list_folders(
         .filter(|s| *s != "root")
         .and_then(|s| Uuid::parse_str(s).ok());
     
+    // Optional website_id filter - None for personal cloud, Some for website-scoped
     let website_id: Option<Uuid> = params
         .get("website_id")
         .and_then(|s| Uuid::parse_str(s).ok());
@@ -504,14 +513,14 @@ pub async fn list_folders(
             (SELECT COUNT(*) FROM files f WHERE f.folder_id = ff.id)::bigint as file_count,
             (SELECT COUNT(*) FROM file_folders sf WHERE sf.parent_id = ff.id)::bigint as subfolder_count
         FROM file_folders ff
-        WHERE ff.account_id = $1
+        WHERE ff.tenant_id = $1
         "#,
     );
 
     let mut param_idx = 2;
     
     // Add parent_id filter
-    if let Some(pid) = parent_id {
+    if let Some(_pid) = parent_id {
         query.push_str(&format!(" AND ff.parent_id = ${}", param_idx));
         param_idx += 1;
     } else if filter_root {
@@ -522,6 +531,9 @@ pub async fn list_folders(
     // Add website_id filter
     if website_id.is_some() {
         query.push_str(&format!(" AND ff.website_id = ${}", param_idx));
+    } else {
+        // Personal cloud: only show folders without website_id
+        query.push_str(" AND ff.website_id IS NULL");
     }
     
     query.push_str(" ORDER BY ff.name ASC");
@@ -602,7 +614,7 @@ pub async fn create_folder(
     // If website_id is provided, verify user has access to this website
     if let Some(wid) = request.website_id {
         let has_access: Option<bool> = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND account_id = $2)"
+            "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND tenant_id = $2)"
         )
         .bind(wid)
         .bind(account_id)
@@ -617,12 +629,12 @@ pub async fn create_folder(
 
     // Build path based on parent
     let path = if let Some(parent_id) = request.parent_folder_id {
-        // Verify parent exists and belongs to user
-        let parent = sqlx::query!(
-            "SELECT path, website_id FROM file_folders WHERE id = $1 AND account_id = $2",
-            parent_id,
-            account_id,
+        // Verify parent exists and belongs to user (use dynamic query to avoid SQLx cache issues)
+        let parent_row = sqlx::query(
+            "SELECT path, website_id FROM file_folders WHERE id = $1 AND tenant_id = $2"
         )
+        .bind(parent_id)
+        .bind(account_id)
         .fetch_optional(&pool)
         .await
         .map_err(|e| {
@@ -631,12 +643,15 @@ pub async fn create_folder(
         })?
         .ok_or_else(|| (StatusCode::NOT_FOUND, "Parent folder not found".to_string()))?;
 
+        let parent_path: String = parent_row.get("path");
+        let parent_website_id: Option<Uuid> = parent_row.get("website_id");
+
         // If parent has a website_id, child must inherit it
-        if parent.website_id.is_some() && request.website_id != parent.website_id {
+        if parent_website_id.is_some() && request.website_id != parent_website_id {
             return Err((StatusCode::BAD_REQUEST, "Folder must belong to the same website as parent".to_string()));
         }
 
-        format!("{}/{}", parent.path, request.name)
+        format!("{}/{}", parent_path, request.name)
     } else {
         format!("/{}", request.name)
     };
@@ -646,7 +661,7 @@ pub async fn create_folder(
 
     sqlx::query!(
         r#"
-        INSERT INTO file_folders (id, account_id, parent_id, name, path, website_id, created_at, updated_at)
+        INSERT INTO file_folders (id, tenant_id, parent_id, name, path, website_id, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
         "#,
         folder_id,
@@ -694,12 +709,12 @@ pub async fn update_folder(
     let account_id = uuid::Uuid::parse_str(&claims.sub)
         .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid account ID".to_string()))?;
 
-    // Verify folder exists and belongs to user
-    let folder = sqlx::query!(
-        "SELECT id, name, path, parent_id, website_id, created_at FROM file_folders WHERE id = $1 AND account_id = $2",
-        folder_id,
-        account_id,
+    // Verify folder exists and belongs to user (use dynamic query to avoid SQLx cache issues)
+    let folder_row = sqlx::query(
+        "SELECT id, name, path, parent_id, website_id, created_at FROM file_folders WHERE id = $1 AND tenant_id = $2"
     )
+    .bind(folder_id)
+    .bind(account_id)
     .fetch_optional(&pool)
     .await
     .map_err(|e| {
@@ -708,27 +723,33 @@ pub async fn update_folder(
     })?
     .ok_or_else(|| (StatusCode::NOT_FOUND, "Folder not found".to_string()))?;
 
+    let folder_name: String = folder_row.get("name");
+    let folder_path: String = folder_row.get("path");
+    let folder_parent_id: Option<Uuid> = folder_row.get("parent_id");
+    let folder_website_id: Option<Uuid> = folder_row.get("website_id");
+    let folder_created_at: chrono::DateTime<chrono::Utc> = folder_row.get("created_at");
+
     let name_changed = request.name.is_some();
-    let new_name = request.name.unwrap_or_else(|| folder.name.clone());
+    let new_name = request.name.unwrap_or_else(|| folder_name.clone());
     
     // Update path if name changed
     let new_path = if name_changed {
-        let parent_path = folder.path.rsplit_once('/').map(|(p, _)| p).unwrap_or("");
+        let parent_path = folder_path.rsplit_once('/').map(|(p, _)| p).unwrap_or("");
         if parent_path.is_empty() {
             format!("/{}", new_name)
         } else {
             format!("{}/{}", parent_path, new_name)
         }
     } else {
-        folder.path.clone()
+        folder_path.clone()
     };
 
-    sqlx::query!(
-        "UPDATE file_folders SET name = $1, path = $2, updated_at = NOW() WHERE id = $3",
-        new_name,
-        new_path,
-        folder_id,
+    sqlx::query(
+        "UPDATE file_folders SET name = $1, path = $2, updated_at = NOW() WHERE id = $3"
     )
+    .bind(&new_name)
+    .bind(&new_path)
+    .bind(folder_id)
     .execute(&pool)
     .await
     .map_err(|e| {
@@ -737,35 +758,29 @@ pub async fn update_folder(
     })?;
 
     // Get counts
-    let file_count: i64 = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM files WHERE folder_id = $1",
-        folder_id
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap_or(Some(0))
-    .unwrap_or(0);
+    let file_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM files WHERE folder_id = $1")
+        .bind(folder_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap_or(0);
 
-    let subfolder_count: i64 = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM file_folders WHERE parent_id = $1",
-        folder_id
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap_or(Some(0))
-    .unwrap_or(0);
+    let subfolder_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM file_folders WHERE parent_id = $1")
+        .bind(folder_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap_or(0);
 
     Ok(Json(FolderResponse {
         id: folder_id,
         name: new_name,
         path: new_path,
-        parent_folder_id: folder.parent_id,
-        website_id: folder.website_id,
+        parent_folder_id: folder_parent_id,
+        website_id: folder_website_id,
         icon: request.icon,
         color: request.color,
         file_count,
         subfolder_count,
-        created_at: folder.created_at,
+        created_at: folder_created_at,
     }))
 }
 
@@ -784,12 +799,12 @@ pub async fn delete_folder(
         .map(|s| s == "true")
         .unwrap_or(false);
 
-    // Verify folder exists and belongs to user
-    let folder_exists = sqlx::query!(
-        "SELECT id FROM file_folders WHERE id = $1 AND account_id = $2",
-        folder_id,
-        account_id,
+    // Verify folder exists and belongs to user (use dynamic query to avoid SQLx cache issues)
+    let folder_exists = sqlx::query(
+        "SELECT id FROM file_folders WHERE id = $1 AND tenant_id = $2"
     )
+    .bind(folder_id)
+    .bind(account_id)
     .fetch_optional(&pool)
     .await
     .map_err(|e| {
@@ -802,34 +817,28 @@ pub async fn delete_folder(
     }
 
     // Check for contents
-    let has_files: i64 = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM files WHERE folder_id = $1",
-        folder_id
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap_or(Some(0))
-    .unwrap_or(0);
+    let has_files: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM files WHERE folder_id = $1")
+        .bind(folder_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap_or(0);
 
-    let has_subfolders: i64 = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM file_folders WHERE parent_id = $1",
-        folder_id
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap_or(Some(0))
-    .unwrap_or(0);
+    let has_subfolders: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM file_folders WHERE parent_id = $1")
+        .bind(folder_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap_or(0);
 
     if (has_files > 0 || has_subfolders > 0) && !delete_contents {
         return Err((StatusCode::CONFLICT, "Folder is not empty. Use delete_contents=true to delete anyway.".to_string()));
     }
 
     // Delete folder (cascade will handle contents if any)
-    sqlx::query!(
-        "DELETE FROM file_folders WHERE id = $1 AND account_id = $2",
-        folder_id,
-        account_id,
+    sqlx::query(
+        "DELETE FROM file_folders WHERE id = $1 AND tenant_id = $2"
     )
+    .bind(folder_id)
+    .bind(account_id)
     .execute(&pool)
     .await
     .map_err(|e| {
