@@ -33,6 +33,8 @@ pub struct WebsiteExtensionRow {
     pub extension_id: Uuid,
     pub extension_name: String,
     pub extension_slug: String,
+    pub category: String,
+    pub icon: Option<String>,
     pub settings: JsonValue,
     pub enabled: bool,
     pub activated_at: DateTime<Utc>,
@@ -119,6 +121,8 @@ mod tests {
             extension_id: Uuid::new_v4(),
             extension_name: "GitHub Sync".to_string(),
             extension_slug: "github-sync".to_string(),
+            category: "integration".to_string(),
+            icon: Some("github".to_string()),
             settings: serde_json::json!({"auto_sync": true}),
             enabled: true,
             activated_at: Utc::now(),
@@ -127,6 +131,7 @@ mod tests {
         let json = serde_json::to_string(&extension).unwrap();
         assert!(json.contains("github-sync"));
         assert!(json.contains("auto_sync"));
+        assert!(json.contains("github"));
     }
 
     #[test]

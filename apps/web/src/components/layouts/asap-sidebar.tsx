@@ -18,7 +18,8 @@ import {
 import { SiteSwitcher } from "@/components/features/websites/SiteSwitcher"
 import { useWebsiteContext } from "@/contexts/WebsiteContext"
 import { Link } from "@/components/app-router"
-import { PageIcon, ExtensionIcon } from "@/lib/navigation-config"
+import { PageIcon } from "@/lib/navigation-config"
+import { ExtensionIcon } from "@/lib/extension-icons"
 import type { WebsiteExtension, Website } from "@/lib/api"
 
 interface AsapSidebarProps {
@@ -195,7 +196,7 @@ export function AsapSidebar({
                       <SidebarMenuItem key={extension.id}>
                         <SidebarMenuButton asChild tooltip={extension.extension_name} isActive={isActive(extPath)}>
                           <Link href={buildUrl(extPath)}>
-                            <ExtensionIcon category={extension.category} size="sm" isActive={isActive(extPath)} />
+                            <ExtensionIcon icon={extension.icon} slug={extension.extension_slug} size="sm" isActive={isActive(extPath)} />
                             <span className={cn(isActive(extPath) && "text-primary font-semibold")}>{extension.extension_name}</span>
                           </Link>
                         </SidebarMenuButton>

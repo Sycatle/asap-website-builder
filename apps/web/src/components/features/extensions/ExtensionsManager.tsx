@@ -6,6 +6,7 @@ import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { Link } from '@/components/app-router';
 import { PageHeader } from '@/components/shared/page-header';
 import { PageIcon } from '@/lib/navigation-config';
+import { ExtensionIcon, getExtensionLucideIcon } from '@/lib/extension-icons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,12 +29,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { 
-  BookOpen, 
-  Mail, 
-  BarChart3, 
-  Palette, 
-  Puzzle,
-  Link as LinkIcon,
   Star,
   Settings,
   Power,
@@ -41,15 +36,6 @@ import {
   Info
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
-
-// Icon mapping for categories
-const categoryIcons: Record<string, React.ElementType> = {
-  'integration': LinkIcon,
-  'content': BookOpen,
-  'engagement': Mail,
-  'analytics': BarChart3,
-  'appearance': Palette,
-};
 
 export default function ExtensionsManager() {
   const { t } = useTranslation(['dashboard', 'common']);
@@ -156,11 +142,6 @@ export default function ExtensionsManager() {
     } finally {
       setActivatingExtension(null);
     }
-  };
-
-  const getExtensionIcon = (category: string) => {
-    const IconComponent = categoryIcons[category] || Puzzle;
-    return <IconComponent className="h-5 w-5" />;
   };
 
   // Check if an extension is active (compare by slug)
@@ -296,7 +277,7 @@ export default function ExtensionsManager() {
                       <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
                         <div className="flex items-start justify-between">
                           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110 group-hover:bg-primary/20">
-                            {getExtensionIcon(catalogExtension.category)}
+                            <ExtensionIcon icon={catalogExtension.icon} slug={catalogExtension.slug} size="sm" />
                       </div>
                       <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-xs transition-transform duration-200 hover:scale-105">
                         <TooltipProvider>
@@ -407,7 +388,7 @@ export default function ExtensionsManager() {
                     >
                       <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
                         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110 group-hover:bg-primary/10">
-                          {getExtensionIcon(extension.category)}
+                          <ExtensionIcon icon={extension.icon} slug={extension.slug} size="sm" />
                         </div>
                         <CardTitle className="text-sm sm:text-base mt-2 sm:mt-3">{extension.name}</CardTitle>
                         <CardDescription className="line-clamp-2 text-xs sm:text-sm">

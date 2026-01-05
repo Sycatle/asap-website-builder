@@ -213,17 +213,7 @@ pub async fn activate_extension(
     ).await;
 
     match result {
-        Ok(_) => {
-            // Get extension name for notification
-            let extension_name: Option<String> = sqlx::query_scalar(
-                "SELECT name FROM extensions WHERE id = $1"
-            )
-            .bind(extension_uuid)
-            .fetch_optional(&pool)
-            .await
-            .ok()
-            .flatten();
-
+        Ok(activated_extension) => {
             let event_payload = serde_json::json!({
                 "website_id": website_id,
                 "extension_id": payload.extension_id
@@ -238,34 +228,36 @@ pub async fn activate_extension(
             .await;
 
             // Create notification for extension activated
-            if let Some(ref name) = extension_name {
-                if let Err(e) = crate::notifications::create_extension_activated_notification(&pool, account_id, name).await {
-                    tracing::error!("Failed to create extension activated notification: {}", e);
-                }
+            if let Err(e) = crate::notifications::create_extension_activated_notification(&pool, account_id, &activated_extension.extension_name).await {
+                tracing::error!("Failed to create extension activated notification: {}", e);
             }
 
-            let extension_data = serde_json::json!({
-                "extension_id": extension_uuid.to_string(),
-                "extension_name": extension_name,
-                "settings": settings
+            // Build response matching WebsiteExtension type expected by frontend
+            let extension_response = serde_json::json!({
+                "id": activated_extension.id.to_string(),
+                "website_id": activated_extension.website_id.to_string(),
+                "extension_id": activated_extension.extension_id.to_string(),
+                "extension_name": activated_extension.extension_name,
+                "extension_slug": activated_extension.extension_slug,
+                "category": activated_extension.category,
+                "settings": activated_extension.settings,
+                "enabled": activated_extension.enabled,
+                "activated_at": activated_extension.activated_at.to_rfc3339()
             });
 
             // Broadcast to all users with access (owner + active administrators)
-            let website_uuid = Uuid::parse_str(&website_id).unwrap();
             if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
                 for acc_id in account_ids {
                     (*ws_broadcaster).sync_extension_activated(
                         &acc_id.to_string(),
                         &website_id,
                         &payload.extension_id,
-                        extension_data.clone(),
+                        extension_response.clone(),
                     );
                 }
             }
 
-            (StatusCode::OK, Json(serde_json::json!({
-                "message": "Extension activated successfully"
-            }))).into_response()
+            (StatusCode::OK, Json(extension_response)).into_response()
         }
         Err(e) => {
             tracing::error!("Database error activating extension: {}", e);

@@ -63,11 +63,11 @@ pub async fn list_website_extensions(
     pool: &PgPool,
     website_id: Uuid,
 ) -> Result<Vec<WebsiteExtensionRow>, Box<dyn std::error::Error + Send + Sync>> {
-    let rows = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, JsonValue, bool, DateTime<Utc>)>(
+    let rows = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, String, Option<String>, JsonValue, bool, DateTime<Utc>)>(
         r#"
         SELECT 
             we.id, we.website_id, we.extension_id, 
-            e.name as extension_name, e.slug as extension_slug,
+            e.name as extension_name, e.slug as extension_slug, e.category, e.icon,
             we.settings, we.enabled, we.activated_at
         FROM website_extensions we
         JOIN extensions e ON we.extension_id = e.id
@@ -79,13 +79,15 @@ pub async fn list_website_extensions(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows.into_iter().map(|(id, website_id, extension_id, extension_name, extension_slug, settings, enabled, activated_at)| {
+    Ok(rows.into_iter().map(|(id, website_id, extension_id, extension_name, extension_slug, category, icon, settings, enabled, activated_at)| {
         WebsiteExtensionRow {
             id,
             website_id,
             extension_id,
             extension_name,
             extension_slug,
+            category,
+            icon,
             settings,
             enabled,
             activated_at,
@@ -94,34 +96,55 @@ pub async fn list_website_extensions(
 }
 
 /// Activate an extension for a website
+/// Returns the activated extension data
 pub async fn activate_website_extension(
     pool: &PgPool,
     website_id: Uuid,
     extension_id: Uuid,
     account_id: Uuid,
     settings: JsonValue,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<WebsiteExtensionRow, Box<dyn std::error::Error + Send + Sync>> {
     // Verify website access (owner or active administrator)
     if !super::verify_website_access(pool, website_id, account_id).await? {
         return Err("Website not found".into());
     }
 
-    // Insert or update extension activation
-    sqlx::query(
+    // Insert or update extension activation and return the result
+    let row = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, String, Option<String>, JsonValue, bool, DateTime<Utc>)>(
         r#"
-        INSERT INTO website_extensions (website_id, extension_id, settings, enabled)
-        VALUES ($1, $2, $3, true)
-        ON CONFLICT (website_id, extension_id)
-        DO UPDATE SET settings = $3, enabled = true, updated_at = now()
+        WITH upserted AS (
+            INSERT INTO website_extensions (website_id, extension_id, settings, enabled)
+            VALUES ($1, $2, $3, true)
+            ON CONFLICT (website_id, extension_id)
+            DO UPDATE SET settings = $3, enabled = true, updated_at = now()
+            RETURNING id, website_id, extension_id, settings, enabled, activated_at
+        )
+        SELECT 
+            u.id, u.website_id, u.extension_id, 
+            e.name as extension_name, e.slug as extension_slug, e.category, e.icon,
+            u.settings, u.enabled, u.activated_at
+        FROM upserted u
+        JOIN extensions e ON u.extension_id = e.id
         "#
     )
     .bind(website_id)
     .bind(extension_id)
     .bind(&settings)
-    .execute(pool)
+    .fetch_one(pool)
     .await?;
 
-    Ok(())
+    Ok(WebsiteExtensionRow {
+        id: row.0,
+        website_id: row.1,
+        extension_id: row.2,
+        extension_name: row.3,
+        extension_slug: row.4,
+        category: row.5,
+        icon: row.6,
+        settings: row.7,
+        enabled: row.8,
+        activated_at: row.9,
+    })
 }
 
 /// Update a website extension

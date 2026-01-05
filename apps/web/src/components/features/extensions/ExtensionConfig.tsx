@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Settings, Database, History, RefreshCw, Power, ChevronLeft, Check, Loader2, AlertCircle, Link as LinkIcon, BookOpen, Mail, BarChart3, Paintbrush, LayoutGrid } from 'lucide-react';
+import { AlertTriangle, Settings, Database, History, RefreshCw, Power, ChevronLeft, Check, Loader2, AlertCircle } from 'lucide-react';
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from 'sonner';
 import SchemaRenderer from '@/components/SchemaRenderer';
@@ -25,6 +25,7 @@ import { Link } from '@/components/app-router';
 import { FormActions } from '@/components/ui/form-actions';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { formatRelativeTimeFr } from '@/lib/utils/formatters';
+import { ExtensionIcon } from '@/lib/extension-icons';
 
 interface ExtensionConfigProps {
   slug: string;
@@ -70,17 +71,6 @@ const getCategoryColor = (category: string) => {
 };
 
 // Category labels will be translated inside the component using the t function
-
-const getExtensionIcon = (category: string) => {
-  const icons: Record<string, React.ReactNode> = {
-    'integration': <LinkIcon className="w-6 h-6" />,
-    'content': <BookOpen className="w-6 h-6" />,
-    'engagement': <Mail className="w-6 h-6" />,
-    'analytics': <BarChart3 className="w-6 h-6" />,
-    'appearance': <Paintbrush className="w-6 h-6" />,
-  };
-  return icons[category] || <LayoutGrid className="w-6 h-6" />;
-};
 
 // Changelog entry type (mocked for now, should come from API)
 interface ChangelogEntry {
@@ -490,9 +480,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             {/* Extension info */}
             <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
-              <div className={`w-10 h-10 sm:w-12 sm:h-12 ${getCategoryColor(extension.category)} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
-                {getExtensionIcon(extension.category)}
-              </div>
+              <ExtensionIcon icon={extension.icon} slug={extension.slug} size="lg" />
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                   <h1 className="text-lg sm:text-xl font-bold text-foreground">{extension.name}</h1>

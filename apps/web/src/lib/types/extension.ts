@@ -136,6 +136,7 @@ export interface WebsiteExtension {
   enabled: boolean;
   activated_at: string;
   category: string;
+  icon?: string;  // Icon identifier from extension catalog (e.g., "github", "blog")
 }
 
 export interface ActivateExtensionRequest {

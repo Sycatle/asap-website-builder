@@ -12,16 +12,14 @@ import {
   Users,
   Palette,
   Puzzle,
-  Link as LinkIcon,
-  BookOpen,
-  Mail,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 /**
  * Centralized navigation configuration for consistent icons and colors
  * across the entire application (sidebar, page headers, etc.)
- * Using Phosphor Icons with "fill" weight for modern filled appearance
+ * 
+ * Note: For extension icons, use @/lib/extension-icons.tsx instead
  */
 
 // Page icon configuration
@@ -41,36 +39,9 @@ export const pageIcons = {
 
 export type PageKey = keyof typeof pageIcons
 
-// Extension category configuration
-export const extensionCategoryConfig = {
-  integration: { icon: LinkIcon, gradient: "from-cyan-500 to-blue-500" },
-  content: { icon: BookOpen, gradient: "from-amber-500 to-yellow-500" },
-  engagement: { icon: Mail, gradient: "from-red-500 to-pink-500" },
-  analytics: { icon: BarChart3, gradient: "from-indigo-500 to-violet-500" },
-  appearance: { icon: Palette, gradient: "from-pink-500 to-rose-500" },
-} as const
-
-export type ExtensionCategory = keyof typeof extensionCategoryConfig
-
 // Get icon config for a page
 export function getPageIconConfig(page: PageKey) {
   return pageIcons[page]
-}
-
-// Get icon config for an extension category
-export function getExtensionIconConfig(category: string) {
-  return extensionCategoryConfig[category as ExtensionCategory] || {
-    icon: Puzzle,
-    gradient: "from-fuchsia-500 to-purple-500"
-  }
-}
-
-// Shared icon component props
-interface PageIconProps {
-  page: PageKey
-  size?: "xs" | "sm" | "md" | "lg"
-  isActive?: boolean
-  className?: string
 }
 
 // Size mappings
@@ -81,6 +52,14 @@ const sizeClasses = {
   lg: { container: "h-10 w-10 rounded-xl shadow-lg", iconSize: 22, iconClass: "size-[22px]" },
 }
 
+// Shared icon component props
+interface PageIconProps {
+  page: PageKey
+  size?: "xs" | "sm" | "md" | "lg"
+  isActive?: boolean
+  className?: string
+}
+
 /**
  * Reusable page icon component with consistent styling
  * - For sidebar (size="sm"): no background, bold weight when active
@@ -88,48 +67,6 @@ const sizeClasses = {
  */
 export function PageIcon({ page, size = "lg", isActive, className }: PageIconProps) {
   const config = pageIcons[page]
-  const Icon = config.icon
-  const sizeClass = sizeClasses[size]
-  
-  // For sidebar (sm size), render just the icon without container
-  if (size === "sm") {
-    return (
-      <Icon 
-        className={cn(
-          "shrink-0 transition-all duration-200",
-          sizeClass.iconClass,
-          isActive ? "text-primary stroke-[2.5]" : "text-muted-foreground",
-          className
-        )}
-      />
-    )
-  }
-  
-  // For page headers (md/lg), show gradient background
-  return (
-    <div className={cn(
-      sizeClass.container,
-      "flex items-center justify-center shrink-0",
-      `bg-gradient-to-br ${config.gradient}`,
-      className
-    )}>
-      <Icon 
-        className={cn(sizeClass.iconClass, "text-white")}
-      />
-    </div>
-  )
-}
-
-// Extension icon component
-interface ExtensionIconProps {
-  category: string
-  size?: "xs" | "sm" | "md" | "lg"
-  isActive?: boolean
-  className?: string
-}
-
-export function ExtensionIcon({ category, size = "lg", isActive, className }: ExtensionIconProps) {
-  const config = getExtensionIconConfig(category)
   const Icon = config.icon
   const sizeClass = sizeClasses[size]
   
