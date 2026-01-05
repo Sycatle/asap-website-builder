@@ -160,7 +160,7 @@ pub async fn upload_file(
     // If website_id is provided, verify user has access to this website
     if let Some(wid) = website_id {
         let has_access: Option<bool> = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND tenant_id = $2)"
+            "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND account_id = $2)"
         )
         .bind(wid)
         .bind(account_id)
@@ -505,15 +505,15 @@ pub async fn list_folders(
             ff.id,
             ff.name,
             ff.path,
-            ff.parent_id as parent_folder_id,
+            ff.parent_folder_id as parent_folder_id,
             ff.website_id,
-            NULL::text as icon,
-            NULL::text as color,
+            ff.icon as icon,
+            ff.color as color,
             ff.created_at,
             (SELECT COUNT(*) FROM files f WHERE f.folder_id = ff.id)::bigint as file_count,
-            (SELECT COUNT(*) FROM file_folders sf WHERE sf.parent_id = ff.id)::bigint as subfolder_count
+            (SELECT COUNT(*) FROM file_folders sf WHERE sf.parent_folder_id = ff.id)::bigint as subfolder_count
         FROM file_folders ff
-        WHERE ff.tenant_id = $1
+        WHERE ff.account_id = $1
         "#,
     );
 
@@ -521,10 +521,10 @@ pub async fn list_folders(
     
     // Add parent_id filter
     if let Some(_pid) = parent_id {
-        query.push_str(&format!(" AND ff.parent_id = ${}", param_idx));
+        query.push_str(&format!(" AND ff.parent_folder_id = ${}", param_idx));
         param_idx += 1;
     } else if filter_root {
-        query.push_str(" AND ff.parent_id IS NULL");
+        query.push_str(" AND ff.parent_folder_id IS NULL");
     }
     // If neither, no parent filter (returns all folders)
     
@@ -614,7 +614,7 @@ pub async fn create_folder(
     // If website_id is provided, verify user has access to this website
     if let Some(wid) = request.website_id {
         let has_access: Option<bool> = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND tenant_id = $2)"
+            "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND account_id = $2)"
         )
         .bind(wid)
         .bind(account_id)
@@ -628,10 +628,10 @@ pub async fn create_folder(
     }
 
     // Build path based on parent
-    let path = if let Some(parent_id) = request.parent_folder_id {
+    let (path, effective_website_id) = if let Some(parent_id) = request.parent_folder_id {
         // Verify parent exists and belongs to user (use dynamic query to avoid SQLx cache issues)
         let parent_row = sqlx::query(
-            "SELECT path, website_id FROM file_folders WHERE id = $1 AND tenant_id = $2"
+            "SELECT path, website_id FROM file_folders WHERE id = $1 AND account_id = $2"
         )
         .bind(parent_id)
         .bind(account_id)
@@ -646,38 +646,35 @@ pub async fn create_folder(
         let parent_path: String = parent_row.get("path");
         let parent_website_id: Option<Uuid> = parent_row.get("website_id");
 
-        // If parent has a website_id, child must inherit it
-        if parent_website_id.is_some() && request.website_id != parent_website_id {
-            return Err((StatusCode::BAD_REQUEST, "Folder must belong to the same website as parent".to_string()));
-        }
+        // Child inherits website_id from parent (or uses request.website_id if parent has none)
+        let website_id = parent_website_id.or(request.website_id);
 
-        format!("{}/{}", parent_path, request.name)
+        (format!("{}/{}", parent_path, request.name), website_id)
     } else {
-        format!("/{}", request.name)
+        (format!("/{}", request.name), request.website_id)
     };
 
     let folder_id = Uuid::new_v4();
     let now = chrono::Utc::now();
 
-    sqlx::query!(
-        r#"
-        INSERT INTO file_folders (id, tenant_id, parent_id, name, path, website_id, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
-        "#,
-        folder_id,
-        account_id,
-        request.parent_folder_id,
-        request.name,
-        path,
-        request.website_id,
-        now,
+    sqlx::query(
+        "INSERT INTO file_folders (id, account_id, parent_folder_id, name, path, website_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $7)"
     )
+    .bind(folder_id)
+    .bind(account_id)
+    .bind(request.parent_folder_id)
+    .bind(&request.name)
+    .bind(&path)
+    .bind(effective_website_id)
+    .bind(now)
     .execute(&pool)
     .await
     .map_err(|e| {
         tracing::error!("Failed to create folder: {}", e);
-        if e.to_string().contains("unique_folder_name") {
+        if e.to_string().contains("unique_folder") {
             (StatusCode::CONFLICT, "A folder with this name already exists".to_string())
+        } else if e.to_string().contains("folder depth") {
+            (StatusCode::BAD_REQUEST, "Maximum folder depth of 3 levels exceeded".to_string())
         } else {
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create folder".to_string())
         }
@@ -688,7 +685,7 @@ pub async fn create_folder(
         name: request.name,
         path,
         parent_folder_id: request.parent_folder_id,
-        website_id: request.website_id,
+        website_id: effective_website_id,
         icon: request.icon,
         color: request.color,
         file_count: 0,
@@ -711,7 +708,7 @@ pub async fn update_folder(
 
     // Verify folder exists and belongs to user (use dynamic query to avoid SQLx cache issues)
     let folder_row = sqlx::query(
-        "SELECT id, name, path, parent_id, website_id, created_at FROM file_folders WHERE id = $1 AND tenant_id = $2"
+        "SELECT id, name, path, parent_folder_id, website_id, created_at FROM file_folders WHERE id = $1 AND account_id = $2"
     )
     .bind(folder_id)
     .bind(account_id)
@@ -725,7 +722,7 @@ pub async fn update_folder(
 
     let folder_name: String = folder_row.get("name");
     let folder_path: String = folder_row.get("path");
-    let folder_parent_id: Option<Uuid> = folder_row.get("parent_id");
+    let folder_parent_id: Option<Uuid> = folder_row.get("parent_folder_id");
     let folder_website_id: Option<Uuid> = folder_row.get("website_id");
     let folder_created_at: chrono::DateTime<chrono::Utc> = folder_row.get("created_at");
 
@@ -801,7 +798,7 @@ pub async fn delete_folder(
 
     // Verify folder exists and belongs to user (use dynamic query to avoid SQLx cache issues)
     let folder_exists = sqlx::query(
-        "SELECT id FROM file_folders WHERE id = $1 AND tenant_id = $2"
+        "SELECT id FROM file_folders WHERE id = $1 AND account_id = $2"
     )
     .bind(folder_id)
     .bind(account_id)
@@ -823,7 +820,7 @@ pub async fn delete_folder(
         .await
         .unwrap_or(0);
 
-    let has_subfolders: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM file_folders WHERE parent_id = $1")
+    let has_subfolders: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM file_folders WHERE parent_folder_id = $1")
         .bind(folder_id)
         .fetch_one(&pool)
         .await
@@ -835,7 +832,7 @@ pub async fn delete_folder(
 
     // Delete folder (cascade will handle contents if any)
     sqlx::query(
-        "DELETE FROM file_folders WHERE id = $1 AND tenant_id = $2"
+        "DELETE FROM file_folders WHERE id = $1 AND account_id = $2"
     )
     .bind(folder_id)
     .bind(account_id)

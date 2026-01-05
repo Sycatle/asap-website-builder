@@ -335,6 +335,7 @@
       "namePlaceholder": "Folder name",
       "createSuccess": "Folder \"{{name}}\" created",
       "createError": "Failed to create folder",
+      "maxDepthReached": "Maximum folder depth reached (3 levels)",
       "open": "Open",
       "empty": "Empty folder",
       "deleteTitle": "Delete Folder",

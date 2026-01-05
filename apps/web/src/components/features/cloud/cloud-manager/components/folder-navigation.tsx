@@ -47,6 +47,7 @@ interface FolderNavigationProps {
   onNavigate: (folderId: string | null) => void;
   onCreateFolder: (name: string) => void;
   isCreating?: boolean;
+  maxDepth?: number;
 }
 
 /**
@@ -60,10 +61,18 @@ export function FolderNavigation({
   onNavigate,
   onCreateFolder,
   isCreating = false,
+  maxDepth = 3,
 }: FolderNavigationProps) {
   const { t } = useTranslation(['common', 'dashboard']);
   const [newFolderName, setNewFolderName] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  // breadcrumbPath.length represents how many folders deep we are
+  // If breadcrumbPath = [] → we're at root, can create up to maxDepth levels
+  // If breadcrumbPath = [folder1] → we're 1 level deep, can create if 1 < maxDepth
+  // If breadcrumbPath = [f1, f2, f3] → we're 3 levels deep, can create if 3 < maxDepth
+  // maxDepth = 3 means we allow folders at depth 0, 1, 2 (creating at depth 2 creates a depth-3 folder)
+  const canCreateFolder = breadcrumbPath.length < maxDepth;
 
   const handleCreateFolder = () => {
     if (newFolderName.trim()) {
@@ -168,48 +177,55 @@ export function FolderNavigation({
         </DropdownMenu>
       )}
 
-      {/* Create Folder Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1.5">
-            <FolderPlus className="h-4 w-4" />
-            <span className="hidden sm:inline">{t('dashboard:cloud.folders.create')}</span>
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('dashboard:cloud.folders.createTitle')}</DialogTitle>
-            <DialogDescription>
-              {currentFolder 
-                ? t('dashboard:cloud.folders.createIn', { folder: currentFolder.name })
-                : t('dashboard:cloud.folders.createInRoot')
-              }
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Input
-              placeholder={t('dashboard:cloud.folders.namePlaceholder')}
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleCreateFolder();
-              }}
-              autoFocus
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              {t('common:actions.cancel')}
+      {/* Create Folder Dialog - Only show if not at max depth */}
+      {canCreateFolder ? (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <FolderPlus className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('dashboard:cloud.folders.create')}</span>
             </Button>
-            <Button 
-              onClick={handleCreateFolder} 
-              disabled={!newFolderName.trim() || isCreating}
-            >
-              {isCreating ? t('common:status.creating') : t('common:actions.create')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('dashboard:cloud.folders.createTitle')}</DialogTitle>
+              <DialogDescription>
+                {currentFolder 
+                  ? t('dashboard:cloud.folders.createIn', { folder: currentFolder.name })
+                  : t('dashboard:cloud.folders.createInRoot')
+                }
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Input
+                placeholder={t('dashboard:cloud.folders.namePlaceholder')}
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleCreateFolder();
+                }}
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                {t('common:actions.cancel')}
+              </Button>
+              <Button 
+                onClick={handleCreateFolder} 
+                disabled={!newFolderName.trim() || isCreating}
+              >
+                {isCreating ? t('common:status.creating') : t('common:actions.create')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : (
+        <Button variant="outline" size="sm" className="gap-1.5" disabled title={t('dashboard:cloud.folders.maxDepthReached')}>
+          <FolderPlus className="h-4 w-4" />
+          <span className="hidden sm:inline">{t('dashboard:cloud.folders.create')}</span>
+        </Button>
+      )}
     </div>
   );
 }

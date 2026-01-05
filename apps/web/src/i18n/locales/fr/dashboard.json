@@ -335,6 +335,7 @@
       "namePlaceholder": "Nom du dossier",
       "createSuccess": "Dossier \"{{name}}\" créé",
       "createError": "Échec de la création du dossier",
+      "maxDepthReached": "Profondeur maximale atteinte (3 niveaux)",
       "open": "Ouvrir",
       "empty": "Dossier vide",
       "deleteTitle": "Supprimer le dossier",
