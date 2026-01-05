@@ -370,7 +370,82 @@ impl FileStorageService {
         Ok(file)
     }
 
-    /// Save file metadata to database
+    /// Upload file with full metadata (website_id, folder_id, visibility, etc.)
+    pub async fn upload_file_with_metadata(
+        &self,
+        account_id: Uuid,
+        filename: &str,
+        mime_type: &str,
+        data: &[u8],
+        website_id: Option<Uuid>,
+        folder_id: Option<Uuid>,
+        visibility: Option<&str>,
+        description: Option<&str>,
+        tags: Option<&[String]>,
+    ) -> Result<File> {
+        // Validate file
+        self.validate_file(filename, mime_type, data.len() as i64)?;
+
+        // Check quota
+        self.check_user_quota(account_id, data.len() as i64).await?;
+
+        // Calculate hash (deduplicate by content within the same account)
+        let file_hash = self.calculate_hash(data);
+
+        // Check if file already exists for this account (content deduplication)
+        // For website-scoped files, we check against the same website too
+        if let Ok(Some(existing_file)) = self.get_file_by_hash(account_id, &file_hash).await {
+            // If existing file is in same website context, return it
+            if existing_file.website_id == website_id {
+                return Ok(existing_file);
+            }
+        }
+
+        // Decide whether to compress based on file type and size
+        let compressed_data = if self.should_compress(mime_type, data.len()) {
+            self.compress_file(data)?
+        } else {
+            Bytes::copy_from_slice(data)
+        };
+
+        // Generate storage key
+        let storage_key = format!("{}/{}", account_id, Uuid::new_v4());
+
+        // Build file with metadata
+        let mut file = File::new(
+            account_id,
+            filename.to_string(),
+            mime_type.to_string(),
+            data.len() as i64,
+            compressed_data.len() as i64,
+            file_hash,
+            storage_key,
+        );
+        
+        // Set optional metadata
+        file.website_id = website_id;
+        file.folder_id = folder_id;
+        if let Some(v) = visibility {
+            file.visibility = asap_core_domain::FileVisibility::from_str(v)
+                .unwrap_or(asap_core_domain::FileVisibility::Private);
+        }
+        file.description = description.map(|s| s.to_string());
+        file.tags = tags.map(|t| t.to_vec()).unwrap_or_default();
+
+        // Save to database with all metadata
+        self.save_file_with_metadata(&file).await?;
+        
+        // Save file content
+        self.save_file_content(file.id, &compressed_data).await?;
+
+        // Update account quota (use compressed size for quota)
+        self.update_user_quota(account_id, compressed_data.len() as i64)
+            .await?;
+
+        Ok(file)
+    }
+
+    /// Save file metadata to database (basic)
     async fn save_file(&self, file: &File) -> Result<()> {
         sqlx::query(
             "INSERT INTO files (id, account_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at)
@@ -385,6 +460,35 @@ impl FileStorageService {
         .bind(&file.file_hash)
         .bind(&file.storage_key)
         .bind(file.created_at)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Save file metadata with all fields (website_id, folder_id, visibility, etc.)
+    async fn save_file_with_metadata(&self, file: &File) -> Result<()> {
+        sqlx::query(
+            r#"INSERT INTO files (
+                id, account_id, filename, mime_type, original_size, compressed_size, 
+                file_hash, storage_key, created_at, website_id, folder_id, 
+                visibility, description, tags
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::file_visibility, $13, $14)"#
+        )
+        .bind(file.id)
+        .bind(file.account_id)
+        .bind(&file.filename)
+        .bind(&file.mime_type)
+        .bind(file.original_size)
+        .bind(file.compressed_size)
+        .bind(&file.file_hash)
+        .bind(&file.storage_key)
+        .bind(file.created_at)
+        .bind(file.website_id)
+        .bind(file.folder_id)
+        .bind(file.visibility.as_str())
+        .bind(&file.description)
+        .bind(&file.tags)
         .execute(&self.pool)
         .await?;
 
@@ -603,67 +707,131 @@ impl FileStorageService {
         }
     }
 
-    /// List account files with optional folder filter
-    pub async fn list_account_files(&self, account_id: Uuid, limit: i64, offset: i64, folder_id: Option<Uuid>, filter_root: bool) -> Result<Vec<File>> {
-        let rows = if filter_root {
-            // Filter for files at root level (folder_id IS NULL)
-            sqlx::query(
-                "SELECT id, account_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at, folder_id
-                 FROM files WHERE account_id = $1 AND folder_id IS NULL
-                 ORDER BY created_at DESC
-                 LIMIT $2 OFFSET $3"
-            )
-            .bind(account_id)
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(&self.pool)
-            .await?
-        } else if let Some(fid) = folder_id {
-            // Filter for files in specific folder
-            sqlx::query(
-                "SELECT id, account_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at, folder_id
-                 FROM files WHERE account_id = $1 AND folder_id = $2
-                 ORDER BY created_at DESC
-                 LIMIT $3 OFFSET $4"
-            )
-            .bind(account_id)
-            .bind(fid)
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(&self.pool)
-            .await?
-        } else {
-            // No filter - return all files
-            sqlx::query(
-                "SELECT id, account_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at, folder_id
-                 FROM files WHERE account_id = $1
-                 ORDER BY created_at DESC
-                 LIMIT $2 OFFSET $3"
-            )
-            .bind(account_id)
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(&self.pool)
-            .await?
+    /// List account files with optional folder and website filter
+    pub async fn list_account_files(
+        &self, 
+        account_id: Uuid, 
+        limit: i64, 
+        offset: i64, 
+        folder_id: Option<Uuid>, 
+        filter_root: bool,
+        website_id: Option<Uuid>,
+    ) -> Result<Vec<File>> {
+        // Build query dynamically based on filters
+        let base_select = r#"
+            SELECT id, account_id, filename, mime_type, original_size, compressed_size, 
+                   file_hash, storage_key, created_at, folder_id, 
+                   visibility::text as visibility, website_id, description, tags
+            FROM files 
+            WHERE account_id = $1
+        "#;
+        
+        let rows = match (filter_root, folder_id, website_id) {
+            // Root folder + specific website
+            (true, _, Some(wid)) => {
+                sqlx::query(&format!(
+                    "{} AND folder_id IS NULL AND website_id = $2 ORDER BY created_at DESC LIMIT $3 OFFSET $4",
+                    base_select
+                ))
+                .bind(account_id)
+                .bind(wid)
+                .bind(limit)
+                .bind(offset)
+                .fetch_all(&self.pool)
+                .await?
+            }
+            // Root folder, no website filter
+            (true, _, None) => {
+                sqlx::query(&format!(
+                    "{} AND folder_id IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3",
+                    base_select
+                ))
+                .bind(account_id)
+                .bind(limit)
+                .bind(offset)
+                .fetch_all(&self.pool)
+                .await?
+            }
+            // Specific folder + specific website
+            (false, Some(fid), Some(wid)) => {
+                sqlx::query(&format!(
+                    "{} AND folder_id = $2 AND website_id = $3 ORDER BY created_at DESC LIMIT $4 OFFSET $5",
+                    base_select
+                ))
+                .bind(account_id)
+                .bind(fid)
+                .bind(wid)
+                .bind(limit)
+                .bind(offset)
+                .fetch_all(&self.pool)
+                .await?
+            }
+            // Specific folder, no website filter
+            (false, Some(fid), None) => {
+                sqlx::query(&format!(
+                    "{} AND folder_id = $2 ORDER BY created_at DESC LIMIT $3 OFFSET $4",
+                    base_select
+                ))
+                .bind(account_id)
+                .bind(fid)
+                .bind(limit)
+                .bind(offset)
+                .fetch_all(&self.pool)
+                .await?
+            }
+            // No folder filter + specific website
+            (false, None, Some(wid)) => {
+                sqlx::query(&format!(
+                    "{} AND website_id = $2 ORDER BY created_at DESC LIMIT $3 OFFSET $4",
+                    base_select
+                ))
+                .bind(account_id)
+                .bind(wid)
+                .bind(limit)
+                .bind(offset)
+                .fetch_all(&self.pool)
+                .await?
+            }
+            // No filters at all
+            (false, None, None) => {
+                sqlx::query(&format!(
+                    "{} ORDER BY created_at DESC LIMIT $2 OFFSET $3",
+                    base_select
+                ))
+                .bind(account_id)
+                .bind(limit)
+                .bind(offset)
+                .fetch_all(&self.pool)
+                .await?
+            }
         };
 
         let files = rows
             .iter()
-            .map(|r| File {
-                id: r.get(0),
-                account_id: r.get(1),
-                filename: r.get(2),
-                mime_type: r.get(3),
-                original_size: r.get(4),
-                compressed_size: r.get(5),
-                file_hash: r.get(6),
-                storage_key: r.get(7),
-                created_at: r.get(8),
-                folder_id: r.get(9),
-                visibility: asap_core_domain::FileVisibility::Private,
-                website_id: None,
-                description: None,
-                tags: vec![],
+            .map(|r| {
+                let visibility_str: Option<String> = r.get(10);
+                let visibility = visibility_str
+                    .as_deref()
+                    .and_then(asap_core_domain::FileVisibility::from_str)
+                    .unwrap_or(asap_core_domain::FileVisibility::Private);
+                let tags_val: Option<Vec<String>> = r.get(13);
+                
+                File {
+                    id: r.get(0),
+                    account_id: r.get(1),
+                    filename: r.get(2),
+                    mime_type: r.get(3),
+                    original_size: r.get(4),
+                    compressed_size: r.get(5),
+                    file_hash: r.get(6),
+                    storage_key: r.get(7),
+                    created_at: r.get(8),
+                    folder_id: r.get(9),
+                    visibility,
+                    website_id: r.get(11),
+                    description: r.get(12),
+                    tags: tags_val.unwrap_or_default(),
+                }
             })
             .collect();
 
