@@ -128,22 +128,6 @@ Tests cover:
 
 ### Extension Tests
 
-#### Analytics Extension (7 tests)
-- `test_track_event_page_view` - Page view tracking
-- `test_track_event_click` - Click tracking
-- `test_track_event_form_submit` - Form submission tracking
-- `test_track_event_custom_event` - Custom event tracking
-- `test_track_event_empty_string` - Edge case handling
-- `test_track_multiple_events` - Event batching
-- `test_track_event_with_special_chars` - Character handling
-
-**File:** `extensions/analytics/src/lib.rs`
-
-Tests cover:
-- ✅ Event type tracking
-- ✅ String handling and validation
-- ✅ Multiple event processing
-
 #### Github Sync Extension (13 tests)
 
 **Client Tests (6 tests):**

@@ -284,10 +284,9 @@ Le core centralise les données utilisateur :
 ## Tests Implémentés
 
 ### Tests Unitaires ✅
-- **Total:** 79 tests (100% passing)
+- **Total:** 72 tests (100% passing)
 - Core Domain: 31 tests
 - Core Shared: 10 tests
-- Analytics Extension: 7 tests
 - GitHub Generator: 13 tests
 - Projections Extension: 8 tests
 - Themes Extension: 10 tests

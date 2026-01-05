@@ -170,7 +170,6 @@ make test-extensions
 
 # Run specific test suite
 cargo test --lib -p asap-core-domain
-cargo test --lib -p asap-extension-analytics
 cargo test --lib -p asap-extension-github-sync
 ```
 
@@ -467,7 +466,6 @@ cargo clippy
 - [x] GitHub Generator extension
 - [x] Theme rendering extension
 - [x] Projections extension
-- [x] Analytics extension
 - [x] Redis caching (optional)
 - [x] File storage with quotas
 

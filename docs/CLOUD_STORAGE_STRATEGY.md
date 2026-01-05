@@ -26,7 +26,7 @@ Le système de fichiers supporte deux contextes :
 1. **Cloud Personnel** (`website_id = NULL`) - Accessible depuis l'app Accounts
 2. **Cloud Website** (`website_id = UUID`) - Accessible depuis l'app Web (Studio)
 
-```
+```Réinitialises tous les volumes d'environnement (dont la bdd), on recommence sur un fresh start avec un build production-like en local.
 Account (tenant)
 ├── 📁 Cloud Personnel (website_id = NULL)
 │   ├── /photos
