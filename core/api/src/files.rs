@@ -62,6 +62,21 @@ pub struct FolderResponse {
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
+/// Internal struct for query_as mapping
+#[derive(Debug, sqlx::FromRow)]
+struct FolderRow {
+    id: Uuid,
+    name: String,
+    path: String,
+    parent_folder_id: Option<Uuid>,
+    website_id: Option<Uuid>,
+    icon: Option<String>,
+    color: Option<String>,
+    file_count: Option<i64>,
+    subfolder_count: Option<i64>,
+    created_at: chrono::DateTime<chrono::Utc>,
+}
+
 /// Upload file handler
 pub async fn upload_file(
     Extension(claims): Extension<Claims>,
@@ -384,15 +399,19 @@ pub async fn list_folders(
     let account_id = uuid::Uuid::parse_str(&claims.sub)
         .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid account ID".to_string()))?;
 
-    let parent_id: Option<Uuid> = params
-        .get("parent_id")
+    // Handle parent_id: "root" means folders without parent, UUID means specific parent, None means all folders
+    let parent_id_param = params.get("parent_id");
+    let filter_root = parent_id_param.map(|s| s == "root").unwrap_or(false);
+    let parent_id: Option<Uuid> = parent_id_param
+        .filter(|s| *s != "root")
         .and_then(|s| Uuid::parse_str(s).ok());
     
     let website_id: Option<Uuid> = params
         .get("website_id")
         .and_then(|s| Uuid::parse_str(s).ok());
 
-    let folders = sqlx::query!(
+    // Build dynamic query based on filter conditions
+    let mut query = String::from(
         r#"
         SELECT 
             ff.id,
@@ -400,29 +419,71 @@ pub async fn list_folders(
             ff.path,
             ff.parent_id as parent_folder_id,
             ff.website_id,
-            NULL as icon,
-            NULL as color,
+            NULL::text as icon,
+            NULL::text as color,
             ff.created_at,
-            (SELECT COUNT(*) FROM files f WHERE f.folder_id = ff.id) as file_count,
-            (SELECT COUNT(*) FROM file_folders sf WHERE sf.parent_id = ff.id) as subfolder_count
+            (SELECT COUNT(*) FROM files f WHERE f.folder_id = ff.id)::bigint as file_count,
+            (SELECT COUNT(*) FROM file_folders sf WHERE sf.parent_id = ff.id)::bigint as subfolder_count
         FROM file_folders ff
         WHERE ff.tenant_id = $1
-          AND ($2::uuid IS NULL OR ff.parent_id IS NOT DISTINCT FROM $2)
-          AND ($3::uuid IS NULL OR ff.website_id = $3)
-        ORDER BY ff.name ASC
         "#,
-        account_id,
-        parent_id,
-        website_id,
-    )
-    .fetch_all(&pool)
-    .await
+    );
+
+    let mut param_idx = 2;
+    
+    // Add parent_id filter
+    if let Some(pid) = parent_id {
+        query.push_str(&format!(" AND ff.parent_id = ${}", param_idx));
+        param_idx += 1;
+    } else if filter_root {
+        query.push_str(" AND ff.parent_id IS NULL");
+    }
+    // If neither, no parent filter (returns all folders)
+    
+    // Add website_id filter
+    if website_id.is_some() {
+        query.push_str(&format!(" AND ff.website_id = ${}", param_idx));
+    }
+    
+    query.push_str(" ORDER BY ff.name ASC");
+
+    // Execute with appropriate bindings
+    let rows: Vec<FolderRow> = match (parent_id, website_id) {
+        (Some(pid), Some(wid)) => {
+            sqlx::query_as(&query)
+                .bind(account_id)
+                .bind(pid)
+                .bind(wid)
+                .fetch_all(&pool)
+                .await
+        }
+        (Some(pid), None) => {
+            sqlx::query_as(&query)
+                .bind(account_id)
+                .bind(pid)
+                .fetch_all(&pool)
+                .await
+        }
+        (None, Some(wid)) => {
+            sqlx::query_as(&query)
+                .bind(account_id)
+                .bind(wid)
+                .fetch_all(&pool)
+                .await
+        }
+        (None, None) => {
+            sqlx::query_as(&query)
+                .bind(account_id)
+                .fetch_all(&pool)
+                .await
+        }
+    }
     .map_err(|e| {
         tracing::error!("Failed to list folders: {}", e);
         (StatusCode::INTERNAL_SERVER_ERROR, "Failed to list folders".to_string())
     })?;
 
-    let responses: Vec<FolderResponse> = folders
+    let responses: Vec<FolderResponse> = rows
         .into_iter()
         .map(|row| FolderResponse {
             id: row.id,
