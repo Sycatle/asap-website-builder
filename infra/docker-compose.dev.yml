@@ -105,8 +105,9 @@ services:
     # Override the image from base docker-compose.yml to use our built image
     image: asap-web:dev
     container_name: asap-web
-    # Override command from base docker-compose.yml
-    command: ["pnpm", "dev", "--host", "0.0.0.0"]
+    working_dir: /app/apps/web
+    # Run astro directly from node_modules/.bin
+    command: ["sh", "-c", "./node_modules/.bin/astro dev --port 4321 --host 0.0.0.0"]
     depends_on:
       base-node:
         condition: service_completed_successfully
@@ -120,8 +121,8 @@ services:
       PUBLIC_API_URL: http://localhost:3000/api
       PUBLIC_WS_URL: ws://localhost:3000/ws
       NODE_ENV: development
-    volumes:
-      # Mount source code for hot reload
+    volumes: !reset
+      # Mount source code for hot reload (replaces base volumes entirely)
       - ../packages/shared/src:/app/packages/shared/src
       - ../packages/renderers/src:/app/packages/renderers/src
       - ../apps/web/src:/app/apps/web/src
@@ -142,8 +143,8 @@ services:
     image: asap-sites:dev
     container_name: asap-sites
     working_dir: /app/apps/sites
-    # Use sh -c to pass arguments correctly to astro
-    command: ["sh", "-c", "pnpm exec astro dev --port 4322 --host 0.0.0.0"]
+    # Run astro directly from node_modules/.bin
+    command: ["sh", "-c", "./node_modules/.bin/astro dev --port 4322 --host 0.0.0.0"]
     depends_on:
       base-node:
         condition: service_completed_successfully
@@ -157,8 +158,8 @@ services:
       PUBLIC_API_URL: http://localhost:3000/api
       INTERNAL_API_URL: http://api:3000/api
       NODE_ENV: development
-    volumes:
-      # Mount source code for hot reload
+    volumes: !reset
+      # Mount source code for hot reload (replaces base volumes entirely)
       - ../packages/shared/src:/app/packages/shared/src
       - ../packages/renderers/src:/app/packages/renderers/src
       - ../apps/sites/src:/app/apps/sites/src
@@ -174,8 +175,9 @@ services:
     # Override the image from base docker-compose.yml to use our built image
     image: asap-accounts:dev
     container_name: asap-accounts
-    # Override command from base docker-compose.yml
-    command: ["pnpm", "dev", "--host", "0.0.0.0"]
+    working_dir: /app/apps/accounts
+    # Run astro directly from node_modules/.bin
+    command: ["sh", "-c", "./node_modules/.bin/astro dev --port 4323 --host 0.0.0.0"]
     depends_on:
       base-node:
         condition: service_completed_successfully
