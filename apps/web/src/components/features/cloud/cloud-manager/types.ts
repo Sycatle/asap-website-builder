@@ -53,6 +53,7 @@ export interface FileCardProps {
   onChangeVisibility?: (visibility: FileVisibility) => void;
   onRename?: (newName: string) => void;
   folders?: FileFolder[];
+  websiteTitle?: string;
   getItemProps: (file: FileMetadata, index: number) => {
     tabIndex: number;
     'data-focused': boolean;
@@ -91,6 +92,13 @@ export interface BulkDeleteDialogProps {
   selectedCount: number;
   isDeleting: boolean;
   onConfirm: () => void;
+  onCancel: () => void;
+}
+
+export interface FolderDeleteDialogProps {
+  folder: FileFolder | null;
+  isDeleting: boolean;
+  onConfirm: (deleteContents: boolean) => void;
   onCancel: () => void;
 }
 
