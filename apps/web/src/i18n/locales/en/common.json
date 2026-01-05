@@ -42,7 +42,12 @@
     "showMore": "Show more",
     "showLess": "Show less",
     "viewAll": "View all",
-    "learnMore": "Learn more"
+    "learnMore": "Learn more",
+    "rename": "Rename",
+    "move": "Move"
+  },
+  "prompts": {
+    "enterNewName": "Enter a new name"
   },
   "labels": {
     "name": "Name",
@@ -80,6 +85,7 @@
     "loading": "Loading...",
     "saving": "Saving...",
     "saved": "Saved",
+    "creating": "Creating...",
     "deleting": "Deleting...",
     "deleted": "Deleted",
     "publishing": "Publishing...",
@@ -159,7 +165,10 @@
     "billing": "Billing",
     "keyboardShortcuts": "Keyboard shortcuts",
     "searchPlaceholder": "Search...",
-    "goTo": "Go to..."
+    "goTo": "Go to...",
+    "search": "Search",
+    "notifications": "Notifications",
+    "bottomNav": "Main navigation"
   },
   "shortcuts": {
     "navigation": "Navigation",

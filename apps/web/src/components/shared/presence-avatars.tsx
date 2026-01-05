@@ -281,8 +281,8 @@ export function PresenceAvatars({
   const handleNavigateToUser = (presenceUser: WebsitePresenceUser) => {
     if (presenceUser.current_page && websiteId) {
       const targetPath = presenceUser.current_page === 'dashboard' 
-        ? `/app/${websiteId}` 
-        : `/app/${websiteId}/${presenceUser.current_page}`
+        ? `/${websiteId}` 
+        : `/${websiteId}/${presenceUser.current_page}`
       navigate(targetPath)
     }
   }

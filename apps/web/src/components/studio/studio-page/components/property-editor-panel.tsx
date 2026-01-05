@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { PropertyEditor } from "../../property-editors";
 import { getElementLabel } from "@/lib/constants/elements";
-import { Settings2 } from "lucide-react";
+import { Settings } from "lucide-react";
 import type { PropertyEditorPanelProps } from "../types";
 
 /**
@@ -23,7 +23,7 @@ export function PropertyEditorPanel({
       {/* Header - Fixed */}
       <div className="shrink-0 p-3 sm:p-4 border-b bg-background flex items-center justify-between">
         <h3 className="font-semibold text-sm flex items-center gap-2" id="properties-title">
-          <Settings2 className="h-4 w-4" aria-hidden="true" />
+          <Settings className="h-4 w-4" aria-hidden="true" />
           {t('editor:properties.title')}
         </h3>
         {selectedElement && (
@@ -56,7 +56,7 @@ function EmptyPropertyState() {
   const { t } = useTranslation(['common', 'editor']);
   return (
     <div className="text-center py-12 text-muted-foreground" role="status">
-      <Settings2 className="h-10 w-10 mx-auto mb-3 opacity-50" aria-hidden="true" />
+      <Settings className="h-10 w-10 mx-auto mb-3 opacity-50" aria-hidden="true" />
       <p className="text-sm font-medium">{t('editor:properties.noSelection')}</p>
       <p className="text-xs mt-1">{t('editor:properties.selectToEdit')}</p>
     </div>

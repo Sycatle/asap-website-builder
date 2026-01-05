@@ -2,17 +2,116 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
+/// File visibility levels
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum FileVisibility {
+    #[default]
+    Private,  // Accessible only to owner with auth token
+    Public,   // Accessible to anyone via public URL
+    Website,  // Inherits visibility from associated website
+}
+
+impl FileVisibility {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            FileVisibility::Private => "private",
+            FileVisibility::Public => "public",
+            FileVisibility::Website => "website",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "private" => Some(FileVisibility::Private),
+            "public" => Some(FileVisibility::Public),
+            "website" => Some(FileVisibility::Website),
+            _ => None,
+        }
+    }
+}
+
+/// Virtual folder for organizing files
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileFolder {
+    pub id: Uuid,
+    pub account_id: Uuid,
+    pub website_id: Option<Uuid>,
+    pub parent_folder_id: Option<Uuid>,
+    pub name: String,
+    pub path: String,
+    pub icon: Option<String>,
+    pub color: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl FileFolder {
+    pub fn new(
+        account_id: Uuid,
+        name: String,
+        parent_folder_id: Option<Uuid>,
+        parent_path: Option<&str>,
+    ) -> Self {
+        let path = match parent_path {
+            Some(p) if !p.is_empty() && p != "/" => format!("{}/{}", p, name),
+            _ => format!("/{}", name),
+        };
+        
+        Self {
+            id: Uuid::new_v4(),
+            account_id,
+            website_id: None,
+            parent_folder_id,
+            name,
+            path,
+            icon: None,
+            color: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+
+    pub fn new_website_folder(account_id: Uuid, website_id: Uuid, website_name: &str) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            account_id,
+            website_id: Some(website_id),
+            parent_folder_id: None,
+            name: website_name.to_string(),
+            path: format!("/websites/{}", website_name),
+            icon: Some("globe".to_string()),
+            color: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+
+    pub fn is_website_folder(&self) -> bool {
+        self.website_id.is_some()
+    }
+
+    pub fn is_root(&self) -> bool {
+        self.parent_folder_id.is_none()
+    }
+}
+
 /// File represents a stored file in the system
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct File {
     pub id: Uuid,
     pub account_id: Uuid,
+    pub folder_id: Option<Uuid>,
+    pub website_id: Option<Uuid>,
     pub filename: String,
     pub mime_type: String,
     pub original_size: i64,
     pub compressed_size: i64,
     pub file_hash: String,
     pub storage_key: String,
+    pub visibility: FileVisibility,
+    pub description: Option<String>,
+    pub tags: Vec<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -29,14 +128,39 @@ impl File {
         Self {
             id: Uuid::new_v4(),
             account_id,
+            folder_id: None,
+            website_id: None,
             filename,
             mime_type,
             original_size,
             compressed_size,
             file_hash,
             storage_key,
+            visibility: FileVisibility::Private,
+            description: None,
+            tags: Vec::new(),
             created_at: Utc::now(),
         }
+    }
+
+    pub fn with_folder(mut self, folder_id: Uuid) -> Self {
+        self.folder_id = Some(folder_id);
+        self
+    }
+
+    pub fn with_website(mut self, website_id: Uuid) -> Self {
+        self.website_id = Some(website_id);
+        self.visibility = FileVisibility::Website;
+        self
+    }
+
+    pub fn with_visibility(mut self, visibility: FileVisibility) -> Self {
+        self.visibility = visibility;
+        self
+    }
+
+    pub fn is_public(&self) -> bool {
+        matches!(self.visibility, FileVisibility::Public)
     }
 
     /// Calculate compression ratio
@@ -96,6 +220,16 @@ impl AccountStorageQuota {
 pub struct FileUploadRequest {
     pub filename: String,
     pub content_type: String,
+    #[serde(default)]
+    pub folder_id: Option<Uuid>,
+    #[serde(default)]
+    pub website_id: Option<Uuid>,
+    #[serde(default)]
+    pub visibility: Option<FileVisibility>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
 }
 
 /// File upload response
@@ -107,6 +241,9 @@ pub struct FileUploadResponse {
     pub compressed_size: i64,
     pub mime_type: String,
     pub compression_ratio: f64,
+    pub visibility: FileVisibility,
+    pub folder_id: Option<Uuid>,
+    pub website_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -120,9 +257,68 @@ impl From<File> for FileUploadResponse {
             compressed_size: file.compressed_size,
             mime_type: file.mime_type,
             compression_ratio,
+            visibility: file.visibility,
+            folder_id: file.folder_id,
+            website_id: file.website_id,
             created_at: file.created_at,
         }
     }
+}
+
+/// Folder response
+#[derive(Debug, Serialize)]
+pub struct FolderResponse {
+    pub id: Uuid,
+    pub name: String,
+    pub path: String,
+    pub parent_folder_id: Option<Uuid>,
+    pub website_id: Option<Uuid>,
+    pub icon: Option<String>,
+    pub color: Option<String>,
+    pub file_count: i64,
+    pub subfolder_count: i64,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Create folder request
+#[derive(Debug, Deserialize)]
+pub struct CreateFolderRequest {
+    pub name: String,
+    pub parent_folder_id: Option<Uuid>,
+    pub icon: Option<String>,
+    pub color: Option<String>,
+}
+
+/// Update folder request
+#[derive(Debug, Deserialize)]
+pub struct UpdateFolderRequest {
+    pub name: Option<String>,
+    pub parent_folder_id: Option<Uuid>,
+    pub icon: Option<String>,
+    pub color: Option<String>,
+}
+
+/// Update file request
+#[derive(Debug, Deserialize)]
+pub struct UpdateFileRequest {
+    pub filename: Option<String>,
+    pub folder_id: Option<Uuid>,
+    pub visibility: Option<FileVisibility>,
+    pub description: Option<String>,
+    pub tags: Option<Vec<String>>,
+}
+
+/// File list query parameters
+#[derive(Debug, Deserialize, Default)]
+pub struct FileListQuery {
+    pub folder_id: Option<Uuid>,
+    pub website_id: Option<Uuid>,
+    pub visibility: Option<FileVisibility>,
+    pub mime_type: Option<String>,
+    pub search: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
 }
 
 /// Storage quota response

@@ -74,7 +74,7 @@ export function CloudPreviewCard({
               </Badge>
             )}
           </CardTitle>
-          <Link href={`/app/${websiteId}/cloud`}>
+          <Link href={`/${websiteId}/cloud`}>
             <Button variant="ghost" size="sm" className="text-xs h-7">
               {t('dashboard:dashboard.cloud.manageFiles')}
               <ChevronRight className="h-3 w-3 ml-1" />
@@ -105,7 +105,7 @@ export function CloudPreviewCard({
             <Upload className="h-10 w-10 mx-auto mb-3 opacity-50" />
             <p className="text-sm font-medium">{t('dashboard:dashboard.cloud.noFiles')}</p>
             <p className="text-xs mt-1">{t('dashboard:dashboard.cloud.uploadFirst')}</p>
-            <Link href={`/app/${websiteId}/cloud`}>
+            <Link href={`/${websiteId}/cloud`}>
               <Button variant="outline" size="sm" className="mt-3">
                 <Upload className="h-3.5 w-3.5 mr-1.5" />
                 {t('dashboard:dashboard.cloud.addFiles')}

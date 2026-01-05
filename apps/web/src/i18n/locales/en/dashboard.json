@@ -257,7 +257,9 @@
       "successMultiple": "{{count}} files uploaded successfully!",
       "error": "Failed to upload {{filename}}",
       "errorMultiple": "Failed to upload {{count}} files",
-      "partial": "{{success}} file(s) uploaded, {{failed}} failed"
+      "partial": "{{success}} file(s) uploaded, {{failed}} failed",
+      "dropHere": "Drop your files here",
+      "dropHint": "Release to upload"
     },
     "delete": {
       "title": "Confirm deletion",
@@ -311,7 +313,51 @@
       "copyLink": "Copy link",
       "download": "Download",
       "openNewTab": "Open in new tab",
-      "delete": "Delete"
+      "delete": "Delete",
+      "moveTo": "Move to...",
+      "visibility": "Visibility"
+    },
+    "operations": {
+      "moveSuccess": "File moved successfully",
+      "moveMultipleSuccess": "{{count}} file(s) moved successfully",
+      "moveMultipleFailed": "{{count}} file(s) could not be moved",
+      "visibilitySuccess": "Visibility updated",
+      "renameSuccess": "File renamed successfully"
+    },
+    "websiteSubtitle": "Manage files for this website",
+    "folders": {
+      "root": "My Files",
+      "files": "files",
+      "create": "New Folder",
+      "createTitle": "Create Folder",
+      "createIn": "Create a new folder in {{folder}}",
+      "createInRoot": "Create a new folder at the root level",
+      "namePlaceholder": "Folder name",
+      "createSuccess": "Folder \"{{name}}\" created",
+      "createError": "Failed to create folder",
+      "open": "Open",
+      "empty": "Empty folder",
+      "deleteTitle": "Delete Folder",
+      "deleteDescription": "Are you sure you want to delete the folder <strong>{{name}}</strong>?",
+      "deleteEmpty": "Delete empty folder",
+      "deleteWithContents": "Delete with all contents",
+      "deleteSuccess": "Folder \"{{name}}\" deleted",
+      "deleteError": "Failed to delete folder",
+      "deleteNotEmpty": "This folder is not empty. Choose to delete with contents."
+    },
+    "filters": {
+      "all": "All",
+      "visibility": "Visibility",
+      "type": "File type",
+      "clear": "Clear filters"
+    },
+    "visibility": {
+      "private": "Private",
+      "public": "Public",
+      "website": "Website"
+    },
+    "search": {
+      "placeholder": "Search files..."
     }
   },
   "pages": {

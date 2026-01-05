@@ -64,7 +64,7 @@ export function WeeklyGoalsCard({
             <Target className="h-4 w-4 text-violet-500" />
             {t('dashboard:dashboard.goals.title')}
           </CardTitle>
-          <Link href={`/app/${websiteId}/analytics`}>
+          <Link href={`/${websiteId}/analytics`}>
             <Button variant="ghost" size="sm" className="text-xs h-7">
               {t('dashboard:dashboard.goals.details')}
               <ChevronRight className="h-3 w-3 ml-1" />

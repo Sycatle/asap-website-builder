@@ -1,0 +1,28 @@
+---
+/**
+ * Logout page - clears tokens and redirects to login
+ */
+import AuthLayout from '../layouts/AuthLayout.astro';
+---
+
+<AuthLayout title="Déconnexion - ASAP">
+  <script>
+    // Clear all auth tokens
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('csrf_token');
+    
+    // Redirect to login page
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get('redirect');
+    
+    if (redirect) {
+      window.location.replace(`/login?redirect=${encodeURIComponent(redirect)}`);
+    } else {
+      window.location.replace('/login');
+    }
+  </script>
+  <div class="flex items-center justify-center p-8">
+    <p class="text-muted-foreground">Déconnexion en cours...</p>
+  </div>
+</AuthLayout>

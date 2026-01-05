@@ -1,0 +1,26 @@
+# ============================================================================
+# Base Node Development Image
+# Shared by Web, Accounts, and Sites services for hot reload development
+# ============================================================================
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install pnpm (once for all Node services)
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy workspace root files
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+
+# Copy all package.json files for workspace packages
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/renderers/package.json ./packages/renderers/
+COPY apps/web/package.json ./apps/web/
+COPY apps/accounts/package.json ./apps/accounts/
+COPY apps/sites/package.json ./apps/sites/
+
+# Install all dependencies once (shared node_modules)
+RUN pnpm install --frozen-lockfile --force
+
+# This image is now ready to be used as base for all frontend apps
+# Child images will only need to copy source code and run dev server

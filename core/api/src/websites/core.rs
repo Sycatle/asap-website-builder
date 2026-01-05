@@ -243,7 +243,7 @@ pub async fn create_website(
 
     // Emit WebSocket event for real-time sync
     // Note: For newly created websites, only the owner exists at creation time
-    ws_broadcaster.sync_website_created(
+    (*ws_broadcaster).sync_website_created(
         &account_id.to_string(),
         serde_json::to_value(&website_response).unwrap_or_default(),
     );
@@ -360,7 +360,7 @@ pub async fn update_website(
             // Broadcast to all users with access (owner + active administrators)
             if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_id).await {
                 for acc_id in account_ids {
-                    ws_broadcaster.sync_website_updated(
+                    (*ws_broadcaster).sync_website_updated(
                         &acc_id.to_string(),
                         &id,
                         update_data.clone(),
@@ -486,7 +486,7 @@ pub async fn patch_website_data(
             // Broadcast to all users with access (owner + active administrators)
             if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_id).await {
                 for acc_id in account_ids {
-                    ws_broadcaster.sync_website_data_updated(
+                    (*ws_broadcaster).sync_website_data_updated(
                         &acc_id.to_string(),
                         &id,
                         payload.data.clone(),
@@ -577,7 +577,7 @@ pub async fn publish_website(
             // Broadcast to all users with access (owner + active administrators)
             if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_id).await {
                 for acc_id in account_ids {
-                    ws_broadcaster.sync_website_published(
+                    (*ws_broadcaster).sync_website_published(
                         &acc_id.to_string(),
                         &id,
                         "published",

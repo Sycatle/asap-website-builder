@@ -42,7 +42,12 @@
     "showMore": "Voir plus",
     "showLess": "Voir moins",
     "viewAll": "Voir tout",
-    "learnMore": "En savoir plus"
+    "learnMore": "En savoir plus",
+    "rename": "Renommer",
+    "move": "Déplacer"
+  },
+  "prompts": {
+    "enterNewName": "Entrez un nouveau nom"
   },
   "labels": {
     "name": "Nom",
@@ -80,6 +85,7 @@
     "loading": "Chargement...",
     "saving": "Enregistrement...",
     "saved": "Enregistré",
+    "creating": "Création...",
     "deleting": "Suppression...",
     "deleted": "Supprimé",
     "publishing": "Publication...",
@@ -159,7 +165,10 @@
     "billing": "Facturation",
     "keyboardShortcuts": "Raccourcis clavier",
     "searchPlaceholder": "Rechercher...",
-    "goTo": "Aller à..."
+    "goTo": "Aller à...",
+    "search": "Rechercher",
+    "notifications": "Notifications",
+    "bottomNav": "Navigation principale"
   },
   "shortcuts": {
     "navigation": "Navigation",

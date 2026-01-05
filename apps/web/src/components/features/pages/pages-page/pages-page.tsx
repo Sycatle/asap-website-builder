@@ -3,9 +3,10 @@
 import { useTranslation } from 'react-i18next';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { PageHeader } from '@/components/shared/page-header';
+import { PageIcon } from '@/lib/navigation-config';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
 // Local imports
 import { 
@@ -110,12 +111,8 @@ export function PagesPage() {
       <PageHeader
         title={t('dashboard:pages.title')}
         subtitle={t('dashboard:pages.subtitle')}
-        icon={
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-lg">
-            <FileText className="h-5 w-5 text-white" />
-          </div>
-        }
-        backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
+        icon={<PageIcon page="pages" />}
+        backHref={currentWebsiteId ? `/${currentWebsiteId}` : '/'}
         actions={[
           {
             label: t('dashboard:pages.new'),
@@ -126,9 +123,7 @@ export function PagesPage() {
         stickyContent={
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
-                <FileText className="h-4 w-4 text-white" />
-              </div>
+              <PageIcon page="pages" size="md" />
               <div className="hidden sm:flex items-center gap-3">
                 <p className="text-sm font-semibold">{t('dashboard:pages.title')}</p>
                 <Badge variant="secondary" className="text-[10px] h-5">

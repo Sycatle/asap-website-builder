@@ -5,6 +5,7 @@ import { useWebsitesQuery, useExtensionCatalogQuery, useWebsiteExtensionsQuery, 
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { Link } from '@/components/app-router';
 import { PageHeader } from '@/components/shared/page-header';
+import { PageIcon } from '@/lib/navigation-config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -244,22 +245,16 @@ export default function ExtensionsManager() {
       <PageHeader
         title={t('dashboard:extensions.title')}
         subtitle={t('dashboard:extensions.subtitle')}
-        icon={
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
-            <Puzzle className="h-5 w-5 text-white" />
-          </div>
-        }
+        icon={<PageIcon page="extensions" />}
         badge={{
           label: t('dashboard:extensions.available', { count: catalogExtensions.length }),
           variant: 'outline',
         }}
-        backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
+        backHref={currentWebsiteId ? `/${currentWebsiteId}` : '/'}
         stickyContent={
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                <Puzzle className="h-4 w-4 text-white" />
-              </div>
+              <PageIcon page="extensions" size="md" />
               <div className="hidden sm:block">
                 <p className="text-sm font-semibold">{t('dashboard:extensions.title')}</p>
                 <p className="text-[11px] text-muted-foreground">{enabledActiveExtensions.length} {t('dashboard:extensions.activeCount', { count: enabledActiveExtensions.length })} {t('common:labels.on')} {catalogExtensions.length}</p>
@@ -330,7 +325,7 @@ export default function ExtensionsManager() {
                     </div>
                     <div className="flex gap-2">
                       <Button asChild variant="secondary" size="sm" className="flex-1 h-8 sm:h-9 text-xs sm:text-sm group/btn">
-                        <Link href={`/app/${currentWebsiteId}/extensions/${catalogExtension.slug}`}>
+                        <Link href={`/${currentWebsiteId}/extensions/${catalogExtension.slug}`}>
                           <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 transition-transform group-hover/btn:rotate-90" />
                           {t('dashboard:extensions.actions.configure')}
                         </Link>
@@ -365,7 +360,7 @@ export default function ExtensionsManager() {
               </ContextMenuTrigger>
               <ContextMenuContent className="w-56">
                 <ContextMenuItem asChild>
-                  <Link href={`/app/${currentWebsiteId}/extensions/${catalogExtension.slug}`}>
+                  <Link href={`/${currentWebsiteId}/extensions/${catalogExtension.slug}`}>
                     <Settings className="mr-2 h-4 w-4" />
                     {t('dashboard:extensions.actions.configure')}
                   </Link>

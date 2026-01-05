@@ -36,7 +36,7 @@ export function FilePreviewDialog({
 
   return (
     <ResponsiveDialog open={isOpen} onOpenChange={onClose}>
-      <ResponsiveDialogContent className="max-w-[95vw] sm:max-w-3xl p-4 sm:p-6">
+      <ResponsiveDialogContent className="w-screen h-screen max-h-screen max-w-none rounded-none p-4 sm:w-auto sm:h-auto sm:max-h-[90vh] sm:max-w-4xl sm:rounded-lg sm:p-6 flex flex-col">
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle className="flex items-center gap-2 text-sm sm:text-base">
             {file && getFileIcon(file.mime_type, "h-4 w-4 sm:h-5 sm:w-5")}
@@ -49,19 +49,19 @@ export function FilePreviewDialog({
         
         {/* Preview Content */}
         {file && (
-          <div className="mt-3 sm:mt-4">
+          <div className="flex-1 flex items-center justify-center overflow-hidden">
             {isImage(file.mime_type) && (
               <img
                 src={getFileUrl(file.id)}
                 alt={file.filename}
-                className="max-h-[50vh] sm:max-h-[60vh] mx-auto rounded-lg"
+                className="max-h-full max-w-full rounded-lg object-contain"
               />
             )}
             {isVideo(file.mime_type) && (
               <video
                 src={getFileUrl(file.id)}
                 controls
-                className="max-h-[50vh] sm:max-h-[60vh] w-full mx-auto rounded-lg"
+                className="max-h-full max-w-full rounded-lg"
               />
             )}
             {isAudio(file.mime_type) && (

@@ -7,6 +7,7 @@ import {
   LogOut,
   Settings,
   CreditCard,
+  ExternalLink,
 } from "lucide-react"
 
 import {
@@ -24,7 +25,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { SettingsModal } from "@/components/features/settings"
 import { NotificationsDropdown, LogoutConfirmDialog } from "@/components/shared"
 import { 
   useAuthStore, 
@@ -32,6 +32,7 @@ import {
   useAuthLoading,
   type UserData 
 } from "@/lib/store/authStore"
+import { getSettingsUrl } from "@/lib/utils/auth-redirect"
 
 interface HeaderUserProps {
   user?: Partial<UserData>
@@ -39,14 +40,12 @@ interface HeaderUserProps {
 
 export function HeaderUser({ user: initialUser }: HeaderUserProps) {
   const { t } = useTranslation('common')
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [settingsTab, setSettingsTab] = useState<'account' | 'billing'>('account')
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
   
   // Use the centralized auth store
   const userData = useUserData()
   const isLoading = useAuthLoading()
-  const { fetchFullUserData, logout, updateUserData } = useAuthStore()
+  const { fetchFullUserData, updateUserData } = useAuthStore()
 
   // Fetch user data on mount
   useEffect(() => {
@@ -57,13 +56,9 @@ export function HeaderUser({ user: initialUser }: HeaderUserProps) {
     setLogoutDialogOpen(true)
   }
 
-  const handleUserUpdate = (updatedData: Partial<UserData>) => {
-    updateUserData(updatedData)
-  }
-
-  const openSettings = (tab: 'account' | 'billing' = 'account') => {
-    setSettingsTab(tab)
-    setSettingsOpen(true)
+  // Redirect to accounts app settings
+  const openSettings = (section?: string) => {
+    window.location.href = getSettingsUrl(section)
   }
 
   const getInitials = (name: string) => {
@@ -118,13 +113,15 @@ export function HeaderUser({ user: initialUser }: HeaderUserProps) {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => openSettings('account')}>
+          <DropdownMenuItem onClick={() => openSettings('profile')}>
             <Settings className="mr-2 h-4 w-4" />
             {t('navigation.settings')}
+            <ExternalLink className="ml-auto h-3 w-3 text-muted-foreground" />
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openSettings('billing')}>
             <CreditCard className="mr-2 h-4 w-4" />
             {t('navigation.billing')}
+            <ExternalLink className="ml-auto h-3 w-3 text-muted-foreground" />
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
@@ -134,15 +131,6 @@ export function HeaderUser({ user: initialUser }: HeaderUserProps) {
         </DropdownMenuContent>
       </DropdownMenu>
       </div>
-
-      {/* Settings Modal */}
-      <SettingsModal
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        user={user}
-        onUserUpdate={handleUserUpdate}
-        defaultTab={settingsTab}
-      />
 
       {/* Logout Confirmation Dialog */}
       <LogoutConfirmDialog

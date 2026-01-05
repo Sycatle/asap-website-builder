@@ -1,22 +1,52 @@
-# Development configuration - Full Docker environment
+# Development configuration - Full Docker environment with base images
 # Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 
 services:
-  # API in dev mode - build inside container with hot reload
+  # ============================================================================
+  # Base Images - Shared by multiple services to speed up builds
+  # ============================================================================
+  
+  base-rust:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.base.rust
+    image: asap-base-rust:dev
+    command: ["true"]
+    networks:
+      - asap-network
+    
+  base-node:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.base.node
+    image: asap-base-node:dev
+    command: ["true"]
+    networks:
+      - asap-network
+
+  # ============================================================================
+  # Application Services
+  # ============================================================================
+  
+  # API in dev mode
   api:
     build:
       context: ..
       dockerfile: infra/Dockerfile.api.dev
     container_name: asap-api
+    depends_on:
+      base-rust:
+        condition: service_completed_successfully
+      migrations:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     volumes:
-      # Mount source code for hot reload
+      - ../Cargo.toml:/app/Cargo.toml
       - ../core:/app/core
       - ../apps/api:/app/apps/api
-      - ../modules:/app/modules
+      - ../extensions:/app/extensions
       - ../.sqlx:/app/.sqlx
-      # Cache cargo registry and target
-      - cargo-cache:/usr/local/cargo/registry
-      - cargo-git:/usr/local/cargo/git
       - api-target:/app/target
     environment:
       DATABASE_URL: postgresql://asap:asap_dev_password@postgres:5432/asap
@@ -25,55 +55,63 @@ services:
       ASAP_API_PORT: 3000
       ASAP_API_HOST: 0.0.0.0
       JWT_SECRET: ${JWT_SECRET:-dev_secret_key_change_in_production_12345}
-      CORS_ALLOWED_ORIGINS: http://localhost:4321,http://web:4321
-      # SQLX_OFFLINE disabled to use live DB verification in dev
+      CORS_ALLOWED_ORIGINS: http://localhost:4321,http://localhost:4322,http://localhost:4323,http://web:4321,http://sites:4322,http://accounts:4323
+      # SQLX_OFFLINE: "true"  # Disabled for development to allow new queries
+      GOOGLE_CLIENT_ID: "605841077442-cl54bg3dmdq6d1ednga612qhh6fj8oh5.apps.googleusercontent.com"
+      GOOGLE_CLIENT_SECRET: "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"
+      GOOGLE_REDIRECT_URI: "http://localhost:4323/oauth/google/callback"
+      GITHUB_CLIENT_ID: ""
+      GITHUB_CLIENT_SECRET: ""
+      GITHUB_REDIRECT_URI: "http://localhost:4323/oauth/github/callback"
     ports:
       - "3000:3000"
-    depends_on:
-      migrations:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-    # Disable healthcheck in dev mode (cargo-watch takes time to compile)
     healthcheck:
       disable: true
     networks:
       - asap-network
 
-  # Worker in dev mode - build inside container
+  # Worker in dev mode
   worker:
     build:
       context: ..
       dockerfile: infra/Dockerfile.worker.dev
     container_name: asap-worker
-    command: ["cargo", "watch", "-x", "run --bin asap-worker", "-w", "apps/worker", "-w", "core", "-w", "modules"]
+    depends_on:
+      base-rust:
+        condition: service_completed_successfully
+      migrations:
+        condition: service_completed_successfully
+    command: ["cargo", "watch", "-x", "run --bin asap-worker", "-w", "apps/worker", "-w", "core", "-w", "extensions"]
     volumes:
-      # Mount source code for hot reload
       - ../core:/app/core
       - ../apps/worker:/app/apps/worker
-      - ../modules:/app/modules
+      - ../extensions:/app/extensions
       - ../.sqlx:/app/.sqlx
-      # Cache cargo registry and target
-      - cargo-cache:/usr/local/cargo/registry
-      - cargo-git:/usr/local/cargo/git
       - worker-target:/app/target
     environment:
       DATABASE_URL: postgresql://asap:asap_dev_password@postgres:5432/asap
       RUST_LOG: asap_worker=debug,sqlx=warn
       POLL_INTERVAL_SECONDS: 5
-      # SQLX_OFFLINE disabled to use live DB verification in dev
-    depends_on:
-      migrations:
-        condition: service_completed_successfully
+      SQLX_OFFLINE: "true"
     networks:
       - asap-network
 
-  # Web application in dev mode with hot reload
+  # Web application in dev mode
   web:
-    image: node:20-alpine
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.web
+      target: dev
+    # Override the image from base docker-compose.yml to use our built image
+    image: asap-web:dev
     container_name: asap-web
-    working_dir: /app/apps/web
-    command: sh -c "npm install --legacy-peer-deps && npm run dev -- --host 0.0.0.0"
+    # Override command from base docker-compose.yml
+    command: ["pnpm", "dev", "--host", "0.0.0.0"]
+    depends_on:
+      base-node:
+        condition: service_completed_successfully
+      api:
+        condition: service_started
     ports:
       - "4321:4321"
     environment:
@@ -83,20 +121,34 @@ services:
       PUBLIC_WS_URL: ws://localhost:3000/ws
       NODE_ENV: development
     volumes:
-      - ..:/app
-      - web-node-modules:/app/apps/web/node_modules
-    depends_on:
-      - api
+      # Mount source code for hot reload
+      - ../packages/shared/src:/app/packages/shared/src
+      - ../packages/renderers/src:/app/packages/renderers/src
+      - ../apps/web/src:/app/apps/web/src
+      - ../apps/web/public:/app/apps/web/public
+      - ../apps/web/astro.config.mjs:/app/apps/web/astro.config.mjs
+      - ../apps/web/tailwind.config.cjs:/app/apps/web/tailwind.config.cjs
+      - ../apps/web/tsconfig.json:/app/apps/web/tsconfig.json
     networks:
       - asap-network
 
-
-  # Sites application in dev mode with hot reload
+  # Sites application in dev mode
   sites:
-    image: node:20-alpine
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.sites
+      target: dev
+    # Override the image from base docker-compose.yml to use our built image
+    image: asap-sites:dev
     container_name: asap-sites
     working_dir: /app/apps/sites
-    command: sh -c "npm install -g pnpm && pnpm install && rm -rf node_modules/.vite && pnpm exec astro dev --host 0.0.0.0 --port 4322"
+    # Use sh -c to pass arguments correctly to astro
+    command: ["sh", "-c", "pnpm exec astro dev --port 4322 --host 0.0.0.0"]
+    depends_on:
+      base-node:
+        condition: service_completed_successfully
+      api:
+        condition: service_started
     ports:
       - "4322:4322"
     environment:
@@ -106,17 +158,49 @@ services:
       INTERNAL_API_URL: http://api:3000/api
       NODE_ENV: development
     volumes:
-      - ..:/app
-      - sites-node-modules:/app/apps/sites/node_modules
+      # Mount source code for hot reload
+      - ../packages/shared/src:/app/packages/shared/src
+      - ../packages/renderers/src:/app/packages/renderers/src
+      - ../apps/sites/src:/app/apps/sites/src
+      - ../apps/sites/public:/app/apps/sites/public
+    networks:
+      - asap-network
+
+  # Accounts application in dev mode
+  accounts:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.accounts.dev
+    # Override the image from base docker-compose.yml to use our built image
+    image: asap-accounts:dev
+    container_name: asap-accounts
+    # Override command from base docker-compose.yml
+    command: ["pnpm", "dev", "--host", "0.0.0.0"]
     depends_on:
-      - api
+      base-node:
+        condition: service_completed_successfully
+      api:
+        condition: service_started
+    ports:
+      - "4323:4323"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 4323
+      PUBLIC_API_URL: http://localhost:3000/api
+      PUBLIC_APP_URL: http://localhost:4321
+      PUBLIC_ACCOUNTS_URL: http://localhost:4323
+      NODE_ENV: development
+    volumes:
+      # Mount source code for hot reload
+      - ../packages/shared/src:/app/packages/shared/src
+      - ../apps/accounts/src:/app/apps/accounts/src
+      - ../apps/accounts/public:/app/apps/accounts/public
+      - ../apps/accounts/astro.config.mjs:/app/apps/accounts/astro.config.mjs
+      - ../apps/accounts/tailwind.config.cjs:/app/apps/accounts/tailwind.config.cjs
+      - ../apps/accounts/tsconfig.json:/app/apps/accounts/tsconfig.json
     networks:
       - asap-network
 
 volumes:
-  cargo-cache:
-  cargo-git:
   api-target:
   worker-target:
-  web-node-modules:
-  sites-node-modules:

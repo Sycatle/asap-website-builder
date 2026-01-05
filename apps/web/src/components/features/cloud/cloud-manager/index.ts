@@ -1,5 +1,12 @@
 // CloudManager module exports
-export { CloudManager, CloudManager as default } from "./cloud-manager";
+// Using simplified version for cleaner UX
+export { CloudManager, CloudManager as default } from "./cloud-manager-simple";
+
+// Full-featured version (v2) for power users
+export { CloudManager as CloudManagerFull } from "./cloud-manager-v2";
+
+// Legacy export for backward compatibility
+export { CloudManager as CloudManagerLegacy } from "./cloud-manager";
 
 // Types
 export type {
@@ -15,6 +22,8 @@ export type {
   SelectionBarProps,
   EmptyStateProps,
   FileMetadata,
+  FileFolder,
+  FileVisibility,
 } from "./types";
 
 // Utils - re-export from shared
@@ -38,3 +47,6 @@ export { DeleteConfirmDialog, BulkDeleteDialog } from "./components/delete-dialo
 export { SelectionBar } from "./components/selection-bar";
 export { EmptyState } from "./components/empty-state";
 export { CloudManagerSkeleton } from "./components/cloud-manager-skeleton";
+export { FolderNavigation } from "./components/folder-navigation";
+export { FolderCard } from "./components/folder-card";
+export { FileFilters } from "./components/file-filters";

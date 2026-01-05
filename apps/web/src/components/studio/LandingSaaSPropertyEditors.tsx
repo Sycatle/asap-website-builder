@@ -39,9 +39,9 @@ import {
   ChevronRight,
   Save,
   RotateCcw,
-  Settings2,
+  Settings,
   Type,
-  Link2,
+  Link as LinkIcon,
   Image,
   ToggleLeft,
   List,
@@ -82,10 +82,10 @@ const PropertyTypeIcons: Record<string, React.FC<{ className?: string }>> = {
   boolean: ToggleLeft,
   select: List,
   icon: Palette,
-  url: Link2,
+  url: LinkIcon,
   image: Image,
   array: List,
-  group: Settings2,
+  group: Settings,
 };
 
 // ============================================
@@ -133,24 +133,24 @@ function shouldShowProperty(prop: PropertySchema, data: SettingsData): boolean {
 const GROUP_LABELS: Record<string, { label: string; icon: React.FC<{ className?: string }> }> = {
   brand: { label: 'Marque', icon: Palette },
   content: { label: 'Contenu', icon: Type },
-  navigation: { label: 'Navigation', icon: Link2 },
-  auth: { label: 'Authentification', icon: Settings2 },
-  mobile: { label: 'Mobile', icon: Settings2 },
+  navigation: { label: 'Navigation', icon: LinkIcon },
+  auth: { label: 'Authentification', icon: Settings },
+  mobile: { label: 'Mobile', icon: Settings },
   badge: { label: 'Badge', icon: Palette },
-  cta: { label: 'Boutons d\'action', icon: Link2 },
-  social_proof: { label: 'Preuve sociale', icon: Settings2 },
+  cta: { label: 'Boutons d\'action', icon: LinkIcon },
+  social_proof: { label: 'Preuve sociale', icon: Settings },
   preview: { label: 'Aperçu', icon: Image },
   style: { label: 'Style', icon: Palette },
-  layout: { label: 'Mise en page', icon: Settings2 },
+  layout: { label: 'Mise en page', icon: Settings },
   features: { label: 'Fonctionnalités', icon: List },
   steps: { label: 'Étapes', icon: List },
   pricing: { label: 'Tarification', icon: Hash },
   plans: { label: 'Plans', icon: List },
   testimonials: { label: 'Témoignages', icon: List },
   badges: { label: 'Badges', icon: Palette },
-  links: { label: 'Liens', icon: Link2 },
-  social: { label: 'Réseaux sociaux', icon: Link2 },
-  legal: { label: 'Légal', icon: Settings2 },
+  links: { label: 'Liens', icon: LinkIcon },
+  social: { label: 'Réseaux sociaux', icon: LinkIcon },
+  legal: { label: 'Légal', icon: Settings },
 };
 
 // ============================================
@@ -310,7 +310,7 @@ function UrlPropertyEditor({ prop, value, onChange }: PropertyEditorFieldProps) 
   return (
     <Field>
       <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
-        <Link2 className="h-3 w-3" /> {prop.label}
+        <LinkIcon className="h-3 w-3" /> {prop.label}
       </FieldLabel>
       <Input
         type="url"
@@ -381,7 +381,7 @@ function ArrayItemEditor({ itemSchema, item, index, onUpdate, onRemove }: ArrayI
         <CollapsibleTrigger asChild>
           <div className="flex items-center gap-2 p-3 cursor-pointer hover:bg-muted/50">
             <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-            {isOpen ? (
+            {isExpanded ? (
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             ) : (
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -628,7 +628,7 @@ interface PropertyGroupProps {
 
 function PropertyGroup({ groupKey, properties, settings, onChange }: PropertyGroupProps) {
   const [isOpen, setIsOpen] = useState(true);
-  const groupInfo = GROUP_LABELS[groupKey] || { label: groupKey, icon: Settings2 };
+  const groupInfo = GROUP_LABELS[groupKey] || { label: groupKey, icon: Settings };
   const GroupIcon = groupInfo.icon;
 
   // Filter properties based on showIf conditions

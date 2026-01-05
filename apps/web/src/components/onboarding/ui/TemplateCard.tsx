@@ -11,7 +11,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { 
-  CheckCircle2,
+  CheckCircle,
   Clock,
   Star,
   Globe,
@@ -116,7 +116,7 @@ export function TemplateCard({
           aria-hidden="true"
         >
           <div className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
-            <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
+            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 fill-current" />
           </div>
         </div>
       )}

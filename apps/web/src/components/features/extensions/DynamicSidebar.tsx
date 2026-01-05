@@ -79,7 +79,7 @@ export default function DynamicSidebar() {
         {extensions.map((extension) => (
           <a
             key={extension.id}
-            href={`/app/extensions/${extension.extension_slug}`}
+            href={`/extensions/${extension.extension_slug}`}
             className="flex items-center gap-3 px-4 py-2 text-foreground rounded-lg hover:bg-muted transition-colors"
           >
             <span className="text-muted-foreground">

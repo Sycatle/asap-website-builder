@@ -2,19 +2,20 @@ import { useEffect, useState, useMemo } from 'react';
 import { useWebsitesQuery } from '@/lib/query';
 import { formatDate } from '@/lib/utils/formatters';
 import { PageHeader } from '@/components/shared/page-header';
+import { PageIcon } from '@/lib/navigation-config';
 import { 
-  Users, 
   UserPlus, 
   Shield, 
-  Mail, 
+  Mail,
   MoreHorizontal,
   RefreshCw,
   Trash2,
-  Edit,
+  Pencil,
   Crown,
   Check,
   Clock,
-  X
+  X,
+  Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -237,7 +238,7 @@ export default function AdministratorsPage() {
   if (websitesLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+        <ArrowClockwise className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -257,22 +258,16 @@ export default function AdministratorsPage() {
       <PageHeader
         title="Administrateurs"
         subtitle="Gérez les accès et permissions des collaborateurs de votre site"
-        icon={
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
-            <Users className="h-5 w-5 text-white" />
-          </div>
-        }
+        icon={<PageIcon page="administrators" />}
         badge={{
           label: `${stats.total} collaborateur${stats.total > 1 ? 's' : ''}`,
           variant: 'outline',
         }}
-        backHref={currentWebsite ? `/app/${currentWebsite.id}` : '/app'}
+        backHref={currentWebsite ? `/${currentWebsite.id}` : '/'}
         stickyContent={
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-                <Users className="h-4 w-4 text-white" />
-              </div>
+              <PageIcon page="administrators" size="md" />
               <div className="hidden sm:flex items-center gap-3">
                 <p className="text-sm font-semibold">Administrateurs</p>
                 <div className="flex items-center gap-2">
@@ -386,7 +381,7 @@ export default function AdministratorsPage() {
                   </SelectItem>
                   <SelectItem value="editor">
                     <div className="flex items-center gap-2">
-                      <Edit className="h-4 w-4" />
+                      <Pencil className="h-4 w-4" />
                       Éditeur
                     </div>
                   </SelectItem>
@@ -490,7 +485,7 @@ export default function AdministratorsPage() {
                                   setEditDialog({ open: true, admin });
                                 }}
                               >
-                                <Edit className="h-4 w-4 mr-2" />
+                                <Pencil className="h-4 w-4 mr-2" />
                                 Modifier le rôle
                               </DropdownMenuItem>
                               {admin.status === 'pending' && (

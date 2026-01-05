@@ -1,105 +1,45 @@
 /**
- * Authentication and user-related types
+ * Auth-related types for the web app
+ * Note: Login/signup types are not needed here as authentication
+ * is handled by the accounts app
  */
 
-// ============================================
-// AUTH REQUEST/RESPONSE TYPES
-// ============================================
-
-export interface SignupRequest {
-  email: string;
-  password: string;
-  portfolio_slug?: string;  // Optional - website is created during onboarding
-}
-
-export interface SignupResponse {
-  token: string;
-  access_token?: string;
-  refresh_token?: string;
-  expires_in?: number;
-  account: {
-    id: string;
-    email: string;
-  };
-}
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-  remember_me?: boolean;
-}
-
-export interface LoginResponse {
-  token: string;
-  access_token?: string;
-  refresh_token?: string;
-  expires_in?: number;
-}
-
-export interface RefreshTokenRequest {
-  refresh_token: string;
-}
-
-export interface TokenPairResponse {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-}
-
+// Response from /auth/me endpoint
 export interface MeResponse {
   id: string;
   email: string;
-  plan: string;
-}
-
-export interface ChangePasswordRequest {
-  current_password: string;
-  new_password: string;
-}
-
-export interface ForgotPasswordRequest {
-  email: string;
-}
-
-export interface ResetPasswordRequest {
-  token: string;
-  new_password: string;
-}
-
-export interface UpdateGitHubIntegrationRequest {
-  github_username: string;
-  github_token?: string | null;
-}
-
-// ============================================
-// SESSION MANAGEMENT TYPES
-// ============================================
-
-export interface SessionInfo {
-  id: string;
-  user_agent: string | null;
-  ip_address: string | null;
+  plan: 'free' | 'starter' | 'pro' | 'enterprise';
   created_at: string;
-  expires_at: string;
-  is_current: boolean;
 }
 
-export interface ListSessionsResponse {
-  sessions: SessionInfo[];
+// Token pair response from refresh
+export interface TokenPairResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
 }
 
-export interface RevokeSessionRequest {
-  session_id: string;
-}
-
-// ============================================
-// USER DATA TYPES
-// ============================================
-
+// User data for display
 export interface UserData {
   id: string;
   email: string;
   name: string;
   avatar?: string;
-  plan?: string;
+  plan: string;
+}
+
+// Session info for sessions list
+export interface SessionInfo {
+  id: string;
+  user_agent: string | null;
+  ip_address: string | null;
+  last_used_at: string;
+  created_at: string;
+  is_current: boolean;
+}
+
+// Response from /auth/sessions
+export interface ListSessionsResponse {
+  sessions: SessionInfo[];
 }

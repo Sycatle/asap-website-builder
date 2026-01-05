@@ -80,7 +80,7 @@ export function TeamCard({ websiteId }: TeamCardProps) {
               </Badge>
             )}
           </CardTitle>
-          <Link href={`/app/${websiteId}/administrators`}>
+          <Link href={`/${websiteId}/administrators`}>
             <Button variant="ghost" size="sm" className="text-xs h-7">
               {t('dashboard:dashboard.team.manage')}
               <ChevronRight className="h-3 w-3 ml-1" />
@@ -124,7 +124,7 @@ export function TeamCard({ websiteId }: TeamCardProps) {
           </div>
         )}
         <Link 
-          href={`/app/${websiteId}/administrators`}
+          href={`/${websiteId}/administrators`}
           className="mt-4 flex items-center justify-center gap-2 p-2 rounded-lg border border-dashed hover:bg-accent transition-colors"
         >
           <Users className="h-4 w-4 text-muted-foreground" />

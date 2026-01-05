@@ -32,13 +32,13 @@ export const LANGUAGE_STORAGE_KEY = 'asap-language';
  */
 export const NAMESPACES = [
   'common',
+  'auth',
   'dashboard',
   'settings',
   'editor',
   'errors',
   'notifications',
   'onboarding',
-  'auth',
 ] as const;
 
 export type Namespace = (typeof NAMESPACES)[number];

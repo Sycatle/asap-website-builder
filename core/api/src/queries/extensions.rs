@@ -4,7 +4,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 use serde_json::Value as JsonValue;
 use chrono::{DateTime, Utc};
-use asap_core_shared::extension_catalog;
+use asap_core_shared::ExtensionRegistry;
 
 use super::types::WebsiteExtensionRow;
 
@@ -13,7 +13,8 @@ use super::types::WebsiteExtensionRow;
 /// This should be called at startup to ensure all extensions defined in code
 /// exist in the database with their latest metadata.
 pub async fn sync_extensions_catalog(pool: &PgPool) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
-    let extensions = extension_catalog::get_extension_catalog();
+    let registry = ExtensionRegistry::load_from_workspace()?;
+    let extensions = registry.get_all();
     let mut synced = 0;
     
     for extension in extensions {

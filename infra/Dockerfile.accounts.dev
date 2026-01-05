@@ -1,0 +1,17 @@
+# Development Dockerfile for Accounts app
+# Uses shared base image to avoid duplicating dependency installation
+FROM asap-base-node:dev
+
+# Copy source code (will be overwritten by volume mounts in docker-compose)
+COPY packages/shared ./packages/shared
+COPY packages/renderers ./packages/renderers
+COPY apps/accounts ./apps/accounts
+
+WORKDIR /app/apps/accounts
+
+ENV HOST=0.0.0.0
+ENV PORT=4323
+
+EXPOSE 4323
+
+CMD ["pnpm", "dev", "--host", "0.0.0.0"]

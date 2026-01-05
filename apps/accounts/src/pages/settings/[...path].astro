@@ -1,0 +1,17 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SettingsApp from '../../components/settings/SettingsApp';
+---
+
+<BaseLayout title="Paramètres - ASAP">
+  <!-- Auth check -->
+  <script>
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      const redirect = encodeURIComponent(window.location.href);
+      window.location.replace(`/login?redirect=${redirect}`);
+    }
+  </script>
+  
+  <SettingsApp client:load />
+</BaseLayout>

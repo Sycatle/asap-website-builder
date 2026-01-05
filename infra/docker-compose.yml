@@ -70,7 +70,7 @@ services:
       ASAP_API_PORT: 3000
       ASAP_API_HOST: 0.0.0.0
       JWT_SECRET: ${JWT_SECRET:-dev_secret_key_change_in_production_12345}
-      CORS_ALLOWED_ORIGINS: http://localhost:4321,http://web:4321
+      CORS_ALLOWED_ORIGINS: http://localhost:4321,http://localhost:4322,http://localhost:4323,http://web:4321,http://sites:4322,http://accounts:4323
     depends_on:
       migrations:
         condition: service_completed_successfully
@@ -128,11 +128,12 @@ services:
       - asap-network
 
   # Sites application (Astro) - Public sites server
+  # Note: In dev mode, this is overridden by docker-compose.dev.yml to use the custom Dockerfile
   sites:
     image: node:20-alpine
     container_name: asap-sites
-    working_dir: /app
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 4322"
+    # Default command for standalone use - overridden in docker-compose.dev.yml
+    command: sh -c "cd /app/apps/sites && corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm dev -- --host 0.0.0.0"
     ports:
       - "4322:4322"
     environment:
@@ -141,8 +142,7 @@ services:
       PUBLIC_API_URL: http://localhost:3000/api
       NODE_ENV: development
     volumes:
-      - ../apps/sites:/app
-      - /app/node_modules
+      - ../:/app
     depends_on:
       api:
         condition: service_healthy

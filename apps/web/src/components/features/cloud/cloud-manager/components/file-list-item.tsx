@@ -2,6 +2,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -9,6 +10,9 @@ import {
   ContextMenuSeparator,
   ContextMenuShortcut,
   ContextMenuTrigger,
+  ContextMenuSub,
+  ContextMenuSubTrigger,
+  ContextMenuSubContent,
 } from "@/components/ui/context-menu";
 import { 
   Trash2,
@@ -17,11 +21,32 @@ import {
   CheckCircle2,
   Eye,
   ExternalLink,
-  Link2
+  Link2,
+  FolderInput,
+  Globe,
+  Lock,
+  Users,
+  Pencil,
 } from "lucide-react";
 import { formatBytes, formatDate } from "@/lib/utils/formatters";
 import { getFileIcon } from "@/components/shared/file-utils";
 import type { FileListItemProps } from "../types";
+import type { FileVisibility } from "@/lib/types";
+
+/**
+ * Visibility icon helper
+ */
+function getVisibilityIcon(visibility: FileVisibility | undefined) {
+  switch (visibility) {
+    case 'public':
+      return <Globe className="h-3 w-3" />;
+    case 'website':
+      return <Users className="h-3 w-3" />;
+    case 'private':
+    default:
+      return <Lock className="h-3 w-3" />;
+  }
+}
 
 /**
  * File list item component for list view
@@ -35,6 +60,11 @@ export function FileListItem({
   onDelete,
   onCopyLink,
   onToggleSelection,
+  onMoveToFolder,
+  onChangeVisibility,
+  onRename,
+  folders = [],
+  websiteTitle,
   getItemProps,
   getFileUrl,
   copiedId,
@@ -92,7 +122,17 @@ export function FileListItem({
 
           {/* File info */}
           <div className="flex-1 min-w-0">
-            <p className="text-sm sm:text-base font-medium truncate">{file.filename}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm sm:text-base font-medium truncate">{file.filename}</p>
+              {file.visibility && (
+                <Badge 
+                  variant={file.visibility === 'public' ? 'default' : 'secondary'} 
+                  className="h-5 px-1.5 text-[10px] gap-1 shrink-0"
+                >
+                  {getVisibilityIcon(file.visibility)}
+                </Badge>
+              )}
+            </div>
             <p className="text-xs sm:text-sm text-muted-foreground">
               {formatBytes(file.original_size)} · {formatDate(file.created_at)}
             </p>
@@ -129,7 +169,7 @@ export function FileListItem({
           </div>
         </div>
       </ContextMenuTrigger>
-      <ContextMenuContent className="w-52">
+<ContextMenuContent className="w-56">
         <ContextMenuItem onClick={onPreview}>
           <Eye className="mr-2 h-4 w-4" />
           {t('dashboard:cloud.contextMenu.preview')}
@@ -152,8 +192,77 @@ export function FileListItem({
             {t('dashboard:cloud.contextMenu.openNewTab')}
           </a>
         </ContextMenuItem>
+        
         <ContextMenuSeparator />
+        
+        {/* Rename option */}
         <ContextMenuItem 
+          onClick={() => {
+            if (!onRename) return;
+            const newName = prompt(t('common:prompts.enterNewName'), file.filename);
+            if (newName && newName.trim() !== file.filename) {
+              onRename(newName.trim());
+            }
+          }} 
+          disabled={!onRename}
+        >
+          <Pencil className="mr-2 h-4 w-4" />
+          {t('common:actions.rename')}
+        </ContextMenuItem>
+        
+        {/* Move to folder submenu */}
+        <ContextMenuSub>
+          <ContextMenuSubTrigger disabled={!onMoveToFolder}>
+            <FolderInput className="mr-2 h-4 w-4" />
+            {t('dashboard:cloud.contextMenu.moveTo')}
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent className="w-48">
+            <ContextMenuItem onClick={() => onMoveToFolder?.(null)}>
+              {websiteTitle || t('dashboard:cloud.folders.root')}
+            </ContextMenuItem>
+            {folders.length > 0 && <ContextMenuSeparator />}
+            {folders.map((folder) => (
+              <ContextMenuItem 
+                key={folder.id} 
+                onClick={() => onMoveToFolder?.(folder.id)}
+              >
+                {folder.name}
+              </ContextMenuItem>
+            ))}
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        
+        {/* Visibility submenu */}
+        <ContextMenuSub>
+          <ContextMenuSubTrigger disabled={!onChangeVisibility}>
+            {getVisibilityIcon(file.visibility)}
+            <span className="ml-2">{t('dashboard:cloud.contextMenu.visibility')}</span>
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent className="w-40">
+            <ContextMenuItem 
+              onClick={() => onChangeVisibility?.('private')}
+              className={file.visibility === 'private' ? 'bg-accent' : ''}
+            >
+              <Lock className="mr-2 h-4 w-4" />
+              {t('dashboard:cloud.visibility.private')}
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeVisibility?.('public')}
+              className={file.visibility === 'public' ? 'bg-accent' : ''}
+            >
+              <Globe className="mr-2 h-4 w-4" />
+              {t('dashboard:cloud.visibility.public')}
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeVisibility?.('website')}
+              className={file.visibility === 'website' ? 'bg-accent' : ''}
+            >
+              <Users className="mr-2 h-4 w-4" />
+              {t('dashboard:cloud.visibility.website')}
+            </ContextMenuItem>
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        <ContextMenuItem
           className="text-destructive focus:text-destructive"
           onClick={onDelete}
         >

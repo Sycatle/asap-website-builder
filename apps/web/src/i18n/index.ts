@@ -13,44 +13,44 @@ import {
 
 // Import all translation files
 import frCommon from './locales/fr/common.json';
+import frAuth from './locales/fr/auth.json';
 import frDashboard from './locales/fr/dashboard.json';
 import frSettings from './locales/fr/settings.json';
 import frEditor from './locales/fr/editor.json';
 import frErrors from './locales/fr/errors.json';
 import frNotifications from './locales/fr/notifications.json';
 import frOnboarding from './locales/fr/onboarding.json';
-import frAuth from './locales/fr/auth.json';
 
 import enCommon from './locales/en/common.json';
+import enAuth from './locales/en/auth.json';
 import enDashboard from './locales/en/dashboard.json';
 import enSettings from './locales/en/settings.json';
 import enEditor from './locales/en/editor.json';
 import enErrors from './locales/en/errors.json';
 import enNotifications from './locales/en/notifications.json';
 import enOnboarding from './locales/en/onboarding.json';
-import enAuth from './locales/en/auth.json';
 
 // Bundle all translations
 const resources = {
   fr: {
     common: frCommon,
+    auth: frAuth,
     dashboard: frDashboard,
     settings: frSettings,
     editor: frEditor,
     errors: frErrors,
     notifications: frNotifications,
     onboarding: frOnboarding,
-    auth: frAuth,
   },
   en: {
     common: enCommon,
+    auth: enAuth,
     dashboard: enDashboard,
     settings: enSettings,
     editor: enEditor,
     errors: enErrors,
     notifications: enNotifications,
     onboarding: enOnboarding,
-    auth: enAuth,
   },
 };
 

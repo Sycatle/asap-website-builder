@@ -7,7 +7,7 @@
 import * as React from 'react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { Check, Github, FolderInput, User, Rocket } from 'lucide-react';
+import { Check, Github, FolderOpen, User, Rocket } from 'lucide-react';
 import type { OnboardingStep } from '@/lib/api/onboarding';
 import { calculateProgress, getStepNumber } from '@/lib/api/onboarding';
 
@@ -18,7 +18,7 @@ interface OnboardingLayoutProps {
 
 const STEPS = [
   { id: 'github_connect' as const, label: 'GitHub', icon: Github },
-  { id: 'import_projects' as const, label: 'Projets', icon: FolderInput },
+  { id: 'import_projects' as const, label: 'Projets', icon: FolderOpen },
   { id: 'review_profile' as const, label: 'Profil', icon: User },
   { id: 'publish' as const, label: 'Publier', icon: Rocket },
 ];

@@ -1,14 +1,13 @@
-use axum::{Json, response::IntoResponse, http::StatusCode, extract::{State, Extension, ConnectInfo}, http::HeaderMap};
+use axum::{Json, response::IntoResponse, http::StatusCode, extract::{State, Extension}, http::{HeaderMap, header}};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
-use std::net::SocketAddr;
 use asap_core_shared::{
     SharedConfig, generate_token, generate_token_with_jti, Claims,
     generate_password_reset_token, validate_password_reset_token, hash_token,
     PASSWORD_RESET_TOKEN_LIFETIME_SECS,
     generate_refresh_token, validate_refresh_token, hash_refresh_token, generate_jti,
-    REFRESH_TOKEN_LIFETIME_SECS,
+    CookieConfig, AuthCookies,
 };
 use chrono::{Utc, Duration};
 
@@ -21,6 +20,59 @@ const DEFAULT_TAGLINE: &str = "";
 /// JWT issuer constant for token validation
 pub const JWT_ISSUER: &str = "asap-auth";
 pub const JWT_AUDIENCE: &str = "asap-api";
+
+/// Build auth response with secure HttpOnly cookies
+/// This sets both access_token and refresh_token as cookies for cross-domain SSO
+fn build_auth_response_with_cookies<T: Serialize>(
+    status: StatusCode,
+    body: T,
+    access_token: &str,
+    refresh_token: &str,
+    access_expires_secs: u64,
+    refresh_expires_secs: u64,
+) -> axum::response::Response {
+    let cookie_config = CookieConfig::from_env();
+    
+    let auth_cookies = AuthCookies {
+        access_token: access_token.to_string(),
+        refresh_token: refresh_token.to_string(),
+        access_token_expires_secs: access_expires_secs,
+        refresh_token_expires_secs: refresh_expires_secs,
+    };
+    
+    let (access_cookie, refresh_cookie) = auth_cookies.to_cookie_headers(&cookie_config);
+    
+    let mut response = (status, Json(body)).into_response();
+    
+    // Set auth cookies
+    if let Ok(access_header) = header::HeaderValue::from_str(&access_cookie) {
+        response.headers_mut().append(header::SET_COOKIE, access_header);
+    }
+    if let Ok(refresh_header) = header::HeaderValue::from_str(&refresh_cookie) {
+        response.headers_mut().append(header::SET_COOKIE, refresh_header);
+    }
+    
+    response
+}
+
+/// Build logout response that clears auth cookies
+fn build_logout_response() -> axum::response::Response {
+    let cookie_config = CookieConfig::from_env();
+    let (clear_access, clear_refresh) = AuthCookies::clear_headers(&cookie_config);
+    
+    let mut response = (StatusCode::OK, Json(serde_json::json!({
+        "message": "Logged out successfully"
+    }))).into_response();
+    
+    if let Ok(access_header) = header::HeaderValue::from_str(&clear_access) {
+        response.headers_mut().append(header::SET_COOKIE, access_header);
+    }
+    if let Ok(refresh_header) = header::HeaderValue::from_str(&clear_refresh) {
+        response.headers_mut().append(header::SET_COOKIE, refresh_header);
+    }
+    
+    response
+}
 
 /// Validate password strength
 /// Returns Ok(()) if valid, Err with error message if invalid
@@ -505,7 +557,7 @@ pub async fn signup(
 
     // Generate JWT access token with JTI
     let jti = generate_jti();
-    let access_token = match generate_token_with_jti(&account_id.to_string(), &jti, &config) {
+    let access_token: String = match generate_token_with_jti(&account_id.to_string(), &jti, &config) {
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate access token: {}", e);
@@ -516,7 +568,7 @@ pub async fn signup(
     };
 
     // Also generate legacy token for backward compatibility
-    let legacy_token = match generate_token(&account_id.to_string(), &config) {
+    let legacy_token: String = match generate_token(&account_id.to_string(), &config) {
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate legacy token: {}", e);
@@ -528,17 +580,27 @@ pub async fn signup(
 
     tracing::info!("Account created successfully: {}", payload.email);
 
-    // Return SignupResponse with legacy token field + new fields
-    (StatusCode::CREATED, Json(serde_json::json!({
-        "token": legacy_token,
-        "access_token": access_token,
-        "refresh_token": refresh.token,
-        "expires_in": asap_core_shared::ACCESS_TOKEN_LIFETIME_SECS,
-        "account": {
-            "id": account_id.to_string(),
-            "email": payload.email
-        }
-    }))).into_response()
+    // Calculate refresh token expiry based on default (not remember_me for signup)
+    let refresh_expires_secs = asap_core_shared::REFRESH_TOKEN_SHORT_LIFETIME_SECS as u64;
+
+    // Return SignupResponse with legacy token field + new fields + secure cookies
+    build_auth_response_with_cookies(
+        StatusCode::CREATED,
+        serde_json::json!({
+            "token": legacy_token,
+            "access_token": access_token,
+            "refresh_token": refresh.token,
+            "expires_in": asap_core_shared::ACCESS_TOKEN_LIFETIME_SECS,
+            "account": {
+                "id": account_id.to_string(),
+                "email": payload.email
+            }
+        }),
+        &access_token,
+        &refresh.token,
+        asap_core_shared::ACCESS_TOKEN_LIFETIME_SECS as u64,
+        refresh_expires_secs,
+    )
 }
 
 pub async fn login(
@@ -654,7 +716,7 @@ pub async fn login(
 
     // Generate JWT access token with JTI
     let jti = generate_jti();
-    let access_token = match generate_token_with_jti(&account.id.to_string(), &jti, &config) {
+    let access_token: String = match generate_token_with_jti(&account.id.to_string(), &jti, &config) {
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate access token: {}", e);
@@ -682,12 +744,27 @@ pub async fn login(
 
     tracing::info!("Account logged in successfully: {}", payload.email);
 
-    (StatusCode::OK, Json(LoginResponseV2 { 
-        access_token: access_token.clone(),
-        refresh_token: refresh.token,
-        expires_in: asap_core_shared::ACCESS_TOKEN_LIFETIME_SECS,
-        token: legacy_token, // Legacy field
-    })).into_response()
+    // Calculate refresh token expiry based on remember_me
+    let refresh_expires_secs = if payload.remember_me {
+        asap_core_shared::REFRESH_TOKEN_LIFETIME_SECS as u64
+    } else {
+        asap_core_shared::REFRESH_TOKEN_SHORT_LIFETIME_SECS as u64
+    };
+
+    // Return login response with secure HttpOnly cookies
+    build_auth_response_with_cookies(
+        StatusCode::OK,
+        LoginResponseV2 {
+            access_token: access_token.clone(),
+            refresh_token: refresh.token.clone(),
+            expires_in: asap_core_shared::ACCESS_TOKEN_LIFETIME_SECS,
+            token: legacy_token,
+        },
+        &access_token,
+        &refresh.token,
+        asap_core_shared::ACCESS_TOKEN_LIFETIME_SECS as u64,
+        refresh_expires_secs,
+    )
 }
 
 pub async fn me(
@@ -1265,7 +1342,7 @@ pub async fn refresh_token(
 
     // Generate new access token with JTI
     let jti = generate_jti();
-    let access_token = match generate_token_with_jti(&account_id.to_string(), &jti, &config) {
+    let access_token: String = match generate_token_with_jti(&account_id.to_string(), &jti, &config) {
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate access token: {}", e);
@@ -1277,11 +1354,19 @@ pub async fn refresh_token(
 
     tracing::info!("Token refreshed for account: {}", account_id);
 
-    (StatusCode::OK, Json(TokenPairResponse {
-        access_token,
-        refresh_token: new_refresh.token,
-        expires_in: asap_core_shared::ACCESS_TOKEN_LIFETIME_SECS,
-    })).into_response()
+    // Return refreshed tokens with secure cookies
+    build_auth_response_with_cookies(
+        StatusCode::OK,
+        TokenPairResponse {
+            access_token: access_token.clone(),
+            refresh_token: new_refresh.token.clone(),
+            expires_in: asap_core_shared::ACCESS_TOKEN_LIFETIME_SECS,
+        },
+        &access_token,
+        &new_refresh.token,
+        asap_core_shared::ACCESS_TOKEN_LIFETIME_SECS as u64,
+        asap_core_shared::REFRESH_TOKEN_LIFETIME_SECS as u64,
+    )
 }
 
 /// Logout endpoint - revokes all refresh tokens for the account
@@ -1335,9 +1420,8 @@ pub async fn logout_all(
         .await;
     }
 
-    (StatusCode::OK, Json(serde_json::json!({
-        "message": "Successfully logged out from all devices"
-    }))).into_response()
+    // Return success with cookies cleared
+    build_logout_response()
 }
 
 /// Logout from single session - revoke specific refresh token
@@ -1404,9 +1488,8 @@ pub async fn logout(
         .await;
     }
 
-    (StatusCode::OK, Json(serde_json::json!({
-        "message": "Successfully logged out"
-    }))).into_response()
+    // Return success with cookies cleared
+    build_logout_response()
 }
 
 /// Check if an access token is blacklisted

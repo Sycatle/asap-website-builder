@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { PageHeader } from '@/components/shared/page-header';
+import { PageIcon } from '@/lib/navigation-config';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,7 +15,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { 
-  BarChart3,
   Calendar,
   Download,
 } from "lucide-react";
@@ -64,12 +64,8 @@ export function AnalyticsPage() {
       <PageHeader
         title={t('dashboard:analytics.title')}
         subtitle={t('dashboard:analytics.subtitle')}
-        icon={
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center shadow-lg">
-            <BarChart3 className="h-5 w-5 text-white" />
-          </div>
-        }
-        backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
+        icon={<PageIcon page="analytics" />}
+        backHref={currentWebsiteId ? `/${currentWebsiteId}` : '/'}
         actions={[
           {
             label: t('dashboard:analytics.export'),
@@ -80,9 +76,7 @@ export function AnalyticsPage() {
         stickyContent={
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center">
-                <BarChart3 className="h-4 w-4 text-white" />
-              </div>
+              <PageIcon page="analytics" size="md" />
               <div className="hidden sm:flex items-center gap-3">
                 <p className="text-sm font-semibold">{t('dashboard:analytics.title')}</p>
                 <div className="flex items-center gap-1.5 text-green-600">

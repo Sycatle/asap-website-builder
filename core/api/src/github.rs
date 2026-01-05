@@ -70,6 +70,7 @@ pub struct ImportedProject {
 
 #[derive(Debug, FromRow)]
 struct WebsiteOwnerRow {
+    #[allow(dead_code)]
     id: Uuid,
     account_id: Uuid,
 }

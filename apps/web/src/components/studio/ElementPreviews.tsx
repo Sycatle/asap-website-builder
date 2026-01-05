@@ -19,7 +19,7 @@ import {
   Briefcase,
   Code,
   Zap,
-  MessageSquare,
+  MessageCircle,
   Mail,
   Star,
   MapPin,
@@ -150,7 +150,7 @@ function ServicesPreview({ element }: ElementPreviewProps) {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <Zap className="h-4 w-4 text-violet-500" />
+        <Zap className="h-4 w-4 text-violet-500 fill-violet-500" />
         <h4 className="font-medium text-sm">{element.title || 'Services'}</h4>
         <Badge variant="secondary" className="text-xs">{services.length || 3}</Badge>
       </div>
@@ -275,7 +275,7 @@ function ProcessPreview({ element }: ElementPreviewProps) {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <Zap className="h-4 w-4 text-amber-500" />
+        <Zap className="h-4 w-4 text-amber-500 fill-amber-500" />
         <h4 className="font-medium text-sm">{element.title || 'Process'}</h4>
       </div>
       <div className="flex gap-1">

@@ -87,5 +87,10 @@
       "description": "Le site est temporairement indisponible pour maintenance.",
       "backSoon": "Nous serons de retour très bientôt !"
     }
+  },
+  "section": {
+    "errorIn": "Erreur dans {{section}}",
+    "loadingError": "Erreur de chargement",
+    "contentDisplayFailed": "Le contenu n'a pas pu être affiché"
   }
 }

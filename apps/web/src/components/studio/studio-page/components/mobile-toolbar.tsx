@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   Layers,
   Plus,
-  Settings2,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MobileToolbarProps } from "../types";
@@ -78,7 +78,7 @@ export function MobileToolbar({
           aria-label={selectedElement ? (rightPanelOpen ? t('editor:mobileToolbar.closeProperties') : t('editor:mobileToolbar.openProperties')) : t('editor:mobileToolbar.selectFirst')}
           aria-pressed={rightPanelOpen}
         >
-          <Settings2 className="h-5 w-5" aria-hidden="true" />
+          <Settings className="h-5 w-5" aria-hidden="true" />
           <span className="text-[10px] font-medium">{t('editor:properties.title')}</span>
         </Button>
       </div>

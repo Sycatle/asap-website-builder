@@ -45,6 +45,7 @@ const ThemePage = lazyWithRetry(() => import("@/components/features/settings/The
 const WebsiteSelector = lazyWithRetry(() => import("@/components/pages/WebsiteSelector"))
 const AnalyticsPage = lazyWithRetry(() => import("@/components/features/analytics/analytics-page"))
 const SeoPage = lazyWithRetry(() => import("@/components/features/seo/SeoPage"))
+const NotificationsPage = lazyWithRetry(() => import("@/components/features/notifications"))
 
 // UUID regex pattern
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -52,6 +53,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 // Route types
 type Route =
   | { page: "select" }
+  | { page: "notifications" }
   | { page: "dashboard"; websiteId: string }
   | { page: "extensions"; websiteId: string }
   | { page: "extension"; websiteId: string; slug: string }
@@ -67,8 +69,8 @@ type Route =
 
 // Parse route from pathname
 function parseRoute(pathname: string): Route {
-  // Remove /app prefix
-  const path = pathname.replace(/^\/app\/?/, "")
+  // Remove leading slash
+  const path = pathname.replace(/^\//, "")
   
   // Empty path = website selector
   if (!path) {
@@ -76,6 +78,11 @@ function parseRoute(pathname: string): Route {
   }
   
   const segments = path.split("/").filter(Boolean)
+  
+  // Global routes (not tied to a specific website)
+  if (segments[0] === "notifications") {
+    return { page: "notifications" }
+  }
   
   // First segment should be websiteId (UUID)
   const websiteId = segments[0]
@@ -88,7 +95,7 @@ function parseRoute(pathname: string): Route {
   const pageName = segments[1]
   
   if (!pageName) {
-    // /app/{uuid} = dashboard
+    // /{uuid} = dashboard
     return { page: "dashboard", websiteId }
   }
   
@@ -150,8 +157,10 @@ export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(
         return
       }
       
-      // Only handle internal /app routes
-      if (href.startsWith('/app')) {
+      // Only handle internal app routes (not auth pages)
+      const isAuthPage = href.startsWith('/login') || href.startsWith('/signup') || 
+                         href.startsWith('/forgot-password') || href.startsWith('/reset-password')
+      if (!isAuthPage && href.startsWith('/')) {
         e.preventDefault()
         navigate(href)
       }
@@ -171,9 +180,9 @@ Link.displayName = "Link"
 // Build app URL helper
 export function buildAppUrl(websiteId: string, page?: string): string {
   if (!page) {
-    return `/app/${websiteId}`
+    return `/${websiteId}`
   }
-  return `/app/${websiteId}/${page}`
+  return `/${websiteId}/${page}`
 }
 
 // Loading fallback
@@ -203,6 +212,8 @@ function getPageTitle(route: Route): string {
   switch (route.page) {
     case "select":
       return "Sélectionner un site"
+    case "notifications":
+      return "Notifications"
     case "dashboard":
       return "Accueil"
     case "extensions":
@@ -238,7 +249,7 @@ function getPageBreadcrumbs(route: Route, websiteId: string | null): { label: st
     case "extension":
       if (route.page === "extension") {
         return [
-          { label: "Extensions", href: `/app/${websiteId}/extensions` },
+          { label: "Extensions", href: `/${websiteId}/extensions` },
           { label: route.slug }
         ]
       }
@@ -248,22 +259,140 @@ function getPageBreadcrumbs(route: Route, websiteId: string | null): { label: st
   }
 }
 
+// Get accounts app URL for redirects
+function getAccountsUrl(): string {
+  return import.meta.env.PUBLIC_ACCOUNTS_URL || 'http://localhost:4323';
+}
+
 export default function AppRouter() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+  const [isRedirecting, setIsRedirecting] = useState(false)
 
   // Check authentication on mount
   useEffect(() => {
-    const token = localStorage.getItem('auth_token')
-    if (!token) {
-      // Redirect to login with return URL
-      const currentUrl = window.location.pathname + window.location.search
-      const redirectParam = encodeURIComponent(currentUrl)
-      window.location.href = `/login?redirect=${redirectParam}`
-      return
+    // Prevent multiple redirects
+    if (isRedirecting) return;
+    
+    const checkAuth = async () => {
+      // First, check if tokens are passed in URL hash (from accounts app redirect)
+      const hashTokens = extractTokensFromHash();
+      if (hashTokens) {
+        console.log('[AppRouter] Found tokens in hash, storing...');
+        localStorage.setItem('auth_token', hashTokens.accessToken);
+        localStorage.setItem('refresh_token', hashTokens.refreshToken);
+        // Clean up URL hash
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+      
+      const token = localStorage.getItem('auth_token')
+      console.log('[AppRouter] Token check:', token ? 'found' : 'not found');
+      
+      if (!token) {
+        redirectToLogin()
+        return
+      }
+      
+      // Validate token with API
+      try {
+        console.log('[AppRouter] Validating token with API...');
+        const response = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/auth/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        })
+        
+        console.log('[AppRouter] API response status:', response.status);
+        
+        if (response.ok) {
+          setIsAuthenticated(true)
+        } else if (response.status === 401) {
+          // Token invalid, try refresh
+          const refreshToken = localStorage.getItem('refresh_token')
+          if (refreshToken) {
+            try {
+              console.log('[AppRouter] Attempting token refresh...');
+              const refreshResponse = await fetch(
+                `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/auth/refresh`,
+                {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ refresh_token: refreshToken }),
+                }
+              )
+              
+              if (refreshResponse.ok) {
+                const data = await refreshResponse.json()
+                localStorage.setItem('auth_token', data.access_token)
+                localStorage.setItem('refresh_token', data.refresh_token)
+                setIsAuthenticated(true)
+                return
+              }
+            } catch (e) {
+              console.error('[AppRouter] Token refresh failed:', e)
+            }
+          }
+          
+          // Clear invalid tokens and redirect
+          console.log('[AppRouter] Clearing invalid tokens and redirecting...');
+          localStorage.removeItem('auth_token')
+          localStorage.removeItem('refresh_token')
+          redirectToLogin()
+        } else {
+          // Other errors (network, server) - let user proceed but log warning
+          console.warn('[AppRouter] Auth check failed with status:', response.status)
+          setIsAuthenticated(true)
+        }
+      } catch (error) {
+        // Network error - let user proceed if they have a token
+        console.warn('[AppRouter] Auth check network error:', error)
+        setIsAuthenticated(true)
+      }
     }
-    setIsAuthenticated(true)
-  }, [])
+    
+    // Extract tokens from URL hash (passed from accounts app)
+    const extractTokensFromHash = (): { accessToken: string; refreshToken: string } | null => {
+      const hash = window.location.hash;
+      if (!hash || !hash.includes('auth=')) return null;
+      
+      try {
+        const hashParams = new URLSearchParams(hash.substring(1)); // Remove leading #
+        const accessToken = hashParams.get('auth');
+        const refreshToken = hashParams.get('refresh');
+        
+        if (accessToken && refreshToken) {
+          return {
+            accessToken: decodeURIComponent(accessToken),
+            refreshToken: decodeURIComponent(refreshToken),
+          };
+        }
+      } catch (e) {
+        console.error('[AppRouter] Failed to parse auth tokens from hash:', e);
+      }
+      return null;
+    }
+    
+    const redirectToLogin = () => {
+      if (isRedirecting) return;
+      setIsRedirecting(true);
+      
+      const authPaths = ['/login', '/signup', '/forgot-password', '/reset-password']
+      const currentPathname = window.location.pathname
+      const isAuthPath = authPaths.some(path => currentPathname.startsWith(path))
+      
+      const accountsUrl = getAccountsUrl()
+      console.log('[AppRouter] Redirecting to:', accountsUrl);
+      
+      if (isAuthPath) {
+        window.location.href = `${accountsUrl}/login`
+      } else {
+        const redirectParam = encodeURIComponent(window.location.origin + window.location.pathname)
+        window.location.href = `${accountsUrl}/login?redirect=${redirectParam}`
+      }
+    }
+    
+    checkAuth()
+  }, [isRedirecting])
 
   useEffect(() => {
     const handlePopState = () => {
@@ -290,11 +419,21 @@ export default function AppRouter() {
   const title = getPageTitle(route)
   const breadcrumbs = getPageBreadcrumbs(route, websiteId)
 
+  // Store last visited website and page for navigation
+  if (websiteId && route.page !== "not-found") {
+    localStorage.setItem('last_website_id', websiteId);
+    localStorage.setItem('last_page', route.page);
+    localStorage.setItem('last_path', currentPath);
+  }
+
   // Render page content
   function renderPage() {
     switch (route.page) {
       case "select":
         return <WebsiteSelector />
+      
+      case "notifications":
+        return <NotificationsPage />
       
       case "dashboard":
         return <Dashboard />
@@ -335,7 +474,7 @@ export default function AppRouter() {
           <div className="flex flex-col items-center justify-center h-[50vh] gap-4">
             <h1 className="text-2xl font-bold">Page non trouvée</h1>
             <p className="text-muted-foreground">La page que vous cherchez n'existe pas.</p>
-            <Link href="/app" className="text-primary hover:underline">
+            <Link href="/" className="text-primary hover:underline">
               Retourner à l'accueil
             </Link>
           </div>

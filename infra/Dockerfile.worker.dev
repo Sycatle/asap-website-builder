@@ -1,45 +1,8 @@
 # Development Dockerfile for Worker with hot reload
-FROM rustlang/rust:nightly-slim
+# Uses shared base image to avoid duplicating dependency installation
+FROM asap-base-rust:dev
 
-WORKDIR /app
-
-# Install dependencies
-RUN apt-get update && apt-get install -y \
-    pkg-config \
-    libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install cargo-watch for hot reload
-RUN cargo install cargo-watch
-
-# Copy workspace Cargo files
-COPY Cargo.toml Cargo.lock ./
-COPY core/shared/Cargo.toml ./core/shared/
-COPY core/domain/Cargo.toml ./core/domain/
-COPY core/api/Cargo.toml ./core/api/
-COPY core/payments/Cargo.toml ./core/payments/
-COPY core/notifications/Cargo.toml ./core/notifications/
-COPY apps/api/Cargo.toml ./apps/api/
-COPY apps/worker/Cargo.toml ./apps/worker/
-COPY extensions/analytics/Cargo.toml ./extensions/analytics/
-COPY extensions/github-sync/Cargo.toml ./extensions/github-sync/
-
-# Create stub files for dependency caching
-RUN mkdir -p core/shared/src && echo "// stub" > core/shared/src/lib.rs && \
-    mkdir -p core/domain/src && echo "// stub" > core/domain/src/lib.rs && \
-    mkdir -p core/api/src && echo "// stub" > core/api/src/lib.rs && \
-    mkdir -p core/payments/src && echo "// stub" > core/payments/src/lib.rs && \
-    mkdir -p core/notifications/src && echo "// stub" > core/notifications/src/lib.rs && \
-    mkdir -p apps/api/src && echo "fn main() {}" > apps/api/src/main.rs && \
-    mkdir -p apps/worker/src && echo "fn main() {}" > apps/worker/src/main.rs && \
-    mkdir -p extensions/analytics/src && echo "// stub" > extensions/analytics/src/lib.rs && \
-    mkdir -p extensions/github-sync/src && echo "// stub" > extensions/github-sync/src/lib.rs
-
-# Pre-build dependencies
-RUN cargo build --bin asap-worker 2>/dev/null || true
-RUN rm -rf core apps extensions
-
-# Copy all source code (will be overwritten by volume mounts)
+# Copy all source code (will be overwritten by volume mounts in docker-compose)
 COPY core ./core
 COPY apps ./apps
 COPY extensions ./extensions

@@ -44,14 +44,20 @@ interface CommandItem {
 }
 
 // ============================================================================
-// Hooks
+// Context for shared state
 // ============================================================================
 
+interface CommandPaletteContextValue {
+  open: boolean
+  setOpen: (open: boolean) => void
+}
+
+const CommandPaletteContext = React.createContext<CommandPaletteContextValue | null>(null)
+
 /**
- * Hook to manage command palette state with keyboard shortcuts
- * Opens with Cmd+K / Ctrl+K or "/" key
+ * Provider to share command palette state across components
  */
-export function useCommandPalette() {
+export function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -72,7 +78,27 @@ export function useCommandPalette() {
     return () => document.removeEventListener("keydown", down)
   }, [])
 
-  return { open, setOpen }
+  return (
+    <CommandPaletteContext.Provider value={{ open, setOpen }}>
+      {children}
+    </CommandPaletteContext.Provider>
+  )
+}
+
+// ============================================================================
+// Hooks
+// ============================================================================
+
+/**
+ * Hook to access command palette state from context
+ * Must be used within CommandPaletteProvider
+ */
+export function useCommandPalette() {
+  const context = React.useContext(CommandPaletteContext)
+  if (!context) {
+    throw new Error('useCommandPalette must be used within a CommandPaletteProvider')
+  }
+  return context
 }
 
 // ============================================================================
@@ -190,7 +216,7 @@ function WebsiteSwitcher({ websites, currentWebsiteId, onSelect }: WebsiteSwitch
         {otherWebsites.map((website) => (
           <CommandItem
             key={website.id}
-            onSelect={() => onSelect(() => navigate(`/app/${website.id}`))}
+            onSelect={() => onSelect(() => navigate(`/${website.id}`))}
           >
             <Globe className="mr-2 h-4 w-4" />
             <span>{website.title}</span>
@@ -212,7 +238,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const { currentWebsiteId, currentWebsite, websites } = useWebsiteContext()
   const [search, setSearch] = useState("")
 
-  const baseUrl = currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'
+  const baseUrl = currentWebsiteId ? `/${currentWebsiteId}` : '/'
 
   // Get commands
   const navigationCommands = useNavigationCommands(baseUrl)

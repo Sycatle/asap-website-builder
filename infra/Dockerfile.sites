@@ -1,8 +1,29 @@
 # ============================================================================
 # Dockerfile for ASAP Sites (Public Portfolio Sites)
-# Multi-stage build for optimized production image
+# Development: Uses shared base image with pre-installed dependencies
+# Production: Multi-stage build for optimized image
 # ============================================================================
 
+# For development - use base image
+FROM asap-base-node:dev AS dev
+
+# Copy source code (will be overwritten by volume mounts in docker-compose)
+COPY packages/shared ./packages/shared
+COPY packages/renderers ./packages/renderers
+COPY apps/sites ./apps/sites
+
+WORKDIR /app/apps/sites
+
+ENV HOST=0.0.0.0
+ENV PORT=4322
+
+EXPOSE 4322
+
+CMD ["pnpm", "dev", "--host", "0.0.0.0"]
+
+# ============================================================================
+# For production - separate build (not using base image)
+# ============================================================================
 FROM node:20-alpine AS base
 
 # Install pnpm

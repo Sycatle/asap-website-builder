@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { usePWA } from '../../hooks/usePWA';
 import { Button } from './button';
-import { Download, Wifi, WifiOff, RefreshCw, Share, X } from 'lucide-react';
+import { Download, Wifi, WifiOff, RefreshCw, Share2, X } from 'lucide-react';
 
 export function PWAInstallButton() {
   const { isInstallable, isInstalled, showIOSInstallInstructions, install } = usePWA();
@@ -83,7 +83,7 @@ export function IOSInstallModal({ onClose }: { onClose: () => void }) {
                 En bas de l'écran Safari
               </p>
               <div className="mt-2 flex items-center gap-2 text-primary">
-                <Share className="h-5 w-5" />
+                <Share2 className="h-5 w-5" />
                 <span className="text-sm">Icône Partager</span>
               </div>
             </div>
@@ -119,7 +119,7 @@ export function IOSInstallModal({ onClose }: { onClose: () => void }) {
         </Button>
       </div>
     </div>
-  );
+  );  
 }
 
 export function PWAStatus() {

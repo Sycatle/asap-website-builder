@@ -7,6 +7,7 @@ import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query';
 import { PageHeader } from '@/components/shared/page-header';
+import { PageIcon } from '@/lib/navigation-config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +44,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { 
-  Settings, 
   Globe,
   Type,
   FileText,
@@ -201,7 +201,7 @@ export default function SettingsPage() {
       await websitesAPI.delete(currentWebsiteId);
       await queryClient.invalidateQueries({ queryKey: queryKeys.websites.all });
       toast.success(t('settings:toast.deleted'));
-      window.location.href = '/app';
+      window.location.href = '/';
     } catch (error) {
       toast.error(t('settings:toast.deleteError'));
     } finally {
@@ -231,18 +231,12 @@ export default function SettingsPage() {
       <PageHeader
         title={t('settings:website.title')}
         subtitle={t('settings:website.subtitle')}
-        icon={
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center shadow-lg">
-            <Settings className="h-5 w-5 text-white" />
-          </div>
-        }
-        backHref={currentWebsiteId ? `/app/${currentWebsiteId}` : '/app'}
+        icon={<PageIcon page="settings" />}
+        backHref={currentWebsiteId ? `/${currentWebsiteId}` : '/'}
         stickyContent={
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center">
-                <Settings className="h-4 w-4 text-white" />
-              </div>
+              <PageIcon page="settings" size="md" />
               <p className="text-sm font-semibold hidden sm:block">{t('settings:title')}</p>
             </div>
             {isFormDirty && (

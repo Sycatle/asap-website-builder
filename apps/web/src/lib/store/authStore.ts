@@ -23,8 +23,6 @@ interface AuthState {
   lastFetchTime: number | null;
   
   // Actions
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>;
   logout: (fromAllDevices?: boolean) => Promise<void>;
   refreshToken: () => Promise<boolean>;
   fetchUser: () => Promise<void>;
@@ -34,6 +32,14 @@ interface AuthState {
   getFileUrl: (storedUrl: string) => string;
   clearError: () => void;
 }
+
+// Helper to get accounts URL
+const getAccountsUrl = () => {
+  if (typeof window !== 'undefined') {
+    return import.meta.env.PUBLIC_ACCOUNTS_URL || 'http://localhost:4323';
+  }
+  return 'http://localhost:4323';
+};
 
 // ============================================
 // STORE
@@ -49,51 +55,6 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
       lastFetchTime: null,
-
-      login: async (email: string, password: string, rememberMe = false) => {
-        set({ isLoading: true, error: null });
-        try {
-          const response = await authAPI.login({ email, password, remember_me: rememberMe });
-          // Use new setTokens method to handle both access and refresh tokens
-          authAPI.setTokens(response);
-          
-          const user = await authAPI.me();
-          set({ user, isAuthenticated: true, isLoading: false });
-          
-          // Fetch full user data after login
-          await get().fetchFullUserData(true);
-        } catch (error: any) {
-          set({ 
-            error: error.message || 'Login failed', 
-            isLoading: false 
-          });
-          throw error;
-        }
-      },
-
-      signup: async (email: string, password: string) => {
-        set({ isLoading: true, error: null });
-        try {
-          const response = await authAPI.signup({ 
-            email, 
-            password
-          });
-          // Use new setTokens method to handle both access and refresh tokens
-          authAPI.setTokens(response);
-          
-          const user = await authAPI.me();
-          set({ user, isAuthenticated: true, isLoading: false });
-          
-          // Fetch full user data after signup
-          await get().fetchFullUserData(true);
-        } catch (error: any) {
-          set({ 
-            error: error.message || 'Signup failed', 
-            isLoading: false 
-          });
-          throw error;
-        }
-      },
 
       logout: async (fromAllDevices = false) => {
         try {
@@ -118,7 +79,8 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
           lastFetchTime: null,
         });
-        window.location.href = '/login';
+        // Redirect to accounts app logout page (to clear tokens there too)
+        window.location.href = `${getAccountsUrl()}/logout`;
       },
 
       /**
@@ -133,7 +95,7 @@ export const useAuthStore = create<AuthState>()(
           return true;
         } catch (error) {
           console.error('Token refresh failed:', error);
-          // Clear tokens and redirect to login
+          // Clear tokens and redirect to accounts login
           authAPI.logout();
           apiClient.clearCsrfToken();
           set({ 
@@ -192,15 +154,17 @@ export const useAuthStore = create<AuthState>()(
           
           // Fetch account data (name, avatar, etc.)
           let accountData: Record<string, any> = {};
+          let avatarUrl: string | undefined;
           try {
-            const account = await accountsAPI.getAccount(meData.id);
-            accountData = account.data || {};
+            const accountResponse = await accountsAPI.getAccount(meData.id);
+            accountData = accountResponse.data || {};
+            // The API now returns avatar_url at the top level
+            avatarUrl = accountResponse.avatar_url;
           } catch (err) {
             console.error('Failed to load account data:', err);
           }
 
-          // Process avatar URL
-          let avatarUrl = accountData.avatar;
+          // Process avatar URL - add token for authentication
           if (avatarUrl && avatarUrl.includes('/files/')) {
             avatarUrl = get().getFileUrl(avatarUrl);
           }
@@ -208,7 +172,7 @@ export const useAuthStore = create<AuthState>()(
           const userData: UserData = {
             id: meData.id,
             email: meData.email,
-            name: accountData.name || meData.email.split('@')[0],
+            name: accountData.display_name || accountData.name || meData.email.split('@')[0],
             avatar: avatarUrl,
             plan: meData.plan,
           };
@@ -235,7 +199,8 @@ export const useAuthStore = create<AuthState>()(
         } catch (error: any) {
           console.error('Failed to load user data:', error);
           
-          // Handle auth errors
+          // Handle auth errors - clear local state but DON'T redirect
+          // (app-router handles the redirect to avoid loops)
           if (error?.status === 401 || error?.status === 403) {
             authAPI.logout();
             set({ 
@@ -246,7 +211,6 @@ export const useAuthStore = create<AuthState>()(
               isLoading: false,
               lastFetchTime: null,
             });
-            window.location.href = '/login';
             return;
           }
 

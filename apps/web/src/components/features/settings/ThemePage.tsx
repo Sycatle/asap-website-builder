@@ -1,15 +1,16 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useWebsitesQuery } from '@/lib/query';
 import { PageHeader } from '@/components/shared/page-header';
+import { PageIcon } from '@/lib/navigation-config';
 import { 
-  Palette, 
   RefreshCw,
   Sun,
   Moon,
   Type,
   Paintbrush,
   Save,
-  RotateCcw
+  RotateCcw,
+  Palette,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -185,16 +186,12 @@ export default function ThemePage() {
       <PageHeader
         title="Thème"
         subtitle="Personnalisez l'apparence de votre site"
-        icon={
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg">
-            <Palette className="h-5 w-5 text-white" />
-          </div>
-        }
-        backHref={currentWebsite ? `/app/${currentWebsite.id}` : '/app'}
+        icon={<PageIcon page="theme" />}
+        backHref={currentWebsite ? `/${currentWebsite.id}` : '/'}
         actions={[
           ...(hasChanges ? [{
             label: 'Annuler',
-            icon: <RotateCcw className="h-4 w-4" />,
+            icon: <RotateCcw className="h-4 w-4 stroke-[2.5]" />,
             variant: 'outline' as const,
             onClick: handleRevert,
           }] : []),
@@ -208,9 +205,7 @@ export default function ThemePage() {
         stickyContent={
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
-                <Palette className="h-4 w-4 text-white" />
-              </div>
+              <PageIcon page="theme" size="md" />
               <p className="text-sm font-semibold hidden sm:block">Thème</p>
             </div>
             <div className="flex items-center gap-2">
@@ -219,7 +214,7 @@ export default function ThemePage() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="outline" size="sm" onClick={handleRevert} className="h-8">
-                        <RotateCcw className="h-4 w-4 mr-1.5" />
+                        <RotateCcw className="h-4 w-4 mr-1.5 stroke-[2.5]" />
                         <span className="hidden sm:inline">Annuler</span>
                       </Button>
                     </TooltipTrigger>
