@@ -35,17 +35,38 @@ export interface LandingPreviewProps {
 }
 
 /**
- * Convert WebsiteElement to Element format expected by renderers
+ * Convert WebsiteElement to Element format expected by renderers.
+ * 
+ * Handles both data sources:
+ * - SaaS sections: use `settings` as primary source
+ * - Portfolio sections: use `content` or `data` as primary source
+ * 
+ * The renderer's getData() function will look in both `settings` and `data`,
+ * so we ensure both are properly populated.
  */
-function toSection(element: WebsiteElement): Element {
+export function toSection(element: WebsiteElement): Element {
+  // Merge all data sources for maximum compatibility
+  // Priority: settings > data > content (for SaaS sections)
+  const settings = element.settings ?? {};
+  const data = element.data ?? {};
+  const content = element.content ?? {};
+  
+  // For SaaS sections, settings is the primary source
+  // For Portfolio sections, content/data is the primary source
+  // We keep both to ensure getData() in renderers can find the values
+  
   return {
     id: element.id,
     website_id: element.website_id,
     element_type: element.element_type,
-    // Use settings as the primary data source (SaaS sections use settings)
-    settings: element.settings ?? {},
-    data: element.data ?? element.content ?? {},
-    content: element.content,
+    slug: element.slug,
+    title: element.title,
+    layout: element.layout,
+    // Settings for SaaS sections
+    settings: settings,
+    // Data/content for compatibility - merge them
+    data: { ...content, ...data },
+    content: content,
     visible: element.visible ?? true,
     order_index: element.order_index ?? element.order ?? 0,
   } as Element;
