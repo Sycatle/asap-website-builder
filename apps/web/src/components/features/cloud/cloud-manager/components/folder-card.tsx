@@ -159,10 +159,10 @@ export function FolderCard({
           <div className="aspect-square bg-muted/50 relative overflow-hidden">
             {previewItems.length > 0 ? (
               <div className="absolute inset-1 grid grid-cols-2 grid-rows-2 gap-0.5 rounded overflow-hidden">
-                {previewItems.map((file, i) => (
+                {previewItems.map((file) => (
                   <div 
                     key={file.id} 
-                    className="bg-muted/80 overflow-hidden flex items-center justify-center"
+                    className="aspect-square bg-muted/80 overflow-hidden flex items-center justify-center"
                   >
                     {isImage(file.mime_type) && getFileUrl ? (
                       <img 
@@ -179,7 +179,7 @@ export function FolderCard({
                 ))}
                 {/* Fill empty slots */}
                 {Array.from({ length: 4 - previewItems.length }).map((_, i) => (
-                  <div key={`empty-${i}`} className="bg-muted/40" />
+                  <div key={`empty-${i}`} className="aspect-square bg-muted/40" />
                 ))}
               </div>
             ) : (
