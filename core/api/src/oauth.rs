@@ -282,8 +282,8 @@ pub async fn oauth_callback(
             if should_update_avatar {
                 tracing::info!("Avatar URL changed for account {}, downloading new avatar", account.id);
                 
-                // Download and store new avatar
-                let new_avatar_file_id = match download_and_store_avatar(&pool, account.id, new_avatar_url).await {
+                // Download and store new avatar with provider-specific naming
+                let new_avatar_file_id = match download_and_store_avatar(&pool, account.id, new_avatar_url, provider.as_str()).await {
                     Ok(file_id) => {
                         tracing::info!("Avatar successfully updated for account {}", account.id);
                         Some(file_id)
@@ -360,9 +360,9 @@ pub async fn oauth_callback(
             )
         })?;
 
-        // Download and store avatar in user's cloud storage
+        // Download and store avatar in user's cloud storage with provider-specific naming
         let avatar_file_id = if let Some(ref avatar_url) = avatar_url {
-            match download_and_store_avatar(&pool, new_account_id, avatar_url).await {
+            match download_and_store_avatar(&pool, new_account_id, avatar_url, provider.as_str()).await {
                 Ok(file_id) => {
                     tracing::info!("Avatar successfully downloaded for account {}", new_account_id);
                     Some(file_id)
@@ -778,10 +778,12 @@ async fn exchange_github_code(
 // TODO: Implement avatar download
 // This function will be re-enabled once we confirm file storage is working properly
 /// Download avatar from OAuth provider and store in user's cloud storage
+/// Uses naming convention: {provider}-avatar.{extension} (e.g., github-avatar.png)
 async fn download_and_store_avatar(
     pool: &PgPool,
     account_id: Uuid,
     avatar_url: &str,
+    provider: &str,
 ) -> anyhow::Result<Uuid> {
     use crate::storage::FileStorageService;
     
@@ -807,7 +809,8 @@ async fn download_and_store_avatar(
     // Download image bytes
     let image_bytes = response.bytes().await?;
     
-    // Generate filename based on content type
+    // Generate filename based on provider and content type
+    // Convention: {provider}-avatar.{extension}
     let extension = match content_type.as_str() {
         "image/png" => "png",
         "image/jpeg" | "image/jpg" => "jpg",
@@ -815,18 +818,30 @@ async fn download_and_store_avatar(
         "image/webp" => "webp",
         _ => "jpg",
     };
-    let filename = format!("avatar.{}", extension);
+    let filename = format!("{}-avatar.{}", provider, extension);
     
-    // Store in user's cloud storage
+    // Store in user's personal cloud storage with public visibility
+    // No website_id = personal cloud
     let storage = FileStorageService::new(pool.clone());
     let file = storage
-        .upload_file(account_id, &filename, &content_type, &image_bytes)
+        .upload_file_with_metadata(
+            account_id,
+            &filename,
+            &content_type,
+            &image_bytes,
+            None,           // website_id = None (personal cloud)
+            None,           // folder_id
+            Some("public"), // visibility = public (avatars must be accessible)
+            Some(&format!("Avatar imported from {}", provider)), // description
+            None,           // tags
+        )
         .await?;
     
     tracing::info!(
-        "Avatar downloaded and stored: account_id={}, file_id={}, size={}",
+        "Avatar downloaded and stored: account_id={}, file_id={}, filename={}, size={}",
         account_id,
         file.id,
+        filename,
         image_bytes.len()
     );
     
