@@ -159,7 +159,7 @@ pub async fn upload_file(
     // If website_id is provided, verify user has access to this website
     if let Some(wid) = website_id {
         let has_access: Option<bool> = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND tenant_id = $2)"
+            "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND account_id = $2)"
         )
         .bind(wid)
         .bind(account_id)
@@ -504,7 +504,7 @@ pub async fn list_folders(
             (SELECT COUNT(*) FROM files f WHERE f.folder_id = ff.id)::bigint as file_count,
             (SELECT COUNT(*) FROM file_folders sf WHERE sf.parent_id = ff.id)::bigint as subfolder_count
         FROM file_folders ff
-        WHERE ff.tenant_id = $1
+        WHERE ff.account_id = $1
         "#,
     );
 
@@ -602,7 +602,7 @@ pub async fn create_folder(
     // If website_id is provided, verify user has access to this website
     if let Some(wid) = request.website_id {
         let has_access: Option<bool> = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND tenant_id = $2)"
+            "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND account_id = $2)"
         )
         .bind(wid)
         .bind(account_id)
@@ -619,7 +619,7 @@ pub async fn create_folder(
     let path = if let Some(parent_id) = request.parent_folder_id {
         // Verify parent exists and belongs to user
         let parent = sqlx::query!(
-            "SELECT path, website_id FROM file_folders WHERE id = $1 AND tenant_id = $2",
+            "SELECT path, website_id FROM file_folders WHERE id = $1 AND account_id = $2",
             parent_id,
             account_id,
         )
@@ -646,7 +646,7 @@ pub async fn create_folder(
 
     sqlx::query!(
         r#"
-        INSERT INTO file_folders (id, tenant_id, parent_id, name, path, website_id, created_at, updated_at)
+        INSERT INTO file_folders (id, account_id, parent_id, name, path, website_id, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
         "#,
         folder_id,
@@ -696,7 +696,7 @@ pub async fn update_folder(
 
     // Verify folder exists and belongs to user
     let folder = sqlx::query!(
-        "SELECT id, name, path, parent_id, website_id, created_at FROM file_folders WHERE id = $1 AND tenant_id = $2",
+        "SELECT id, name, path, parent_id, website_id, created_at FROM file_folders WHERE id = $1 AND account_id = $2",
         folder_id,
         account_id,
     )
@@ -786,7 +786,7 @@ pub async fn delete_folder(
 
     // Verify folder exists and belongs to user
     let folder_exists = sqlx::query!(
-        "SELECT id FROM file_folders WHERE id = $1 AND tenant_id = $2",
+        "SELECT id FROM file_folders WHERE id = $1 AND account_id = $2",
         folder_id,
         account_id,
     )
@@ -826,7 +826,7 @@ pub async fn delete_folder(
 
     // Delete folder (cascade will handle contents if any)
     sqlx::query!(
-        "DELETE FROM file_folders WHERE id = $1 AND tenant_id = $2",
+        "DELETE FROM file_folders WHERE id = $1 AND account_id = $2",
         folder_id,
         account_id,
     )
