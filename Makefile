@@ -333,7 +333,7 @@ test-domain:
 test-extensions:
 	@echo "$(CYAN)Testing Extensions...$(NC)"
 	docker run --rm -v "$(PWD)":/app -w /app rustlang/rust:nightly-slim \
-		cargo test --lib -p asap-extension-analytics -p asap-extension-github-sync
+		cargo test --lib -p asap-extension-github-sync
 	@echo "$(GREEN)✓ Extension tests passed$(NC)"
 
 test-api:

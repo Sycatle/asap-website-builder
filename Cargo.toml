@@ -7,7 +7,6 @@ members = [
     "core/payments",
     "core/notifications",
     "extensions/github-sync",
-    "extensions/analytics",
     "apps/api",
     "apps/worker",
 ]
