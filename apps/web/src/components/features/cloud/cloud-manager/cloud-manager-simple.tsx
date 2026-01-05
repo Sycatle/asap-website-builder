@@ -297,7 +297,11 @@ export function CloudManager() {
   // File operations
   const handleMoveToFolder = async (fileId: string, folderId: string | null) => {
     try {
-      await updateFileMutation.mutateAsync({ fileId, data: { folder_id: folderId } });
+      // Use 'root' as special value to move file to root (no folder)
+      await updateFileMutation.mutateAsync({ 
+        fileId, 
+        data: { folder_id: folderId ?? 'root' } 
+      });
       toast.success(t('dashboard:cloud.operations.moveSuccess'));
     } catch {
       toast.error(t('common:errors.generic'));

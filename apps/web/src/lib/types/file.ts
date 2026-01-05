@@ -70,7 +70,7 @@ export interface FileMetadata {
 
 export interface UpdateFileRequest {
   filename?: string;
-  folder_id?: string | null;
+  folder_id?: string | 'root';  // 'root' means move to root (no folder)
   visibility?: FileVisibility;
   website_id?: string | null;
   description?: string;

@@ -20,7 +20,7 @@ use asap_core_domain::{FileUploadResponse, StorageQuotaResponse};
 #[derive(Debug, Deserialize)]
 pub struct UpdateFileRequest {
     pub filename: Option<String>,
-    pub folder_id: Option<Uuid>,
+    pub folder_id: Option<String>,  // UUID string or "root" to move to root folder
     pub visibility: Option<String>,
     pub website_id: Option<Uuid>,
     pub description: Option<String>,
@@ -323,7 +323,12 @@ pub async fn update_file(
 
     // Build update query dynamically
     let new_filename = request.filename.unwrap_or(file.filename);
-    let new_folder_id = if request.folder_id.is_some() { request.folder_id } else { file.folder_id };
+    // Handle folder_id: "root" means move to root (NULL), UUID string means specific folder
+    let new_folder_id: Option<Uuid> = match request.folder_id.as_deref() {
+        Some("root") => None,  // Explicitly move to root
+        Some(id) => Some(Uuid::parse_str(id).map_err(|_| (StatusCode::BAD_REQUEST, "Invalid folder_id".to_string()))?),
+        None => file.folder_id,  // Keep existing
+    };
     let new_visibility = request.visibility.as_deref().unwrap_or(file.visibility.as_deref().unwrap_or("private"));
     let new_website_id = if request.website_id.is_some() { request.website_id } else { file.website_id };
     let new_description = request.description.or(file.description);

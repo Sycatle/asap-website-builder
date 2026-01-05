@@ -364,7 +364,7 @@ export function CloudManager() {
     try {
       await updateFileMutation.mutateAsync({
         fileId,
-        data: { folder_id: folderId }
+        data: { folder_id: folderId ?? 'root' }
       });
       toast.success(t('dashboard:cloud.operations.moveSuccess'));
     } catch (error) {
