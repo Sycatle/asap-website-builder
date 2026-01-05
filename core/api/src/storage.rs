@@ -10,12 +10,14 @@ use hex;
 use tokio::io::AsyncRead;
 
 use asap_core_domain::{File, AccountStorageQuota};
+use crate::image_converter::{ImageConverter, ImageConverterConfig};
 
 /// FileStorageService handles file uploads, compression, and metadata management
 pub struct FileStorageService {
     pool: PgPool,
     max_file_size: i64,
     allowed_mime_types: Vec<String>,
+    image_converter: ImageConverter,
 }
 
 impl FileStorageService {
@@ -26,6 +28,17 @@ impl FileStorageService {
             pool,
             max_file_size: Self::DEFAULT_MAX_FILE_SIZE,
             allowed_mime_types: Self::default_allowed_mime_types(),
+            image_converter: ImageConverter::new(),
+        }
+    }
+    
+    /// Create with custom image converter config
+    pub fn with_image_config(pool: PgPool, image_config: ImageConverterConfig) -> Self {
+        Self {
+            pool,
+            max_file_size: Self::DEFAULT_MAX_FILE_SIZE,
+            allowed_mime_types: Self::default_allowed_mime_types(),
+            image_converter: ImageConverter::with_config(image_config),
         }
     }
 
@@ -371,6 +384,7 @@ impl FileStorageService {
     }
 
     /// Upload file with full metadata (website_id optional for personal cloud)
+    /// Includes automatic image conversion to WebP for supported formats
     pub async fn upload_file_with_metadata(
         &self,
         account_id: Uuid,
@@ -389,8 +403,34 @@ impl FileStorageService {
         // Check quota
         self.check_user_quota(account_id, data.len() as i64).await?;
 
+        // Try to convert image to WebP if applicable
+        let (final_data, final_mime_type, final_filename) = if self.image_converter.is_supported_image(mime_type) {
+            match self.image_converter.process_image(data, mime_type, filename) {
+                Ok(result) => {
+                    if result.was_converted {
+                        tracing::info!(
+                            "Image converted: {} ({}) -> {} ({}) - {:.1}% reduction",
+                            filename,
+                            mime_type,
+                            result.filename,
+                            result.mime_type,
+                            result.size_reduction_percent()
+                        );
+                    }
+                    (result.data, result.mime_type, result.filename)
+                }
+                Err(e) => {
+                    // Log error but continue with original file
+                    tracing::warn!("Image conversion failed, using original: {}", e);
+                    (data.to_vec(), mime_type.to_string(), filename.to_string())
+                }
+            }
+        } else {
+            (data.to_vec(), mime_type.to_string(), filename.to_string())
+        };
+
         // Calculate hash (deduplicate by content within the same website or personal cloud)
-        let file_hash = self.calculate_hash(data);
+        let file_hash = self.calculate_hash(&final_data);
 
         // Check if file already exists for this account (content deduplication)
         if let Ok(Some(existing_file)) = self.get_file_by_hash(account_id, &file_hash).await {
@@ -398,10 +438,10 @@ impl FileStorageService {
         }
 
         // Decide whether to compress based on file type and size
-        let compressed_data = if self.should_compress(mime_type, data.len()) {
-            self.compress_file(data)?
+        let compressed_data = if self.should_compress(&final_mime_type, final_data.len()) {
+            self.compress_file(&final_data)?
         } else {
-            Bytes::copy_from_slice(data)
+            Bytes::copy_from_slice(&final_data)
         };
 
         // Generate storage key
@@ -410,9 +450,9 @@ impl FileStorageService {
         // Build file with metadata
         let mut file = File::new(
             account_id,
-            filename.to_string(),
-            mime_type.to_string(),
-            data.len() as i64,
+            final_filename,
+            final_mime_type,
+            final_data.len() as i64,
             compressed_data.len() as i64,
             file_hash,
             storage_key,
