@@ -50,6 +50,7 @@ import {
   useFoldersQuery,
   useCreateFolderMutation,
   useUpdateFileMutation,
+  useDeleteFolderMutation,
 } from '@/lib/query';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 
@@ -58,7 +59,7 @@ import { getFileUrl } from "@/components/shared/file-utils";
 import { FileCard } from "./components/file-card";
 import { FileListItem } from "./components/file-list-item";
 import { FilePreviewDialog } from "./components/file-preview-dialog";
-import { DeleteConfirmDialog, BulkDeleteDialog } from "./components/delete-dialogs";
+import { DeleteConfirmDialog, BulkDeleteDialog, FolderDeleteDialog } from "./components/delete-dialogs";
 import { EmptyState } from "./components/empty-state";
 import { FolderCard } from "./components/folder-card";
 
@@ -84,6 +85,7 @@ export function CloudManager() {
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [folderToDelete, setFolderToDelete] = useState<FileFolder | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Queries - use 'root' to filter files at root level when no folder is selected
@@ -97,8 +99,14 @@ export function CloudManager() {
     {},
     { staleTime: 60000 } // Cache for 1 minute
   );
+  // Get folders for current level - use 'root' for root-level folders (no parent)
   const { data: folders = [], isLoading: foldersLoading } = useFoldersQuery(
-    { website_id: currentWebsiteId || undefined, parent_id: currentFolderId || undefined }
+    { website_id: currentWebsiteId || undefined, parent_id: currentFolderId || 'root' }
+  );
+  // Get root folders for "Move to" menu (folders without parent)
+  const { data: rootFolders = [] } = useFoldersQuery(
+    { website_id: currentWebsiteId || undefined, parent_id: 'root' },
+    { staleTime: 60000 }
   );
   const { data: quota } = useQuotaQuery();
   
@@ -123,6 +131,7 @@ export function CloudManager() {
   const deletesMutation = useDeleteFilesMutation();
   const createFolderMutation = useCreateFolderMutation();
   const updateFileMutation = useUpdateFileMutation();
+  const deleteFolderMutation = useDeleteFolderMutation();
 
   // Filtered files
   const filteredFiles = useMemo(() => {
@@ -317,6 +326,24 @@ export function CloudManager() {
   const handleMoveFolderToFolder = async (sourceFolderId: string, targetFolderId: string) => {
     // TODO: Implement folder move API
     toast.info('Move folder coming soon');
+  };
+
+  // Delete folder
+  const handleDeleteFolder = async (deleteContents: boolean) => {
+    if (!folderToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteFolderMutation.mutateAsync({ 
+        folderId: folderToDelete.id, 
+        deleteContents 
+      });
+      toast.success(t('dashboard:cloud.folders.deleteSuccess', { name: folderToDelete.name }));
+      setFolderToDelete(null);
+    } catch {
+      toast.error(t('dashboard:cloud.folders.deleteError'));
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleChangeVisibility = async (fileId: string, visibility: FileVisibility) => {
@@ -563,7 +590,7 @@ export function CloudManager() {
                         toast.info('Rename folder coming soon');
                       }
                     }}
-                    onDelete={() => toast.info('Delete folder coming soon')}
+                    onDelete={() => setFolderToDelete(folder)}
                     previewFiles={filesByFolder.get(folder.id) || []}
                     getFileUrl={getFileUrl}
                     onDropFiles={handleMoveFilesToFolder}
@@ -582,7 +609,8 @@ export function CloudManager() {
                     onDelete={() => setDeleteConfirm({ file })}
                     onCopyLink={() => copyToClipboard(file.id)}
                     onToggleSelection={() => toggleSelection(file)}
-                    folders={folders}
+                    folders={rootFolders}
+                    websiteTitle={currentWebsite?.title}
                     getItemProps={() => ({ 
                       tabIndex: 0, 
                       'data-focused': false, 
@@ -665,7 +693,8 @@ export function CloudManager() {
                       onDelete={() => setDeleteConfirm({ file })}
                       onCopyLink={() => copyToClipboard(file.id)}
                       onToggleSelection={() => toggleSelection(file)}
-                      folders={folders}
+                      folders={rootFolders}
+                      websiteTitle={currentWebsite?.title}
                       getItemProps={() => ({ 
                         tabIndex: 0, 
                         'data-focused': false, 
@@ -759,6 +788,13 @@ export function CloudManager() {
         isDeleting={isDeleting}
         onConfirm={handleBulkDelete}
         onCancel={() => setBulkDeleteConfirm(false)}
+      />
+
+      <FolderDeleteDialog
+        folder={folderToDelete}
+        isDeleting={isDeleting}
+        onConfirm={handleDeleteFolder}
+        onCancel={() => setFolderToDelete(null)}
       />
     </div>
   );
