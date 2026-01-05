@@ -63,6 +63,7 @@ export function FileCard({
   onChangeVisibility,
   onRename,
   folders = [],
+  websiteTitle,
   getItemProps,
   getFileUrl,
   selectedIds,
@@ -199,7 +200,7 @@ export function FileCard({
           </ContextMenuSubTrigger>
           <ContextMenuSubContent className="w-48">
             <ContextMenuItem onClick={() => onMoveToFolder?.(null)}>
-              {t('dashboard:cloud.folders.root')}
+              {websiteTitle || t('dashboard:cloud.folders.root')}
             </ContextMenuItem>
             {folders.length > 0 && <ContextMenuSeparator />}
             {folders.map((folder) => (
