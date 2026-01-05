@@ -1,5 +1,5 @@
 # Build stage - Use Debian bookworm for consistency
-FROM rust:1.83-slim-bookworm AS builder
+FROM rust:1.87-slim-bookworm AS builder
 
 WORKDIR /app
 
@@ -18,7 +18,6 @@ COPY core/notifications/Cargo.toml ./core/notifications/
 COPY core/payments/Cargo.toml ./core/payments/
 COPY apps/api/Cargo.toml ./apps/api/
 COPY apps/worker/Cargo.toml ./apps/worker/
-COPY extensions/analytics/Cargo.toml ./extensions/analytics/
 COPY extensions/github-sync/Cargo.toml ./extensions/github-sync/
 
 # Copy all source code (workspace needs all members)
@@ -40,7 +39,12 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+WORKDIR /app
+
 COPY --from=builder /app/target/release/asap-api /usr/local/bin/asap-api
+
+# Copy extension definitions (needed at runtime for extension catalog)
+COPY --from=builder /app/extensions /app/extensions
 
 EXPOSE 3000
 
