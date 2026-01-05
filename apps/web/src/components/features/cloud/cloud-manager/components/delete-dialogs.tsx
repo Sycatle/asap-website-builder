@@ -13,7 +13,7 @@ import {
 import { Trash2, AlertTriangle } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { escapeHtml } from "@/lib/utils/security";
-import type { DeleteConfirmDialogProps, BulkDeleteDialogProps } from "../types";
+import type { DeleteConfirmDialogProps, BulkDeleteDialogProps, FolderDeleteDialogProps } from "../types";
 
 /**
  * Single file delete confirmation dialog
@@ -121,6 +121,72 @@ export function BulkDeleteDialog({
                 {t('common:actions.delete')} {selectedCount} {t('dashboard:cloud.selection.count', { count: selectedCount })}
               </>
             )}
+          </Button>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
+  );
+}
+
+/**
+ * Folder delete confirmation dialog with option to delete contents
+ */
+export function FolderDeleteDialog({
+  folder,
+  isDeleting,
+  onConfirm,
+  onCancel,
+}: FolderDeleteDialogProps) {
+  const { t } = useTranslation(['common', 'dashboard']);
+
+  return (
+    <ResponsiveDialog open={!!folder} onOpenChange={onCancel}>
+      <ResponsiveDialogContent className="sm:max-w-md">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            {t('dashboard:cloud.folders.deleteTitle')}
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className="pt-2">
+            <span dangerouslySetInnerHTML={{ __html: t('dashboard:cloud.folders.deleteDescription', { name: escapeHtml(folder?.name) }) }} />
+            <br />
+            <span className="text-muted-foreground">{t('dashboard:cloud.delete.irreversible')}</span>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
+        <ResponsiveDialogFooter className="flex-col gap-2 sm:flex-row">
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            disabled={isDeleting}
+            className="w-full sm:w-auto"
+          >
+            {t('common:actions.cancel')}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => onConfirm(false)}
+            disabled={isDeleting}
+            className="w-full sm:w-auto"
+          >
+            {isDeleting ? (
+              <Spinner className="h-4 w-4 mr-2" />
+            ) : (
+              <Trash2 className="h-4 w-4 mr-2" />
+            )}
+            {t('dashboard:cloud.folders.deleteEmpty')}
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => onConfirm(true)}
+            disabled={isDeleting}
+            className="w-full sm:w-auto"
+          >
+            {isDeleting ? (
+              <Spinner className="h-4 w-4 mr-2" />
+            ) : (
+              <Trash2 className="h-4 w-4 mr-2" />
+            )}
+            {t('dashboard:cloud.folders.deleteWithContents')}
           </Button>
         </ResponsiveDialogFooter>
       </ResponsiveDialogContent>
