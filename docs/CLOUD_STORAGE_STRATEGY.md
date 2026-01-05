@@ -9,9 +9,11 @@
 1. [Vue d'ensemble](#vue-densemble)
 2. [Architecture](#architecture)
 3. [Cloud Personnel vs Cloud Website](#cloud-personnel-vs-cloud-website)
-4. [Schéma de base de données](#schéma-de-base-de-données)
-5. [API Endpoints](#api-endpoints)
-6. [Comportement par application](#comportement-par-application)
+4. [Gestion des Avatars](#gestion-des-avatars)
+5. [Convertisseur d'images](#convertisseur-dimages)
+6. [Schéma de base de données](#schéma-de-base-de-données)
+7. [API Endpoints](#api-endpoints)
+8. [Comportement par application](#comportement-par-application)
 
 ---
 
@@ -94,9 +96,10 @@ Account (tenant)
 ### Cloud Personnel (`website_id = NULL`)
 
 - **Accès** : App Accounts uniquement
-- **Contenu** : Photos personnelles, exports, fichiers divers
+- **Contenu** : Photos personnelles, exports, fichiers divers, **avatars**
 - **Visibilité** : `private` par défaut
 - **Use cases** :
+  - **Avatar du compte** (public)
   - Exporter ses données
   - Stocker des fichiers personnels
   - Brouillons avant publication
@@ -111,6 +114,208 @@ Account (tenant)
   - Media library du site
   - Images pour sections Hero, Projects, etc.
   - Documents publics du portfolio
+
+---
+
+## Gestion des Avatars
+
+### Règles
+
+1. **Stockage** : Cloud personnel (`website_id = NULL`)
+2. **Visibilité** : Toujours `public` (accessible sans authentification)
+3. **Remplacement** : Un nouvel avatar remplace l'ancien (même nom de fichier)
+
+### Convention de nommage
+
+| Source | Nom de fichier | Exemple |
+|--------|----------------|---------|
+| Upload manuel | `avatar.{ext}` | `avatar.png` |
+| OAuth GitHub | `github-avatar.{ext}` | `github-avatar.png` |
+| OAuth Google | `google-avatar.{ext}` | `google-avatar.webp` |
+| OAuth Discord | `discord-avatar.{ext}` | `discord-avatar.png` |
+
+### Flux d'upload avatar
+
+```typescript
+// Upload avatar (manual ou OAuth)
+const uploadAvatar = async (file: File, provider?: string) => {
+  const filename = provider 
+    ? `${provider}-avatar.${getExtension(file)}`
+    : `avatar.${getExtension(file)}`;
+  
+  const renamedFile = new File([file], filename, { type: file.type });
+  
+  return filesAPI.upload(renamedFile, {
+    // Pas de website_id → cloud personnel
+    visibility: 'public', // Avatar toujours public
+    description: provider ? `Avatar from ${provider}` : 'User avatar',
+  });
+};
+```
+
+### Récupération automatique OAuth
+
+Lors de la connexion OAuth, si le provider fournit un avatar :
+
+1. Télécharger l'image depuis l'URL du provider
+2. Convertir en format web-friendly (voir convertisseur)
+3. Uploader avec le nom `{provider}-avatar.{ext}`
+4. Mettre à jour `account_data.avatar` avec l'URL du fichier
+
+```rust
+// Backend: Après OAuth success
+async fn sync_oauth_avatar(account_id: Uuid, provider: &str, avatar_url: &str) {
+    // 1. Download from provider
+    let image_bytes = fetch_avatar(avatar_url).await?;
+    
+    // 2. Convert to WebP
+    let webp_bytes = convert_to_webp(&image_bytes)?;
+    
+    // 3. Upload to personal cloud
+    let filename = format!("{}-avatar.webp", provider);
+    let file = storage.upload_file_with_metadata(
+        account_id,
+        &filename,
+        "image/webp",
+        &webp_bytes,
+        None,  // website_id = NULL (personal cloud)
+        None,  // folder_id
+        Some("public"),
+        Some(&format!("Avatar from {}", provider)),
+        None,
+    ).await?;
+    
+    // 4. Update account data
+    update_account_avatar(account_id, file.id).await?;
+}
+```
+
+---
+
+## Convertisseur d'images
+
+### Objectif
+
+Convertir automatiquement les images uploadées en formats web-friendly pour :
+- Réduire la taille des fichiers
+- Améliorer les performances de chargement
+- Assurer la compatibilité navigateurs
+
+### Formats supportés
+
+| Format source | Format cible | Conditions |
+|---------------|--------------|------------|
+| HEIC/HEIF | WebP | Toujours convertir (iOS) |
+| PNG | WebP | Si taille > 100KB |
+| BMP | WebP | Toujours convertir |
+| TIFF | WebP | Toujours convertir |
+| JPEG | WebP | Si taille > 500KB |
+| GIF | WebP animé | Si non animé, sinon garder |
+| WebP | WebP | Pas de conversion |
+| SVG | SVG | Pas de conversion (vectoriel) |
+
+### Configuration
+
+```rust
+pub struct ImageConverterConfig {
+    /// Enable/disable automatic conversion
+    pub enabled: bool,
+    
+    /// Max size before conversion (bytes)
+    pub png_threshold: usize,    // 100KB
+    pub jpeg_threshold: usize,   // 500KB
+    
+    /// WebP quality (0-100)
+    pub webp_quality: u8,        // 85
+    
+    /// Max dimensions (resize if larger)
+    pub max_width: u32,          // 2048
+    pub max_height: u32,         // 2048
+    
+    /// Preserve original alongside converted
+    pub keep_original: bool,     // false
+}
+
+impl Default for ImageConverterConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            png_threshold: 100 * 1024,
+            jpeg_threshold: 500 * 1024,
+            webp_quality: 85,
+            max_width: 2048,
+            max_height: 2048,
+            keep_original: false,
+        }
+    }
+}
+```
+
+### Flux de conversion
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│   Upload    │ ──▶ │  Converter   │ ──▶ │   Storage   │
+│  (original) │     │  (si besoin) │     │   (final)   │
+└─────────────┘     └──────────────┘     └─────────────┘
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │  Conditions  │
+                    │  - Format    │
+                    │  - Taille    │
+                    │  - Dimensions│
+                    └──────────────┘
+```
+
+### Intégration dans l'upload
+
+```rust
+// Dans storage.rs - upload_file_with_metadata()
+pub async fn upload_file_with_metadata(...) -> Result<File> {
+    let (final_data, final_mime) = if self.converter_config.enabled 
+        && is_image(mime_type) 
+    {
+        self.maybe_convert_image(data, mime_type)?
+    } else {
+        (data.to_vec(), mime_type.to_string())
+    };
+    
+    // Continue with upload...
+}
+
+fn maybe_convert_image(&self, data: &[u8], mime_type: &str) -> Result<(Vec<u8>, String)> {
+    match mime_type {
+        "image/heic" | "image/heif" => {
+            let webp = convert_heic_to_webp(data, self.converter_config.webp_quality)?;
+            Ok((webp, "image/webp".to_string()))
+        }
+        "image/png" if data.len() > self.converter_config.png_threshold => {
+            let webp = convert_to_webp(data, self.converter_config.webp_quality)?;
+            Ok((webp, "image/webp".to_string()))
+        }
+        "image/bmp" | "image/tiff" => {
+            let webp = convert_to_webp(data, self.converter_config.webp_quality)?;
+            Ok((webp, "image/webp".to_string()))
+        }
+        "image/jpeg" if data.len() > self.converter_config.jpeg_threshold => {
+            let webp = convert_to_webp(data, self.converter_config.webp_quality)?;
+            Ok((webp, "image/webp".to_string()))
+        }
+        _ => Ok((data.to_vec(), mime_type.to_string()))
+    }
+}
+```
+
+### Dépendances Rust suggérées
+
+```toml
+# Cargo.toml
+[dependencies]
+image = "0.25"           # Image processing
+webp = "0.3"             # WebP encoding
+libheif-rs = "0.20"      # HEIC/HEIF support (optional)
+```
 
 ---
 
