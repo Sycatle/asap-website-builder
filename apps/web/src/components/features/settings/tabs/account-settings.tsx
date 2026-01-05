@@ -118,7 +118,16 @@ export function AccountSettings({
     setIsUploadingAvatar(true)
 
     const uploadPromise = async () => {
-      const uploadedFile = await filesAPI.upload(file)
+      // Rename file to avatar.{extension} for consistent naming
+      const extension = file.name.split('.').pop() || 'png'
+      const avatarFile = new File([file], `avatar.${extension}`, { type: file.type })
+      
+      // Upload to personal cloud (no website_id) with public visibility
+      const uploadedFile = await filesAPI.upload(avatarFile, {
+        visibility: 'public', // Avatar must be publicly accessible
+        description: 'User avatar',
+        // No website_id = personal cloud
+      })
       const avatarFileId = uploadedFile.id
       const displayUrl = getFileUrl(avatarFileId)
       setAvatarUrl(displayUrl)
