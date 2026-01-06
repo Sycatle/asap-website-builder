@@ -7,6 +7,7 @@ pub mod storage;
 pub mod extension_schema;
 pub mod administrators;
 pub mod collections;
+pub mod extensions;
 
 pub use users::{Account, AccountData};
 pub use websites::{
@@ -44,4 +45,22 @@ pub use collections::{
     CollectionResponse, VariablesResponse, PaginationInfo,
     // Helper
     field,
+};
+pub use extensions::{
+    // Manifest types
+    ExtensionManifest, ExtensionMetadata, ExtensionCategory, ExtensionAuthor, PlanTier,
+    // Permissions
+    Permissions, PermissionScope,
+    // Fields
+    ManifestField, ManifestFieldType, ManifestSelectOption, ManifestFieldValidation, ManifestFieldConditions,
+    // Sections & Actions
+    ManifestSection, ManifestAction, ManifestHttpMethod,
+    // Data Display
+    ManifestDataDisplay, ManifestDisplayType, ManifestDataField, ManifestDataFieldType,
+    // Other
+    ManifestWebhook, ManifestLifecycle, ManifestAssets, ManifestScreenshot, ManifestPricing, PricingModel, PricingInterval,
+    // Validation
+    ManifestValidationError,
+    // Parser
+    parse_manifest, parse_manifest_file, ManifestParseError,
 };
