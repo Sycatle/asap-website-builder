@@ -1031,14 +1031,210 @@ POST /api/websites/:id/apps/:slug/actions/:action_id
 | Versioning + Migrations | Évolution sans casse |
 | Ratings/Reviews | Social proof, feedback loop |
 
-### 10.3 Plan de Migration
+### 10.3 Plan de Migration Unifié (Backend + Frontend)
 
-| Phase | Durée | Actions |
-|-------|-------|---------|
-| **Phase 1** | 1 semaine | Parser `manifest.toml`, garder compatibilité `extension_catalog.rs` |
-| **Phase 2** | 1 semaine | Migration DB (`extensions` → `apps`) |
-| **Phase 3** | 2 semaines | UI Store + nouvelles permissions |
-| **Phase 4** | 1 semaine | Déprécier ancien système |
+Ce plan intègre les étapes backend et frontend dans un ordre logique avec dépendances.
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                        PHASE 0: PRÉPARATION (3 jours)                        │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Backend                              Frontend                               │
+│  ───────                              ────────                               │
+│  [ ] Définir structure manifest.toml  [ ] Définir types TypeScript (types.ts)│
+│  [ ] Créer AppManifest Rust struct    [ ] Créer constantes (categories, etc) │
+│  [ ] Parser TOML → AppManifest        [ ] Setup structure dossiers           │
+│  [ ] Tests parsing manifests                                                 │
+│                                                                              │
+│  Livrable: manifest.toml validé + types sync Rust/TS                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                      PHASE 1: FOUNDATION (1 semaine)                         │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Backend                              Frontend                               │
+│  ───────                              ────────                               │
+│  [ ] Migration DB:                    [ ] FormRenderer orchestrateur         │
+│      - CREATE TABLE apps              [ ] Field renderers:                   │
+│      - CREATE TABLE account_apps          - TextField, NumberField           │
+│      - CREATE TABLE website_apps          - BooleanField, SelectField        │
+│      - CREATE TABLE app_migrations        - MultiSelectField, ColorField     │
+│  [ ] CRUD API /store/apps                 - DateField, FileField             │
+│  [ ] GET /store/apps/:slug                - SecretField, OAuthField          │
+│  [ ] Seed apps depuis manifests       [ ] FormSection grouping               │
+│                                       [ ] Tests unitaires FormRenderer       │
+│                                                                              │
+│  Dépendance: Phase 0 complète                                                │
+│  Livrable: DB ready + FormRenderer fonctionnel                               │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                       PHASE 2: STORE API (1 semaine)                         │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Backend                              Frontend                               │
+│  ───────                              ────────                               │
+│  [ ] GET /store/apps (liste, filtres) [ ] API client apps.ts                 │
+│  [ ] GET /store/apps/:slug/manifest   [ ] useAppStore hook                   │
+│  [ ] GET /store/categories            [ ] AppStorePage layout                │
+│  [ ] Search & pagination              [ ] AppStoreGrid                       │
+│  [ ] Tests API store                  [ ] AppStoreFilters                    │
+│                                       [ ] AppStoreSearch                     │
+│                                       [ ] AppCard, AppCardFeatured           │
+│                                       [ ] AppRating component                │
+│                                       [ ] Routing /store/*                   │
+│                                                                              │
+│  Dépendance: Phase 1 (DB + types)                                            │
+│  Livrable: Page Store navigable avec apps listées                            │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    PHASE 3: DETAIL & INSTALL (1 semaine)                     │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Backend                              Frontend                               │
+│  ───────                              ────────                               │
+│  [ ] POST /account/apps/:slug/install [ ] useAppDetail hook                  │
+│  [ ] DELETE /account/apps/:slug       [ ] AppDetailPage                      │
+│  [ ] GET /account/apps (installed)    [ ] AppHeader, AppScreenshots          │
+│  [ ] Permissions validation           [ ] AppPermissions display             │
+│  [ ] Lifecycle: on_install hook       [ ] AppCollections, AppVariables       │
+│  [ ] Tests install/uninstall          [ ] InstallDialog                      │
+│                                       [ ] PermissionsReview                  │
+│                                       [ ] InstallProgress                    │
+│                                       [ ] useInstalledApps hook              │
+│                                       [ ] Routing /store/[slug]              │
+│                                                                              │
+│  Dépendance: Phase 2 (Store API)                                             │
+│  Livrable: Flow installation complet avec review permissions                 │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                  PHASE 4: ACTIVATION WEBSITE (1 semaine)                     │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Backend                              Frontend                               │
+│  ───────                              ────────                               │
+│  [ ] POST /websites/:id/apps/:slug    [ ] useWebsiteApps hook                │
+│      /activate                        [ ] AppWebsiteSelector                 │
+│  [ ] DELETE /websites/:id/apps/:slug  [ ] Website apps list page             │
+│      /deactivate                      [ ] Activate/Deactivate toggles        │
+│  [ ] GET /websites/:id/apps           [ ] Routing /websites/[id]/apps        │
+│  [ ] Lifecycle: on_activate hook                                             │
+│  [ ] Tests activation                                                        │
+│                                                                              │
+│  Dépendance: Phase 3 (Install flow)                                          │
+│  Livrable: Apps activables par website                                       │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    PHASE 5: CONFIGURATION (1 semaine)                        │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Backend                              Frontend                               │
+│  ───────                              ────────                               │
+│  [ ] PUT /account/apps/:slug/settings [ ] useAppConfig hook                  │
+│  [ ] PUT /websites/:id/apps/:slug     [ ] AppConfigPage                      │
+│      /settings                        [ ] AppConfigForm (uses FormRenderer)  │
+│  [ ] Validation settings vs schema    [ ] Global vs Website settings tabs    │
+│  [ ] Encryption des secrets           [ ] Secret field masking               │
+│  [ ] OAuth flow endpoints             [ ] OAuth connect/disconnect           │
+│  [ ] Tests config CRUD                [ ] Tests configuration                │
+│                                                                              │
+│  Dépendance: Phase 4 (Website activation)                                    │
+│  Livrable: Configuration complète (global + website) avec FormRenderer       │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                       PHASE 6: ACTIONS (3 jours)                             │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Backend                              Frontend                               │
+│  ───────                              ────────                               │
+│  [ ] POST /websites/:id/apps/:slug    [ ] useAppActions hook                 │
+│      /actions/:action_id              [ ] AppActions component               │
+│  [ ] Action execution engine          [ ] Action buttons (primary/danger)    │
+│  [ ] Action permissions check         [ ] Confirmation dialogs               │
+│  [ ] Tests actions                    [ ] Action result toasts               │
+│                                                                              │
+│  Dépendance: Phase 5 (Config)                                                │
+│  Livrable: Actions exécutables depuis l'UI                                   │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                 PHASE 7: COLLECTIONS & VARIABLES (1 semaine)                 │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Backend                              Frontend                               │
+│  ───────                              ────────                               │
+│  [ ] Collections liées aux apps       [ ] AppDataPreview component           │
+│  [ ] Variables liées aux apps         [ ] Adapter CollectionSelector         │
+│  [ ] GET /websites/:id/apps/:slug     [ ] Adapter VariablePicker             │
+│      /collections                     [ ] Adapter DataSourceEditor           │
+│  [ ] Tests collections/variables      [ ] Source "app" dans Studio           │
+│                                       [ ] Tests intégration Studio           │
+│                                                                              │
+│  Dépendance: Phase 6 (Actions) + Collections existantes (Phase 3 précédente) │
+│  Livrable: Collections/Variables apps accessibles dans Studio                │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                      PHASE 8: MIGRATION LEGACY (1 semaine)                   │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Backend                              Frontend                               │
+│  ───────                              ────────                               │
+│  [ ] Script migration extensions →    [ ] Supprimer SchemaRenderer global    │
+│      apps                             [ ] Supprimer features/extensions/     │
+│  [ ] Convertir extension.toml →       [ ] Supprimer settings/extension-*     │
+│      manifest.toml                    [ ] Mettre à jour imports              │
+│  [ ] Déprécier extension_catalog.rs   [ ] Mettre à jour navigation           │
+│  [ ] DROP anciennes tables            [ ] Tests de non-régression            │
+│  [ ] Tests migration                                                         │
+│                                                                              │
+│  Dépendance: Phases 0-7 complètes + validation QA                            │
+│  Livrable: Ancien système supprimé, nouveau système en production            │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                       PHASE 9: POLISH (ongoing)                              │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  [ ] Ratings & Reviews system                                                │
+│  [ ] Featured apps rotation                                                  │
+│  [ ] App versioning & updates                                                │
+│  [ ] Settings migrations                                                     │
+│  [ ] Analytics (installs, usage)                                             │
+│  [ ] Documentation développeur                                               │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Résumé Timeline
+
+| Phase | Durée | Milestone |
+|-------|-------|-----------|
+| 0 | 3 jours | Types & structure prêts |
+| 1 | 1 sem | DB + FormRenderer |
+| 2 | 1 sem | Store browsable |
+| 3 | 1 sem | Install flow |
+| 4 | 1 sem | Website activation |
+| 5 | 1 sem | Configuration |
+| 6 | 3 jours | Actions |
+| 7 | 1 sem | Studio integration |
+| 8 | 1 sem | Legacy removed |
+| **Total** | **~8 semaines** | **App Store complet** |
 
 ---
 
@@ -1989,7 +2185,9 @@ export const appsAPI = {
 
 ### 13.9 Migration Frontend
 
-#### Fichiers à Supprimer
+Voir **Section 10.3 Plan de Migration Unifié** pour le détail des phases frontend intégrées au plan global.
+
+#### Fichiers à Supprimer (Phase 8)
 
 ```
 ❌ apps/web/src/components/SchemaRenderer.tsx        → Migré vers ui/form-renderer
@@ -1997,58 +2195,21 @@ export const appsAPI = {
 ❌ apps/web/src/components/features/settings/extension-settings/
 ```
 
-#### Fichiers à Créer
+#### Fichiers à Créer (Phases 1-7)
 
 ```
-✅ apps/web/src/components/ui/form-renderer/         → Nouveau système
-✅ apps/web/src/components/features/app-store/       → Feature complète
-✅ apps/web/src/lib/api/apps.ts                      → API client
-✅ apps/web/src/pages/store/                         → Pages store
+✅ apps/web/src/components/ui/form-renderer/         → Phase 1
+✅ apps/web/src/components/features/app-store/       → Phases 2-6
+✅ apps/web/src/lib/api/apps.ts                      → Phase 2
+✅ apps/web/src/pages/store/                         → Phases 2-3
 ```
 
-#### Fichiers à Modifier
+#### Fichiers à Modifier (Phase 7)
 
 ```
 📝 apps/web/src/components/studio/data-binding/     → Utiliser nouveaux types
 📝 apps/web/src/hooks/useCollections.ts             → Adapter aux apps
 📝 apps/web/src/lib/api/index.ts                    → Export apps API
-```
-
-### 13.10 Checklist d'Implémentation Frontend
-
-```
-Phase 1: Foundation
-├── [ ] Créer ui/form-renderer avec tous les field renderers
-├── [ ] Créer types.ts pour app-store
-├── [ ] Créer api/apps.ts client
-└── [ ] Tests unitaires FormRenderer
-
-Phase 2: App Store
-├── [ ] AppStorePage + routing
-├── [ ] AppCard, AppCardFeatured, AppRating
-├── [ ] AppStoreFilters, AppStoreSearch
-├── [ ] useAppStore hook
-└── [ ] Tests composants store
-
-Phase 3: App Detail & Install
-├── [ ] AppDetailPage
-├── [ ] AppPermissions, AppScreenshots
-├── [ ] InstallDialog avec PermissionsReview
-├── [ ] useAppDetail, useInstalledApps hooks
-└── [ ] Tests flow installation
-
-Phase 4: App Config
-├── [ ] AppConfigPage
-├── [ ] AppConfigForm (utilise FormRenderer)
-├── [ ] AppActions, AppDataPreview
-├── [ ] useAppConfig, useAppActions hooks
-└── [ ] Tests configuration
-
-Phase 5: Integration Studio
-├── [ ] Adapter CollectionSelector pour apps
-├── [ ] Adapter VariablePicker pour apps
-├── [ ] Connecter DataSourceEditor aux apps
-└── [ ] Tests intégration
 ```
 
 ---
