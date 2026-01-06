@@ -1,50 +1,78 @@
-# ASAP Extension Store — Architecture de Conception
+# ASAP Extension Store — Architecture & Plan d'Implémentation
 
-> **Version**: 1.0.0  
+> **Version**: 2.0.0  
 > **Date**: 6 janvier 2026  
 > **Auteur**: Architecture Team  
 > **Statut**: RFC (Request for Comments)
 
 ---
 
+## Table des Matières
+
+1. [Résumé Exécutif](#1-résumé-exécutif)
+2. [Analyse de l'Existant](#2-analyse-de-lexistant)
+3. [Architecture Cible: manifest.toml](#3-architecture-cible-manifesttoml)
+4. [Types de Champs Standardisés](#4-types-de-champs-standardisés)
+5. [Modèle de Permissions](#5-modèle-de-permissions)
+6. [Cycle de Vie des Extensions](#6-cycle-de-vie-des-extensions)
+7. [Schéma Base de Données](#7-schéma-base-de-données-revisé)
+8. [API du Store](#8-api-du-store)
+9. [Interface Utilisateur](#9-interface-utilisateur)
+10. [Plan d'Implémentation](#10-plan-dimplémentation)
+11. [Restructuration Frontend](#11-restructuration-frontend)
+12. [Questions Ouvertes](#12-questions-ouvertes)
+13. [Conclusion](#13-conclusion)
+
+---
+
 ## 1. Résumé Exécutif
 
-### 1.1 Problème Actuel
+### 1.1 Contexte & Problématique
 
-L'architecture d'extensions actuelle souffre de plusieurs incohérences:
+L'architecture d'extensions actuelle présente des défauts de conception qui freinent l'évolutivité :
 
-| Problème | Impact |
-|----------|--------|
-| **Double source de vérité** | `extension.toml` + `extension_catalog.rs` définissent la même chose différemment |
-| **Schéma non unifié** | Chaque extension peut avoir une structure de settings arbitraire |
-| **Pas de versioning sémantique** | Impossible de gérer les migrations de settings entre versions |
-| **Activation fragmentée** | `extensions` table + `website_extensions` table avec logique dupliquée |
-| **Pas de marketplace mindset** | Conçu comme "features à activer" pas comme "apps à installer" |
-| **Permissions floues** | Pas de déclaration explicite des capabilities requises |
+| Problème | Impact | Criticité |
+|----------|--------|:---------:|
+| **Double source de vérité** | `extension.toml` + `extension_catalog.rs` définissent les mêmes données différemment | 🔴 Haute |
+| **Schéma non unifié** | Chaque extension a une structure de settings arbitraire | 🔴 Haute |
+| **Pas de versioning sémantique** | Migrations de settings impossibles entre versions | 🟠 Moyenne |
+| **Activation fragmentée** | `extensions` + `website_extensions` avec logique dupliquée | 🟠 Moyenne |
+| **Permissions implicites** | Pas de déclaration explicite des capabilities requises | 🟠 Moyenne |
+| **UX sous-optimale** | Conçu comme "features techniques" pas "produits à découvrir" | 🟡 Basse |
 
 ### 1.2 Vision Cible
 
-Transformer le système d'extensions en un **App Store interne** avec:
+Transformer le système en un **Extension Store** structuré :
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                        ASAP APP STORE                               │
+│                      ASAP EXTENSION STORE                           │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
-│  │  GitHub      │  │    Blog      │  │   Contact    │              │
-│  │  Sync        │  │   Engine     │  │    Form      │              │
+│  │  📦 GitHub   │  │  📝 Blog     │  │  📬 Contact  │              │
+│  │    Sync      │  │   Engine     │  │    Form      │              │
 │  │  ──────────  │  │  ──────────  │  │  ──────────  │              │
 │  │  ★★★★☆ 4.2  │  │  ★★★★★ 4.8  │  │  ★★★★☆ 4.5  │              │
 │  │  12k users   │  │  8k users    │  │  15k users   │              │
 │  │              │  │              │  │              │              │
-│  │ [Installer]  │  │ [Installer]  │  │ [Installer]  │              │
+│  │ [Installer]  │  │ [Installer]  │  │ [Pro Plan]   │              │
 │  └──────────────┘  └──────────────┘  └──────────────┘              │
 │                                                                     │
 │  Catégories: Intégrations • Contenu • Engagement • Analytics       │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+### 1.3 Objectifs Clés
+
+| Objectif | Métrique de Succès |
+|----------|--------------------|
+| **Source unique de vérité** | 100% des extensions définies via `manifest.toml` uniquement |
+| **Schéma standardisé** | Tous les champs de config utilisent les 17 types définis |
+| **Permissions explicites** | Chaque extension déclare ses accès data/network/events |
+| **UX Store** | Temps moyen d'installation < 30 secondes |
+| **Migration sans rupture** | 0 perte de données utilisateur existantes |
 
 ---
 
@@ -852,7 +880,7 @@ POST /api/websites/:id/apps/:slug/actions/:action_id
 │  ◄ Back to Dashboard           🔍 Search apps...                    │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
-│  APP STORE                                                          │
+│  EXTENSION STORE                                                    │
 │                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐   │
 │  │  🌟 FEATURED                                                 │   │
@@ -1027,235 +1055,555 @@ POST /api/websites/:id/apps/:slug/actions/:action_id
 | `manifest.toml` unifié | Source unique de vérité, complète |
 | Système de permissions | Sécurité, transparence pour l'utilisateur |
 | Lifecycle hooks | Comportement prévisible, migrations |
-| Store UI | Expérience App Store |
+| Store UI | Expérience Extension Store cohérente |
 | Versioning + Migrations | Évolution sans casse |
 | Ratings/Reviews | Social proof, feedback loop |
 
-### 10.3 Plan de Migration Unifié (Backend + Frontend)
+### 10.3 Plan d'Implémentation Détaillé
 
-Ce plan intègre les étapes backend et frontend dans un ordre logique avec dépendances.
+Ce plan utilise une approche **incrémentale par couches**, permettant des livraisons fréquentes et une validation continue.
 
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                        PHASE 0: PRÉPARATION (3 jours)                        │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Backend                              Frontend                               │
-│  ───────                              ────────                               │
-│  [ ] Définir structure manifest.toml  [ ] Définir types TypeScript (types.ts)│
-│  [ ] Créer AppManifest Rust struct    [ ] Créer constantes (categories, etc) │
-│  [ ] Parser TOML → AppManifest        [ ] Setup structure dossiers           │
-│  [ ] Tests parsing manifests                                                 │
-│                                                                              │
-│  Livrable: manifest.toml validé + types sync Rust/TS                         │
-└──────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                      PHASE 1: FOUNDATION (1 semaine)                         │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Backend                              Frontend                               │
-│  ───────                              ────────                               │
-│  [ ] Migration DB:                    [ ] FormRenderer orchestrateur         │
-│      - CREATE TABLE apps              [ ] Field renderers:                   │
-│      - CREATE TABLE account_apps          - TextField, NumberField           │
-│      - CREATE TABLE website_apps          - BooleanField, SelectField        │
-│      - CREATE TABLE app_migrations        - MultiSelectField, ColorField     │
-│  [ ] CRUD API /store/apps                 - DateField, FileField             │
-│  [ ] GET /store/apps/:slug                - SecretField, OAuthField          │
-│  [ ] Seed apps depuis manifests       [ ] FormSection grouping               │
-│                                       [ ] Tests unitaires FormRenderer       │
-│                                                                              │
-│  Dépendance: Phase 0 complète                                                │
-│  Livrable: DB ready + FormRenderer fonctionnel                               │
-└──────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                       PHASE 2: STORE API (1 semaine)                         │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Backend                              Frontend                               │
-│  ───────                              ────────                               │
-│  [ ] GET /store/apps (liste, filtres) [ ] API client apps.ts                 │
-│  [ ] GET /store/apps/:slug/manifest   [ ] useAppStore hook                   │
-│  [ ] GET /store/categories            [ ] AppStorePage layout                │
-│  [ ] Search & pagination              [ ] AppStoreGrid                       │
-│  [ ] Tests API store                  [ ] AppStoreFilters                    │
-│                                       [ ] AppStoreSearch                     │
-│                                       [ ] AppCard, AppCardFeatured           │
-│                                       [ ] AppRating component                │
-│                                       [ ] Routing /store/*                   │
-│                                                                              │
-│  Dépendance: Phase 1 (DB + types)                                            │
-│  Livrable: Page Store navigable avec apps listées                            │
-└──────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                    PHASE 3: DETAIL & INSTALL (1 semaine)                     │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Backend                              Frontend                               │
-│  ───────                              ────────                               │
-│  [ ] POST /account/apps/:slug/install [ ] useAppDetail hook                  │
-│  [ ] DELETE /account/apps/:slug       [ ] AppDetailPage                      │
-│  [ ] GET /account/apps (installed)    [ ] AppHeader, AppScreenshots          │
-│  [ ] Permissions validation           [ ] AppPermissions display             │
-│  [ ] Lifecycle: on_install hook       [ ] AppCollections, AppVariables       │
-│  [ ] Tests install/uninstall          [ ] InstallDialog                      │
-│                                       [ ] PermissionsReview                  │
-│                                       [ ] InstallProgress                    │
-│                                       [ ] useInstalledApps hook              │
-│                                       [ ] Routing /store/[slug]              │
-│                                                                              │
-│  Dépendance: Phase 2 (Store API)                                             │
-│  Livrable: Flow installation complet avec review permissions                 │
-└──────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                  PHASE 4: ACTIVATION WEBSITE (1 semaine)                     │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Backend                              Frontend                               │
-│  ───────                              ────────                               │
-│  [ ] POST /websites/:id/apps/:slug    [ ] useWebsiteApps hook                │
-│      /activate                        [ ] AppWebsiteSelector                 │
-│  [ ] DELETE /websites/:id/apps/:slug  [ ] Website apps list page             │
-│      /deactivate                      [ ] Activate/Deactivate toggles        │
-│  [ ] GET /websites/:id/apps           [ ] Routing /websites/[id]/apps        │
-│  [ ] Lifecycle: on_activate hook                                             │
-│  [ ] Tests activation                                                        │
-│                                                                              │
-│  Dépendance: Phase 3 (Install flow)                                          │
-│  Livrable: Apps activables par website                                       │
-└──────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                    PHASE 5: CONFIGURATION (1 semaine)                        │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Backend                              Frontend                               │
-│  ───────                              ────────                               │
-│  [ ] PUT /account/apps/:slug/settings [ ] useAppConfig hook                  │
-│  [ ] PUT /websites/:id/apps/:slug     [ ] AppConfigPage                      │
-│      /settings                        [ ] AppConfigForm (uses FormRenderer)  │
-│  [ ] Validation settings vs schema    [ ] Global vs Website settings tabs    │
-│  [ ] Encryption des secrets           [ ] Secret field masking               │
-│  [ ] OAuth flow endpoints             [ ] OAuth connect/disconnect           │
-│  [ ] Tests config CRUD                [ ] Tests configuration                │
-│                                                                              │
-│  Dépendance: Phase 4 (Website activation)                                    │
-│  Livrable: Configuration complète (global + website) avec FormRenderer       │
-└──────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                       PHASE 6: ACTIONS (3 jours)                             │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Backend                              Frontend                               │
-│  ───────                              ────────                               │
-│  [ ] POST /websites/:id/apps/:slug    [ ] useAppActions hook                 │
-│      /actions/:action_id              [ ] AppActions component               │
-│  [ ] Action execution engine          [ ] Action buttons (primary/danger)    │
-│  [ ] Action permissions check         [ ] Confirmation dialogs               │
-│  [ ] Tests actions                    [ ] Action result toasts               │
-│                                                                              │
-│  Dépendance: Phase 5 (Config)                                                │
-│  Livrable: Actions exécutables depuis l'UI                                   │
-└──────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                 PHASE 7: COLLECTIONS & VARIABLES (1 semaine)                 │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Backend                              Frontend                               │
-│  ───────                              ────────                               │
-│  [ ] Collections liées aux apps       [ ] AppDataPreview component           │
-│  [ ] Variables liées aux apps         [ ] Adapter CollectionSelector         │
-│  [ ] GET /websites/:id/apps/:slug     [ ] Adapter VariablePicker             │
-│      /collections                     [ ] Adapter DataSourceEditor           │
-│  [ ] Tests collections/variables      [ ] Source "app" dans Studio           │
-│                                       [ ] Tests intégration Studio           │
-│                                                                              │
-│  Dépendance: Phase 6 (Actions) + Collections existantes (Phase 3 précédente) │
-│  Livrable: Collections/Variables apps accessibles dans Studio                │
-└──────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                      PHASE 8: MIGRATION LEGACY (1 semaine)                   │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Backend                              Frontend                               │
-│  ───────                              ────────                               │
-│  [ ] Script migration extensions →    [ ] Supprimer SchemaRenderer global    │
-│      apps                             [ ] Supprimer features/extensions/     │
-│  [ ] Convertir extension.toml →       [ ] Supprimer settings/extension-*     │
-│      manifest.toml                    [ ] Mettre à jour imports              │
-│  [ ] Déprécier extension_catalog.rs   [ ] Mettre à jour navigation           │
-│  [ ] DROP anciennes tables            [ ] Tests de non-régression            │
-│  [ ] Tests migration                                                         │
-│                                                                              │
-│  Dépendance: Phases 0-7 complètes + validation QA                            │
-│  Livrable: Ancien système supprimé, nouveau système en production            │
-└──────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                       PHASE 9: POLISH (ongoing)                              │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  [ ] Ratings & Reviews system                                                │
-│  [ ] Featured apps rotation                                                  │
-│  [ ] App versioning & updates                                                │
-│  [ ] Settings migrations                                                     │
-│  [ ] Analytics (installs, usage)                                             │
-│  [ ] Documentation développeur                                               │
-│                                                                              │
-└──────────────────────────────────────────────────────────────────────────────┘
+#### Principes Directeurs
+
+| Principe | Application |
+|----------|-------------|
+| **Vertical Slicing** | Chaque phase livre une fonctionnalité utilisable end-to-end |
+| **Feature Flags** | Nouveau système activable progressivement sans couper l'ancien |
+| **Zero Downtime** | Migration des données en background, pas de maintenance |
+| **Test-First** | Critères d'acceptation définis avant le développement |
+
+---
+
+### Phase 0: Fondations & Contrats (3 jours)
+
+**Objectif**: Établir les contrats d'interface entre backend et frontend.
+
+#### Livrables
+
+| Composant | Fichier | Description |
+|-----------|---------|-------------|
+| Manifest Schema | `extensions/manifest.schema.json` | JSON Schema validant tous les manifests |
+| Rust Types | `core/domain/src/extensions/manifest.rs` | Struct `ExtensionManifest` avec serde |
+| TS Types | `packages/shared/src/types/extensions.ts` | Types miroir synchronisés |
+| Parser | `core/domain/src/extensions/parser.rs` | Parse TOML → ExtensionManifest |
+
+#### Critères d'Acceptation
+
+```gherkin
+GIVEN un fichier manifest.toml valide
+WHEN le parser le traite
+THEN il retourne un ExtensionManifest typé sans erreur
+
+GIVEN un fichier manifest.toml avec un champ inconnu
+WHEN le parser le traite  
+THEN il ignore le champ et log un warning (forward compatibility)
+
+GIVEN les types Rust ExtensionManifest
+WHEN on génère les types TypeScript
+THEN ils sont structurellement identiques
 ```
 
-#### Résumé Timeline
+#### Risques & Mitigations
 
-| Phase | Durée | Milestone |
-|-------|-------|-----------|
-| 0 | 3 jours | Types & structure prêts |
-| 1 | 1 sem | DB + FormRenderer |
-| 2 | 1 sem | Store browsable |
-| 3 | 1 sem | Install flow |
-| 4 | 1 sem | Website activation |
-| 5 | 1 sem | Configuration |
-| 6 | 3 jours | Actions |
-| 7 | 1 sem | Studio integration |
-| 8 | 1 sem | Legacy removed |
-| **Total** | **~8 semaines** | **App Store complet** |
+| Risque | Probabilité | Impact | Mitigation |
+|--------|:-----------:|:------:|------------|
+| Désynchronisation types Rust/TS | Moyenne | Haute | Script CI de vérification |
+| Schema trop restrictif | Basse | Moyenne | Champs `extra: Map<String, Value>` |
+
+---
+
+### Phase 1: Infrastructure Base de Données (1 semaine)
+
+**Objectif**: Nouvelle structure DB coexistant avec l'ancienne.
+
+#### Migration SQL
+
+```sql
+-- Phase 1: Création (coexistence avec ancien système)
+CREATE TABLE extensions_v2 (
+    slug VARCHAR(64) PRIMARY KEY,
+    manifest JSONB NOT NULL,
+    manifest_version VARCHAR(20) NOT NULL,
+    -- Métadonnées store
+    install_count INTEGER DEFAULT 0,
+    rating_avg DECIMAL(2,1),
+    rating_count INTEGER DEFAULT 0,
+    featured BOOLEAN DEFAULT FALSE,
+    -- Audit
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE account_extensions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    extension_slug VARCHAR(64) NOT NULL REFERENCES extensions_v2(slug),
+    installed_version VARCHAR(20) NOT NULL,
+    global_settings JSONB DEFAULT '{}',
+    granted_permissions TEXT[] NOT NULL,
+    installed_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(account_id, extension_slug)
+);
+
+CREATE TABLE website_extensions_v2 (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    website_id UUID NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    account_extension_id UUID NOT NULL REFERENCES account_extensions(id) ON DELETE CASCADE,
+    enabled BOOLEAN DEFAULT TRUE,
+    website_settings JSONB DEFAULT '{}',
+    activated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(website_id, account_extension_id)
+);
+
+-- Index pour performances
+CREATE INDEX idx_account_extensions_account ON account_extensions(account_id);
+CREATE INDEX idx_website_extensions_website ON website_extensions_v2(website_id);
+CREATE INDEX idx_extensions_v2_featured ON extensions_v2(featured) WHERE featured = TRUE;
+```
+
+#### Critères d'Acceptation
+
+```gherkin
+GIVEN la migration appliquée
+WHEN je query les anciennes tables (extensions, website_extensions)
+THEN elles existent toujours et fonctionnent
+
+GIVEN un manifest.toml valide
+WHEN je seed l'extension dans extensions_v2
+THEN le JSONB contient le manifest complet parsé
+```
+
+#### Tâches Parallélisables
+
+| Backend | Frontend |
+|---------|----------|
+| Migration SQL | Setup structure dossiers `features/extensions-store/` |
+| Seed script depuis manifests | Types TypeScript depuis schema |
+| Repository pattern `ExtensionRepository` | Constantes (catégories, couleurs) |
+
+---
+
+### Phase 2: API Store (Lecture Seule) (1 semaine)
+
+**Objectif**: API publique pour lister et consulter les extensions.
+
+#### Endpoints
+
+```
+GET  /api/store/extensions
+     ?category={category}
+     ?search={query}
+     ?featured=true
+     ?sort=popular|newest|rating
+     &page={n}&per_page={n}
+     
+GET  /api/store/extensions/{slug}
+GET  /api/store/extensions/{slug}/manifest
+GET  /api/store/categories
+```
+
+#### Response Schemas
+
+```typescript
+// GET /api/store/extensions
+interface ExtensionListResponse {
+  extensions: ExtensionSummary[];
+  pagination: {
+    page: number;
+    per_page: number;
+    total: number;
+    total_pages: number;
+  };
+  categories: Category[];
+}
+
+// GET /api/store/extensions/{slug}
+interface ExtensionDetailResponse {
+  slug: string;
+  manifest: ExtensionManifest;
+  stats: {
+    install_count: number;
+    rating_avg: number;
+    rating_count: number;
+  };
+  installed?: boolean; // Si authentifié
+}
+```
+
+#### Critères d'Acceptation
+
+```gherkin
+GIVEN des extensions dans le store
+WHEN je GET /api/store/extensions?category=integration
+THEN je reçois uniquement les extensions de cette catégorie
+
+GIVEN une extension "github-sync"
+WHEN je GET /api/store/extensions/github-sync
+THEN je reçois le manifest complet + statistiques
+
+GIVEN un utilisateur non authentifié
+WHEN je GET /api/store/extensions
+THEN je reçois la liste sans le champ "installed"
+```
+
+#### Tâches Parallélisables
+
+| Backend | Frontend |
+|---------|----------|
+| Handler `list_extensions` | `extensionsAPI.list()` |
+| Handler `get_extension` | `useExtensionStore()` hook |
+| Pagination + filtres | `ExtensionStorePage` layout |
+| Cache Redis (5min TTL) | `ExtensionCard`, `ExtensionGrid` |
+| Tests API | `ExtensionFilters`, `ExtensionSearch` |
+
+---
+
+### Phase 3: Installation & Permissions (1 semaine)
+
+**Objectif**: Flow complet d'installation avec review des permissions.
+
+#### Endpoints
+
+```
+POST   /api/account/extensions/{slug}/install
+       Body: { granted_permissions: string[] }
+       
+DELETE /api/account/extensions/{slug}
+
+GET    /api/account/extensions
+```
+
+#### Flow Installation
+
+```
+┌─────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│   Store     │────▶│ Permissions      │────▶│  Installation   │
+│   Detail    │     │ Review Dialog    │     │  en cours...    │
+└─────────────┘     └──────────────────┘     └────────┬────────┘
+                                                      │
+                    ┌──────────────────┐              │
+                    │  ✓ Installée!    │◀─────────────┘
+                    │  [Configurer]    │
+                    └──────────────────┘
+```
+
+#### Critères d'Acceptation
+
+```gherkin
+GIVEN une extension avec permissions [data.websites.read, network.github.com]
+WHEN l'utilisateur clique "Installer"
+THEN un dialog affiche ces permissions avec explications
+
+GIVEN l'utilisateur accepte les permissions
+WHEN l'installation réussit
+THEN l'extension apparaît dans /api/account/extensions
+AND on_install hook est exécuté si défini
+
+GIVEN une extension déjà installée
+WHEN l'utilisateur tente de la réinstaller
+THEN erreur 409 Conflict
+```
+
+#### Tâches Parallélisables
+
+| Backend | Frontend |
+|---------|----------|
+| Handler `install_extension` | `useInstalledExtensions()` hook |
+| Handler `uninstall_extension` | `InstallDialog` component |
+| Lifecycle: `on_install` executor | `PermissionsReview` component |
+| Validation permissions | `InstallProgress` component |
+| Tests install/uninstall | Tests E2E flow installation |
+
+---
+
+### Phase 4: Activation par Website (1 semaine)
+
+**Objectif**: Activer/désactiver une extension installée sur un website spécifique.
+
+#### Endpoints
+
+```
+GET    /api/websites/{id}/extensions
+POST   /api/websites/{id}/extensions/{slug}/activate
+DELETE /api/websites/{id}/extensions/{slug}/deactivate
+```
+
+#### Modèle Mental
+
+```
+Account Level                    Website Level
+─────────────                    ─────────────
+                                 
+┌─────────────────┐              ┌─────────────────┐
+│ GitHub Sync     │              │ portfolio.com   │
+│ (installée)     │─────────────▶│ [✓] GitHub Sync │
+│                 │              │ [ ] Analytics   │
+│ Analytics Pro   │              └─────────────────┘
+│ (installée)     │              
+│                 │              ┌─────────────────┐
+│                 │              │ blog.io         │
+│                 │─────────────▶│ [ ] GitHub Sync │
+└─────────────────┘              │ [✓] Analytics   │
+                                 └─────────────────┘
+```
+
+#### Critères d'Acceptation
+
+```gherkin
+GIVEN une extension installée au niveau compte
+WHEN je POST /api/websites/{id}/extensions/{slug}/activate
+THEN l'extension est active sur ce website uniquement
+
+GIVEN une extension NON installée au niveau compte
+WHEN je tente de l'activer sur un website
+THEN erreur 400 "Extension must be installed first"
+
+GIVEN une extension activée sur un website
+WHEN on_activate hook est défini
+THEN il est exécuté avec le contexte du website
+```
+
+---
+
+### Phase 5: Configuration (1 semaine)
+
+**Objectif**: Interface de configuration dynamique depuis le manifest.
+
+#### Endpoints
+
+```
+GET  /api/account/extensions/{slug}/settings
+PUT  /api/account/extensions/{slug}/settings
+     Body: { settings: Record<string, any> }
+
+GET  /api/websites/{id}/extensions/{slug}/settings  
+PUT  /api/websites/{id}/extensions/{slug}/settings
+     Body: { settings: Record<string, any> }
+```
+
+#### FormRenderer Architecture
+
+```
+                    ┌─────────────────────────┐
+                    │      FormRenderer       │
+                    │  (Orchestrateur)        │
+                    └───────────┬─────────────┘
+                                │
+        ┌───────────────────────┼───────────────────────┐
+        │                       │                       │
+        ▼                       ▼                       ▼
+┌───────────────┐       ┌───────────────┐       ┌───────────────┐
+│  FormSection  │       │  FormSection  │       │  FormSection  │
+│  "Connection" │       │   "Options"   │       │  "Advanced"   │
+└───────┬───────┘       └───────┬───────┘       └───────┬───────┘
+        │                       │                       │
+        ▼                       ▼                       ▼
+┌───────────────┐       ┌───────────────┐       ┌───────────────┐
+│ OAuthField    │       │ BooleanField  │       │ NumberField   │
+│ TextField     │       │ SelectField   │       │ SecretField   │
+└───────────────┘       └───────────────┘       └───────────────┘
+```
+
+#### Critères d'Acceptation
+
+```gherkin
+GIVEN un manifest avec [config.fields.api_key] de type "secret"
+WHEN le FormRenderer le rend
+THEN le champ est masqué avec toggle de visibilité
+
+GIVEN un manifest avec validation { min: 1, max: 100 }
+WHEN l'utilisateur entre 150
+THEN erreur de validation inline avant soumission
+
+GIVEN un champ avec visible_if = "auth_type == 'oauth'"
+WHEN auth_type != 'oauth'
+THEN le champ est masqué
+```
+
+---
+
+### Phase 6: Actions (3 jours)
+
+**Objectif**: Boutons d'action définis dans le manifest.
+
+#### Endpoint
+
+```
+POST /api/websites/{id}/extensions/{slug}/actions/{action_id}
+```
+
+#### Response
+
+```typescript
+interface ActionResult {
+  success: boolean;
+  message?: string;
+  data?: unknown;
+  refresh?: boolean; // Recharger les collections
+}
+```
+
+#### Critères d'Acceptation
+
+```gherkin
+GIVEN une action "sync_now" avec confirm = "Êtes-vous sûr?"
+WHEN l'utilisateur clique le bouton
+THEN un dialog de confirmation apparaît
+
+GIVEN l'action exécutée avec succès
+WHEN refresh_after = true dans le manifest
+THEN les collections de l'extension sont rechargées
+```
+
+---
+
+### Phase 7: Intégration Studio (1 semaine)
+
+**Objectif**: Collections et variables des extensions utilisables dans le Studio.
+
+#### Data Flow
+
+```
+Extension                    Studio Editor
+─────────                    ─────────────
+
+┌──────────────┐            ┌──────────────────────────────┐
+│ github-sync  │            │  Section: Projects           │
+│              │            │  ─────────────────           │
+│ Collections: │            │                              │
+│  └ repos     │───────────▶│  Data Source: [github-sync ▼]│
+│              │            │  Collection:  [repos      ▼] │
+│ Variables:   │            │  Limit: 6                    │
+│  └ username  │───────────▶│                              │
+│  └ avatar    │            │  Title: {{github.username}}  │
+└──────────────┘            └──────────────────────────────┘
+```
+
+#### Critères d'Acceptation
+
+```gherkin
+GIVEN une extension avec collections définies
+WHEN j'ouvre le DataSourceEditor dans le Studio
+THEN je vois l'extension comme source disponible
+
+GIVEN une extension avec variables définies
+WHEN j'ouvre le VariablePicker
+THEN je vois les variables groupées par extension
+```
+
+---
+
+### Phase 8: Migration Legacy & Cleanup (1 semaine)
+
+**Objectif**: Supprimer l'ancien système sans perte de données.
+
+#### Script de Migration
+
+```sql
+-- Migrer les données existantes
+INSERT INTO account_extensions (account_id, extension_slug, ...)
+SELECT DISTINCT 
+    we.account_id,
+    e.slug,
+    ...
+FROM website_extensions we
+JOIN extensions e ON e.id = we.extension_id;
+
+-- Après validation complète
+DROP TABLE website_extensions;
+DROP TABLE extensions;
+ALTER TABLE extensions_v2 RENAME TO extensions;
+ALTER TABLE website_extensions_v2 RENAME TO website_extensions;
+```
+
+#### Critères d'Acceptation
+
+```gherkin
+GIVEN des extensions configurées dans l'ancien système
+WHEN la migration s'exécute
+THEN 100% des settings sont préservés dans le nouveau format
+
+GIVEN la migration terminée
+WHEN je vérifie les anciennes routes API
+THEN elles retournent 301 Redirect vers les nouvelles
+```
+
+#### Checklist de Cleanup
+
+**Backend**:
+- [ ] Supprimer `extension_catalog.rs`
+- [ ] Supprimer anciens handlers `/api/extensions/*`
+- [ ] Supprimer anciennes migrations (archiver)
+- [ ] Mettre à jour la documentation API
+
+**Frontend**:
+- [ ] Supprimer `components/features/extensions/`
+- [ ] Supprimer `components/settings/extension-settings/`
+- [ ] Supprimer `SchemaRenderer.tsx` global
+- [ ] Mettre à jour la navigation
+
+---
+
+### Phase 9: Améliorations Continues (Post-Launch)
+
+| Feature | Priorité | Effort |
+|---------|:--------:|:------:|
+| Ratings & Reviews | P1 | 3j |
+| Extension Updates & Changelog | P1 | 2j |
+| Settings Migrations entre versions | P2 | 3j |
+| Analytics (installs, usage) | P2 | 2j |
+| Documentation développeur | P2 | 2j |
+| Notifications de nouvelles extensions | P3 | 1j |
+
+---
+
+### Résumé Planning
+
+```
+Semaine 1    Semaine 2    Semaine 3    Semaine 4    Semaine 5    Semaine 6    Semaine 7    Semaine 8
+────────────────────────────────────────────────────────────────────────────────────────────────────
+█ Phase 0    ██████████   ██████████   ██████████   ██████████   █████        ██████████   ██████████
+  (3j)       Phase 1      Phase 2      Phase 3      Phase 4      Phase 5      Phase 6+7    Phase 8
+             Foundation   Store API    Install      Activation   Config       Actions+     Migration
+                                                                              Studio
+```
+
+| Phase | Durée | Dépendances | Livrable Clé |
+|:-----:|:-----:|-------------|--------------|
+| **0** | 3j | - | Types Rust/TS synchronisés |
+| **1** | 1 sem | Phase 0 | DB prête + FormRenderer |
+| **2** | 1 sem | Phase 1 | Store browsable publiquement |
+| **3** | 1 sem | Phase 2 | Installation avec permissions |
+| **4** | 1 sem | Phase 3 | Activation par website |
+| **5** | 1 sem | Phase 4 | Configuration dynamique |
+| **6** | 3j | Phase 5 | Actions exécutables |
+| **7** | 1 sem | Phase 6 | Intégration Studio |
+| **8** | 1 sem | Phases 0-7 | Ancien système supprimé |
+| **Total** | **~8 sem** | | **Extension Store complet** |
 
 ---
 
 ## 11. Questions Ouvertes
 
-1. **Marketplace externe ?** — Permettre des apps tierces à terme ?
-2. **Monétisation apps ?** — Apps payantes avec revenue share ?
-3. **Sandbox ?** — Isolation des apps (WASM, containers) ?
-4. **Versioning SemVer strict ?** — Breaking changes = major bump obligatoire ?
+| # | Question | Options | Recommandation |
+|:-:|----------|---------|----------------|
+| 1 | **Marketplace externe ?** | Oui (complexe) / Non (interne only) | Non pour V1, roadmap V2 |
+| 2 | **Extensions payantes ?** | Revenue share / Flat fee / Free only | Free only pour V1 |
+| 3 | **Sandbox isolation ?** | WASM / Containers / Trust-based | Trust-based pour V1 |
+| 4 | **SemVer strict ?** | Enforced / Recommended / None | Recommended |
+| 5 | **i18n manifests ?** | Dans manifest / Fichiers séparés | Fichiers séparés |
 
 ---
 
 ## 12. Conclusion
 
-Cette refonte transforme un système d'extensions technique en un **App Store utilisateur-centrique**:
+Cette refonte transforme un système d'extensions technique en un **Extension Store** structuré :
 
 - **Pour l'utilisateur**: Expérience cohérente, permissions claires, installation simple
 - **Pour le développeur**: Un seul fichier manifest, hooks clairs, migrations gérées
 - **Pour la plateforme**: Extensibilité maîtrisée, métriques, potentiel marketplace
 
-Le manifest unifié `manifest.toml` devient le **contrat** entre l'app et la plateforme — tout ce qu'une app peut faire doit y être déclaré.
+Le manifest unifié `manifest.toml` devient le **contrat** entre l'extension et la plateforme — tout ce qu'une extension peut faire doit y être déclaré.
 
 ---
 
@@ -1325,27 +1673,27 @@ apps/web/src/
 │   │   └── ... (autres composants ui)
 │   │
 │   ├── features/
-│   │   ├── app-store/                 # NOUVEAU: Feature App Store complète
+│   │   ├── extensions-store/          # NOUVEAU: Feature Extension Store complète
 │   │   │   ├── components/
 │   │   │   │   ├── store/             # Pages catalogue
-│   │   │   │   │   ├── AppStorePage.tsx
-│   │   │   │   │   ├── AppStoreGrid.tsx
-│   │   │   │   │   ├── AppStoreFilters.tsx
-│   │   │   │   │   ├── AppStoreFeatured.tsx
-│   │   │   │   │   └── AppStoreSearch.tsx
-│   │   │   │   ├── detail/            # Page détail app
-│   │   │   │   │   ├── AppDetailPage.tsx
-│   │   │   │   │   ├── AppHeader.tsx
-│   │   │   │   │   ├── AppScreenshots.tsx
-│   │   │   │   │   ├── AppPermissions.tsx
-│   │   │   │   │   ├── AppCollections.tsx
-│   │   │   │   │   ├── AppVariables.tsx
-│   │   │   │   │   └── AppReviews.tsx
+│   │   │   │   │   ├── ExtensionStorePage.tsx
+│   │   │   │   │   ├── ExtensionStoreGrid.tsx
+│   │   │   │   │   ├── ExtensionStoreFilters.tsx
+│   │   │   │   │   ├── ExtensionStoreFeatured.tsx
+│   │   │   │   │   └── ExtensionStoreSearch.tsx
+│   │   │   │   ├── detail/            # Page détail extension
+│   │   │   │   │   ├── ExtensionDetailPage.tsx
+│   │   │   │   │   ├── ExtensionHeader.tsx
+│   │   │   │   │   ├── ExtensionScreenshots.tsx
+│   │   │   │   │   ├── ExtensionPermissions.tsx
+│   │   │   │   │   ├── ExtensionCollections.tsx
+│   │   │   │   │   ├── ExtensionVariables.tsx
+│   │   │   │   │   └── ExtensionReviews.tsx
 │   │   │   │   ├── cards/             # Composants cartes
-│   │   │   │   │   ├── AppCard.tsx
-│   │   │   │   │   ├── AppCardCompact.tsx
-│   │   │   │   │   ├── AppCardFeatured.tsx
-│   │   │   │   │   └── AppRating.tsx
+│   │   │   │   │   ├── ExtensionCard.tsx
+│   │   │   │   │   ├── ExtensionCardCompact.tsx
+│   │   │   │   │   ├── ExtensionCardFeatured.tsx
+│   │   │   │   │   └── ExtensionRating.tsx
 │   │   │   │   ├── install/           # Flow installation
 │   │   │   │   │   ├── InstallDialog.tsx
 │   │   │   │   │   ├── PermissionsReview.tsx
@@ -1631,38 +1979,38 @@ export function OAuthField({ field, value, onChange, disabled }: OAuthFieldProps
 }
 ```
 
-### 13.4 Composants App Store
+### 13.4 Composants Extension Store
 
-#### AppCard
+#### ExtensionCard
 
 ```typescript
-// features/app-store/components/cards/AppCard.tsx
+// features/extensions-store/components/cards/ExtensionCard.tsx
 
-interface AppCardProps {
-  app: AppSummary;
+interface ExtensionCardProps {
+  extension: ExtensionSummary;
   installed?: boolean;
   onInstall?: () => void;
   onConfigure?: () => void;
 }
 
-export function AppCard({ app, installed, onInstall, onConfigure }: AppCardProps) {
+export function ExtensionCard({ extension, installed, onInstall, onConfigure }: ExtensionCardProps) {
   return (
     <Card className="group hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-start gap-3">
           <div 
             className="p-2 rounded-lg" 
-            style={{ backgroundColor: `${app.color}15` }}
+            style={{ backgroundColor: `${extension.color}15` }}
           >
-            <AppIcon icon={app.icon} color={app.color} className="h-8 w-8" />
+            <ExtensionIcon icon={extension.icon} color={extension.color} className="h-8 w-8" />
           </div>
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-base truncate">{app.name}</CardTitle>
+            <CardTitle className="text-base truncate">{extension.name}</CardTitle>
             <p className="text-sm text-muted-foreground">
-              by {app.author}
+              by {extension.author}
             </p>
           </div>
-          {app.featured && (
+          {extension.featured && (
             <Badge variant="secondary">Featured</Badge>
           )}
         </div>
@@ -1670,13 +2018,13 @@ export function AppCard({ app, installed, onInstall, onConfigure }: AppCardProps
       
       <CardContent className="pb-3">
         <p className="text-sm text-muted-foreground line-clamp-2">
-          {app.description}
+          {extension.description}
         </p>
         
         <div className="flex items-center gap-3 mt-3">
-          <AppRating rating={app.rating_avg} count={app.rating_count} />
+          <ExtensionRating rating={extension.rating_avg} count={extension.rating_count} />
           <span className="text-xs text-muted-foreground">
-            {formatNumber(app.install_count)} installs
+            {formatNumber(extension.install_count)} installs
           </span>
         </div>
       </CardContent>
@@ -1697,7 +2045,7 @@ export function AppCard({ app, installed, onInstall, onConfigure }: AppCardProps
             onClick={onInstall}
           >
             <Download className="h-4 w-4 mr-2" />
-            {app.required_plan === 'free' ? 'Install Free' : `Requires ${app.required_plan}`}
+            {extension.required_plan === 'free' ? 'Install Free' : `Requires ${extension.required_plan}`}
           </Button>
         )}
       </CardFooter>
@@ -1706,17 +2054,17 @@ export function AppCard({ app, installed, onInstall, onConfigure }: AppCardProps
 }
 ```
 
-#### AppPermissions
+#### ExtensionPermissions
 
 ```typescript
-// features/app-store/components/detail/AppPermissions.tsx
+// features/extensions-store/components/detail/ExtensionPermissions.tsx
 
-interface AppPermissionsProps {
-  permissions: AppPermissions;
+interface ExtensionPermissionsProps {
+  permissions: ExtensionPermissions;
   compact?: boolean;
 }
 
-export function AppPermissions({ permissions, compact }: AppPermissionsProps) {
+export function ExtensionPermissions({ permissions, compact }: ExtensionPermissionsProps) {
   const groupedPermissions = useMemo(() => 
     groupPermissions(permissions),
     [permissions]
@@ -1786,16 +2134,16 @@ function PermissionGroup({ icon: Icon, title, permissions, compact }: Permission
 #### InstallDialog
 
 ```typescript
-// features/app-store/components/install/InstallDialog.tsx
+// features/extensions-store/components/install/InstallDialog.tsx
 
 interface InstallDialogProps {
-  app: AppDetail;
+  extension: ExtensionDetail;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onInstall: (grantedPermissions: string[]) => Promise<void>;
 }
 
-export function InstallDialog({ app, open, onOpenChange, onInstall }: InstallDialogProps) {
+export function InstallDialog({ extension, open, onOpenChange, onInstall }: InstallDialogProps) {
   const [step, setStep] = useState<'review' | 'installing' | 'success'>('review');
   const [isInstalling, setIsInstalling] = useState(false);
   
@@ -1804,7 +2152,7 @@ export function InstallDialog({ app, open, onOpenChange, onInstall }: InstallDia
     setStep('installing');
     
     try {
-      await onInstall(Object.keys(app.permissions));
+      await onInstall(Object.keys(extension.permissions));
       setStep('success');
     } catch (error) {
       setStep('review');
@@ -1818,10 +2166,10 @@ export function InstallDialog({ app, open, onOpenChange, onInstall }: InstallDia
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <AppIcon icon={app.icon} color={app.color} className="h-10 w-10" />
+            <ExtensionIcon icon={extension.icon} color={extension.color} className="h-10 w-10" />
             <div>
-              <DialogTitle>Install {app.name}?</DialogTitle>
-              <DialogDescription>v{app.version} by {app.author}</DialogDescription>
+              <DialogTitle>Install {extension.name}?</DialogTitle>
+              <DialogDescription>v{extension.version} by {extension.author}</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -1829,7 +2177,7 @@ export function InstallDialog({ app, open, onOpenChange, onInstall }: InstallDia
         {step === 'review' && (
           <>
             <div className="py-4">
-              <AppPermissions permissions={app.permissions} compact />
+              <ExtensionPermissions permissions={extension.permissions} compact />
             </div>
             
             <DialogFooter>
@@ -1838,7 +2186,7 @@ export function InstallDialog({ app, open, onOpenChange, onInstall }: InstallDia
               </Button>
               <Button onClick={handleInstall}>
                 <Download className="h-4 w-4 mr-2" />
-                Install {app.name}
+                Install {extension.name}
               </Button>
             </DialogFooter>
           </>
@@ -1847,7 +2195,7 @@ export function InstallDialog({ app, open, onOpenChange, onInstall }: InstallDia
         {step === 'installing' && (
           <div className="py-8 text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">Installing {app.name}...</p>
+            <p className="text-muted-foreground">Installing {extension.name}...</p>
           </div>
         )}
         
@@ -1875,94 +2223,94 @@ export function InstallDialog({ app, open, onOpenChange, onInstall }: InstallDia
 }
 ```
 
-### 13.5 Hooks App Store
+### 13.5 Hooks Extension Store
 
 ```typescript
-// features/app-store/hooks/useAppStore.ts
+// features/extensions-store/hooks/useExtensionStore.ts
 
-interface UseAppStoreOptions {
+interface UseExtensionStoreOptions {
   category?: string;
   search?: string;
   featured?: boolean;
   sort?: 'popular' | 'newest' | 'rating';
 }
 
-export function useAppStore(options: UseAppStoreOptions = {}) {
-  const [apps, setApps] = useState<AppSummary[]>([]);
+export function useExtensionStore(options: UseExtensionStoreOptions = {}) {
+  const [extensions, setExtensions] = useState<ExtensionSummary[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const fetchApps = useCallback(async () => {
+  const fetchExtensions = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await appsAPI.list(options);
-      setApps(response.apps);
+      const response = await extensionsAPI.list(options);
+      setExtensions(response.extensions);
       setCategories(response.categories);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch apps');
+      setError(err instanceof Error ? err.message : 'Failed to fetch extensions');
     } finally {
       setIsLoading(false);
     }
   }, [options]);
   
   useEffect(() => {
-    fetchApps();
-  }, [fetchApps]);
+    fetchExtensions();
+  }, [fetchExtensions]);
   
   return {
-    apps,
+    extensions,
     categories,
     isLoading,
     error,
-    refetch: fetchApps,
+    refetch: fetchExtensions,
   };
 }
 ```
 
 ```typescript
-// features/app-store/hooks/useInstalledApps.ts
+// features/extensions-store/hooks/useInstalledExtensions.ts
 
-export function useInstalledApps() {
-  const [apps, setApps] = useState<InstalledApp[]>([]);
+export function useInstalledExtensions() {
+  const [extensions, setExtensions] = useState<InstalledExtension[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   const install = useCallback(async (slug: string, permissions: string[]) => {
-    const installed = await appsAPI.install(slug, permissions);
-    setApps(prev => [...prev, installed]);
+    const installed = await extensionsAPI.install(slug, permissions);
+    setExtensions(prev => [...prev, installed]);
     return installed;
   }, []);
   
   const uninstall = useCallback(async (slug: string) => {
-    await appsAPI.uninstall(slug);
-    setApps(prev => prev.filter(a => a.slug !== slug));
+    await extensionsAPI.uninstall(slug);
+    setExtensions(prev => prev.filter(e => e.slug !== slug));
   }, []);
   
   const updateConfig = useCallback(async (slug: string, settings: Record<string, unknown>) => {
-    const updated = await appsAPI.updateSettings(slug, settings);
-    setApps(prev => prev.map(a => a.slug === slug ? updated : a));
+    const updated = await extensionsAPI.updateSettings(slug, settings);
+    setExtensions(prev => prev.map(e => e.slug === slug ? updated : e));
     return updated;
   }, []);
   
   // ... fetch logic
   
   return {
-    apps,
+    extensions,
     isLoading,
     error,
     install,
     uninstall,
     updateConfig,
-    isInstalled: (slug: string) => apps.some(a => a.slug === slug),
+    isInstalled: (slug: string) => extensions.some(e => e.slug === slug),
   };
 }
 ```
 
 ```typescript
-// features/app-store/hooks/useAppActions.ts
+// features/extensions-store/hooks/useExtensionActions.ts
 
-export function useAppActions(websiteId: string, appSlug: string) {
+export function useExtensionActions(websiteId: string, extensionSlug: string) {
   const [isExecuting, setIsExecuting] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<ActionResult | null>(null);
   
@@ -1971,13 +2319,13 @@ export function useAppActions(websiteId: string, appSlug: string) {
     setLastResult(null);
     
     try {
-      const result = await appsAPI.executeAction(websiteId, appSlug, actionId);
+      const result = await extensionsAPI.executeAction(websiteId, extensionSlug, actionId);
       setLastResult(result);
       return result;
     } finally {
       setIsExecuting(null);
     }
-  }, [websiteId, appSlug]);
+  }, [websiteId, extensionSlug]);
   
   return {
     executeAction,
@@ -1991,19 +2339,19 @@ export function useAppActions(websiteId: string, appSlug: string) {
 ### 13.6 Types Frontend
 
 ```typescript
-// features/app-store/types.ts
+// features/extensions-store/types.ts
 
 /**
- * App summary for listing (compact)
+ * Extension summary for listing (compact)
  */
-export interface AppSummary {
+export interface ExtensionSummary {
   slug: string;
   name: string;
   description: string;
   tagline: string;
   icon: string;
   color: string;
-  category: AppCategory;
+  category: ExtensionCategory;
   tags: string[];
   author: string;
   required_plan: PlanType;
@@ -2014,37 +2362,37 @@ export interface AppSummary {
 }
 
 /**
- * Full app details
+ * Full extension details
  */
-export interface AppDetail extends AppSummary {
+export interface ExtensionDetail extends ExtensionSummary {
   version: string;
   homepage?: string;
   repository?: string;
   screenshots: string[];
-  permissions: AppPermissions;
+  permissions: ExtensionPermissions;
   config: ConfigSchema;
-  actions: AppAction[];
+  actions: ExtensionAction[];
   collections: CollectionDefinition[];
   variables: VariableDefinition[];
 }
 
 /**
- * Installed app (account level)
+ * Installed extension (account level)
  */
-export interface InstalledApp {
+export interface InstalledExtension {
   id: string;
-  app: AppSummary;
+  extension: ExtensionSummary;
   installed_version: string;
   installed_at: string;
   global_settings: Record<string, unknown>;
   granted_permissions: string[];
-  websites: WebsiteAppStatus[];
+  websites: WebsiteExtensionStatus[];
 }
 
 /**
- * App activation status per website
+ * Extension activation status per website
  */
-export interface WebsiteAppStatus {
+export interface WebsiteExtensionStatus {
   website_id: string;
   website_name: string;
   enabled: boolean;
@@ -2053,9 +2401,9 @@ export interface WebsiteAppStatus {
 }
 
 /**
- * App permissions structure
+ * Extension permissions structure
  */
-export interface AppPermissions {
+export interface ExtensionPermissions {
   data: string[];
   network: string[];
   events: string[];
@@ -2070,9 +2418,9 @@ export interface ConfigSchema {
 }
 
 /**
- * App action definition
+ * Extension action definition
  */
-export interface AppAction {
+export interface ExtensionAction {
   id: string;
   label: string;
   description?: string;
@@ -2094,9 +2442,9 @@ export interface ActionResult {
 }
 
 /**
- * App categories
+ * Extension categories
  */
-export type AppCategory = 
+export type ExtensionCategory = 
   | 'integration'
   | 'content'
   | 'engagement'
@@ -2104,7 +2452,7 @@ export type AppCategory =
   | 'design'
   | 'monetization';
 
-export const APP_CATEGORIES: Record<AppCategory, { label: string; icon: string }> = {
+export const EXTENSION_CATEGORIES: Record<ExtensionCategory, { label: string; icon: string }> = {
   integration: { label: 'Integrations', icon: 'puzzle' },
   content: { label: 'Content', icon: 'file-text' },
   engagement: { label: 'Engagement', icon: 'users' },
@@ -2114,59 +2462,59 @@ export const APP_CATEGORIES: Record<AppCategory, { label: string; icon: string }
 };
 ```
 
-### 13.7 API Client Apps
+### 13.7 API Client Extensions
 
 ```typescript
-// lib/api/apps.ts
+// lib/api/extensions.ts
 
 import { apiClient } from './client';
 import type { 
-  AppSummary, 
-  AppDetail, 
-  InstalledApp,
+  ExtensionSummary, 
+  ExtensionDetail, 
+  InstalledExtension,
   ActionResult 
-} from '@/features/app-store/types';
+} from '@/features/extensions-store/types';
 
-export const appsAPI = {
+export const extensionsAPI = {
   // Store
-  list: (params?: AppListParams) => 
-    apiClient.get<AppListResponse>('/store/apps', { params }),
+  list: (params?: ExtensionListParams) => 
+    apiClient.get<ExtensionListResponse>('/store/extensions', { params }),
     
   get: (slug: string) => 
-    apiClient.get<AppDetail>(`/store/apps/${slug}`),
+    apiClient.get<ExtensionDetail>(`/store/extensions/${slug}`),
   
   // Account level
   installed: () => 
-    apiClient.get<InstalledApp[]>('/account/apps'),
+    apiClient.get<InstalledExtension[]>('/account/extensions'),
     
   install: (slug: string, permissions: string[]) => 
-    apiClient.post<InstalledApp>(`/account/apps/${slug}/install`, { 
+    apiClient.post<InstalledExtension>(`/account/extensions/${slug}/install`, { 
       granted_permissions: permissions 
     }),
     
   uninstall: (slug: string) => 
-    apiClient.delete(`/account/apps/${slug}/uninstall`),
+    apiClient.delete(`/account/extensions/${slug}/uninstall`),
     
   updateGlobalSettings: (slug: string, settings: Record<string, unknown>) =>
-    apiClient.put<InstalledApp>(`/account/apps/${slug}/settings`, { settings }),
+    apiClient.put<InstalledExtension>(`/account/extensions/${slug}/settings`, { settings }),
   
   // Website level  
-  websiteApps: (websiteId: string) =>
-    apiClient.get<WebsiteApp[]>(`/websites/${websiteId}/apps`),
+  websiteExtensions: (websiteId: string) =>
+    apiClient.get<WebsiteExtension[]>(`/websites/${websiteId}/extensions`),
     
   activate: (websiteId: string, slug: string) =>
-    apiClient.post(`/websites/${websiteId}/apps/${slug}/activate`),
+    apiClient.post(`/websites/${websiteId}/extensions/${slug}/activate`),
     
   deactivate: (websiteId: string, slug: string) =>
-    apiClient.delete(`/websites/${websiteId}/apps/${slug}/deactivate`),
+    apiClient.delete(`/websites/${websiteId}/extensions/${slug}/deactivate`),
     
   updateWebsiteSettings: (websiteId: string, slug: string, settings: Record<string, unknown>) =>
-    apiClient.put(`/websites/${websiteId}/apps/${slug}/settings`, { settings }),
+    apiClient.put(`/websites/${websiteId}/extensions/${slug}/settings`, { settings }),
     
   // Actions
   executeAction: (websiteId: string, slug: string, actionId: string) =>
     apiClient.post<ActionResult>(
-      `/websites/${websiteId}/apps/${slug}/actions/${actionId}`
+      `/websites/${websiteId}/extensions/${slug}/actions/${actionId}`
     ),
 };
 ```
@@ -2176,22 +2524,22 @@ export const appsAPI = {
 ```typescript
 // Pages à créer/modifier
 
-// apps/web/src/pages/store/index.astro     → AppStorePage
-// apps/web/src/pages/store/[slug].astro    → AppDetailPage  
-// apps/web/src/pages/apps/index.astro      → Installed apps list
-// apps/web/src/pages/apps/[slug].astro     → App config page
-// apps/web/src/pages/websites/[id]/apps.astro → Website apps
+// apps/web/src/pages/extensions/index.astro           → ExtensionStorePage
+// apps/web/src/pages/extensions/[slug].astro          → ExtensionDetailPage  
+// apps/web/src/pages/account/extensions/index.astro   → Installed extensions list
+// apps/web/src/pages/account/extensions/[slug].astro  → Extension config page
+// apps/web/src/pages/websites/[id]/extensions.astro   → Website extensions
 ```
 
 ### 13.9 Migration Frontend
 
-Voir **Section 10.3 Plan de Migration Unifié** pour le détail des phases frontend intégrées au plan global.
+Voir **Section 10.3 Plan d'Implémentation Détaillé** pour le détail des phases frontend intégrées au plan global.
 
 #### Fichiers à Supprimer (Phase 8)
 
 ```
 ❌ apps/web/src/components/SchemaRenderer.tsx        → Migré vers ui/form-renderer
-❌ apps/web/src/components/features/extensions/      → Remplacé par app-store
+❌ apps/web/src/components/features/extensions/      → Remplacé par extensions-store
 ❌ apps/web/src/components/features/settings/extension-settings/
 ```
 
@@ -2199,40 +2547,35 @@ Voir **Section 10.3 Plan de Migration Unifié** pour le détail des phases front
 
 ```
 ✅ apps/web/src/components/ui/form-renderer/         → Phase 1
-✅ apps/web/src/components/features/app-store/       → Phases 2-6
-✅ apps/web/src/lib/api/apps.ts                      → Phase 2
-✅ apps/web/src/pages/store/                         → Phases 2-3
+✅ apps/web/src/components/features/extensions-store/→ Phases 2-6
+✅ apps/web/src/lib/api/extensions.ts                → Phase 2
+✅ apps/web/src/pages/extensions/                    → Phases 2-3
 ```
 
 #### Fichiers à Modifier (Phase 7)
 
 ```
 📝 apps/web/src/components/studio/data-binding/     → Utiliser nouveaux types
-📝 apps/web/src/hooks/useCollections.ts             → Adapter aux apps
-📝 apps/web/src/lib/api/index.ts                    → Export apps API
+📝 apps/web/src/hooks/useCollections.ts             → Adapter aux extensions
+📝 apps/web/src/lib/api/index.ts                    → Export extensions API
 ```
 
 ---
 
 ## 14. Questions Ouvertes
 
-1. **Marketplace externe ?** — Permettre des apps tierces à terme ?
-2. **Monétisation apps ?** — Apps payantes avec revenue share ?
-3. **Sandbox ?** — Isolation des apps (WASM, containers) ?
-4. **Versioning SemVer strict ?** — Breaking changes = major bump obligatoire ?
-5. **i18n Manifests ?** — Labels traduits dans le manifest ?
-6. **Dark mode icons ?** — Variantes d'icônes pour les thèmes ?
+La section 11 du plan d'implémentation contient les questions ouvertes sous forme de tableau avec recommandations.
 
 ---
 
 ## 15. Conclusion
 
-Cette refonte transforme un système d'extensions technique en un **App Store utilisateur-centrique**:
+Cette refonte transforme un système d'extensions technique en un **Extension Store** structuré :
 
 - **Pour l'utilisateur**: Expérience cohérente, permissions claires, installation simple
 - **Pour le développeur**: Un seul fichier manifest, hooks clairs, migrations gérées
 - **Pour la plateforme**: Extensibilité maîtrisée, métriques, potentiel marketplace
 
-Le manifest unifié `manifest.toml` devient le **contrat** entre l'app et la plateforme — tout ce qu'une app peut faire doit y être déclaré.
+Le manifest unifié `manifest.toml` devient le **contrat** entre l'extension et la plateforme — tout ce qu'une extension peut faire doit y être déclaré.
 
-Le **FormRenderer** côté frontend garantit une UX cohérente peu importe l'app — chaque type de champ est rendu de manière uniforme et validé selon le même système.
+Le **FormRenderer** côté frontend garantit une UX cohérente pour toute extension — chaque type de champ est rendu de manière uniforme et validé selon le même système.

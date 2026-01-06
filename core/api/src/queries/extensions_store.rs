@@ -523,6 +523,36 @@ pub async fn list_website_extensions_v2(
     .await
 }
 
+/// Toggle website extension enabled state
+pub async fn toggle_website_extension_v2(
+    pool: &PgPool,
+    website_id: Uuid,
+    account_id: Uuid,
+    extension_slug: &str,
+    enabled: bool,
+) -> Result<WebsiteExtensionV2Row, sqlx::Error> {
+    sqlx::query_as::<_, WebsiteExtensionV2Row>(
+        r#"
+        UPDATE website_extensions_v2 we
+        SET enabled = $4, updated_at = NOW()
+        FROM account_extensions ae
+        WHERE we.account_extension_id = ae.id
+          AND we.website_id = $1
+          AND ae.account_id = $2
+          AND ae.extension_slug = $3
+        RETURNING we.id, we.website_id, we.account_extension_id,
+                  ae.extension_slug, (SELECT name FROM extensions_v2 WHERE slug = ae.extension_slug) as extension_name,
+                  we.settings, we.enabled, we.activated_at, we.updated_at
+        "#,
+    )
+    .bind(website_id)
+    .bind(account_id)
+    .bind(extension_slug)
+    .bind(enabled)
+    .fetch_one(pool)
+    .await
+}
+
 /// Update website-specific extension settings
 pub async fn update_website_extension_settings_v2(
     pool: &PgPool,

@@ -1,7 +1,9 @@
 //! Extension Store API Handlers
 //!
 //! Handlers for the public Extension Store API (browsing, details).
-//! Installation and activation are handled separately (requires auth).
+//! Installation and activation are handled in the `install` submodule.
+
+pub mod install;
 
 use axum::{
     extract::{Path, Query, State},
@@ -19,6 +21,21 @@ use crate::queries::{
     ExtensionStoreFilter, ExtensionSort, Pagination,
     list_store_extensions, get_store_extension, get_featured_extensions,
     get_extension_categories, is_extension_installed,
+};
+
+// Re-export install handlers
+pub use install::{
+    install_account_extension,
+    uninstall_account_extension,
+    list_installed_extensions,
+    get_installed_extension,
+    update_installed_extension_settings,
+    toggle_installed_extension,
+    activate_extension_on_website,
+    deactivate_extension_from_website,
+    list_website_extensions,
+    toggle_website_extension,
+    update_website_extension_settings,
 };
 
 // ============================================================================
