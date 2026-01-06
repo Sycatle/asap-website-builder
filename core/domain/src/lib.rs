@@ -6,6 +6,7 @@ pub mod errors;
 pub mod storage;
 pub mod extension_schema;
 pub mod administrators;
+pub mod collections;
 
 pub use users::{Account, AccountData};
 pub use websites::{
@@ -27,4 +28,20 @@ pub use administrators::{
     WebsiteAdministrator, AdministratorRole, AdministratorStatus,
     AdministratorPermissions, InviteAdministratorRequest, UpdateAdministratorRequest,
     AdministratorAuditLog,
+};
+pub use collections::{
+    // Schema definitions (for extensions)
+    CollectionDefinition, CollectionSchema, CollectionFieldDef, CollectionFieldType,
+    SyncMode, SyncFrequency, VariableDefinition, VariableSourceDef, VariableComputation,
+    ComputeOperation,
+    // Instance types (stored per website)
+    WebsiteCollection, CollectionItem, SyncStatus,
+    WebsiteVariable, VariableType, VariableSource,
+    // Binding types (for Studio)
+    DataBinding, CollectionBinding, FilterClause, FilterOperator, SortClause, SortOrder,
+    // Request/Response types
+    UpsertCollectionRequest, SetVariableRequest, CollectionQuery,
+    CollectionResponse, VariablesResponse, PaginationInfo,
+    // Helper
+    field,
 };

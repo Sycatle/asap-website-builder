@@ -34,6 +34,11 @@ pub enum EventType {
     
     // Preset events
     PresetApplied,
+    
+    // Collection events
+    SyncCollection,
+    CollectionSynced,
+    RecomputeVariables,
 }
 
 /// Event represents a system event that can trigger module actions
