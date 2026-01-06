@@ -9,7 +9,6 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -34,7 +33,6 @@ import {
   Download,
   Layers,
   X,
-  ChevronRight,
   Star,
   ArrowRight,
 } from 'lucide-react';
@@ -74,33 +72,33 @@ interface CategoryNavProps {
 function CategoryNav({ categories, activeCategory, installedCount, onSelect }: CategoryNavProps) {
   return (
     <ScrollArea className="w-full whitespace-nowrap">
-      <div className="flex gap-2 pb-2">
+      <div className="flex gap-1.5 pb-2">
         <button
           onClick={() => onSelect('all')}
           className={cn(
-            "shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all",
+            "shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
             activeCategory === 'all' 
-              ? "bg-primary text-primary-foreground shadow-md shadow-primary/25" 
+              ? "bg-primary text-primary-foreground" 
               : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
           )}
         >
-          <Layers className="w-4 h-4" />
+          <Layers className="w-3.5 h-3.5" />
           Toutes
         </button>
         <button
           onClick={() => onSelect('installed')}
           className={cn(
-            "shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all",
+            "shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
             activeCategory === 'installed' 
-              ? "bg-primary text-primary-foreground shadow-md shadow-primary/25" 
+              ? "bg-primary text-primary-foreground" 
               : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
           )}
         >
-          <Download className="w-4 h-4" />
+          <Download className="w-3.5 h-3.5" />
           Installées
           {installedCount > 0 && (
             <span className={cn(
-              "ml-1 px-1.5 py-0.5 rounded-full text-xs",
+              "ml-0.5 px-1.5 py-0.5 rounded text-[10px]",
               activeCategory === 'installed' 
                 ? "bg-white/20" 
                 : "bg-primary/10 text-primary"
@@ -109,21 +107,21 @@ function CategoryNav({ categories, activeCategory, installedCount, onSelect }: C
             </span>
           )}
         </button>
-        <Separator orientation="vertical" className="h-6 my-auto mx-1" />
+        <Separator orientation="vertical" className="h-5 my-auto mx-1" />
         {categories.map(cat => (
           <button
             key={cat.slug}
             onClick={() => onSelect(cat.slug)}
             className={cn(
-              "shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all",
+              "shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
               activeCategory === cat.slug 
-                ? "bg-primary text-primary-foreground shadow-md shadow-primary/25" 
+                ? "bg-primary text-primary-foreground" 
                 : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
             {cat.name}
             <span className={cn(
-              "px-1.5 py-0.5 rounded-full text-xs",
+              "px-1.5 py-0.5 rounded text-[10px]",
               activeCategory === cat.slug 
                 ? "bg-white/20" 
                 : "bg-foreground/5"
@@ -162,13 +160,12 @@ function FeaturedCarousel({
   return (
     <section className="mb-8">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-white" />
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-amber-500/10">
+            <Sparkles className="w-4 h-4 text-amber-500" />
           </div>
           <div>
-            <h2 className="font-semibold">En vedette</h2>
-            <p className="text-xs text-muted-foreground">Extensions recommandées</p>
+            <h2 className="font-medium text-sm">En vedette</h2>
           </div>
         </div>
       </div>
@@ -180,7 +177,7 @@ function FeaturedCarousel({
         }}
         className="w-full"
       >
-        <CarouselContent className="-ml-4">
+        <CarouselContent className="-ml-3">
           {extensions.map(ext => {
             const iconConfig = getExtensionIconConfig(ext.icon, ext.slug);
             const IconComponent = iconConfig.icon;
@@ -188,60 +185,62 @@ function FeaturedCarousel({
             const isActive = activeSlugs.has(ext.slug);
 
             return (
-              <CarouselItem key={ext.slug} className="pl-4 basis-full sm:basis-1/2 lg:basis-1/3 xl:basis-[280px]">
+              <CarouselItem key={ext.slug} className="pl-3 basis-full sm:basis-1/2 lg:basis-1/3 xl:basis-[260px]">
                 <Link 
                   href={`/${websiteId}/extensions/${ext.slug}`}
                   className={cn(
-                    "group block h-full rounded-2xl border bg-card overflow-hidden",
-                    "transition-all duration-300 hover:shadow-xl hover:shadow-black/5 hover:-translate-y-1",
-                    isActive && "ring-2 ring-emerald-500/30",
+                    "group flex flex-col h-full rounded-lg border bg-card overflow-hidden",
+                    "transition-all duration-200 hover:shadow-md hover:border-primary/20",
+                    isActive && "border-emerald-500/30 bg-emerald-500/5",
                   )}
                 >
-                  {/* Gradient header */}
-                  <div className={cn(
-                    "h-20 relative flex items-end p-4",
-                    `bg-gradient-to-br ${iconConfig.gradient}`,
-                  )}>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                    
-                    <Badge className="absolute top-3 right-3 bg-white/20 text-white border-0 backdrop-blur-sm text-[10px]">
-                      <Star className="w-3 h-3 mr-1 fill-current" />
-                      Featured
-                    </Badge>
-
-                    {isActive && (
-                      <Badge className="absolute top-3 left-3 bg-emerald-500 text-white border-0 text-[10px]">
-                        <CheckCircle2 className="w-3 h-3 mr-1" />
-                        Active
-                      </Badge>
-                    )}
-
-                    <div className="relative w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
-                      <IconComponent className="w-6 h-6 text-white" strokeWidth={1.5} />
-                    </div>
-                  </div>
-
                   {/* Content */}
-                  <div className="p-4 space-y-2">
-                    <div>
-                      <h3 className="font-semibold text-sm line-clamp-1">{ext.name}</h3>
-                      <p className="text-xs text-muted-foreground">{ext.author_name || 'ASAP Team'}</p>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{ext.description}</p>
-                    
-                    <div className="flex items-center justify-between pt-2">
-                      <span className="text-xs text-muted-foreground">{ext.install_count} installs</span>
-                      <div onClick={e => e.preventDefault()}>
-                        {!isInstalled && (
-                          <Button
-                            size="sm"
-                            className="h-7 text-xs rounded-full"
-                            onClick={() => onInstall(ext)}
-                          >
-                            Installer
-                          </Button>
+                  <div className="p-4 flex-1">
+                    <div className="flex items-start gap-3">
+                      <div 
+                        className={cn(
+                          "shrink-0 w-10 h-10 rounded-lg flex items-center justify-center",
+                          `bg-gradient-to-br ${iconConfig.gradient}`,
                         )}
+                      >
+                        <IconComponent className="w-5 h-5 text-white" strokeWidth={1.5} />
                       </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="font-medium text-sm truncate">{ext.name}</h3>
+                          <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">{ext.author_name || 'ASAP Team'}</p>
+                      </div>
+
+                      {isActive && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 shrink-0">
+                          <CheckCircle2 className="w-3 h-3" />
+                        </span>
+                      )}
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground line-clamp-2 mt-3">{ext.description}</p>
+                  </div>
+                  
+                  {/* Footer */}
+                  <div className="px-4 py-3 bg-muted/30 border-t flex items-center justify-between">
+                    <span className="text-[11px] text-muted-foreground">{ext.install_count} installs</span>
+                    <div onClick={e => e.preventDefault()}>
+                      {isInstalled ? (
+                        isActive ? (
+                          <span className="text-[11px] text-emerald-600 font-medium">Active</span>
+                        ) : (
+                          <Button size="sm" variant="outline" className="h-7 text-xs">
+                            Activer
+                          </Button>
+                        )
+                      ) : (
+                        <Button size="sm" className="h-7 text-xs" onClick={() => onInstall(ext)}>
+                          Installer
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </Link>
@@ -249,8 +248,8 @@ function FeaturedCarousel({
             );
           })}
         </CarouselContent>
-        <CarouselPrevious className="hidden sm:flex -left-4 bg-background/80 backdrop-blur-sm border shadow-lg hover:bg-background" />
-        <CarouselNext className="hidden sm:flex -right-4 bg-background/80 backdrop-blur-sm border shadow-lg hover:bg-background" />
+        <CarouselPrevious className="hidden sm:flex -left-3 h-8 w-8 border shadow-sm" />
+        <CarouselNext className="hidden sm:flex -right-3 h-8 w-8 border shadow-sm" />
       </Carousel>
     </section>
   );
@@ -287,54 +286,54 @@ function ExtensionCard({
       <Link 
         href={`/${websiteId}/extensions/${extension.slug}`}
         className={cn(
-          "group flex items-center gap-4 p-4 rounded-xl border bg-card",
-          "transition-all duration-200 hover:bg-muted/30 hover:border-border",
-          isActive && "bg-emerald-500/5 border-emerald-500/20",
+          "group flex items-center gap-4 p-4 rounded-lg border bg-card",
+          "transition-all duration-200 hover:shadow-md hover:border-primary/20",
+          isActive && "border-emerald-500/30 bg-emerald-500/5",
         )}
       >
         <div 
           className={cn(
-            "shrink-0 w-12 h-12 rounded-xl flex items-center justify-center",
-            "shadow-lg shadow-black/5 transition-transform duration-200 group-hover:scale-105",
+            "shrink-0 w-10 h-10 rounded-lg flex items-center justify-center",
             `bg-gradient-to-br ${iconConfig.gradient}`,
           )}
         >
-          <IconComponent className="w-6 h-6 text-white" strokeWidth={1.5} />
+          <IconComponent className="w-5 h-5 text-white" strokeWidth={1.5} />
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-sm truncate">{extension.name}</h3>
+            <h3 className="font-medium text-sm truncate">{extension.name}</h3>
             {extension.featured && (
               <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
             )}
             {isActive && (
-              <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] h-5">
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600">
+                <CheckCircle2 className="w-3 h-3" />
                 Active
-              </Badge>
+              </span>
             )}
           </div>
           <p className="text-xs text-muted-foreground truncate mt-0.5">{extension.description}</p>
         </div>
 
-        <div className="flex items-center gap-2" onClick={e => e.preventDefault()}>
+        <div className="flex items-center gap-3" onClick={e => e.preventDefault()}>
+          <span className="text-xs text-muted-foreground hidden sm:block">{extension.install_count} installs</span>
           {isInstalled ? (
             <Button
               size="sm"
               variant={isActive ? "outline" : "default"}
-              className="h-8 rounded-full"
+              className="h-8"
               onClick={onToggleActive}
             >
-              <Power className="w-3.5 h-3.5 mr-1" />
+              <Power className="w-3.5 h-3.5 mr-1.5" />
               {isActive ? 'Désactiver' : 'Activer'}
             </Button>
           ) : (
-            <Button size="sm" className="h-8 rounded-full" onClick={onInstall}>
-              <Download className="w-3.5 h-3.5 mr-1" />
+            <Button size="sm" className="h-8" onClick={onInstall}>
+              <Download className="w-3.5 h-3.5 mr-1.5" />
               Installer
             </Button>
           )}
-          <ChevronRight className="w-4 h-4 text-muted-foreground" />
         </div>
       </Link>
     );
@@ -345,46 +344,49 @@ function ExtensionCard({
     <Link 
       href={`/${websiteId}/extensions/${extension.slug}`}
       className={cn(
-        "group relative flex flex-col rounded-2xl border bg-card overflow-hidden",
-        "transition-all duration-300 hover:shadow-xl hover:shadow-black/5 hover:-translate-y-1",
-        isActive && "ring-2 ring-emerald-500/20 bg-emerald-500/[0.02]",
+        "group relative flex flex-col rounded-lg border bg-card overflow-hidden",
+        "transition-all duration-200 hover:shadow-md hover:border-primary/20",
+        isActive && "border-emerald-500/30 bg-emerald-500/5",
       )}
     >
-      <div className={cn("h-1.5 w-full", `bg-gradient-to-r ${iconConfig.gradient}`)} />
-
-      <div className="p-5 flex-1 flex flex-col">
-        <div className="flex items-start gap-4">
+      <div className="p-4 flex-1 flex flex-col">
+        <div className="flex items-start gap-3">
           <div 
             className={cn(
-              "shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center",
-              "shadow-lg shadow-black/10 transition-transform duration-200 group-hover:scale-105",
+              "shrink-0 w-10 h-10 rounded-lg flex items-center justify-center",
               `bg-gradient-to-br ${iconConfig.gradient}`,
             )}
           >
-            <IconComponent className="w-7 h-7 text-white" strokeWidth={1.5} />
+            <IconComponent className="w-5 h-5 text-white" strokeWidth={1.5} />
           </div>
 
-          <div className="flex-1 min-w-0 pt-0.5">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-[15px] truncate">{extension.name}</h3>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-medium text-sm truncate">{extension.name}</h3>
               {extension.featured && (
-                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               {extension.author_name || 'ASAP'}
             </p>
           </div>
+
+          {isActive && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 shrink-0">
+              <CheckCircle2 className="w-3 h-3" />
+            </span>
+          )}
         </div>
 
-        <p className="text-sm text-muted-foreground line-clamp-2 mt-4 leading-relaxed flex-1">
+        <p className="text-xs text-muted-foreground line-clamp-2 mt-3 leading-relaxed flex-1">
           {extension.description}
         </p>
 
         {extension.tags && extension.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            {extension.tags.slice(0, 3).map(tag => (
-              <span key={tag} className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-muted text-muted-foreground">
+          <div className="flex flex-wrap gap-1 mt-3">
+            {extension.tags.slice(0, 2).map(tag => (
+              <span key={tag} className="px-1.5 py-0.5 rounded text-[10px] bg-muted text-muted-foreground">
                 {tag}
               </span>
             ))}
@@ -392,27 +394,20 @@ function ExtensionCard({
         )}
       </div>
 
-      <div className="px-5 py-3.5 mt-auto bg-muted/30 border-t flex items-center justify-between">
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span>{extension.install_count} installs</span>
-          <span>v{extension.version}</span>
-        </div>
+      <div className="px-4 py-3 bg-muted/30 border-t flex items-center justify-between">
+        <span className="text-[11px] text-muted-foreground">{extension.install_count} installs</span>
 
         <div onClick={e => e.preventDefault()}>
           {isInstalled ? (
             isActive ? (
-              <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]">
-                <CheckCircle2 className="w-3 h-3 mr-1" />
-                Active
-              </Badge>
+              <span className="text-[11px] text-emerald-600 font-medium">Active</span>
             ) : (
-              <Button size="sm" className="h-7 text-xs rounded-full" onClick={onToggleActive}>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onToggleActive}>
                 Activer
               </Button>
             )
           ) : (
-            <Button size="sm" className="h-7 text-xs rounded-full" onClick={onInstall}>
-              <Download className="w-3.5 h-3.5 mr-1" />
+            <Button size="sm" className="h-7 text-xs" onClick={onInstall}>
               Installer
             </Button>
           )}
@@ -426,18 +421,11 @@ function ExtensionCard({
 // Section Header
 // ============================================================================
 
-function SectionHeader({ title, subtitle, icon }: { title: string; subtitle?: string; icon?: React.ReactNode }) {
+function SectionHeader({ title, icon }: { title: string; subtitle?: string; icon?: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-3 mb-5">
-      {icon && (
-        <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-          {icon}
-        </div>
-      )}
-      <div>
-        <h2 className="font-semibold text-lg">{title}</h2>
-        {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
-      </div>
+    <div className="flex items-center gap-2 mb-4">
+      {icon}
+      <h2 className="font-medium text-sm">{title}</h2>
     </div>
   );
 }
@@ -629,30 +617,27 @@ export default function ExtensionMarketplace() {
             <section>
               {categoryFilter === 'all' && !searchQuery && (
                 <SectionHeader
-                  title="Toutes les extensions"
-                  subtitle={`${displayedExtensions.length} disponibles`}
-                  icon={<Layers className="w-4 h-4 text-muted-foreground" />}
+                  title={`Toutes les extensions (${displayedExtensions.length})`}
+                  icon={<div className="p-1.5 rounded-lg bg-muted"><Layers className="w-3.5 h-3.5 text-muted-foreground" /></div>}
                 />
               )}
               {categoryFilter === 'installed' && (
                 <SectionHeader
-                  title="Mes extensions"
-                  subtitle={`${displayedExtensions.length} installée${displayedExtensions.length > 1 ? 's' : ''}`}
-                  icon={<Download className="w-4 h-4 text-muted-foreground" />}
+                  title={`Mes extensions (${displayedExtensions.length})`}
+                  icon={<div className="p-1.5 rounded-lg bg-primary/10"><Download className="w-3.5 h-3.5 text-primary" /></div>}
                 />
               )}
               {searchQuery && (
                 <SectionHeader
-                  title="Résultats"
-                  subtitle={`${displayedExtensions.length} pour "${searchQuery}"`}
-                  icon={<Search className="w-4 h-4 text-muted-foreground" />}
+                  title={`${displayedExtensions.length} résultat${displayedExtensions.length > 1 ? 's' : ''} pour "${searchQuery}"`}
+                  icon={<div className="p-1.5 rounded-lg bg-muted"><Search className="w-3.5 h-3.5 text-muted-foreground" /></div>}
                 />
               )}
 
               <div className={cn(
                 viewMode === 'grid'
-                  ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"
-                  : "flex flex-col gap-3"
+                  ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3"
+                  : "flex flex-col gap-2"
               )}>
                 {displayedExtensions.map(ext => (
                   <ExtensionCard

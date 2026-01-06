@@ -127,12 +127,12 @@ function OverviewTab({ extension }: OverviewTabProps) {
   const permissions = (extension.manifest?.permissions as string[]) || [];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
+    <div className="grid gap-4 lg:grid-cols-3">
       {/* Main Content */}
-      <div className="lg:col-span-2 space-y-6">
+      <div className="lg:col-span-2 space-y-4">
         {/* Banner */}
         {extension.banner && (
-          <Card className="overflow-hidden border-0 shadow-lg">
+          <Card className="overflow-hidden">
             <img src={extension.banner} alt={extension.name} className="w-full h-auto" />
           </Card>
         )}
@@ -140,9 +140,9 @@ function OverviewTab({ extension }: OverviewTabProps) {
         {/* Description */}
         {extension.long_description && (
           <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <div className="p-1.5 rounded-lg bg-primary/10">
                   <Info className="w-4 h-4 text-primary" />
                 </div>
                 Description
@@ -158,24 +158,24 @@ function OverviewTab({ extension }: OverviewTabProps) {
 
         {/* Features */}
         <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <div className="p-1.5 rounded-lg bg-emerald-500/10">
                 <Zap className="w-4 h-4 text-emerald-500" />
               </div>
               Fonctionnalités
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid sm:grid-cols-2 gap-3">
+            <div className="grid sm:grid-cols-2 gap-2">
               {[
                 { title: 'Installation rapide', desc: 'Activez en un clic' },
                 { title: 'Mises à jour auto', desc: 'Toujours à jour' },
                 { title: 'Support intégré', desc: 'Assistance directe' },
                 { title: 'Configuration simple', desc: 'Interface intuitive' },
               ].map(f => (
-                <div key={f.title} className="flex gap-3 p-3 rounded-xl bg-muted/30">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                <div key={f.title} className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-medium text-sm">{f.title}</p>
                     <p className="text-xs text-muted-foreground">{f.desc}</p>
@@ -189,9 +189,9 @@ function OverviewTab({ extension }: OverviewTabProps) {
         {/* Permissions */}
         {permissions.length > 0 && (
           <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <div className="p-1.5 rounded-lg bg-amber-500/10">
                   <Shield className="w-4 h-4 text-amber-500" />
                 </div>
                 Permissions requises
@@ -200,9 +200,9 @@ function OverviewTab({ extension }: OverviewTabProps) {
             <CardContent>
               <div className="space-y-2">
                 {permissions.map(perm => (
-                  <div key={perm} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                  <div key={perm} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
                     <Shield className="w-4 h-4 text-amber-500 shrink-0" />
-                    <span className="text-sm font-medium">{perm}</span>
+                    <span className="text-sm">{perm}</span>
                   </div>
                 ))}
               </div>
@@ -212,13 +212,13 @@ function OverviewTab({ extension }: OverviewTabProps) {
       </div>
 
       {/* Sidebar */}
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Info Card */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Informations</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Informations</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             <div className="flex justify-between items-center text-sm">
               <span className="text-muted-foreground">Version</span>
               <span className="font-medium">{extension.version}</span>
@@ -226,7 +226,7 @@ function OverviewTab({ extension }: OverviewTabProps) {
             <Separator />
             <div className="flex justify-between items-center text-sm">
               <span className="text-muted-foreground">Plan minimum</span>
-              <Badge variant="secondary" className="capitalize">{extension.min_plan}</Badge>
+              <Badge variant="secondary" className="capitalize text-xs">{extension.min_plan}</Badge>
             </div>
             <Separator />
             <div className="flex justify-between items-center text-sm">
@@ -246,16 +246,16 @@ function OverviewTab({ extension }: OverviewTabProps) {
         {/* Tags */}
         {extension.tags.length > 0 && (
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Tag className="w-4 h-4" />
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <Tag className="w-4 h-4 text-muted-foreground" />
                 Tags
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {extension.tags.map(tag => (
-                  <Badge key={tag} variant="secondary" className="rounded-full px-3">{tag}</Badge>
+                  <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
                 ))}
               </div>
             </CardContent>
@@ -265,23 +265,23 @@ function OverviewTab({ extension }: OverviewTabProps) {
         {/* Author */}
         {extension.author && (
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <User className="w-4 h-4" />
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <User className="w-4 h-4 text-muted-foreground" />
                 Développeur
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
                   {extension.author.name.charAt(0).toUpperCase()}
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="font-semibold">{extension.author.name}</span>
-                    {extension.author.verified && <CheckCircle2 className="w-4 h-4 text-blue-500" />}
+                    <span className="font-medium text-sm">{extension.author.name}</span>
+                    {extension.author.verified && <CheckCircle2 className="w-3.5 h-3.5 text-blue-500" />}
                   </div>
-                  <p className="text-sm text-muted-foreground">Développeur vérifié</p>
+                  <p className="text-xs text-muted-foreground">Développeur vérifié</p>
                 </div>
               </div>
             </CardContent>
@@ -290,14 +290,14 @@ function OverviewTab({ extension }: OverviewTabProps) {
 
         {/* Support */}
         <Card className="bg-muted/30">
-          <CardContent className="pt-6 text-center space-y-3">
-            <Heart className="w-8 h-8 mx-auto text-muted-foreground" />
+          <CardContent className="pt-5 text-center space-y-2">
+            <Heart className="w-6 h-6 mx-auto text-muted-foreground" />
             <div>
               <h3 className="font-medium text-sm">Besoin d'aide ?</h3>
-              <p className="text-xs text-muted-foreground mt-1">Consultez la documentation</p>
+              <p className="text-xs text-muted-foreground">Consultez la documentation</p>
             </div>
-            <Button variant="outline" size="sm" className="rounded-full w-full">
-              <ExternalLink className="w-3.5 h-3.5 mr-2" />
+            <Button variant="outline" size="sm" className="w-full text-xs">
+              <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
               Documentation
             </Button>
           </CardContent>
@@ -320,10 +320,10 @@ interface SettingsTabProps {
 function SettingsTab({ schema, settings, onSettingsChange }: SettingsTabProps) {
   if (!schema.fields || schema.fields.length === 0) {
     return (
-      <div className="text-center py-12">
-        <Settings className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-        <h3 className="font-semibold mb-2">Aucune configuration</h3>
-        <p className="text-sm text-muted-foreground">
+      <div className="text-center py-10">
+        <Settings className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+        <h3 className="font-medium text-sm mb-1">Aucune configuration</h3>
+        <p className="text-xs text-muted-foreground">
           Cette extension ne nécessite pas de configuration.
         </p>
       </div>
@@ -332,12 +332,12 @@ function SettingsTab({ schema, settings, onSettingsChange }: SettingsTabProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Settings className="w-4 h-4" />
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+          <Settings className="w-4 h-4 text-muted-foreground" />
           Configuration
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs">
           Personnalisez le comportement de l'extension
         </CardDescription>
       </CardHeader>
@@ -368,10 +368,10 @@ interface ActionsTabProps {
 function ActionsTab({ actions, executingAction, onAction }: ActionsTabProps) {
   if (actions.length === 0) {
     return (
-      <div className="text-center py-12">
-        <Zap className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-        <h3 className="font-semibold mb-2">Aucune action</h3>
-        <p className="text-sm text-muted-foreground">
+      <div className="text-center py-10">
+        <Zap className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+        <h3 className="font-medium text-sm mb-1">Aucune action</h3>
+        <p className="text-xs text-muted-foreground">
           Cette extension n'a pas d'actions disponibles.
         </p>
       </div>
@@ -379,13 +379,13 @@ function ActionsTab({ actions, executingAction, onAction }: ActionsTabProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {actions.map(action => (
         <Card key={action.key}>
-          <CardContent className="flex items-center justify-between p-4">
-            <div className="flex items-center gap-4">
+          <CardContent className="flex items-center justify-between p-3">
+            <div className="flex items-center gap-3">
               <div className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center",
+                "p-2 rounded-lg",
                 action.style === 'danger' 
                   ? "bg-red-500/10 text-red-500"
                   : action.key.includes('sync')
@@ -393,15 +393,15 @@ function ActionsTab({ actions, executingAction, onAction }: ActionsTabProps) {
                     : "bg-primary/10 text-primary"
               )}>
                 {action.key.includes('sync') ? (
-                  <RefreshCw className="w-5 h-5" />
+                  <RefreshCw className="w-4 h-4" />
                 ) : (
-                  <Play className="w-5 h-5" />
+                  <Play className="w-4 h-4" />
                 )}
               </div>
               <div>
-                <h4 className="font-medium">{action.label}</h4>
+                <h4 className="font-medium text-sm">{action.label}</h4>
                 {action.confirm && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-[11px] text-muted-foreground">
                     Nécessite une confirmation
                   </p>
                 )}
@@ -410,12 +410,11 @@ function ActionsTab({ actions, executingAction, onAction }: ActionsTabProps) {
             <Button
               variant={action.style === 'danger' ? 'destructive' : 'default'}
               size="sm"
-              className="rounded-full"
               onClick={() => onAction(action.key)}
               disabled={executingAction === action.key}
             >
               {executingAction === action.key ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
               ) : null}
               Exécuter
             </Button>
@@ -437,20 +436,20 @@ interface HistoryTabProps {
 function HistoryTab({ changelog }: HistoryTabProps) {
   const getIcon = (action: ChangelogEntry['action']) => {
     switch (action) {
-      case 'sync': return <RefreshCw className="w-4 h-4" />;
-      case 'settings_updated': return <Settings className="w-4 h-4" />;
-      case 'enabled': return <CheckCircle2 className="w-4 h-4" />;
-      case 'disabled': return <Power className="w-4 h-4" />;
-      default: return <History className="w-4 h-4" />;
+      case 'sync': return <RefreshCw className="w-3.5 h-3.5" />;
+      case 'settings_updated': return <Settings className="w-3.5 h-3.5" />;
+      case 'enabled': return <CheckCircle2 className="w-3.5 h-3.5" />;
+      case 'disabled': return <Power className="w-3.5 h-3.5" />;
+      default: return <History className="w-3.5 h-3.5" />;
     }
   };
 
   if (changelog.length === 0) {
     return (
-      <div className="text-center py-12">
-        <History className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-        <h3 className="font-semibold mb-2">Aucun historique</h3>
-        <p className="text-sm text-muted-foreground">
+      <div className="text-center py-10">
+        <History className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+        <h3 className="font-medium text-sm mb-1">Aucun historique</h3>
+        <p className="text-xs text-muted-foreground">
           Les actions sur cette extension apparaîtront ici.
         </p>
       </div>
@@ -462,13 +461,13 @@ function HistoryTab({ changelog }: HistoryTabProps) {
       <CardContent className="p-0">
         <div className="divide-y">
           {changelog.map(entry => (
-            <div key={entry.id} className="flex items-start gap-4 p-4">
-              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0 text-muted-foreground">
+            <div key={entry.id} className="flex items-start gap-3 p-3">
+              <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0 text-muted-foreground">
                 {getIcon(entry.action)}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm">{entry.description}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-[11px] text-muted-foreground mt-0.5">
                   {formatDistanceToNow(new Date(entry.timestamp), { addSuffix: true, locale: fr })}
                 </p>
               </div>
@@ -491,7 +490,7 @@ interface SuggestedExtensionsProps {
   websiteId: string;
 }
 
-function SuggestedExtensions({ currentSlug, category, tags, websiteId }: SuggestedExtensionsProps) {
+function SuggestedExtensions({ currentSlug, category, tags: _tags, websiteId }: SuggestedExtensionsProps) {
   const TARGET_COUNT = 4;
   
   // Fetch extensions from the same category
@@ -528,25 +527,16 @@ function SuggestedExtensions({ currentSlug, category, tags, websiteId }: Suggest
 
   if (suggestions.length === 0) return null;
 
-  // Determine subtitle based on content
-  const hasMixedCategories = suggestions.some(ext => ext.category !== category);
-  const subtitle = hasMixedCategories 
-    ? "Découvrez d'autres extensions" 
-    : `Découvrez d'autres extensions ${category}`;
-
   return (
-    <section className="mt-12 pt-8 border-t">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-          <Sparkles className="w-5 h-5 text-white" />
+    <section className="mt-10 pt-6 border-t">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="p-1.5 rounded-lg bg-violet-500/10">
+          <Sparkles className="w-4 h-4 text-violet-500" />
         </div>
-        <div>
-          <h2 className="font-semibold text-lg">Extensions similaires</h2>
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
-        </div>
+        <h2 className="font-medium text-sm">Extensions similaires</h2>
       </div>
       
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {suggestions.map(ext => {
           const iconConfig = getExtensionIconConfig(ext.icon, ext.slug);
           const IconComponent = iconConfig.icon;
@@ -556,46 +546,42 @@ function SuggestedExtensions({ currentSlug, category, tags, websiteId }: Suggest
               key={ext.slug}
               href={`/${websiteId}/extensions/${ext.slug}`}
               className={cn(
-                "group relative flex flex-col rounded-xl border bg-card overflow-hidden",
-                "transition-all duration-300 hover:shadow-lg hover:shadow-black/5 hover:-translate-y-0.5 hover:border-primary/20",
+                "group flex flex-col rounded-lg border bg-card overflow-hidden",
+                "transition-all duration-200 hover:shadow-md hover:border-primary/20",
               )}
             >
-              {/* Gradient accent */}
-              <div className={cn("h-1 w-full", `bg-gradient-to-r ${iconConfig.gradient}`)} />
-              
-              <div className="p-4 flex flex-col flex-1">
+              <div className="p-4 flex-1">
                 <div className="flex items-start gap-3">
                   <div 
                     className={cn(
-                      "shrink-0 w-10 h-10 rounded-xl flex items-center justify-center",
-                      "shadow-md shadow-black/5 transition-transform duration-200 group-hover:scale-110",
+                      "shrink-0 w-9 h-9 rounded-lg flex items-center justify-center",
                       `bg-gradient-to-br ${iconConfig.gradient}`,
                     )}
                   >
-                    <IconComponent className="w-5 h-5 text-white" strokeWidth={1.5} />
+                    <IconComponent className="w-4 h-4 text-white" strokeWidth={1.5} />
                   </div>
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <h3 className="font-semibold text-sm truncate">{ext.name}</h3>
+                      <h3 className="font-medium text-sm truncate">{ext.name}</h3>
                       {ext.featured && (
                         <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
                       )}
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                    <p className="text-[11px] text-muted-foreground">
                       {ext.author_name || 'ASAP Team'}
                     </p>
                   </div>
                 </div>
                 
-                <p className="text-xs text-muted-foreground line-clamp-2 mt-3 flex-1">
+                <p className="text-xs text-muted-foreground line-clamp-2 mt-2">
                   {ext.description}
                 </p>
-                
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-dashed">
-                  <span className="text-[10px] text-muted-foreground">{ext.install_count} installs</span>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                </div>
+              </div>
+              
+              <div className="px-4 py-2.5 bg-muted/30 border-t flex items-center justify-between">
+                <span className="text-[10px] text-muted-foreground">{ext.install_count} installs</span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
             </Link>
           );
@@ -826,15 +812,15 @@ export default function ExtensionPage({ slug, initialTab = 'overview' }: Extensi
   // Header icon
   const headerIcon = IconComponent ? (
     <div className={cn(
-      "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg",
+      "w-10 h-10 rounded-lg flex items-center justify-center",
       `bg-gradient-to-br ${iconConfig?.gradient}`,
     )}>
-      <IconComponent className="w-6 h-6 text-white" strokeWidth={1.5} />
+      <IconComponent className="w-5 h-5 text-white" strokeWidth={1.5} />
     </div>
   ) : undefined;
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+    <div className="flex flex-col gap-4 animate-in fade-in duration-300">
       {/* Page Header */}
       <PageHeader
         title={extension.name}
@@ -862,19 +848,18 @@ export default function ExtensionPage({ slug, initialTab = 'overview' }: Extensi
         ]}
         stickyContent={
           <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {headerIcon}
-              <span className="font-semibold hidden sm:block">{extension.name}</span>
+              <span className="font-medium text-sm hidden sm:block">{extension.name}</span>
             </div>
             <div className="flex items-center gap-2">
               {isActive && (
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-full"
                   onClick={() => handleAction('sync')}
                 >
-                  <RefreshCw className="w-4 h-4 mr-2" />
+                  <RefreshCw className="w-4 h-4 mr-1.5" />
                   Sync
                 </Button>
               )}
@@ -892,56 +877,56 @@ export default function ExtensionPage({ slug, initialTab = 'overview' }: Extensi
       />
 
       {/* Stats Bar */}
-      <div className="flex flex-wrap gap-6 text-sm">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Download className="w-4 h-4" />
+      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1.5">
+          <Download className="w-3.5 h-3.5" />
           <span>{extension.install_count.toLocaleString()} installs</span>
         </div>
         {extension.rating !== undefined && extension.rating_count > 0 && (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+          <div className="flex items-center gap-1.5">
+            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
             <span>{extension.rating.toFixed(1)} ({extension.rating_count})</span>
           </div>
         )}
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Box className="w-4 h-4" />
+        <div className="flex items-center gap-1.5">
+          <Box className="w-3.5 h-3.5" />
           <span>v{extension.version}</span>
         </div>
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Clock className="w-4 h-4" />
+        <div className="flex items-center gap-1.5">
+          <Clock className="w-3.5 h-3.5" />
           <span>MAJ {formatDistanceToNow(new Date(extension.updated_at), { locale: fr })}</span>
         </div>
       </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
-        <TabsList className="bg-muted/50">
-          <TabsTrigger value="overview" className="gap-2">
-            <Info className="w-4 h-4" />
+        <TabsList className="bg-muted/50 h-9">
+          <TabsTrigger value="overview" className="gap-1.5 text-xs h-7">
+            <Info className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Aperçu</span>
           </TabsTrigger>
           {isActive && hasConfig && (
-            <TabsTrigger value="settings" className="gap-2">
-              <Settings className="w-4 h-4" />
+            <TabsTrigger value="settings" className="gap-1.5 text-xs h-7">
+              <Settings className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Paramètres</span>
             </TabsTrigger>
           )}
           {isActive && hasActions && (
-            <TabsTrigger value="actions" className="gap-2">
-              <Zap className="w-4 h-4" />
+            <TabsTrigger value="actions" className="gap-1.5 text-xs h-7">
+              <Zap className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Actions</span>
-              <Badge variant="secondary" className="ml-1 h-5 text-[10px]">{actions.length}</Badge>
+              <Badge variant="secondary" className="ml-1 h-4 text-[10px] px-1">{actions.length}</Badge>
             </TabsTrigger>
           )}
           {isActive && (
-            <TabsTrigger value="history" className="gap-2">
-              <History className="w-4 h-4" />
+            <TabsTrigger value="history" className="gap-1.5 text-xs h-7">
+              <History className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Historique</span>
             </TabsTrigger>
           )}
         </TabsList>
 
-        <div className="mt-6">
+        <div className="mt-4">
           <TabsContent value="overview" className="mt-0">
             <OverviewTab extension={extension} />
           </TabsContent>
@@ -977,14 +962,14 @@ export default function ExtensionPage({ slug, initialTab = 'overview' }: Extensi
       {/* Not active state */}
       {!isActive && isInstalled && (
         <Card className="bg-muted/30">
-          <CardContent className="py-8 text-center">
-            <Power className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="font-semibold mb-2">Extension inactive</h3>
-            <p className="text-sm text-muted-foreground mb-4">
+          <CardContent className="py-6 text-center">
+            <Power className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+            <h3 className="font-medium text-sm mb-1">Extension inactive</h3>
+            <p className="text-xs text-muted-foreground mb-4">
               Activez cette extension pour accéder aux paramètres et actions.
             </p>
-            <Button onClick={handleToggleExtension} className="rounded-full">
-              <Power className="w-4 h-4 mr-2" />
+            <Button size="sm" onClick={handleToggleExtension}>
+              <Power className="w-4 h-4 mr-1.5" />
               Activer l'extension
             </Button>
           </CardContent>
