@@ -2519,16 +2519,128 @@ export const extensionsAPI = {
 };
 ```
 
-### 13.8 Routing & Pages
+### 13.8 Interface Unifiée `/{website_id}/extensions`
+
+> **Décision d'Architecture**: Plutôt que de créer des pages séparées pour le store et les extensions activées,
+> nous fusionnons tout en une **interface unique** à `/{website_id}/extensions`.
+
+#### Pourquoi une Interface Unifiée ?
+
+| Approche Séparée | Approche Unifiée (Choisie) |
+|------------------|----------------------------|
+| `/extensions` → Store global | `/{website_id}/extensions` → Tout en un |
+| `/account/extensions` → Installées | Onglets dans la même page |
+| `/{website_id}/extensions` → Activées | Context-aware selon le website |
+| 3+ pages à maintenir | 1 seule page + composants |
+
+#### Architecture de la Page Unifiée
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  ◄ Back to Dashboard           Extensions                           │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  [Installées] [Découvrir]                    🔍 Rechercher...        │
+│  ─────────────────────────────────────────────────────────────      │
+│                                                                     │
+│  ┌─ ONGLET "INSTALLÉES" ────────────────────────────────────────┐  │
+│  │                                                               │  │
+│  │  ● Extensions actives sur ce site (3)                        │  │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │  │
+│  │  │ GitHub Sync  │  │  Analytics   │  │   Contact    │       │  │
+│  │  │ [Configurer] │  │ [Configurer] │  │ [Configurer] │       │  │
+│  │  │ [Désactiver] │  │ [Désactiver] │  │ [Désactiver] │       │  │
+│  │  └──────────────┘  └──────────────┘  └──────────────┘       │  │
+│  │                                                               │  │
+│  │  ○ Installées mais inactives (2)                             │  │
+│  │  ┌──────────────┐  ┌──────────────┐                         │  │
+│  │  │   Blog       │  │   SEO Pro    │                         │  │
+│  │  │  [Activer]   │  │  [Activer]   │                         │  │
+│  │  └──────────────┘  └──────────────┘                         │  │
+│  │                                                               │  │
+│  └───────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  ┌─ ONGLET "DÉCOUVRIR" ─────────────────────────────────────────┐  │
+│  │                                                               │  │
+│  │  [Toutes] [Intégrations] [Contenu] [Analytics] [Engagement]  │  │
+│  │                                                               │  │
+│  │  ★ En vedette                                                │  │
+│  │  ┌──────────────────────────────────────────────────────┐   │  │
+│  │  │  GitHub Sync - Import your repos automatically        │   │  │
+│  │  │  ★★★★★ (423) • 12k installs         [Installer]      │   │  │
+│  │  └──────────────────────────────────────────────────────┘   │  │
+│  │                                                               │  │
+│  │  Toutes les extensions                                       │  │
+│  │  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐   │  │
+│  │  │ Analytics Pro │  │   Contact     │  │    Blog       │   │  │
+│  │  │  [Installer]  │  │  [Installer]  │  │  [Installer]  │   │  │
+│  │  └───────────────┘  └───────────────┘  └───────────────┘   │  │
+│  │                                                               │  │
+│  └───────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+#### Composants de la Page Unifiée
 
 ```typescript
-// Pages à créer/modifier
+// WebsiteExtensionsPage - Point d'entrée
+// Combine le store et les extensions installées
 
-// apps/web/src/pages/extensions/index.astro           → ExtensionStorePage
-// apps/web/src/pages/extensions/[slug].astro          → ExtensionDetailPage  
-// apps/web/src/pages/account/extensions/index.astro   → Installed extensions list
-// apps/web/src/pages/account/extensions/[slug].astro  → Extension config page
-// apps/web/src/pages/websites/[id]/extensions.astro   → Website extensions
+interface WebsiteExtensionsPageProps {
+  websiteId: string;
+}
+
+// Tabs structure:
+// - "installed": InstalledExtensionsList (active + inactive on this website)
+// - "discover": ExtensionStorePage (browse & install)
+
+// Sub-routes handled:
+// /{website_id}/extensions              → Page principale (onglet "installed")
+// /{website_id}/extensions?tab=discover → Onglet "discover"
+// /{website_id}/extensions/{slug}       → ExtensionConfig (configuration)
+```
+
+#### Flux Utilisateur
+
+```
+Utilisateur arrive sur /{website_id}/extensions
+        │
+        ▼
+┌─ Tab "Installées" ─────────────────────────────────────────────┐
+│  Voir mes extensions actives et inactives pour CE website      │
+│                                                                │
+│  Actions disponibles:                                          │
+│  • Configurer une extension active                             │
+│  • Désactiver une extension active                             │
+│  • Activer une extension installée mais inactive               │
+│  • Aller vers "Découvrir" pour installer plus                  │
+└────────────────────────────────────────────────────────────────┘
+        │
+        │ [Clic sur "Découvrir"]
+        ▼
+┌─ Tab "Découvrir" ──────────────────────────────────────────────┐
+│  Parcourir le catalogue d'extensions                           │
+│                                                                │
+│  Actions disponibles:                                          │
+│  • Filtrer par catégorie, rechercher                           │
+│  • Voir détails d'une extension                                │
+│  • Installer une extension (ouvre permissions dialog)          │
+│  • L'extension installée apparaît immédiatement dans           │
+│    "Installées" et peut être activée                           │
+└────────────────────────────────────────────────────────────────┘
+```
+
+#### Routing Final
+
+```typescript
+// app-router.tsx routes (client-side React routing)
+
+// /{website_id}/extensions              → WebsiteExtensionsPage
+// /{website_id}/extensions/{slug}       → ExtensionConfig (configuration)
+
+// Pas de routes globales /extensions ou /account/extensions
+// Tout passe par le contexte du website sélectionné
 ```
 
 ### 13.9 Migration Frontend
