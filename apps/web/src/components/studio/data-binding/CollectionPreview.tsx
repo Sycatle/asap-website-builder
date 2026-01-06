@@ -75,6 +75,10 @@ function ItemPreview({ item, schema, expanded = false }: ItemPreviewProps) {
     .map(field => ({ field, value: item.data[field] }))
     .filter(({ value }) => value !== undefined && value !== null);
 
+  // Type-safe accessors for optional fields
+  const language = typeof item.data.language === 'string' ? item.data.language : null;
+  const stars = typeof item.data.stars === 'number' ? item.data.stars : null;
+
   return (
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
       <CollapsibleTrigger asChild>
@@ -99,15 +103,15 @@ function ItemPreview({ item, schema, expanded = false }: ItemPreviewProps) {
               </div>
             )}
           </div>
-          {item.data.language && (
+          {language && (
             <Badge variant="outline" className="shrink-0">
-              {item.data.language as string}
+              {language}
             </Badge>
           )}
-          {typeof item.data.stars === 'number' && (
+          {stars !== null && (
             <span className="flex items-center gap-1 text-sm text-muted-foreground">
               <Star className="h-3 w-3" />
-              {item.data.stars}
+              {stars}
             </span>
           )}
         </button>

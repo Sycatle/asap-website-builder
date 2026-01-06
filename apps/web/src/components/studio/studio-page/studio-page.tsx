@@ -20,6 +20,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable"
+import { StudioDataProvider } from "../data-binding"
 
 import type { DevicePreview, StudioPageProps } from "./types"
 import { useIsMobile } from "./hooks"
@@ -232,22 +233,23 @@ export function StudioPage({ onBack }: StudioPageProps) {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
-      {/* Header - Fixed */}
-      <StudioHeader
-        website={website}
-        currentPage={currentPage}
-        pages={pages}
-        selectedPageId={selectedPageId}
-        setSelectedPageId={setSelectedPageId}
-        devicePreview={devicePreview}
-        setDevicePreview={setDevicePreview}
-        isLoadingPages={isLoadingPages}
-        isLoadingElements={isLoadingElements}
-        mobileMenuOpen={mobileMenuOpen}
-        setMobileMenuOpen={setMobileMenuOpen}
-        refetch={refetch}
-        onBack={onBack}
+    <StudioDataProvider websiteId={website?.id}>
+      <div className="h-screen flex flex-col bg-background overflow-hidden">
+        {/* Header - Fixed */}
+        <StudioHeader
+          website={website}
+          currentPage={currentPage}
+          pages={pages}
+          selectedPageId={selectedPageId}
+          setSelectedPageId={setSelectedPageId}
+          devicePreview={devicePreview}
+          setDevicePreview={setDevicePreview}
+          isLoadingPages={isLoadingPages}
+          isLoadingElements={isLoadingElements}
+          mobileMenuOpen={mobileMenuOpen}
+          setMobileMenuOpen={setMobileMenuOpen}
+          refetch={refetch}
+          onBack={onBack}
       />
 
       {/* Main content - Resizable panels for desktop */}
@@ -358,7 +360,8 @@ export function StudioPage({ onBack }: StudioPageProps) {
         onAdd={handleAddElement}
         existingElementsCount={elements.length}
       />
-    </div>
+      </div>
+    </StudioDataProvider>
   )
 }
 
