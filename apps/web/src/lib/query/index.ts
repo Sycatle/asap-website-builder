@@ -62,7 +62,6 @@ export {
 
 // Extension Queries & Mutations
 export {
-  useExtensionCatalogQuery,
   useWebsiteExtensionsQuery,
   useExtensionDataQuery,
   useActivateExtensionMutation,

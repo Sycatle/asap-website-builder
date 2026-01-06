@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { extensionsAPI } from '@/lib/api';
-import type { Extension, WebsiteExtension, ConfigSchema, ConfigAction } from '@/lib/api/extensions';
+import type { WebsiteExtension, ConfigSchema, ConfigAction } from '@/lib/api/extensions';
+import type { ExtensionStoreDetail } from '@/lib/api/store';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,7 +20,8 @@ import { AlertTriangle, Settings, Database, History, RefreshCw, Power, ChevronLe
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from 'sonner';
 import SchemaRenderer from '@/components/SchemaRenderer';
-import { useWebsitesQuery, useExtensionCatalogQuery, useWebsiteExtensionsQuery, useExtensionDataQuery, useUpdateExtensionSettingsMutation, useDeactivateExtensionMutation } from '@/lib/query';
+import { useWebsitesQuery, useWebsiteExtensionsQuery, useExtensionDataQuery, useUpdateExtensionSettingsMutation, useDeactivateExtensionMutation } from '@/lib/query';
+import { useStoreExtensionQuery } from '@/lib/query/store';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { Link } from '@/components/app-router';
 import { FormActions } from '@/components/ui/form-actions';
@@ -44,9 +46,19 @@ const Icons = {
   error: <AlertCircle className="w-5 h-5" />,
 };
 
+// Helper to extract config from store extension manifest
+const getExtensionConfig = (extension: ExtensionStoreDetail | undefined) => {
+  if (!extension?.manifest) return { defaultSettings: {}, configSchema: undefined };
+  const manifest = extension.manifest;
+  return {
+    defaultSettings: (manifest.default_settings as Record<string, unknown>) || {},
+    configSchema: manifest.config_schema as ConfigSchema | undefined,
+    actions: manifest.actions as Record<string, ConfigAction> | undefined,
+  };
+};
+
 // Default schema for extensions without config_schema (fallback)
-const getDefaultSchema = (extension: Extension): ConfigSchema => {
-  const defaultSettings = extension.default_settings || {};
+const getDefaultSchemaFromSettings = (defaultSettings: Record<string, unknown>): ConfigSchema => {
   const fields = Object.entries(defaultSettings).map(([key, value]) => ({
     key,
     label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
@@ -89,7 +101,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
   const { currentWebsiteId: websiteId } = useWebsiteContext();
   // React Query hooks
   const { data: websites = [], isLoading: websitesLoading } = useWebsitesQuery();
-  const { data: catalogExtensions = [], isLoading: catalogLoading } = useExtensionCatalogQuery();
+  const { data: extension, isLoading: extensionLoading } = useStoreExtensionQuery(slug);
   const { data: websiteExtensions = [], isLoading: extensionsLoading, refetch: refetchExtensions } = useWebsiteExtensionsQuery(websiteId);
   const { data: extensionDataResponse, isLoading: extensionDataLoading, refetch: refetchExtensionData } = useExtensionDataQuery(websiteId, slug);
   
@@ -104,12 +116,6 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
     // Return category if translation key doesn't exist
     return translated === translationKey ? category : translated;
   };
-  
-  // Derive extension from catalog
-  const extension = useMemo(() => {
-    if (!catalogExtensions.length) return null;
-    return catalogExtensions.find((e: Extension) => e.slug === slug) || null;
-  }, [catalogExtensions, slug]);
 
   // Derive websiteExtension from cached extensions
   const websiteExtension = useMemo(() => {
@@ -130,7 +136,10 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
   const [isDeactivating, setIsDeactivating] = useState(false);
 
   // Combined loading state
-  const isLoading = websitesLoading || catalogLoading || extensionsLoading || extensionDataLoading;
+  const isLoading = websitesLoading || extensionLoading || extensionsLoading || extensionDataLoading;
+  
+  // Extract config from manifest
+  const extensionConfig = useMemo(() => getExtensionConfig(extension), [extension]);
   
   // Track if settings have changed
   const isSettingsDirty = useMemo(() => {
@@ -141,16 +150,16 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
   useEffect(() => {
     if (websiteExtension) {
       setIsExtensionEnabled(websiteExtension.enabled);
-      const newSettings = websiteExtension.settings || extension?.default_settings || {};
+      const newSettings = websiteExtension.settings || extensionConfig.defaultSettings || {};
       setSettings(newSettings);
       setInitialSettings(newSettings);
     } else if (extension) {
-      const newSettings = extension.default_settings || {};
+      const newSettings = extensionConfig.defaultSettings || {};
       setSettings(newSettings);
       setInitialSettings(newSettings);
       setIsExtensionEnabled(false);
     }
-  }, [websiteExtension, extension]);
+  }, [websiteExtension, extension, extensionConfig.defaultSettings]);
 
   // Update extension data from cache
   useEffect(() => {
@@ -237,7 +246,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
     const savePromise = async () => {
       await updateSettingsMutation.mutateAsync({
         websiteId,
-        extensionId: websiteExtension?.extension_id || extension.id,
+        extensionId: websiteExtension?.extension_id || extension.slug,
         settings,
         isNewActivation: !websiteExtension,
       });
@@ -267,7 +276,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
   const handleAction = async (actionKey: string) => {
     if (!websiteId) return;
     
-    const action = extension?.config_schema?.actions?.find((a: ConfigAction) => a.key === actionKey);
+    const action = extensionConfig.configSchema?.actions?.find((a: ConfigAction) => a.key === actionKey);
     
     // Handle confirmation
     if (action?.confirm && pendingConfirm !== actionKey) {
@@ -307,8 +316,8 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
     } else {
       const activatePromise = async () => {
         await extensionsAPI.activate(websiteId, {
-          extension_id: extension.id,
-          settings: extension.default_settings || {},
+          extension_id: extension.slug,
+          settings: extensionConfig.defaultSettings || {},
         });
         await refreshData();
       };
@@ -350,14 +359,14 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
 
   // Find sync action from schema
   const getSyncAction = (): ConfigAction | undefined => {
-    return extension?.config_schema?.actions?.find(
+    return extensionConfig.configSchema?.actions?.find(
       (a: ConfigAction) => a.key === 'sync' || a.key.includes('sync')
     );
   };
 
   // Get other actions (non-sync)
   const getOtherActions = (): ConfigAction[] => {
-    return extension?.config_schema?.actions?.filter(
+    return extensionConfig.configSchema?.actions?.filter(
       (a: ConfigAction) => a.key !== 'sync' && !a.key.includes('sync')
     ) || [];
   };
@@ -455,7 +464,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
     );
   }
 
-  const schema = extension.config_schema || getDefaultSchema(extension);
+  const schema = extensionConfig.configSchema || getDefaultSchemaFromSettings(extensionConfig.defaultSettings);
   const syncAction = getSyncAction();
   const hasData = schema.dataDisplay && schema.dataDisplay.length > 0;
   const hasConfig = schema.fields && schema.fields.length > 0;
@@ -539,7 +548,7 @@ export default function ExtensionConfig({ slug }: ExtensionConfigProps) {
           <div className="px-4 sm:px-6 py-3 sm:py-4 border-t bg-amber-50 border-amber-100">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <span className="text-xs sm:text-sm text-amber-700">
-                {extension.config_schema?.actions?.find((a: ConfigAction) => a.key === pendingConfirm)?.confirm || 'Confirmer cette action ?'}
+                {extensionConfig.configSchema?.actions?.find((a: ConfigAction) => a.key === pendingConfirm)?.confirm || 'Confirmer cette action ?'}
               </span>
               <div className="flex items-center gap-2">
                 <button

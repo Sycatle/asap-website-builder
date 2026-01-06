@@ -4,24 +4,6 @@ import { queryKeys, staleTimes } from './queryKeys';
 import type { Extension, WebsiteExtension, ExtensionData } from '../types';
 
 // ============================================
-// EXTENSION CATALOG QUERIES
-// ============================================
-
-/**
- * Hook to fetch the extension catalog (all available extensions)
- */
-export function useExtensionCatalogQuery(
-  options?: Omit<UseQueryOptions<Extension[], Error>, 'queryKey' | 'queryFn'>
-) {
-  return useQuery({
-    queryKey: queryKeys.extensions.catalog(),
-    queryFn: () => extensionsAPI.catalog(),
-    staleTime: staleTimes.extensions,
-    ...options,
-  });
-}
-
-// ============================================
 // WEBSITE EXTENSIONS QUERIES
 // ============================================
 

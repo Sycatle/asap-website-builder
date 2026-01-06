@@ -2,7 +2,6 @@ pub mod auth;
 pub mod config;
 pub mod cookies;
 pub mod errors;
-pub mod extension_catalog;
 pub mod extension_registry;
 pub mod websocket;
 pub mod pubsub;
@@ -38,13 +37,8 @@ pub use refresh_token::{
     REFRESH_TOKEN_SHORT_LIFETIME_SECS,
     ACCESS_TOKEN_LIFETIME_SECS,
 };
-pub use extension_catalog::{
-    ExtensionDefinition, 
-    get_extension_catalog, 
-    get_extension_by_slug,
-    get_user_extensions,
-};
-pub use extension_registry::ExtensionRegistry;
+// Extension system - now uses TOML-based registry only
+pub use extension_registry::{ExtensionRegistry, ExtensionDefinition};
 pub use websocket::{WsBroadcaster, WsBroadcastMessage, SharedWsBroadcaster, NoOpBroadcaster};
 pub use pubsub::{
     NotificationPubSubEvent, 
