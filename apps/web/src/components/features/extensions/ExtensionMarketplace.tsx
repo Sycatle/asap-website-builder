@@ -59,19 +59,106 @@ type ViewMode = 'grid' | 'list';
 type CategoryFilter = 'installed' | 'all' | string;
 
 // ============================================================================
-// Category Nav - Horizontal scrollable category pills
+// Category Sidebar - Vertical sticky navigation
 // ============================================================================
 
-interface CategoryNavProps {
+interface CategorySidebarProps {
   categories: { slug: string; name: string; count: number }[];
   activeCategory: CategoryFilter;
   installedCount: number;
   onSelect: (category: CategoryFilter) => void;
 }
 
-function CategoryNav({ categories, activeCategory, installedCount, onSelect }: CategoryNavProps) {
+function CategorySidebar({ categories, activeCategory, installedCount, onSelect }: CategorySidebarProps) {
   return (
-    <ScrollArea className="w-full whitespace-nowrap">
+    <aside className="hidden lg:block w-52 shrink-0">
+      <nav className="sticky top-4 space-y-1">
+        <button
+          onClick={() => onSelect('all')}
+          className={cn(
+            "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all",
+            activeCategory === 'all' 
+              ? "bg-primary text-primary-foreground font-medium" 
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <span className="flex items-center gap-2">
+            <Layers className="w-4 h-4" />
+            Toutes
+          </span>
+        </button>
+        <button
+          onClick={() => onSelect('installed')}
+          className={cn(
+            "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all",
+            activeCategory === 'installed' 
+              ? "bg-primary text-primary-foreground font-medium" 
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <span className="flex items-center gap-2">
+            <Download className="w-4 h-4" />
+            Installées
+          </span>
+          {installedCount > 0 && (
+            <span className={cn(
+              "px-1.5 py-0.5 rounded text-xs tabular-nums",
+              activeCategory === 'installed' 
+                ? "bg-white/20" 
+                : "bg-primary/10 text-primary"
+            )}>
+              {installedCount}
+            </span>
+          )}
+        </button>
+        
+        <Separator className="my-2" />
+        
+        <p className="px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          Catégories
+        </p>
+        
+        {categories.map(cat => (
+          <button
+            key={cat.slug}
+            onClick={() => onSelect(cat.slug)}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all",
+              activeCategory === cat.slug 
+                ? "bg-primary text-primary-foreground font-medium" 
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <span>{cat.name}</span>
+            <span className={cn(
+              "px-1.5 py-0.5 rounded text-xs tabular-nums",
+              activeCategory === cat.slug 
+                ? "bg-white/20" 
+                : "bg-foreground/5"
+            )}>
+              {cat.count}
+            </span>
+          </button>
+        ))}
+      </nav>
+    </aside>
+  );
+}
+
+// ============================================================================
+// Mobile Category Nav - Horizontal scrollable for small screens
+// ============================================================================
+
+interface MobileCategoryNavProps {
+  categories: { slug: string; name: string; count: number }[];
+  activeCategory: CategoryFilter;
+  installedCount: number;
+  onSelect: (category: CategoryFilter) => void;
+}
+
+function MobileCategoryNav({ categories, activeCategory, installedCount, onSelect }: MobileCategoryNavProps) {
+  return (
+    <ScrollArea className="w-full whitespace-nowrap lg:hidden">
       <div className="flex gap-1.5 pb-2">
         <button
           onClick={() => onSelect('all')}
@@ -513,7 +600,7 @@ export default function ExtensionMarketplace() {
   const isLoading = storeLoading || installedLoading;
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+    <div className="flex flex-col gap-4 animate-in fade-in duration-300">
       {/* Page Header */}
       <PageHeader
         title="Extensions"
@@ -526,113 +613,130 @@ export default function ExtensionMarketplace() {
         backHref={`/${currentWebsiteId}`}
       />
 
-      {/* Search Bar */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-xl">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher une extension..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-11 h-11 bg-muted/40 border-transparent focus:border-primary/30 rounded-full"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
-        <div className="flex rounded-full border bg-muted/40 p-1">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={cn(
-              "p-2 rounded-full transition-all",
-              viewMode === 'grid' ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Grid3X3 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={cn(
-              "p-2 rounded-full transition-all",
-              viewMode === 'list' ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <LayoutList className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Category Navigation */}
-      <CategoryNav
+      {/* Mobile Category Navigation */}
+      <MobileCategoryNav
         categories={categories}
         activeCategory={categoryFilter}
         installedCount={installedCount}
         onSelect={setCategoryFilter}
       />
 
-      {/* Loading State */}
-      {isLoading ? (
-        <div className={cn(
-          viewMode === 'grid'
-            ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"
-            : "flex flex-col gap-3"
-        )}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="rounded-2xl border bg-card overflow-hidden">
-              <Skeleton className="h-1.5 w-full" />
-              <div className="p-5">
-                <div className="flex items-start gap-4">
-                  <Skeleton className="w-14 h-14 rounded-2xl" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-5 w-32" />
-                    <Skeleton className="h-4 w-20" />
+      {/* Main Layout with Sidebar */}
+      <div className="flex gap-6">
+        {/* Desktop Category Sidebar */}
+        <CategorySidebar
+          categories={categories}
+          activeCategory={categoryFilter}
+          installedCount={installedCount}
+          onSelect={setCategoryFilter}
+        />
+
+        {/* Main Content */}
+        <div className="flex-1 min-w-0 space-y-4">
+          {/* Search Bar & View Toggle */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher une extension..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-9 bg-muted/40 border-transparent focus:border-primary/30"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex rounded-lg border bg-muted/40 p-0.5">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={cn(
+                  "p-1.5 rounded-md transition-all",
+                  viewMode === 'grid' ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Grid3X3 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={cn(
+                  "p-1.5 rounded-md transition-all",
+                  viewMode === 'list' ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <LayoutList className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Loading State */}
+          {isLoading ? (
+            <div className={cn(
+              viewMode === 'grid'
+                ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3"
+                : "flex flex-col gap-2"
+            )}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="rounded-lg border bg-card overflow-hidden">
+                  <div className="p-4">
+                    <div className="flex items-start gap-3">
+                      <Skeleton className="w-10 h-10 rounded-lg" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-8 w-full mt-3" />
                   </div>
                 </div>
-                <Skeleton className="h-12 w-full mt-4" />
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
-      ) : (
-        <>
-          {/* Featured Section */}
-          {categoryFilter === 'all' && !searchQuery && featuredExtensions.length > 0 && (
-            <FeaturedCarousel
-              extensions={featuredExtensions}
-              installedSlugs={installedSlugs}
-              activeSlugs={activeSlugs}
-              websiteId={currentWebsiteId}
-              onInstall={handleInstall}
-            />
-          )}
+          ) : (
+            <>
+              {/* Featured Section */}
+              {categoryFilter === 'all' && !searchQuery && featuredExtensions.length > 0 && (
+                <FeaturedCarousel
+                  extensions={featuredExtensions}
+                  installedSlugs={installedSlugs}
+                  activeSlugs={activeSlugs}
+                  websiteId={currentWebsiteId}
+                  onInstall={handleInstall}
+                />
+              )}
 
-          {/* Extensions Grid */}
-          {displayedExtensions.length > 0 ? (
-            <section>
-              {categoryFilter === 'all' && !searchQuery && (
-                <SectionHeader
-                  title={`Toutes les extensions (${displayedExtensions.length})`}
-                  icon={<div className="p-1.5 rounded-lg bg-muted"><Layers className="w-3.5 h-3.5 text-muted-foreground" /></div>}
-                />
-              )}
-              {categoryFilter === 'installed' && (
-                <SectionHeader
-                  title={`Mes extensions (${displayedExtensions.length})`}
-                  icon={<div className="p-1.5 rounded-lg bg-primary/10"><Download className="w-3.5 h-3.5 text-primary" /></div>}
-                />
-              )}
-              {searchQuery && (
-                <SectionHeader
-                  title={`${displayedExtensions.length} résultat${displayedExtensions.length > 1 ? 's' : ''} pour "${searchQuery}"`}
-                  icon={<div className="p-1.5 rounded-lg bg-muted"><Search className="w-3.5 h-3.5 text-muted-foreground" /></div>}
-                />
-              )}
+              {/* Extensions Grid */}
+              {displayedExtensions.length > 0 ? (
+                <section>
+                  {categoryFilter === 'all' && !searchQuery && (
+                    <SectionHeader
+                      title={`Toutes les extensions (${displayedExtensions.length})`}
+                      icon={<div className="p-1.5 rounded-lg bg-muted"><Layers className="w-3.5 h-3.5 text-muted-foreground" /></div>}
+                    />
+                  )}
+                  {categoryFilter === 'installed' && (
+                    <SectionHeader
+                      title={`Mes extensions (${displayedExtensions.length})`}
+                      icon={<div className="p-1.5 rounded-lg bg-primary/10"><Download className="w-3.5 h-3.5 text-primary" /></div>}
+                    />
+                  )}
+                  {searchQuery && (
+                    <SectionHeader
+                      title={`${displayedExtensions.length} résultat${displayedExtensions.length > 1 ? 's' : ''} pour "${searchQuery}"`}
+                      icon={<div className="p-1.5 rounded-lg bg-muted"><Search className="w-3.5 h-3.5 text-muted-foreground" /></div>}
+                    />
+                  )}
+                  {categoryFilter !== 'all' && categoryFilter !== 'installed' && !searchQuery && (
+                    <SectionHeader
+                      title={`${categories.find(c => c.slug === categoryFilter)?.name || categoryFilter} (${displayedExtensions.length})`}
+                      icon={<div className="p-1.5 rounded-lg bg-muted"><Package className="w-3.5 h-3.5 text-muted-foreground" /></div>}
+                    />
+                  )}
 
               <div className={cn(
                 viewMode === 'grid'
@@ -670,7 +774,6 @@ export default function ExtensionMarketplace() {
               {(searchQuery || categoryFilter !== 'all') && (
                 <Button
                   variant="outline"
-                  className="rounded-full"
                   onClick={() => { setSearchQuery(''); setCategoryFilter('all'); }}
                 >
                   <ArrowRight className="w-4 h-4 mr-2" />
@@ -679,8 +782,10 @@ export default function ExtensionMarketplace() {
               )}
             </div>
           )}
-        </>
-      )}
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
