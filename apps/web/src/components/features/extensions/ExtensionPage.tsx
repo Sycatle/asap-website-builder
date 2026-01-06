@@ -160,8 +160,8 @@ function OverviewTab({ extension }: OverviewTabProps) {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-sm font-medium">
-              <div className="p-1.5 rounded-lg bg-emerald-500/10">
-                <Zap className="w-4 h-4 text-emerald-500" />
+              <div className="p-1.5 rounded-lg bg-primary/10">
+                <Zap className="w-4 h-4 text-primary" />
               </div>
               Fonctionnalités
             </CardTitle>
@@ -175,7 +175,7 @@ function OverviewTab({ extension }: OverviewTabProps) {
                 { title: 'Configuration simple', desc: 'Interface intuitive' },
               ].map(f => (
                 <div key={f.title} className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                   <div>
                     <p className="font-medium text-sm">{f.title}</p>
                     <p className="text-xs text-muted-foreground">{f.desc}</p>

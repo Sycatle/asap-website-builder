@@ -276,13 +276,13 @@ function FeaturedCarousel({
                   className={cn(
                     "group relative flex flex-col h-full p-5 rounded-xl border bg-card/50 backdrop-blur-sm",
                     "transition-all duration-300 hover:bg-card hover:border-primary/20",
-                    isActive && "border-emerald-500/40 bg-emerald-500/5",
+                    isActive && "border-primary/40 bg-primary/5",
                   )}
                 >
                   {/* Status indicator */}
                   {isActive && (
                     <div className="absolute top-3 right-3">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                     </div>
                   )}
 
@@ -353,7 +353,7 @@ function ExtensionCard({
         className={cn(
           "group flex items-center gap-4 p-4 rounded-xl border bg-card/50 backdrop-blur-sm",
           "transition-all duration-300 hover:bg-card hover:border-primary/20",
-          isActive && "border-emerald-500/40 bg-emerald-500/5",
+          isActive && "border-primary/40 bg-primary/5",
         )}
       >
         <div 
@@ -372,7 +372,7 @@ function ExtensionCard({
               <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
             )}
             {isActive && (
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <div className="w-2 h-2 rounded-full bg-primary" />
             )}
           </div>
           <p className="text-sm text-muted-foreground truncate mt-1">{extension.description}</p>
@@ -399,13 +399,13 @@ function ExtensionCard({
       className={cn(
         "group relative flex flex-col p-5 rounded-xl border bg-card/50 backdrop-blur-sm",
         "transition-all duration-300 hover:bg-card hover:border-primary/20",
-        isActive && "border-emerald-500/40 bg-emerald-500/5",
+        isActive && "border-primary/40 bg-primary/5",
       )}
     >
       {/* Status indicator */}
       {isActive && (
         <div className="absolute top-4 right-4">
-          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          <div className="w-2 h-2 rounded-full bg-primary" />
         </div>
       )}
 
