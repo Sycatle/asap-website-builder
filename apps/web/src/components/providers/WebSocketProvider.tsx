@@ -22,7 +22,7 @@ interface WebSocketContextValue {
   isWsAuthenticated: boolean
   reconnectAttempts: number
   send: (event: string, data: any) => void
-  on: (event: string, handler: (data: any) => void) => void
+  on: (event: string, handler: (data: any) => void) => (() => void)
   off: (event: string, handler: (data: any) => void) => void
 }
 

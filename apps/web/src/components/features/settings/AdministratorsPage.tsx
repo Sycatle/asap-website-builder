@@ -238,7 +238,7 @@ export default function AdministratorsPage() {
   if (websitesLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <ArrowClockwise className="h-8 w-8 animate-spin text-muted-foreground" />
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }

@@ -296,7 +296,7 @@ function AppShellContent({
             </button>
             {/* Mobile: Show current website name or app name */}
             <span className="sm:hidden text-sm font-medium truncate">
-              {currentWebsite?.name || 'ASAP'}
+              {currentWebsite?.title || 'ASAP'}
             </span>
           </div>
           

@@ -5,6 +5,7 @@ export interface AccountData {
   email: string;
   plan: string;
   data: Record<string, any>;
+  avatar_url?: string;
 }
 
 export interface UpdateAccountDataRequest {

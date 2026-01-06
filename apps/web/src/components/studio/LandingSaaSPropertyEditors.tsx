@@ -381,7 +381,7 @@ function ArrayItemEditor({ itemSchema, item, index, onUpdate, onRemove }: ArrayI
         <CollapsibleTrigger asChild>
           <div className="flex items-center gap-2 p-3 cursor-pointer hover:bg-muted/50">
             <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-            {isExpanded ? (
+            {isOpen ? (
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             ) : (
               <ChevronRight className="h-4 w-4 text-muted-foreground" />

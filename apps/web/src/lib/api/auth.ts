@@ -105,4 +105,11 @@ export const authAPI = {
   async revokeSession(sessionId: string): Promise<{ message: string }> {
     return apiClient.post<{ message: string }>('/auth/sessions/revoke', { session_id: sessionId });
   },
+
+  /**
+   * Change password
+   */
+  async changePassword(data: { current_password: string; new_password: string }): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>('/auth/change-password', data);
+  },
 };

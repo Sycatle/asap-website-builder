@@ -107,7 +107,7 @@ function BasePropertyEditor({ element, onUpdate, isUpdating, children }: Propert
               <Spinner className="h-4 w-4" />
             ) : (
               <>
-                <FloppyDisk className="h-4 w-4 mr-1" />
+                <Save className="h-4 w-4 mr-1" />
                 {t('common:actions.save')}
               </>
             )}
@@ -117,7 +117,7 @@ function BasePropertyEditor({ element, onUpdate, isUpdating, children }: Propert
         <div className="space-y-3">
           <Field>
             <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
-              <TextT className="h-3 w-3" /> {t('editor:properties.elementTitle')}
+              <Type className="h-3 w-3" /> {t('editor:properties.elementTitle')}
             </FieldLabel>
             <Input 
               value={title}
@@ -364,7 +364,7 @@ export function AboutPropertyEditor({ element, onUpdate, isUpdating }: PropertyE
             <div className="space-y-2">
               {highlights.map((highlight, index) => (
                 <div key={index} className="flex items-center gap-2">
-                  <DotsSixVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
                   <Input 
                     value={highlight}
                     onChange={(e) => updateHighlight(index, e.target.value)}
@@ -377,7 +377,7 @@ export function AboutPropertyEditor({ element, onUpdate, isUpdating }: PropertyE
                     onClick={() => removeHighlight(index)}
                     className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                   >
-                    <Trash className="h-3 w-3" />
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
               ))}
@@ -488,7 +488,7 @@ export function SkillsPropertyEditor({ element, onUpdate, isUpdating }: Property
                     onClick={() => removeCategory(catIndex)}
                     className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                   >
-                    <Trash className="h-3 w-3" />
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
                 
@@ -507,7 +507,7 @@ export function SkillsPropertyEditor({ element, onUpdate, isUpdating }: Property
                         onClick={() => removeSkill(catIndex, skillIndex)}
                         className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                       >
-                        <Trash className="h-3 w-3" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
                   ))}
@@ -611,7 +611,7 @@ export function ServicesPropertyEditor({ element, onUpdate, isUpdating }: Proper
                     onClick={() => removeService(index)}
                     className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                   >
-                    <Trash className="h-3 w-3" />
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
                 <Textarea 
@@ -755,7 +755,7 @@ export function ContactPropertyEditor({ element, onUpdate, isUpdating }: Propert
                     onClick={() => removeSocial(index)}
                     className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                   >
-                    <Trash className="h-3 w-3" />
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
               ))}
