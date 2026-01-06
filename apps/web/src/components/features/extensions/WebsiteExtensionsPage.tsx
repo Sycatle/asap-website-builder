@@ -1,7 +1,7 @@
 /**
  * Unified Website Extensions Page
  * 
- * Single interface for managing extensions on a website:
+ * Modern, unified interface for managing extensions on a website:
  * - Tab "Installed": Extensions installed on account + activation status for this website
  * - Tab "Discover": Browse and install new extensions from the store
  * 
@@ -17,15 +17,18 @@ import { PageIcon } from '@/lib/navigation-config';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import {
   Package,
   Store,
   Sparkles,
   CheckCircle,
-  Circle,
   Settings,
   Power,
   Plus,
+  ExternalLink,
+  MoreHorizontal,
+  Zap,
 } from 'lucide-react';
 import type { StoreListParams, ExtensionStoreSummary } from '@/lib/api/store';
 import {
@@ -49,6 +52,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Link } from '@/components/app-router';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { ExtensionIcon } from '@/lib/extension-icons';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 // ============================================================================
 // Installed Extensions Tab Content
@@ -90,51 +101,54 @@ function InstalledTabContent({ websiteId, onSwitchToDiscover }: InstalledTabCont
   
   const isLoading = installedLoading || websiteLoading;
   
-  const handleActivate = async (slug: string) => {
+  const handleToggle = async (slug: string, currentlyActive: boolean) => {
     try {
-      await activateMutation.mutateAsync({ websiteId, slug });
-      toast.success(t('dashboard:extensions.toast.activated', { name: slug }));
+      if (currentlyActive) {
+        await deactivateMutation.mutateAsync({ websiteId, slug });
+        toast.success(t('dashboard:extensions.toast.deactivated'));
+      } else {
+        await activateMutation.mutateAsync({ websiteId, slug });
+        toast.success(t('dashboard:extensions.toast.activated', { name: slug }));
+      }
     } catch (error) {
-      toast.error(t('dashboard:extensions.toast.activateError', { name: slug }));
-    }
-  };
-  
-  const handleDeactivate = async (slug: string) => {
-    try {
-      await deactivateMutation.mutateAsync({ websiteId, slug });
-      toast.success(t('dashboard:extensions.toast.deactivated'));
-    } catch (error) {
-      toast.error(t('dashboard:extensions.toast.deactivateError'));
+      toast.error(currentlyActive 
+        ? t('dashboard:extensions.toast.deactivateError')
+        : t('dashboard:extensions.toast.activateError', { name: slug })
+      );
     }
   };
   
   if (isLoading) {
     return (
-      <div className="space-y-8">
-        {/* Active Section Skeleton */}
-        <div className="space-y-4">
-          <Skeleton className="h-6 w-48" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(2)].map((_, i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-10 w-10 rounded-lg" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-32" />
-                      <Skeleton className="h-3 w-20" />
-                    </div>
+      <div className="space-y-6">
+        {/* Stats skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i} className="bg-muted/30">
+              <CardContent className="p-4">
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-4 w-24" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        
+        {/* Extensions skeleton */}
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-12 w-12 rounded-xl" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-4 w-48" />
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex gap-2">
-                    <Skeleton className="h-9 flex-1" />
-                    <Skeleton className="h-9 w-9" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  <Skeleton className="h-6 w-12 rounded-full" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     );
@@ -142,97 +156,139 @@ function InstalledTabContent({ websiteId, onSwitchToDiscover }: InstalledTabCont
   
   if (installedExtensions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <Package className="w-16 h-16 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-semibold mb-2">
-          {t('dashboard:extensions.noExtensionsInstalled', 'Aucune extension installée')}
-        </h3>
-        <p className="text-muted-foreground mb-6 max-w-md">
-          {t('dashboard:extensions.noExtensionsDescription', 'Découvrez les extensions disponibles dans le store pour enrichir votre site.')}
-        </p>
-        <Button onClick={onSwitchToDiscover} className="gap-2">
-          <Store className="w-4 h-4" />
-          {t('dashboard:extensions.browseStore', 'Parcourir le store')}
-        </Button>
-      </div>
+      <Card className="border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center mb-6">
+            <Package className="w-8 h-8 text-primary" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">
+            {t('dashboard:extensions.noExtensionsInstalled', 'Aucune extension installée')}
+          </h3>
+          <p className="text-muted-foreground mb-6 max-w-md">
+            {t('dashboard:extensions.noExtensionsDescription', 'Découvrez les extensions disponibles dans le store pour enrichir votre site.')}
+          </p>
+          <Button onClick={onSwitchToDiscover} className="gap-2">
+            <Store className="w-4 h-4" />
+            {t('dashboard:extensions.browseStore', 'Parcourir le store')}
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
   
   return (
     <div className="space-y-8">
-      {/* Active Extensions */}
-      {activeExtensions.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <h2 className="text-base sm:text-lg font-semibold">
-              {t('dashboard:extensions.activeOnThisSite', 'Actives sur ce site')}
-            </h2>
-            <Badge variant="outline" className="ml-1">{activeExtensions.length}</Badge>
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/5 border-green-500/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-green-600">{activeExtensions.length}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t('dashboard:extensions.stats.active', 'Actives')}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-muted/30">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
+                <Package className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{installedExtensions.length}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t('dashboard:extensions.stats.installed', 'Installées')}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-muted/30 hidden sm:block">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
+                <Power className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{inactiveExtensions.length}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t('dashboard:extensions.stats.inactive', 'Inactives')}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Extensions List - Unified view */}
+      <div className="space-y-3">
+        {/* Active Extensions First */}
+        {activeExtensions.map((ext) => (
+          <ExtensionListCard
+            key={ext.slug}
+            extension={ext}
+            isActive={true}
+            websiteId={websiteId}
+            onToggle={() => handleToggle(ext.slug, true)}
+            isLoading={activateMutation.isPending || deactivateMutation.isPending}
+          />
+        ))}
+        
+        {/* Divider if both sections have items */}
+        {activeExtensions.length > 0 && inactiveExtensions.length > 0 && (
+          <div className="relative py-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-dashed" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-background px-3 text-xs text-muted-foreground">
+                {t('dashboard:extensions.availableToActivate', 'Disponibles pour activation')}
+              </span>
+            </div>
           </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {activeExtensions.map((ext) => (
-              <ExtensionListCard
-                key={ext.slug}
-                extension={ext}
-                isActive={true}
-                websiteId={websiteId}
-                onActivate={() => handleActivate(ext.slug)}
-                onDeactivate={() => handleDeactivate(ext.slug)}
-                isLoading={activateMutation.isPending || deactivateMutation.isPending}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-      
-      {/* Inactive Extensions (Installed but not active on this site) */}
-      {inactiveExtensions.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Circle className="w-3 h-3 text-muted-foreground" />
-            <h2 className="text-base sm:text-lg font-semibold text-muted-foreground">
-              {t('dashboard:extensions.installedButInactive', 'Installées mais inactives')}
-            </h2>
-            <Badge variant="secondary" className="ml-1">{inactiveExtensions.length}</Badge>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {inactiveExtensions.map((ext) => (
-              <ExtensionListCard
-                key={ext.slug}
-                extension={ext}
-                isActive={false}
-                websiteId={websiteId}
-                onActivate={() => handleActivate(ext.slug)}
-                onDeactivate={() => handleDeactivate(ext.slug)}
-                isLoading={activateMutation.isPending || deactivateMutation.isPending}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+        )}
+        
+        {/* Inactive Extensions */}
+        {inactiveExtensions.map((ext) => (
+          <ExtensionListCard
+            key={ext.slug}
+            extension={ext}
+            isActive={false}
+            websiteId={websiteId}
+            onToggle={() => handleToggle(ext.slug, false)}
+            isLoading={activateMutation.isPending || deactivateMutation.isPending}
+          />
+        ))}
+      </div>
     </div>
   );
 }
 
 // ============================================================================
-// Extension List Card (for Installed tab)
+// Extension List Card (Modern unified design)
 // ============================================================================
 
 interface ExtensionListCardProps {
   extension: {
     slug: string;
     name: string;
+    description?: string;
     icon?: string;
     category?: string;
     version?: string;
   };
   isActive: boolean;
   websiteId: string;
-  onActivate: () => void;
-  onDeactivate: () => void;
+  onToggle: () => void;
   isLoading?: boolean;
 }
 
@@ -240,72 +296,109 @@ function ExtensionListCard({
   extension,
   isActive,
   websiteId,
-  onActivate,
-  onDeactivate,
+  onToggle,
   isLoading,
 }: ExtensionListCardProps) {
   const { t } = useTranslation(['dashboard', 'common']);
   
   return (
     <Card className={cn(
-      'group transition-all duration-200',
-      isActive ? 'border-green-500/30 bg-green-500/5' : 'opacity-75 hover:opacity-100'
+      'group transition-all duration-200 hover:shadow-md',
+      isActive 
+        ? 'bg-gradient-to-r from-green-500/5 to-transparent border-green-500/20' 
+        : 'bg-muted/20 hover:bg-muted/30'
     )}>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className={cn(
-              'w-10 h-10 rounded-lg flex items-center justify-center text-lg',
-              isActive ? 'bg-green-500/10' : 'bg-muted'
-            )}>
-              {extension.icon || extension.name.charAt(0)}
+      <CardContent className="p-4">
+        <div className="flex items-center gap-4">
+          {/* Icon */}
+          <ExtensionIcon 
+            icon={extension.icon} 
+            slug={extension.slug} 
+            category={extension.category}
+            size="lg"
+            className={cn(
+              "transition-all duration-200",
+              !isActive && "opacity-60 grayscale"
+            )}
+          />
+          
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-sm truncate">{extension.name}</h3>
+              {isActive && (
+                <Badge variant="default" className="bg-green-600 text-[10px] h-5">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  {t('dashboard:extensions.status.active', 'Active')}
+                </Badge>
+              )}
             </div>
-            <div>
-              <CardTitle className="text-sm">{extension.name}</CardTitle>
-              <CardDescription className="text-xs">
-                {extension.category} {extension.version && `• v${extension.version}`}
-              </CardDescription>
+            {extension.description && (
+              <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                {extension.description}
+              </p>
+            )}
+            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground/60">
+              {extension.category && (
+                <span className="capitalize">{extension.category}</span>
+              )}
+              {extension.version && (
+                <>
+                  <span>•</span>
+                  <span>v{extension.version}</span>
+                </>
+              )}
             </div>
           </div>
-          {isActive && (
-            <Badge variant="default" className="bg-green-600 text-[10px]">
-              <CheckCircle className="w-3 h-3 mr-1" />
-              {t('dashboard:extensions.status.active', 'Active')}
-            </Badge>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="flex gap-2">
-          {isActive ? (
-            <>
-              <Button asChild variant="outline" size="sm" className="flex-1">
-                <Link href={`/${websiteId}/extensions/${extension.slug}`}>
-                  <Settings className="w-3.5 h-3.5 mr-1" />
-                  {t('dashboard:extensions.actions.configure', 'Configurer')}
-                </Link>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onDeactivate}
-                disabled={isLoading}
-                className="text-destructive hover:text-destructive"
-              >
-                <Power className="w-3.5 h-3.5" />
-              </Button>
-            </>
-          ) : (
-            <Button
-              size="sm"
-              className="w-full"
-              onClick={onActivate}
+          
+          {/* Actions */}
+          <div className="flex items-center gap-3">
+            {/* Toggle Switch */}
+            <Switch
+              checked={isActive}
+              onCheckedChange={onToggle}
               disabled={isLoading}
-            >
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              {t('dashboard:extensions.actions.activate', 'Activer')}
-            </Button>
-          )}
+              className={cn(
+                "data-[state=checked]:bg-green-600",
+                isLoading && "opacity-50 cursor-not-allowed"
+              )}
+            />
+            
+            {/* More actions dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {isActive && (
+                  <DropdownMenuItem asChild>
+                    <Link href={`/${websiteId}/extensions/${extension.slug}`}>
+                      <Settings className="w-4 h-4 mr-2" />
+                      {t('dashboard:extensions.actions.configure', 'Configurer')}
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem>
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  {t('dashboard:extensions.actions.viewDetails', 'Voir les détails')}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={onToggle}
+                  disabled={isLoading}
+                  className={!isActive ? "text-green-600" : "text-destructive"}
+                >
+                  <Power className="w-4 h-4 mr-2" />
+                  {isActive 
+                    ? t('dashboard:extensions.actions.deactivate', 'Désactiver')
+                    : t('dashboard:extensions.actions.activate', 'Activer')
+                  }
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </CardContent>
     </Card>

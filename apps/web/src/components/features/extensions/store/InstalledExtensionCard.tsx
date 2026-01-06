@@ -25,6 +25,7 @@ import {
   Globe,
 } from 'lucide-react';
 import type { InstalledExtensionSummary } from '@/lib/api/store';
+import { ExtensionIcon } from '@/lib/extension-icons';
 
 interface InstalledExtensionCardProps {
   extension: InstalledExtensionSummary;
@@ -47,18 +48,13 @@ export function InstalledExtensionCard({
     <Card className="relative overflow-hidden">
       <CardHeader className="pb-3">
         <div className="flex items-start gap-3">
-          {/* Icon */}
-          {extension.icon ? (
-            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center text-2xl">
-              {extension.icon}
-            </div>
-          ) : (
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-              <span className="text-lg font-bold text-primary">
-                {extension.name.charAt(0)}
-              </span>
-            </div>
-          )}
+          {/* Icon - Using ExtensionIcon component */}
+          <ExtensionIcon
+            icon={extension.icon}
+            slug={extension.slug}
+            category={extension.category}
+            size="lg"
+          />
 
           {/* Title & Actions */}
           <div className="flex-1 min-w-0">
@@ -74,7 +70,7 @@ export function InstalledExtensionCard({
                   <Badge variant="outline" className="text-xs">
                     v{extension.version}
                   </Badge>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground capitalize">
                     {extension.category}
                   </span>
                 </div>

@@ -8,6 +8,28 @@ import {
   BarChart3,
   Palette,
   Puzzle,
+  Plug,
+  Globe,
+  Share2,
+  ShoppingCart,
+  Shield,
+  Zap,
+  Search,
+  MessageCircle,
+  Bell,
+  Image,
+  Video,
+  Code,
+  Layers,
+  Rocket,
+  Bot,
+  Users,
+  Calendar,
+  MapPin,
+  FileText,
+  CreditCard,
+  TrendingUp,
+  Eye,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -27,21 +49,80 @@ export const extensionIconConfig: Record<string, {
 }> = {
   // Integration extensions
   github: { icon: Github, gradient: "from-zinc-700 to-zinc-900" },
+  integration: { icon: Plug, gradient: "from-blue-500 to-cyan-500" },
+  plug: { icon: Plug, gradient: "from-blue-500 to-cyan-500" },
+  webhook: { icon: Globe, gradient: "from-emerald-500 to-teal-500" },
   
   // Content extensions  
   blog: { icon: BookOpen, gradient: "from-amber-500 to-yellow-500" },
+  content: { icon: FileText, gradient: "from-orange-500 to-amber-500" },
+  image: { icon: Image, gradient: "from-violet-500 to-purple-500" },
+  gallery: { icon: Image, gradient: "from-violet-500 to-purple-500" },
+  video: { icon: Video, gradient: "from-red-500 to-rose-500" },
   
   // Engagement extensions
   contact: { icon: Mail, gradient: "from-red-500 to-pink-500" },
   mail: { icon: Mail, gradient: "from-red-500 to-pink-500" },
+  chat: { icon: MessageCircle, gradient: "from-green-500 to-emerald-500" },
+  notification: { icon: Bell, gradient: "from-yellow-500 to-orange-500" },
+  bell: { icon: Bell, gradient: "from-yellow-500 to-orange-500" },
   
-  // Analytics extensions (now core feature, kept for reference)
+  // Analytics extensions
   analytics: { icon: BarChart3, gradient: "from-indigo-500 to-violet-500" },
+  'chart-bar': { icon: BarChart3, gradient: "from-indigo-500 to-violet-500" },
   chart: { icon: BarChart3, gradient: "from-indigo-500 to-violet-500" },
+  stats: { icon: TrendingUp, gradient: "from-blue-500 to-indigo-500" },
+  views: { icon: Eye, gradient: "from-cyan-500 to-blue-500" },
   
   // Appearance extensions
   theme: { icon: Palette, gradient: "from-pink-500 to-rose-500" },
   palette: { icon: Palette, gradient: "from-pink-500 to-rose-500" },
+  design: { icon: Layers, gradient: "from-fuchsia-500 to-pink-500" },
+  
+  // Social & Marketing
+  social: { icon: Share2, gradient: "from-sky-500 to-blue-500" },
+  share: { icon: Share2, gradient: "from-sky-500 to-blue-500" },
+  marketing: { icon: TrendingUp, gradient: "from-green-500 to-emerald-500" },
+  
+  // E-commerce
+  ecommerce: { icon: ShoppingCart, gradient: "from-orange-500 to-red-500" },
+  shop: { icon: ShoppingCart, gradient: "from-orange-500 to-red-500" },
+  payment: { icon: CreditCard, gradient: "from-slate-600 to-slate-800" },
+  
+  // Security
+  security: { icon: Shield, gradient: "from-emerald-500 to-green-600" },
+  shield: { icon: Shield, gradient: "from-emerald-500 to-green-600" },
+  
+  // Utilities
+  utility: { icon: Zap, gradient: "from-yellow-400 to-orange-500" },
+  zap: { icon: Zap, gradient: "from-yellow-400 to-orange-500" },
+  performance: { icon: Rocket, gradient: "from-violet-500 to-indigo-500" },
+  rocket: { icon: Rocket, gradient: "from-violet-500 to-indigo-500" },
+  
+  // AI & Automation
+  ai: { icon: Bot, gradient: "from-purple-500 to-violet-600" },
+  bot: { icon: Bot, gradient: "from-purple-500 to-violet-600" },
+  automation: { icon: Zap, gradient: "from-amber-500 to-orange-500" },
+  
+  // Development
+  code: { icon: Code, gradient: "from-gray-600 to-gray-800" },
+  development: { icon: Code, gradient: "from-gray-600 to-gray-800" },
+  
+  // SEO
+  seo: { icon: Search, gradient: "from-green-500 to-teal-500" },
+  search: { icon: Search, gradient: "from-green-500 to-teal-500" },
+  
+  // Community
+  community: { icon: Users, gradient: "from-blue-500 to-indigo-500" },
+  users: { icon: Users, gradient: "from-blue-500 to-indigo-500" },
+  
+  // Events & Scheduling
+  calendar: { icon: Calendar, gradient: "from-red-500 to-pink-500" },
+  events: { icon: Calendar, gradient: "from-red-500 to-pink-500" },
+  
+  // Location
+  location: { icon: MapPin, gradient: "from-red-500 to-rose-500" },
+  map: { icon: MapPin, gradient: "from-red-500 to-rose-500" },
   
   // Default fallback
   default: { icon: Puzzle, gradient: "from-fuchsia-500 to-purple-500" },
