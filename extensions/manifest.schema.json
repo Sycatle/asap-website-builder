@@ -1,0 +1,754 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://asap.cool/schemas/extension-manifest.json",
+  "title": "ASAP Extension Manifest",
+  "description": "Schema for ASAP platform extension manifest files (manifest.toml)",
+  "type": "object",
+  "required": ["extension"],
+  "properties": {
+    "extension": {
+      "$ref": "#/definitions/Extension"
+    },
+    "permissions": {
+      "$ref": "#/definitions/Permissions"
+    },
+    "default_settings": {
+      "type": "object",
+      "description": "Default configuration values for the extension",
+      "additionalProperties": true
+    },
+    "fields": {
+      "type": "array",
+      "description": "Configuration fields for the extension UI",
+      "items": {
+        "$ref": "#/definitions/Field"
+      }
+    },
+    "sections": {
+      "type": "array",
+      "description": "Group fields into logical sections",
+      "items": {
+        "$ref": "#/definitions/Section"
+      }
+    },
+    "actions": {
+      "type": "array",
+      "description": "User-triggerable actions",
+      "items": {
+        "$ref": "#/definitions/Action"
+      }
+    },
+    "data_display": {
+      "type": "array",
+      "description": "Data visualization components",
+      "items": {
+        "$ref": "#/definitions/DataDisplay"
+      }
+    },
+    "webhooks": {
+      "type": "array",
+      "description": "Webhook configurations",
+      "items": {
+        "$ref": "#/definitions/Webhook"
+      }
+    },
+    "lifecycle": {
+      "$ref": "#/definitions/Lifecycle"
+    },
+    "assets": {
+      "$ref": "#/definitions/Assets"
+    },
+    "pricing": {
+      "$ref": "#/definitions/Pricing"
+    }
+  },
+  "definitions": {
+    "Extension": {
+      "type": "object",
+      "description": "Core extension metadata",
+      "required": ["slug", "name", "version", "description", "category"],
+      "properties": {
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*[a-z0-9]$",
+          "minLength": 2,
+          "maxLength": 50,
+          "description": "Unique identifier for the extension (kebab-case)"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Display name of the extension"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.]+)?$",
+          "description": "Semantic version (e.g., 1.0.0, 2.1.0-beta.1)"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Short description of the extension"
+        },
+        "long_description": {
+          "type": "string",
+          "maxLength": 5000,
+          "description": "Detailed description with markdown support"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "integration",
+            "analytics",
+            "marketing",
+            "design",
+            "seo",
+            "security",
+            "performance",
+            "social",
+            "utility",
+            "ai"
+          ],
+          "description": "Extension category for store browsing"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "maxItems": 10,
+          "description": "Search tags for discoverability"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Icon name (lucide icon) or URL to custom icon"
+        },
+        "author": {
+          "$ref": "#/definitions/Author"
+        },
+        "repository": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to source repository"
+        },
+        "homepage": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to extension homepage"
+        },
+        "documentation": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to documentation"
+        },
+        "user_configurable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether users can configure this extension"
+        },
+        "sidebar_order": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Order in sidebar navigation"
+        },
+        "sidebar_label": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Label shown in sidebar"
+        },
+        "min_plan": {
+          "type": "string",
+          "enum": ["free", "starter", "pro", "business"],
+          "default": "free",
+          "description": "Minimum plan required to use this extension"
+        },
+        "beta": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the extension is in beta"
+        },
+        "deprecated": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the extension is deprecated"
+        },
+        "successor": {
+          "type": "string",
+          "description": "Slug of replacement extension if deprecated"
+        }
+      }
+    },
+    "Author": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "verified": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether author is verified by ASAP"
+        }
+      }
+    },
+    "Permissions": {
+      "type": "object",
+      "description": "Required permissions for the extension",
+      "properties": {
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "website:read",
+              "website:write",
+              "account:read",
+              "account:write",
+              "analytics:read",
+              "analytics:write",
+              "storage:read",
+              "storage:write",
+              "notifications:send",
+              "webhooks:manage",
+              "integrations:github",
+              "integrations:stripe",
+              "integrations:analytics"
+            ]
+          },
+          "description": "Permission scopes required by the extension"
+        },
+        "data_access": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Specific data types the extension can access"
+        },
+        "external_services": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "External services the extension communicates with"
+        }
+      }
+    },
+    "Field": {
+      "type": "object",
+      "required": ["id", "type", "label"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "Unique field identifier (snake_case)"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "textarea",
+            "number",
+            "boolean",
+            "select",
+            "multiselect",
+            "url",
+            "email",
+            "password",
+            "color",
+            "date",
+            "datetime",
+            "file",
+            "image",
+            "json",
+            "code",
+            "markdown"
+          ],
+          "description": "Field input type"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Display label for the field"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Help text for the field"
+        },
+        "placeholder": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Placeholder text for input"
+        },
+        "required": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the field is required"
+        },
+        "default": {
+          "description": "Default value for the field"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SelectOption"
+          },
+          "description": "Options for select/multiselect fields"
+        },
+        "validation": {
+          "$ref": "#/definitions/FieldValidation"
+        },
+        "conditions": {
+          "$ref": "#/definitions/FieldConditions"
+        },
+        "group": {
+          "type": "string",
+          "description": "Group ID for organizing fields"
+        },
+        "advanced": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to show in advanced settings"
+        },
+        "sensitive": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the value should be masked/encrypted"
+        }
+      }
+    },
+    "SelectOption": {
+      "type": "object",
+      "required": ["value", "label"],
+      "properties": {
+        "value": {
+          "type": "string",
+          "description": "Option value"
+        },
+        "label": {
+          "type": "string",
+          "description": "Display label"
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Optional icon"
+        },
+        "disabled": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "FieldValidation": {
+      "type": "object",
+      "properties": {
+        "min": {
+          "type": "number",
+          "description": "Minimum value (number) or length (string)"
+        },
+        "max": {
+          "type": "number",
+          "description": "Maximum value (number) or length (string)"
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Regex pattern for validation"
+        },
+        "message": {
+          "type": "string",
+          "description": "Custom error message"
+        },
+        "allowed_extensions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Allowed file extensions for file/image fields"
+        },
+        "max_size": {
+          "type": "integer",
+          "description": "Maximum file size in bytes"
+        }
+      }
+    },
+    "FieldConditions": {
+      "type": "object",
+      "description": "Conditional visibility rules",
+      "properties": {
+        "show_when": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Show field when conditions are met (field_id: expected_value)"
+        },
+        "hide_when": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Hide field when conditions are met"
+        },
+        "require_when": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Make field required when conditions are met"
+        }
+      }
+    },
+    "Section": {
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "icon": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Field IDs to include in this section"
+        },
+        "collapsible": {
+          "type": "boolean",
+          "default": false
+        },
+        "collapsed_by_default": {
+          "type": "boolean",
+          "default": false
+        },
+        "conditions": {
+          "$ref": "#/definitions/FieldConditions"
+        }
+      }
+    },
+    "Action": {
+      "type": "object",
+      "required": ["id", "label", "endpoint"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "API endpoint to call (relative to extension base)"
+        },
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "DELETE"],
+          "default": "POST"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "primary": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this is the primary action"
+        },
+        "destructive": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this action is destructive"
+        },
+        "confirm": {
+          "type": "string",
+          "description": "Confirmation message before executing"
+        },
+        "refresh_after": {
+          "type": "boolean",
+          "default": false,
+          "description": "Refresh data after action completes"
+        },
+        "success_message": {
+          "type": "string",
+          "description": "Toast message on success"
+        },
+        "error_message": {
+          "type": "string",
+          "description": "Toast message on error"
+        },
+        "conditions": {
+          "$ref": "#/definitions/FieldConditions"
+        }
+      }
+    },
+    "DataDisplay": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["list", "table", "grid", "chart", "stat", "timeline", "custom"],
+          "description": "Display component type"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "data_source": {
+          "type": "string",
+          "description": "API endpoint for data (defaults to extension data)"
+        },
+        "empty_message": {
+          "type": "string",
+          "description": "Message when no data available"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DataField"
+          },
+          "description": "Fields to display"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Action IDs available per item"
+        },
+        "pagination": {
+          "type": "boolean",
+          "default": false
+        },
+        "page_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        },
+        "sortable": {
+          "type": "boolean",
+          "default": false
+        },
+        "filterable": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "DataField": {
+      "type": "object",
+      "required": ["id", "type", "label"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["text", "number", "date", "link", "badge", "image", "boolean", "progress", "custom"]
+        },
+        "label": {
+          "type": "string"
+        },
+        "link_to": {
+          "type": "string",
+          "description": "Field ID to use as link URL"
+        },
+        "format": {
+          "type": "string",
+          "description": "Format string (e.g., date format, number format)"
+        },
+        "sortable": {
+          "type": "boolean",
+          "default": false
+        },
+        "width": {
+          "type": "string",
+          "description": "Column width (e.g., '100px', 'auto', '20%')"
+        }
+      }
+    },
+    "Webhook": {
+      "type": "object",
+      "required": ["id", "event"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "event": {
+          "type": "string",
+          "description": "Event type to listen for"
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "Endpoint to call when event fires"
+        },
+        "retry": {
+          "type": "boolean",
+          "default": true
+        },
+        "max_retries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 3
+        }
+      }
+    },
+    "Lifecycle": {
+      "type": "object",
+      "description": "Extension lifecycle hooks",
+      "properties": {
+        "on_install": {
+          "type": "string",
+          "description": "Endpoint called when extension is installed"
+        },
+        "on_uninstall": {
+          "type": "string",
+          "description": "Endpoint called when extension is uninstalled"
+        },
+        "on_enable": {
+          "type": "string",
+          "description": "Endpoint called when extension is enabled"
+        },
+        "on_disable": {
+          "type": "string",
+          "description": "Endpoint called when extension is disabled"
+        },
+        "on_upgrade": {
+          "type": "string",
+          "description": "Endpoint called when extension is upgraded"
+        },
+        "on_config_change": {
+          "type": "string",
+          "description": "Endpoint called when configuration changes"
+        }
+      }
+    },
+    "Assets": {
+      "type": "object",
+      "description": "Extension assets",
+      "properties": {
+        "icon": {
+          "type": "string",
+          "description": "Path to icon file"
+        },
+        "screenshots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Screenshot"
+          },
+          "maxItems": 10
+        },
+        "banner": {
+          "type": "string",
+          "description": "Path to banner image"
+        },
+        "video": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to demo video"
+        }
+      }
+    },
+    "Screenshot": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "caption": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "alt": {
+          "type": "string",
+          "maxLength": 200
+        }
+      }
+    },
+    "Pricing": {
+      "type": "object",
+      "description": "Extension pricing configuration",
+      "properties": {
+        "model": {
+          "type": "string",
+          "enum": ["free", "one_time", "subscription", "usage_based"],
+          "default": "free"
+        },
+        "price": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Price in cents (for one_time or subscription)"
+        },
+        "currency": {
+          "type": "string",
+          "default": "EUR",
+          "description": "ISO 4217 currency code"
+        },
+        "interval": {
+          "type": "string",
+          "enum": ["month", "year"],
+          "description": "Billing interval for subscriptions"
+        },
+        "trial_days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 90,
+          "default": 0
+        },
+        "usage_unit": {
+          "type": "string",
+          "description": "Unit name for usage-based pricing"
+        },
+        "price_per_unit": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Price per usage unit in cents"
+        },
+        "included_units": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Free units included"
+        }
+      }
+    }
+  }
+}
