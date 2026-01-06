@@ -10,6 +10,7 @@ import {
   storeAPI, 
   accountExtensionsAPI, 
   websiteExtensionsV2API,
+  extensionActionsAPI,
   type ExtensionListResponse,
   type ExtensionStoreDetail,
   type ExtensionStoreSummary,
@@ -18,6 +19,7 @@ import {
   type InstalledExtensionDetail,
   type WebsiteExtensionV2,
   type StoreListParams,
+  type ActionResult,
 } from '../api/store';
 import { queryKeys, staleTimes } from './queryKeys';
 
@@ -33,7 +35,7 @@ export function useStoreExtensionsQuery(
   options?: Omit<UseQueryOptions<ExtensionListResponse, Error>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
-    queryKey: queryKeys.store.extensions(params),
+    queryKey: queryKeys.store.extensions(params as Record<string, unknown>),
     queryFn: () => storeAPI.list(params),
     staleTime: staleTimes.store,
     ...options,
@@ -357,5 +359,92 @@ export function useExtensionStore(initialParams: StoreListParams = {}) {
     isFetching: extensionsQuery.isFetching,
     error: extensionsQuery.error,
     refetch: extensionsQuery.refetch,
+  };
+}
+
+// ============================================================================
+// Extension Actions
+// ============================================================================
+
+/**
+ * Hook to execute extension actions
+ * 
+ * @example
+ * ```tsx
+ * const { executeAction, isExecuting, lastResult } = useExtensionActions(websiteId, 'github-sync');
+ * 
+ * // Execute action
+ * const result = await executeAction('sync', { github_username: 'user' });
+ * ```
+ */
+export function useExtensionActions(
+  websiteId: string | null | undefined,
+  extensionSlug: string | null | undefined
+) {
+  const queryClient = useQueryClient();
+  
+  const mutation = useMutation({
+    mutationFn: ({ actionKey, payload }: { 
+      actionKey: string; 
+      payload?: Record<string, unknown>;
+    }) => {
+      if (!websiteId || !extensionSlug) {
+        throw new Error('Website ID and extension slug are required');
+      }
+      return extensionActionsAPI.execute(websiteId, extensionSlug, actionKey, payload);
+    },
+    onSuccess: (result, { actionKey }) => {
+      // If action indicates refresh needed, invalidate extension data
+      if (result.refresh && websiteId && extensionSlug) {
+        queryClient.invalidateQueries({ 
+          queryKey: ['extensions', websiteId, extensionSlug, 'data'] 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: queryKeys.store.websiteExtensions(websiteId) 
+        });
+      }
+      
+      // Log success
+      console.log(`Action "${actionKey}" completed:`, result);
+    },
+  });
+
+  return {
+    /**
+     * Execute an extension action
+     */
+    executeAction: (actionKey: string, payload?: Record<string, unknown>) => 
+      mutation.mutateAsync({ actionKey, payload }),
+    
+    /**
+     * Whether any action is currently executing
+     */
+    isExecuting: mutation.isPending,
+    
+    /**
+     * The action key currently being executed
+     */
+    executingAction: mutation.isPending ? (mutation.variables?.actionKey ?? null) : null,
+    
+    /**
+     * Check if a specific action is executing
+     */
+    isActionExecuting: (actionKey: string) => 
+      mutation.isPending && mutation.variables?.actionKey === actionKey,
+    
+    /**
+     * Last action result
+     */
+    lastResult: mutation.data as ActionResult | undefined,
+    
+    /**
+     * Last action error
+     */
+    error: mutation.error,
+    
+    /**
+     * Reset mutation state
+     */
+    reset: mutation.reset,
   };
 }

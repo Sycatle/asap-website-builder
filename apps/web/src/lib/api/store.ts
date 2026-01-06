@@ -308,6 +308,36 @@ export const websiteExtensionsV2API = {
 };
 
 // ============================================================================
+// Extension Actions API (Authenticated)
+// ============================================================================
+
+/** Action execution result */
+export interface ActionResult {
+  success: boolean;
+  message?: string;
+  data?: unknown;
+  status?: 'pending' | 'completed' | 'failed';
+  refresh?: boolean;
+}
+
+export const extensionActionsAPI = {
+  /**
+   * Execute an extension action
+   */
+  async execute(
+    websiteId: string,
+    extensionSlug: string,
+    actionKey: string,
+    payload: Record<string, unknown> = {}
+  ): Promise<ActionResult> {
+    return apiClient.post<ActionResult>(
+      `/websites/${websiteId}/extensions/${extensionSlug}/actions/${actionKey}`,
+      payload
+    );
+  },
+};
+
+// ============================================================================
 // Combined Export
 // ============================================================================
 
@@ -315,6 +345,7 @@ export const extensionStoreAPI = {
   store: storeAPI,
   account: accountExtensionsAPI,
   website: websiteExtensionsV2API,
+  actions: extensionActionsAPI,
 };
 
 export default extensionStoreAPI;

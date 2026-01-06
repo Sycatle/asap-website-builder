@@ -128,4 +128,6 @@ export {
   // Composite hooks
   useExtensionInstallFlow,
   useExtensionStore,
+  // Actions
+  useExtensionActions,
 } from './store';
