@@ -34,8 +34,8 @@ function lazyWithRetry<T extends ComponentType<any>>(
 
 // Lazy load page components with retry logic for HMR stability
 const Dashboard = lazyWithRetry(() => import("@/components/features/websites/dashboard"))
-const WebsiteExtensionsPage = lazyWithRetry(() => import("@/components/features/extensions/WebsiteExtensionsPage"))
-const ExtensionPage = lazyWithRetry(() => import("@/components/features/extensions/ExtensionConfig"))
+const ExtensionMarketplace = lazyWithRetry(() => import("@/components/features/extensions/ExtensionMarketplace"))
+const ExtensionPage = lazyWithRetry(() => import("@/components/features/extensions/ExtensionPage"))
 const CloudPage = lazyWithRetry(() => import("@/components/features/cloud/cloud-manager"))
 const SettingsPage = lazyWithRetry(() => import("@/components/features/settings/SettingsPage"))
 const StudioPage = lazyWithRetry(() => import("@/components/studio/studio-page"))
@@ -439,7 +439,7 @@ export default function AppRouter() {
         return <Dashboard />
       
       case "extensions":
-        return <WebsiteExtensionsPage />
+        return <ExtensionMarketplace />
       
       case "extension":
         return <ExtensionPage slug={route.slug} />
