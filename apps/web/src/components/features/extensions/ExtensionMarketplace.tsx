@@ -26,7 +26,6 @@ import {
   Search,
   Sparkles,
   CheckCircle2,
-  Power,
   Package,
   Grid3X3,
   LayoutList,
@@ -240,7 +239,7 @@ function FeaturedCarousel({
   installedSlugs, 
   activeSlugs,
   websiteId,
-  onInstall,
+  onInstall: _onInstall,
 }: FeaturedCarouselProps) {
   if (extensions.length === 0) return null;
 
@@ -268,7 +267,7 @@ function FeaturedCarousel({
           {extensions.map(ext => {
             const iconConfig = getExtensionIconConfig(ext.icon, ext.slug);
             const IconComponent = iconConfig.icon;
-            const isInstalled = installedSlugs.has(ext.slug);
+            const _isInstalled = installedSlugs.has(ext.slug);
             const isActive = activeSlugs.has(ext.slug);
 
             return (
@@ -276,59 +275,33 @@ function FeaturedCarousel({
                 <Link 
                   href={`/${websiteId}/extensions/${ext.slug}`}
                   className={cn(
-                    "group flex flex-col h-full rounded-lg border bg-card overflow-hidden",
-                    "transition-all duration-200 hover:shadow-md hover:border-primary/20",
-                    isActive && "border-emerald-500/30 bg-emerald-500/5",
+                    "group flex flex-col h-full p-3 rounded-lg border bg-card",
+                    "transition-all duration-200 hover:border-primary/30",
+                    isActive && "border-emerald-500/30",
                   )}
                 >
-                  {/* Content */}
-                  <div className="p-4 flex-1">
-                    <div className="flex items-start gap-3">
-                      <div 
-                        className={cn(
-                          "shrink-0 w-10 h-10 rounded-lg flex items-center justify-center",
-                          `bg-gradient-to-br ${iconConfig.gradient}`,
-                        )}
-                      >
-                        <IconComponent className="w-5 h-5 text-white" strokeWidth={1.5} />
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <h3 className="font-medium text-sm truncate">{ext.name}</h3>
-                          <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
-                        </div>
-                        <p className="text-[11px] text-muted-foreground">{ext.author_name || 'ASAP Team'}</p>
-                      </div>
-
-                      {isActive && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 shrink-0">
-                          <CheckCircle2 className="w-3 h-3" />
-                        </span>
+                  <div className="flex items-start gap-3">
+                    <div 
+                      className={cn(
+                        "shrink-0 w-9 h-9 rounded-lg flex items-center justify-center",
+                        `bg-gradient-to-br ${iconConfig.gradient}`,
                       )}
+                    >
+                      <IconComponent className="w-4 h-4 text-white" strokeWidth={1.5} />
                     </div>
-                    
-                    <p className="text-xs text-muted-foreground line-clamp-2 mt-3">{ext.description}</p>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="font-medium text-sm truncate">{ext.name}</h3>
+                        <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground line-clamp-2 mt-1">{ext.description}</p>
+                    </div>
                   </div>
                   
-                  {/* Footer */}
-                  <div className="px-4 py-3 bg-muted/30 border-t flex items-center justify-between">
-                    <span className="text-[11px] text-muted-foreground">{ext.install_count} installs</span>
-                    <div onClick={e => e.preventDefault()}>
-                      {isInstalled ? (
-                        isActive ? (
-                          <span className="text-[11px] text-emerald-600 font-medium">Active</span>
-                        ) : (
-                          <Button size="sm" variant="outline" className="h-7 text-xs">
-                            Activer
-                          </Button>
-                        )
-                      ) : (
-                        <Button size="sm" className="h-7 text-xs" onClick={() => onInstall(ext)}>
-                          Installer
-                        </Button>
-                      )}
-                    </div>
+                  <div className="flex items-center justify-between mt-3 pt-2 border-t border-dashed">
+                    <span className="text-[10px] text-muted-foreground">{ext.install_count} installs</span>
+                    {isActive && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
                   </div>
                 </Link>
               </CarouselItem>
@@ -363,7 +336,7 @@ function ExtensionCard({
   websiteId,
   viewMode,
   onInstall,
-  onToggleActive,
+  onToggleActive: _onToggleActive,
 }: ExtensionCardProps) {
   const iconConfig = getExtensionIconConfig(extension.icon, extension.slug);
   const IconComponent = iconConfig.icon;
@@ -373,51 +346,35 @@ function ExtensionCard({
       <Link 
         href={`/${websiteId}/extensions/${extension.slug}`}
         className={cn(
-          "group flex items-center gap-4 p-4 rounded-lg border bg-card",
-          "transition-all duration-200 hover:shadow-md hover:border-primary/20",
-          isActive && "border-emerald-500/30 bg-emerald-500/5",
+          "group flex items-center gap-3 p-3 rounded-lg border bg-card",
+          "transition-all duration-200 hover:border-primary/30",
+          isActive && "border-emerald-500/30",
         )}
       >
         <div 
           className={cn(
-            "shrink-0 w-10 h-10 rounded-lg flex items-center justify-center",
+            "shrink-0 w-9 h-9 rounded-lg flex items-center justify-center",
             `bg-gradient-to-br ${iconConfig.gradient}`,
           )}
         >
-          <IconComponent className="w-5 h-5 text-white" strokeWidth={1.5} />
+          <IconComponent className="w-4 h-4 text-white" strokeWidth={1.5} />
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="font-medium text-sm truncate">{extension.name}</h3>
             {extension.featured && (
-              <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+              <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
             )}
-            {isActive && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600">
-                <CheckCircle2 className="w-3 h-3" />
-                Active
-              </span>
-            )}
+            {isActive && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
           </div>
           <p className="text-xs text-muted-foreground truncate mt-0.5">{extension.description}</p>
         </div>
 
-        <div className="flex items-center gap-3" onClick={e => e.preventDefault()}>
-          <span className="text-xs text-muted-foreground hidden sm:block">{extension.install_count} installs</span>
-          {isInstalled ? (
-            <Button
-              size="sm"
-              variant={isActive ? "outline" : "default"}
-              className="h-8"
-              onClick={onToggleActive}
-            >
-              <Power className="w-3.5 h-3.5 mr-1.5" />
-              {isActive ? 'Désactiver' : 'Activer'}
-            </Button>
-          ) : (
-            <Button size="sm" className="h-8" onClick={onInstall}>
-              <Download className="w-3.5 h-3.5 mr-1.5" />
+        <div className="flex items-center gap-2 shrink-0" onClick={e => e.preventDefault()}>
+          <span className="text-[10px] text-muted-foreground hidden sm:block">{extension.install_count}</span>
+          {!isInstalled && (
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onInstall}>
               Installer
             </Button>
           )}
@@ -431,74 +388,41 @@ function ExtensionCard({
     <Link 
       href={`/${websiteId}/extensions/${extension.slug}`}
       className={cn(
-        "group relative flex flex-col rounded-lg border bg-card overflow-hidden",
-        "transition-all duration-200 hover:shadow-md hover:border-primary/20",
-        isActive && "border-emerald-500/30 bg-emerald-500/5",
+        "group flex flex-col p-3 rounded-lg border bg-card",
+        "transition-all duration-200 hover:border-primary/30",
+        isActive && "border-emerald-500/30",
       )}
     >
-      <div className="p-4 flex-1 flex flex-col">
-        <div className="flex items-start gap-3">
-          <div 
-            className={cn(
-              "shrink-0 w-10 h-10 rounded-lg flex items-center justify-center",
-              `bg-gradient-to-br ${iconConfig.gradient}`,
-            )}
-          >
-            <IconComponent className="w-5 h-5 text-white" strokeWidth={1.5} />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <h3 className="font-medium text-sm truncate">{extension.name}</h3>
-              {extension.featured && (
-                <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
-              )}
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              {extension.author_name || 'ASAP'}
-            </p>
-          </div>
-
-          {isActive && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 shrink-0">
-              <CheckCircle2 className="w-3 h-3" />
-            </span>
+      <div className="flex items-start gap-3">
+        <div 
+          className={cn(
+            "shrink-0 w-9 h-9 rounded-lg flex items-center justify-center",
+            `bg-gradient-to-br ${iconConfig.gradient}`,
           )}
+        >
+          <IconComponent className="w-4 h-4 text-white" strokeWidth={1.5} />
         </div>
 
-        <p className="text-xs text-muted-foreground line-clamp-2 mt-3 leading-relaxed flex-1">
-          {extension.description}
-        </p>
-
-        {extension.tags && extension.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-3">
-            {extension.tags.slice(0, 2).map(tag => (
-              <span key={tag} className="px-1.5 py-0.5 rounded text-[10px] bg-muted text-muted-foreground">
-                {tag}
-              </span>
-            ))}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <h3 className="font-medium text-sm truncate">{extension.name}</h3>
+            {extension.featured && (
+              <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
+            )}
           </div>
-        )}
+          <p className="text-[11px] text-muted-foreground line-clamp-2 mt-1">
+            {extension.description}
+          </p>
+        </div>
       </div>
 
-      <div className="px-4 py-3 bg-muted/30 border-t flex items-center justify-between">
-        <span className="text-[11px] text-muted-foreground">{extension.install_count} installs</span>
-
-        <div onClick={e => e.preventDefault()}>
-          {isInstalled ? (
-            isActive ? (
-              <span className="text-[11px] text-emerald-600 font-medium">Active</span>
-            ) : (
-              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onToggleActive}>
-                Activer
-              </Button>
-            )
-          ) : (
-            <Button size="sm" className="h-7 text-xs" onClick={onInstall}>
-              Installer
-            </Button>
-          )}
-        </div>
+      <div className="flex items-center justify-between mt-3 pt-2 border-t border-dashed">
+        <span className="text-[10px] text-muted-foreground">{extension.install_count} installs</span>
+        {isActive ? (
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+        ) : !isInstalled ? (
+          <span className="text-[10px] text-primary font-medium" onClick={e => { e.preventDefault(); onInstall(); }}>Installer</span>
+        ) : null}
       </div>
     </Link>
   );

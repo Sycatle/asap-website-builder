@@ -546,42 +546,36 @@ function SuggestedExtensions({ currentSlug, category, tags: _tags, websiteId }: 
               key={ext.slug}
               href={`/${websiteId}/extensions/${ext.slug}`}
               className={cn(
-                "group flex flex-col rounded-lg border bg-card overflow-hidden",
-                "transition-all duration-200 hover:shadow-md hover:border-primary/20",
+                "group flex flex-col p-3 rounded-lg border bg-card",
+                "transition-all duration-200 hover:border-primary/30",
               )}
             >
-              <div className="p-4 flex-1">
-                <div className="flex items-start gap-3">
-                  <div 
-                    className={cn(
-                      "shrink-0 w-9 h-9 rounded-lg flex items-center justify-center",
-                      `bg-gradient-to-br ${iconConfig.gradient}`,
-                    )}
-                  >
-                    <IconComponent className="w-4 h-4 text-white" strokeWidth={1.5} />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <h3 className="font-medium text-sm truncate">{ext.name}</h3>
-                      {ext.featured && (
-                        <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
-                      )}
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      {ext.author_name || 'ASAP Team'}
-                    </p>
-                  </div>
+              <div className="flex items-start gap-3">
+                <div 
+                  className={cn(
+                    "shrink-0 w-9 h-9 rounded-lg flex items-center justify-center",
+                    `bg-gradient-to-br ${iconConfig.gradient}`,
+                  )}
+                >
+                  <IconComponent className="w-4 h-4 text-white" strokeWidth={1.5} />
                 </div>
                 
-                <p className="text-xs text-muted-foreground line-clamp-2 mt-2">
-                  {ext.description}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-medium text-sm truncate">{ext.name}</h3>
+                    {ext.featured && (
+                      <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground line-clamp-2 mt-1">
+                    {ext.description}
+                  </p>
+                </div>
               </div>
               
-              <div className="px-4 py-2.5 bg-muted/30 border-t flex items-center justify-between">
+              <div className="flex items-center justify-between mt-3 pt-2 border-t border-dashed">
                 <span className="text-[10px] text-muted-foreground">{ext.install_count} installs</span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
             </Link>
           );
