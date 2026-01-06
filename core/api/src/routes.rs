@@ -150,6 +150,18 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         .route("/websites/:id/github/callback", post(crate::github::github_oauth_callback))
         .route("/websites/:id/github/repos", get(crate::github::fetch_github_repos))
         .route("/websites/:id/github/import", post(crate::github::import_github_repos))
+        // Collections routes
+        .route("/websites/:id/collections", get(crate::collections::list_collections))
+        .route("/websites/:id/collections/:slug", get(crate::collections::get_collection))
+        .route("/websites/:id/collections/:slug", put(crate::collections::upsert_collection))
+        .route("/websites/:id/collections/:slug", delete(crate::collections::delete_collection))
+        .route("/websites/:id/collections/:slug/sync", post(crate::collections::trigger_collection_sync))
+        // Variables routes
+        .route("/websites/:id/variables", get(crate::collections::list_variables))
+        .route("/websites/:id/variables/recompute", post(crate::collections::recompute_variables))
+        .route("/websites/:id/variables/:key", get(crate::collections::get_variable))
+        .route("/websites/:id/variables/:key", put(crate::collections::set_variable))
+        .route("/websites/:id/variables/:key", delete(crate::collections::delete_variable))
         // Metrics routes (V1 MVP)
         .route("/websites/:id/activation", get(crate::metrics::get_activation_metrics))
         .route("/metrics/aggregated", get(crate::metrics::get_aggregated_metrics))
