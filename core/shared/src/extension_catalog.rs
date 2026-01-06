@@ -11,6 +11,9 @@
 use asap_core_domain::{
     ConfigSchema, ConfigField, ConfigAction, ConfigSection,
     DataDisplay, DataDisplayField, FieldValidation,
+    // Collections & Variables
+    CollectionDefinition, CollectionSchema, CollectionFieldDef, CollectionFieldType,
+    SyncMode, VariableDefinition, VariableType, VariableComputation,
 };
 use serde::{Deserialize, Serialize};
 
@@ -31,6 +34,12 @@ pub struct ExtensionDefinition {
     pub sidebar_order: i32,
     /// Label shown in sidebar
     pub sidebar_label: Option<String>,
+    /// Collections this extension provides
+    #[serde(default)]
+    pub collections: Vec<CollectionDefinition>,
+    /// Variables this extension provides
+    #[serde(default)]
+    pub variables: Vec<VariableDefinition>,
 }
 
 /// Get all available extension definitions
@@ -78,6 +87,72 @@ fn github_sync_extension() -> ExtensionDefinition {
             "include_forks": false,
             "max_repos": 10
         }),
+        // Collections this extension provides
+        collections: vec![
+            CollectionDefinition {
+                slug: "github_repos".to_string(),
+                name: "GitHub Repositories".to_string(),
+                description: "Your public GitHub repositories".to_string(),
+                sync_mode: SyncMode::Manual,
+                sync_frequency: None,
+                schema: CollectionSchema {
+                    primary_key: "id".to_string(),
+                    display_field: "name".to_string(),
+                    preview_fields: vec!["description".to_string(), "language".to_string(), "stars".to_string()],
+                    fields: vec![
+                        CollectionFieldDef::new("id", CollectionFieldType::String, "ID").required(),
+                        CollectionFieldDef::new("name", CollectionFieldType::String, "Name").required().sortable().searchable(),
+                        CollectionFieldDef::new("full_name", CollectionFieldType::String, "Full Name"),
+                        CollectionFieldDef::new("description", CollectionFieldType::String, "Description").searchable(),
+                        CollectionFieldDef::new("url", CollectionFieldType::Url, "URL").required(),
+                        CollectionFieldDef::new("homepage", CollectionFieldType::Url, "Homepage"),
+                        CollectionFieldDef::new("language", CollectionFieldType::String, "Language").filterable(),
+                        CollectionFieldDef::new("stars", CollectionFieldType::Number, "Stars").sortable().with_icon("star"),
+                        CollectionFieldDef::new("forks", CollectionFieldType::Number, "Forks").sortable().with_icon("git-fork"),
+                        CollectionFieldDef::new("open_issues", CollectionFieldType::Number, "Open Issues"),
+                        CollectionFieldDef::new("topics", CollectionFieldType::Array, "Topics").filterable(),
+                        CollectionFieldDef::new("is_fork", CollectionFieldType::Boolean, "Is Fork").filterable(),
+                        CollectionFieldDef::new("is_archived", CollectionFieldType::Boolean, "Is Archived").filterable(),
+                        CollectionFieldDef::new("created_at", CollectionFieldType::DateTime, "Created").sortable(),
+                        CollectionFieldDef::new("updated_at", CollectionFieldType::DateTime, "Updated").sortable(),
+                        CollectionFieldDef::new("pushed_at", CollectionFieldType::DateTime, "Last Push").sortable(),
+                    ],
+                },
+            },
+        ],
+        // Variables this extension provides
+        variables: vec![
+            VariableDefinition::synced(
+                "github_username",
+                "GitHub Username",
+                VariableType::String,
+                "github_username"
+            ),
+            VariableDefinition::computed(
+                "github_total_repos",
+                "Total Repositories",
+                VariableType::Number,
+                VariableComputation::count("github_repos")
+            ),
+            VariableDefinition::computed(
+                "github_total_stars",
+                "Total Stars",
+                VariableType::Number,
+                VariableComputation::sum("github_repos", "stars")
+            ).with_description("Sum of stars across all repositories"),
+            VariableDefinition::computed(
+                "github_total_forks",
+                "Total Forks",
+                VariableType::Number,
+                VariableComputation::sum("github_repos", "forks")
+            ),
+            VariableDefinition::computed(
+                "github_top_language",
+                "Top Language",
+                VariableType::String,
+                VariableComputation::mode("github_repos", "language")
+            ).with_description("Most used programming language"),
+        ],
         config_schema: Some(ConfigSchema::new()
             .with_fields(vec![
                 ConfigField::text("github_username", "Nom d'utilisateur GitHub")
@@ -145,6 +220,50 @@ fn blog_engine_extension() -> ExtensionDefinition {
             "show_date": true,
             "excerpt_length": 200
         }),
+        // Blog posts collection - managed through the blog interface
+        collections: vec![
+            CollectionDefinition {
+                slug: "blog_posts".to_string(),
+                name: "Blog Posts".to_string(),
+                description: "Your blog articles".to_string(),
+                sync_mode: SyncMode::Manual, // User creates posts manually
+                sync_frequency: None,
+                schema: CollectionSchema {
+                    primary_key: "id".to_string(),
+                    display_field: "title".to_string(),
+                    preview_fields: vec!["excerpt".to_string(), "published_at".to_string()],
+                    fields: vec![
+                        CollectionFieldDef::new("id", CollectionFieldType::String, "ID").required(),
+                        CollectionFieldDef::new("title", CollectionFieldType::String, "Title").required().sortable().searchable(),
+                        CollectionFieldDef::new("slug", CollectionFieldType::String, "Slug").required(),
+                        CollectionFieldDef::new("content", CollectionFieldType::RichText, "Content").required(),
+                        CollectionFieldDef::new("excerpt", CollectionFieldType::String, "Excerpt").searchable(),
+                        CollectionFieldDef::new("cover_image", CollectionFieldType::Image, "Cover Image"),
+                        CollectionFieldDef::new("author", CollectionFieldType::String, "Author"),
+                        CollectionFieldDef::new("tags", CollectionFieldType::Array, "Tags").filterable(),
+                        CollectionFieldDef::new("category", CollectionFieldType::String, "Category").filterable(),
+                        CollectionFieldDef::new("is_published", CollectionFieldType::Boolean, "Published").filterable(),
+                        CollectionFieldDef::new("published_at", CollectionFieldType::DateTime, "Published Date").sortable(),
+                        CollectionFieldDef::new("created_at", CollectionFieldType::DateTime, "Created").sortable(),
+                        CollectionFieldDef::new("updated_at", CollectionFieldType::DateTime, "Updated").sortable(),
+                    ],
+                },
+            },
+        ],
+        variables: vec![
+            VariableDefinition::computed(
+                "blog_total_posts",
+                "Total Posts",
+                VariableType::Number,
+                VariableComputation::count("blog_posts")
+            ),
+            VariableDefinition::computed(
+                "blog_published_posts",
+                "Published Posts",
+                VariableType::Number,
+                VariableComputation::count("blog_posts") // Would need filter support
+            ).with_description("Count of published blog posts"),
+        ],
         config_schema: Some(ConfigSchema::new()
             .with_fields(vec![
                 ConfigField::number("posts_per_page", "Articles par page")
@@ -207,6 +326,40 @@ fn contact_form_extension() -> ExtensionDefinition {
             "fields_phone": false,
             "fields_subject": true
         }),
+        // Contact form submissions collection
+        collections: vec![
+            CollectionDefinition {
+                slug: "contact_submissions".to_string(),
+                name: "Contact Submissions".to_string(),
+                description: "Messages received through the contact form".to_string(),
+                sync_mode: SyncMode::Manual, // Populated when users submit
+                sync_frequency: None,
+                schema: CollectionSchema {
+                    primary_key: "id".to_string(),
+                    display_field: "subject".to_string(),
+                    preview_fields: vec!["name".to_string(), "email".to_string(), "created_at".to_string()],
+                    fields: vec![
+                        CollectionFieldDef::new("id", CollectionFieldType::String, "ID").required(),
+                        CollectionFieldDef::new("name", CollectionFieldType::String, "Name").searchable(),
+                        CollectionFieldDef::new("email", CollectionFieldType::String, "Email").required().searchable(),
+                        CollectionFieldDef::new("phone", CollectionFieldType::String, "Phone"),
+                        CollectionFieldDef::new("subject", CollectionFieldType::String, "Subject").searchable(),
+                        CollectionFieldDef::new("message", CollectionFieldType::String, "Message").required().searchable(),
+                        CollectionFieldDef::new("is_read", CollectionFieldType::Boolean, "Read").filterable(),
+                        CollectionFieldDef::new("is_archived", CollectionFieldType::Boolean, "Archived").filterable(),
+                        CollectionFieldDef::new("created_at", CollectionFieldType::DateTime, "Received").sortable(),
+                    ],
+                },
+            },
+        ],
+        variables: vec![
+            VariableDefinition::computed(
+                "contact_total_messages",
+                "Total Messages",
+                VariableType::Number,
+                VariableComputation::count("contact_submissions")
+            ),
+        ],
         config_schema: Some(ConfigSchema::new()
             .with_fields(vec![
                 ConfigField::text("notify_email", "Email de notification")
