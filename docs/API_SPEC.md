@@ -528,6 +528,146 @@ Exécute une action définie par l'extension.
   "success": true,
   "message": "Action exécutée",
   "data": { ... }
+```
+
+---
+
+## Routes Extension Store (Publiques)
+
+Le store permet de parcourir les extensions disponibles. Ces routes sont publiques mais peuvent optionnellement utiliser un token JWT pour indiquer si une extension est déjà installée par l'utilisateur.
+
+### `GET /store/extensions`
+
+Liste les extensions disponibles avec filtres et pagination.
+
+**Query Parameters :**
+- `category` (string) : Filtrer par catégorie (integration, analytics, etc.)
+- `plan` (string) : Filtrer par plan maximum requis (free, pro, enterprise)
+- `search` (string) : Recherche dans nom/description/tags
+- `tags` (string) : Tags séparés par virgule
+- `sort` (string) : Tri - `popular` (défaut), `newest`, `rating`, `name`
+- `featured` (boolean) : Uniquement les extensions mises en avant
+- `include_beta` (boolean) : Inclure les extensions beta
+- `page` (number) : Numéro de page (défaut: 1)
+- `per_page` (number) : Résultats par page (défaut: 20, max: 100)
+
+**Réponse (200) :**
+
+```json
+{
+  "extensions": [
+    {
+      "slug": "github-sync",
+      "name": "GitHub Sync",
+      "description": "Sync your repositories",
+      "icon": "github",
+      "category": "integration",
+      "tags": ["github", "sync", "portfolio"],
+      "min_plan": "free",
+      "author_name": "ASAP Team",
+      "author_verified": true,
+      "version": "1.2.0",
+      "featured": true,
+      "beta": false,
+      "deprecated": false,
+      "install_count": 1500,
+      "rating": 4.8,
+      "rating_count": 42,
+      "installed": true
+    }
+  ],
+  "total": 15,
+  "page": 1,
+  "per_page": 20,
+  "has_more": false
+}
+```
+
+### `GET /store/extensions/featured`
+
+Retourne les extensions mises en avant (max 6).
+
+**Réponse (200) :**
+
+```json
+{
+  "extensions": [...]
+}
+```
+
+### `GET /store/extensions/:slug`
+
+Retourne le détail d'une extension.
+
+**Réponse (200) :**
+
+```json
+{
+  "slug": "github-sync",
+  "name": "GitHub Sync",
+  "version": "1.2.0",
+  "description": "Sync your GitHub repositories",
+  "long_description": "Full markdown description...",
+  "icon": "github",
+  "banner": "banner.png",
+  "category": "integration",
+  "tags": ["github", "sync"],
+  "min_plan": "free",
+  "author": {
+    "name": "ASAP Team",
+    "verified": true
+  },
+  "featured": true,
+  "beta": false,
+  "deprecated": false,
+  "install_count": 1500,
+  "rating": 4.8,
+  "rating_count": 42,
+  "manifest": { ... },
+  "created_at": "2024-01-15T10:00:00Z",
+  "updated_at": "2025-01-06T15:30:00Z",
+  "installed": false
+}
+```
+
+**Erreur (404) :**
+
+```json
+{
+  "error": "Extension not found"
+}
+```
+
+### `GET /store/extensions/:slug/manifest`
+
+Retourne uniquement le manifest JSON d'une extension.
+
+**Réponse (200) :**
+
+```json
+{
+  "id": "github-sync",
+  "name": "GitHub Sync",
+  "version": "1.2.0",
+  "description": "...",
+  ...
+}
+```
+
+### `GET /store/categories`
+
+Liste toutes les catégories avec le nombre d'extensions.
+
+**Réponse (200) :**
+
+```json
+{
+  "categories": [
+    { "slug": "integration", "name": "Integrations", "count": 5 },
+    { "slug": "analytics", "name": "Analytics", "count": 3 },
+    { "slug": "utility", "name": "Utilities", "count": 8 }
+  ]
+}
 }
 ```
 
