@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT items FROM website_collections WHERE website_id = $1 AND collection_slug = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "items",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "bf31d60daa683c65babda0359eabdc46f4c42c642bc7490f5f615bd5664bda08"
+}

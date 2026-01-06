@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id, key, computation, value_type\n        FROM website_variables\n        WHERE website_id = $1 AND source = 'computed' AND stale = TRUE\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "key",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "computation",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "value_type",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "f48a787e0b1a60552e0582f7b9d5745d023935b02a38d5260d8cb055e13fde70"
+}

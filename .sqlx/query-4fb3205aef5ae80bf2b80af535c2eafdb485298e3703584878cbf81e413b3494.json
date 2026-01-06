@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                    INSERT INTO account_data (account_id, data)\n                    VALUES ($1, $2)\n                    ON CONFLICT (account_id) DO UPDATE SET data = $2\n                    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4fb3205aef5ae80bf2b80af535c2eafdb485298e3703584878cbf81e413b3494"
+}

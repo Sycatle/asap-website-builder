@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO administrator_audit_log (website_id, administrator_id, actor_id, action, details)\n        VALUES ($1, $2, $3, 'permissions_changed', $4)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "26cb9ff0d5a5a50d5e7fba75fb3f5d3b7002c5c5a57005c0777b032d9203d3c2"
+}

@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT source_extension, sync_status\n        FROM website_collections\n        WHERE website_id = $1 AND collection_slug = $2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "source_extension",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "sync_status",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "6cb60c19e4bc2b0044224aa5ca5d65c9322a3022127367d500926caf783a0dba"
+}

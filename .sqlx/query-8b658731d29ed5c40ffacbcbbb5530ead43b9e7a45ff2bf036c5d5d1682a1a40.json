@@ -1,0 +1,82 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id, filename, mime_type, original_size, compressed_size, \n               folder_id, visibility::text as visibility, website_id, description, tags,\n               created_at\n        FROM files \n        WHERE id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "filename",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "mime_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "original_size",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "compressed_size",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "folder_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "visibility",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "website_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 8,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "tags",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 10,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      null,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "8b658731d29ed5c40ffacbcbbb5530ead43b9e7a45ff2bf036c5d5d1682a1a40"
+}

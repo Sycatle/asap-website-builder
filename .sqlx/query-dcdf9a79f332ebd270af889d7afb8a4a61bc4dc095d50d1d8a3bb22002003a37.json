@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO notification_settings (\n            account_id, push_enabled, email_enabled, enabled_categories,\n            quiet_hours_start, quiet_hours_end\n        )\n        VALUES ($1, $2, $3, $4, $5, $6)\n        ON CONFLICT (account_id) DO UPDATE SET\n            push_enabled = EXCLUDED.push_enabled,\n            email_enabled = EXCLUDED.email_enabled,\n            enabled_categories = EXCLUDED.enabled_categories,\n            quiet_hours_start = EXCLUDED.quiet_hours_start,\n            quiet_hours_end = EXCLUDED.quiet_hours_end,\n            updated_at = NOW()\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "Bool",
+        "Jsonb",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dcdf9a79f332ebd270af889d7afb8a4a61bc4dc095d50d1d8a3bb22002003a37"
+}
