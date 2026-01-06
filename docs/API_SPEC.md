@@ -668,6 +668,261 @@ Liste toutes les catégories avec le nombre d'extensions.
     { "slug": "utility", "name": "Utilities", "count": 8 }
   ]
 }
+```
+
+---
+
+## Routes Installation Extensions (Authentifiées)
+
+Ces routes permettent d'installer/désinstaller des extensions au niveau du compte.
+
+### `GET /account/extensions`
+
+Liste les extensions installées sur le compte.
+
+**Réponse (200) :**
+
+```json
+{
+  "extensions": [
+    {
+      "slug": "github-sync",
+      "name": "GitHub Sync",
+      "version": "1.2.0",
+      "icon": "github",
+      "category": "integration",
+      "enabled": true,
+      "installed_at": "2025-01-06T10:00:00Z",
+      "websites_count": 2
+    }
+  ]
+}
+```
+
+### `GET /account/extensions/:slug`
+
+Retourne les détails d'une extension installée.
+
+**Réponse (200) :**
+
+```json
+{
+  "slug": "github-sync",
+  "name": "GitHub Sync",
+  "version": "1.2.0",
+  "settings": { "auto_sync": true },
+  "granted_permissions": ["data.websites.read", "network.github.com"],
+  "enabled": true,
+  "installed_at": "2025-01-06T10:00:00Z"
+}
+```
+
+### `POST /account/extensions/:slug/install`
+
+Installe une extension sur le compte.
+
+**Corps JSON :**
+
+```json
+{
+  "granted_permissions": ["data.websites.read", "network.github.com"]
+}
+```
+
+**Réponse (201) :**
+
+```json
+{
+  "slug": "github-sync",
+  "name": "GitHub Sync",
+  "version": "1.2.0",
+  "settings": {},
+  "granted_permissions": ["data.websites.read", "network.github.com"],
+  "enabled": true,
+  "installed_at": "2025-01-06T10:00:00Z"
+}
+```
+
+**Erreur (409) - Déjà installée :**
+
+```json
+{
+  "error": "Extension already installed",
+  "code": "ALREADY_INSTALLED"
+}
+```
+
+**Erreur (400) - Permission manquante :**
+
+```json
+{
+  "error": "Missing required permission: network.github.com",
+  "code": "MISSING_PERMISSION",
+  "required_permissions": ["data.websites.read", "network.github.com"]
+}
+```
+
+### `DELETE /account/extensions/:slug`
+
+Désinstalle une extension du compte.
+
+**Réponse (200) :**
+
+```json
+{
+  "success": true,
+  "message": "Extension uninstalled"
+}
+```
+
+### `PATCH /account/extensions/:slug/settings`
+
+Met à jour les paramètres de l'extension au niveau compte.
+
+**Corps JSON :**
+
+```json
+{
+  "settings": { "auto_sync": false, "max_repos": 50 }
+}
+```
+
+**Réponse (200) :**
+
+```json
+{
+  "slug": "github-sync",
+  "settings": { "auto_sync": false, "max_repos": 50 },
+  "updated_at": "2025-01-06T12:00:00Z"
+}
+```
+
+### `PATCH /account/extensions/:slug/toggle`
+
+Active/désactive une extension au niveau compte.
+
+**Corps JSON :**
+
+```json
+{
+  "enabled": false
+}
+```
+
+**Réponse (200) :**
+
+```json
+{
+  "slug": "github-sync",
+  "enabled": false,
+  "updated_at": "2025-01-06T12:00:00Z"
+}
+```
+
+---
+
+## Routes Activation Extensions Website (Authentifiées)
+
+Ces routes permettent d'activer/désactiver des extensions sur un website spécifique.
+
+### `GET /websites/:id/extensions/v2`
+
+Liste les extensions activées sur un website.
+
+**Réponse (200) :**
+
+```json
+{
+  "extensions": [
+    {
+      "id": "uuid",
+      "extension_slug": "github-sync",
+      "extension_name": "GitHub Sync",
+      "settings": { "show_forks": false },
+      "enabled": true,
+      "activated_at": "2025-01-06T11:00:00Z"
+    }
+  ]
+}
+```
+
+### `POST /websites/:id/extensions/v2/:slug/activate`
+
+Active une extension installée sur un website.
+
+**Corps JSON :**
+
+```json
+{
+  "settings": { "show_forks": false }
+}
+```
+
+**Réponse (201) :**
+
+```json
+{
+  "id": "uuid",
+  "extension_slug": "github-sync",
+  "extension_name": "GitHub Sync",
+  "settings": { "show_forks": false },
+  "enabled": true,
+  "activated_at": "2025-01-06T11:00:00Z"
+}
+```
+
+**Erreur (400) - Non installée :**
+
+```json
+{
+  "error": "Extension not installed. Install it first.",
+  "code": "NOT_INSTALLED"
+}
+```
+
+**Erreur (400) - Désactivée au niveau compte :**
+
+```json
+{
+  "error": "Extension is disabled at account level",
+  "code": "EXTENSION_DISABLED"
+}
+```
+
+### `DELETE /websites/:id/extensions/v2/:slug`
+
+Désactive une extension d'un website.
+
+**Réponse (200) :**
+
+```json
+{
+  "success": true,
+  "message": "Extension deactivated"
+}
+```
+
+### `PATCH /websites/:id/extensions/v2/:slug/settings`
+
+Met à jour les paramètres de l'extension pour ce website.
+
+**Corps JSON :**
+
+```json
+{
+  "settings": { "show_forks": true }
+}
+```
+
+### `PATCH /websites/:id/extensions/v2/:slug/toggle`
+
+Active/désactive une extension sur ce website.
+
+**Corps JSON :**
+
+```json
+{
+  "enabled": false
 }
 ```
 
