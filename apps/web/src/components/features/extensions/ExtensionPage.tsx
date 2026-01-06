@@ -48,6 +48,8 @@ import {
   Heart,
   Play,
   Loader2,
+  Sparkles,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -61,6 +63,7 @@ import { Spinner } from '@/components/ui/spinner';
 import {
   useStoreExtensionQuery,
   useInstallExtensionMutation,
+  useStoreExtensionsQuery,
 } from '@/lib/query/store';
 import {
   useWebsiteExtensionsQuery,
@@ -478,6 +481,105 @@ function HistoryTab({ changelog }: HistoryTabProps) {
 }
 
 // ============================================================================
+// Suggested Extensions Component
+// ============================================================================
+
+interface SuggestedExtensionsProps {
+  currentSlug: string;
+  category: string;
+  tags: string[];
+  websiteId: string;
+}
+
+function SuggestedExtensions({ currentSlug, category, tags, websiteId }: SuggestedExtensionsProps) {
+  // Fetch extensions from the same category
+  const { data: categoryExtensions } = useStoreExtensionsQuery({ 
+    category,
+    per_page: 6,
+  });
+
+  // Filter out current extension and limit to 4
+  const suggestions = useMemo(() => {
+    if (!categoryExtensions?.extensions) return [];
+    return categoryExtensions.extensions
+      .filter(ext => ext.slug !== currentSlug)
+      .slice(0, 4);
+  }, [categoryExtensions, currentSlug]);
+
+  if (suggestions.length === 0) return null;
+
+  return (
+    <section className="mt-12 pt-8 border-t">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+          <Sparkles className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h2 className="font-semibold text-lg">Extensions similaires</h2>
+          <p className="text-sm text-muted-foreground">Découvrez d'autres extensions {category}</p>
+        </div>
+      </div>
+      
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {suggestions.map(ext => {
+          const iconConfig = getExtensionIconConfig(ext.icon, ext.slug);
+          const IconComponent = iconConfig.icon;
+          
+          return (
+            <Link
+              key={ext.slug}
+              href={`/${websiteId}/extensions/${ext.slug}`}
+              className={cn(
+                "group relative flex flex-col rounded-xl border bg-card overflow-hidden",
+                "transition-all duration-300 hover:shadow-lg hover:shadow-black/5 hover:-translate-y-0.5 hover:border-primary/20",
+              )}
+            >
+              {/* Gradient accent */}
+              <div className={cn("h-1 w-full", `bg-gradient-to-r ${iconConfig.gradient}`)} />
+              
+              <div className="p-4 flex flex-col flex-1">
+                <div className="flex items-start gap-3">
+                  <div 
+                    className={cn(
+                      "shrink-0 w-10 h-10 rounded-xl flex items-center justify-center",
+                      "shadow-md shadow-black/5 transition-transform duration-200 group-hover:scale-110",
+                      `bg-gradient-to-br ${iconConfig.gradient}`,
+                    )}
+                  >
+                    <IconComponent className="w-5 h-5 text-white" strokeWidth={1.5} />
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-semibold text-sm truncate">{ext.name}</h3>
+                      {ext.featured && (
+                        <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {ext.author_name || 'ASAP Team'}
+                    </p>
+                  </div>
+                </div>
+                
+                <p className="text-xs text-muted-foreground line-clamp-2 mt-3 flex-1">
+                  {ext.description}
+                </p>
+                
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-dashed">
+                  <span className="text-[10px] text-muted-foreground">{ext.install_count} installs</span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ============================================================================
 // Main Component
 // ============================================================================
 
@@ -861,6 +963,16 @@ export default function ExtensionPage({ slug, initialTab = 'overview' }: Extensi
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {/* Suggested Extensions */}
+      {websiteId && extension.category && (
+        <SuggestedExtensions
+          currentSlug={slug}
+          category={extension.category}
+          tags={extension.tags || []}
+          websiteId={websiteId}
+        />
       )}
 
       {/* Form Actions (sticky) */}
