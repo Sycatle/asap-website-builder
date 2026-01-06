@@ -1060,3 +1060,1018 @@ Cette refonte transforme un système d'extensions technique en un **App Store ut
 - **Pour la plateforme**: Extensibilité maîtrisée, métriques, potentiel marketplace
 
 Le manifest unifié `manifest.toml` devient le **contrat** entre l'app et la plateforme — tout ce qu'une app peut faire doit y être déclaré.
+
+---
+
+## 13. Restructuration Frontend
+
+### 13.1 Analyse de l'Existant Frontend
+
+#### Structure Actuelle des Composants Extensions
+
+```
+apps/web/src/components/
+├── features/
+│   ├── extensions/                    ← Actuellement fragmenté
+│   │   └── extension-manager/
+│   │       ├── components/
+│   │       │   ├── ExtensionCard.tsx
+│   │       │   ├── ExtensionGrid.tsx
+│   │       │   └── InstallDialog.tsx
+│   │       ├── hooks.ts
+│   │       ├── types.ts
+│   │       └── index.ts
+│   └── settings/
+│       └── extension-settings/        ← Logique dupliquée
+│           ├── ExtensionConfigForm.tsx
+│           └── SchemaRenderer.tsx
+├── studio/
+│   └── data-binding/                  ← Collections (Phase 3)
+│       ├── CollectionSelector.tsx
+│       ├── VariablePicker.tsx
+│       └── ...
+└── SchemaRenderer.tsx                 ← Global, devrait être dans ui/
+```
+
+#### Problèmes Identifiés
+
+| Problème | Impact |
+|----------|--------|
+| **SchemaRenderer global** | Pas dans la bonne couche, difficile à maintenir |
+| **Extension config dans settings** | Devrait être dans la feature extensions |
+| **Pas de composants Store** | Manque pages catalogue/détail app |
+| **Types dispersés** | `types.ts` dans chaque feature |
+| **Hooks non réutilisables** | Couplés aux composants spécifiques |
+
+### 13.2 Architecture Frontend Cible
+
+```
+apps/web/src/
+├── components/
+│   ├── ui/                            # Composants atomiques (shadcn)
+│   │   ├── form-renderer/             # NOUVEAU: Rendu dynamique de formulaires
+│   │   │   ├── FormRenderer.tsx       # Orchestrateur principal
+│   │   │   ├── field-renderers/       # Un renderer par type de champ
+│   │   │   │   ├── TextField.tsx
+│   │   │   │   ├── NumberField.tsx
+│   │   │   │   ├── SelectField.tsx
+│   │   │   │   ├── BooleanField.tsx
+│   │   │   │   ├── MultiSelectField.tsx
+│   │   │   │   ├── OAuthField.tsx
+│   │   │   │   ├── ColorField.tsx
+│   │   │   │   ├── DateField.tsx
+│   │   │   │   ├── FileField.tsx
+│   │   │   │   ├── SecretField.tsx
+│   │   │   │   └── index.ts
+│   │   │   ├── section-renderer/      # Groupement de champs
+│   │   │   │   └── FormSection.tsx
+│   │   │   └── index.ts
+│   │   └── ... (autres composants ui)
+│   │
+│   ├── features/
+│   │   ├── app-store/                 # NOUVEAU: Feature App Store complète
+│   │   │   ├── components/
+│   │   │   │   ├── store/             # Pages catalogue
+│   │   │   │   │   ├── AppStorePage.tsx
+│   │   │   │   │   ├── AppStoreGrid.tsx
+│   │   │   │   │   ├── AppStoreFilters.tsx
+│   │   │   │   │   ├── AppStoreFeatured.tsx
+│   │   │   │   │   └── AppStoreSearch.tsx
+│   │   │   │   ├── detail/            # Page détail app
+│   │   │   │   │   ├── AppDetailPage.tsx
+│   │   │   │   │   ├── AppHeader.tsx
+│   │   │   │   │   ├── AppScreenshots.tsx
+│   │   │   │   │   ├── AppPermissions.tsx
+│   │   │   │   │   ├── AppCollections.tsx
+│   │   │   │   │   ├── AppVariables.tsx
+│   │   │   │   │   └── AppReviews.tsx
+│   │   │   │   ├── cards/             # Composants cartes
+│   │   │   │   │   ├── AppCard.tsx
+│   │   │   │   │   ├── AppCardCompact.tsx
+│   │   │   │   │   ├── AppCardFeatured.tsx
+│   │   │   │   │   └── AppRating.tsx
+│   │   │   │   ├── install/           # Flow installation
+│   │   │   │   │   ├── InstallDialog.tsx
+│   │   │   │   │   ├── PermissionsReview.tsx
+│   │   │   │   │   └── InstallProgress.tsx
+│   │   │   │   └── config/            # Configuration app
+│   │   │   │       ├── AppConfigPage.tsx
+│   │   │   │       ├── AppConfigForm.tsx
+│   │   │   │       ├── AppActions.tsx
+│   │   │   │       ├── AppDataPreview.tsx
+│   │   │   │       └── AppWebsiteSelector.tsx
+│   │   │   ├── hooks/
+│   │   │   │   ├── useAppStore.ts     # Liste apps catalogue
+│   │   │   │   ├── useAppDetail.ts    # Détails d'une app
+│   │   │   │   ├── useInstalledApps.ts # Apps installées (compte)
+│   │   │   │   ├── useWebsiteApps.ts  # Apps activées (website)
+│   │   │   │   ├── useAppConfig.ts    # Config d'une app
+│   │   │   │   ├── useAppActions.ts   # Actions d'une app
+│   │   │   │   └── index.ts
+│   │   │   ├── api/
+│   │   │   │   └── apps.ts            # Client API apps
+│   │   │   ├── types.ts               # Types frontend apps
+│   │   │   ├── constants.ts           # Categories, etc.
+│   │   │   └── index.ts
+│   │   │
+│   │   └── ... (autres features)
+│   │
+│   └── studio/
+│       └── data-binding/              # Existant (Collections Phase 3)
+│
+├── hooks/
+│   ├── useCollections.ts              # Existant
+│   ├── useVariables.ts                # Existant
+│   └── ... 
+│
+└── lib/
+    ├── api/
+    │   ├── apps.ts                    # NOUVEAU: API client apps
+    │   ├── collections.ts             # Existant
+    │   └── ...
+    └── types/
+        └── apps.ts                    # NOUVEAU: Types partagés apps
+```
+
+### 13.3 Composants UI: FormRenderer
+
+Le `FormRenderer` est le cœur du système — il génère dynamiquement les formulaires depuis les manifests.
+
+#### Architecture du FormRenderer
+
+```typescript
+// components/ui/form-renderer/FormRenderer.tsx
+
+interface FormRendererProps {
+  /** Schema from app manifest */
+  schema: ConfigSchema;
+  /** Current values */
+  values: Record<string, unknown>;
+  /** Change handler */
+  onChange: (values: Record<string, unknown>) => void;
+  /** Validation errors */
+  errors?: Record<string, string>;
+  /** Loading state */
+  isLoading?: boolean;
+  /** Read-only mode */
+  readOnly?: boolean;
+}
+
+/**
+ * Renders a dynamic form from a config schema.
+ * 
+ * Features:
+ * - Type-safe field rendering
+ * - Conditional visibility (visible_if)
+ * - Section grouping
+ * - Validation display
+ * - Responsive layout
+ */
+export function FormRenderer({
+  schema,
+  values,
+  onChange,
+  errors,
+  isLoading,
+  readOnly,
+}: FormRendererProps) {
+  // Group fields by section
+  const sections = useMemo(() => 
+    groupFieldsBySections(schema.fields, schema.sections),
+    [schema]
+  );
+
+  // Evaluate conditional visibility
+  const visibleFields = useMemo(() =>
+    evaluateVisibility(schema.fields, values),
+    [schema.fields, values]
+  );
+
+  return (
+    <form className="space-y-6">
+      {sections.map((section) => (
+        <FormSection
+          key={section.id}
+          section={section}
+          visibleFields={visibleFields}
+        >
+          {section.fields.map((field) => (
+            visibleFields.has(field.key) && (
+              <FieldRenderer
+                key={field.key}
+                field={field}
+                value={values[field.key]}
+                onChange={(v) => onChange({ ...values, [field.key]: v })}
+                error={errors?.[field.key]}
+                disabled={isLoading || readOnly}
+              />
+            )
+          ))}
+        </FormSection>
+      ))}
+    </form>
+  );
+}
+```
+
+#### Field Renderers Registry
+
+```typescript
+// components/ui/form-renderer/field-renderers/index.ts
+
+import { TextField } from './TextField';
+import { NumberField } from './NumberField';
+import { BooleanField } from './BooleanField';
+import { SelectField } from './SelectField';
+import { MultiSelectField } from './MultiSelectField';
+import { OAuthField } from './OAuthField';
+import { ColorField } from './ColorField';
+import { DateField } from './DateField';
+import { FileField } from './FileField';
+import { SecretField } from './SecretField';
+import { JsonField } from './JsonField';
+
+/**
+ * Registry of field renderers by type.
+ * Add new field types here.
+ */
+export const fieldRenderers: Record<FieldType, React.ComponentType<FieldProps>> = {
+  text: TextField,
+  textarea: TextField,
+  email: TextField,
+  url: TextField,
+  password: TextField,
+  number: NumberField,
+  boolean: BooleanField,
+  select: SelectField,
+  multiselect: MultiSelectField,
+  oauth: OAuthField,
+  color: ColorField,
+  date: DateField,
+  datetime: DateField,
+  file: FileField,
+  image: FileField,
+  secret: SecretField,
+  json: JsonField,
+};
+
+/**
+ * Unified field renderer that delegates to specific type renderer.
+ */
+export function FieldRenderer({ field, ...props }: FieldRendererProps) {
+  const Renderer = fieldRenderers[field.type];
+  
+  if (!Renderer) {
+    console.warn(`Unknown field type: ${field.type}`);
+    return null;
+  }
+  
+  return <Renderer field={field} {...props} />;
+}
+```
+
+#### Exemple: TextField
+
+```typescript
+// components/ui/form-renderer/field-renderers/TextField.tsx
+
+interface TextFieldProps extends FieldProps {
+  field: TextFieldDef;
+}
+
+export function TextField({ field, value, onChange, error, disabled }: TextFieldProps) {
+  const InputComponent = field.type === 'textarea' ? Textarea : Input;
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={field.key}>
+        {field.label}
+        {field.required && <span className="text-destructive ml-1">*</span>}
+      </Label>
+      
+      <InputComponent
+        id={field.key}
+        type={field.type === 'password' ? 'password' : 
+              field.type === 'email' ? 'email' : 
+              field.type === 'url' ? 'url' : 'text'}
+        value={value as string || ''}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={field.placeholder}
+        disabled={disabled}
+        className={cn(error && 'border-destructive')}
+        {...(field.validation?.maxLength && { maxLength: field.validation.maxLength })}
+      />
+      
+      {field.description && !error && (
+        <p className="text-sm text-muted-foreground">{field.description}</p>
+      )}
+      
+      {error && (
+        <p className="text-sm text-destructive">{error}</p>
+      )}
+    </div>
+  );
+}
+```
+
+#### Exemple: OAuthField (Spécial)
+
+```typescript
+// components/ui/form-renderer/field-renderers/OAuthField.tsx
+
+export function OAuthField({ field, value, onChange, disabled }: OAuthFieldProps) {
+  const oauthValue = value as OAuthValue | undefined;
+  const isConnected = !!oauthValue?.access_token;
+  
+  const handleConnect = async () => {
+    // Open OAuth popup
+    const result = await openOAuthFlow(field.provider, field.scopes);
+    onChange(result);
+  };
+  
+  const handleDisconnect = () => {
+    onChange(undefined);
+  };
+  
+  return (
+    <div className="space-y-2">
+      <Label>{field.label}</Label>
+      
+      {isConnected ? (
+        <div className="flex items-center gap-3 p-3 rounded-md border bg-muted/50">
+          <ProviderIcon provider={field.provider} className="h-5 w-5" />
+          <div className="flex-1">
+            <p className="font-medium">{oauthValue.user_name || 'Connected'}</p>
+            <p className="text-sm text-muted-foreground">
+              Connected to {formatProviderName(field.provider)}
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleDisconnect}
+            disabled={disabled}
+          >
+            Disconnect
+          </Button>
+        </div>
+      ) : (
+        <Button
+          variant="outline"
+          onClick={handleConnect}
+          disabled={disabled}
+          className="w-full justify-start gap-2"
+        >
+          <ProviderIcon provider={field.provider} className="h-4 w-4" />
+          Connect with {formatProviderName(field.provider)}
+        </Button>
+      )}
+      
+      {field.description && (
+        <p className="text-sm text-muted-foreground">{field.description}</p>
+      )}
+    </div>
+  );
+}
+```
+
+### 13.4 Composants App Store
+
+#### AppCard
+
+```typescript
+// features/app-store/components/cards/AppCard.tsx
+
+interface AppCardProps {
+  app: AppSummary;
+  installed?: boolean;
+  onInstall?: () => void;
+  onConfigure?: () => void;
+}
+
+export function AppCard({ app, installed, onInstall, onConfigure }: AppCardProps) {
+  return (
+    <Card className="group hover:shadow-md transition-shadow">
+      <CardHeader className="pb-3">
+        <div className="flex items-start gap-3">
+          <div 
+            className="p-2 rounded-lg" 
+            style={{ backgroundColor: `${app.color}15` }}
+          >
+            <AppIcon icon={app.icon} color={app.color} className="h-8 w-8" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-base truncate">{app.name}</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              by {app.author}
+            </p>
+          </div>
+          {app.featured && (
+            <Badge variant="secondary">Featured</Badge>
+          )}
+        </div>
+      </CardHeader>
+      
+      <CardContent className="pb-3">
+        <p className="text-sm text-muted-foreground line-clamp-2">
+          {app.description}
+        </p>
+        
+        <div className="flex items-center gap-3 mt-3">
+          <AppRating rating={app.rating_avg} count={app.rating_count} />
+          <span className="text-xs text-muted-foreground">
+            {formatNumber(app.install_count)} installs
+          </span>
+        </div>
+      </CardContent>
+      
+      <CardFooter className="pt-0">
+        {installed ? (
+          <Button 
+            variant="outline" 
+            className="w-full"
+            onClick={onConfigure}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Configure
+          </Button>
+        ) : (
+          <Button 
+            className="w-full"
+            onClick={onInstall}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {app.required_plan === 'free' ? 'Install Free' : `Requires ${app.required_plan}`}
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
+  );
+}
+```
+
+#### AppPermissions
+
+```typescript
+// features/app-store/components/detail/AppPermissions.tsx
+
+interface AppPermissionsProps {
+  permissions: AppPermissions;
+  compact?: boolean;
+}
+
+export function AppPermissions({ permissions, compact }: AppPermissionsProps) {
+  const groupedPermissions = useMemo(() => 
+    groupPermissions(permissions),
+    [permissions]
+  );
+  
+  return (
+    <div className="space-y-4">
+      <h3 className="font-semibold flex items-center gap-2">
+        <Shield className="h-4 w-4" />
+        Permissions Required
+      </h3>
+      
+      <div className="space-y-3">
+        {groupedPermissions.data.length > 0 && (
+          <PermissionGroup
+            icon={Database}
+            title="Data Access"
+            permissions={groupedPermissions.data}
+            compact={compact}
+          />
+        )}
+        
+        {groupedPermissions.network.length > 0 && (
+          <PermissionGroup
+            icon={Globe}
+            title="Network Access"
+            permissions={groupedPermissions.network}
+            compact={compact}
+          />
+        )}
+        
+        {groupedPermissions.events.length > 0 && (
+          <PermissionGroup
+            icon={Bell}
+            title="Event Subscriptions"
+            permissions={groupedPermissions.events}
+            compact={compact}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PermissionGroup({ icon: Icon, title, permissions, compact }: PermissionGroupProps) {
+  return (
+    <div className="space-y-2">
+      {!compact && (
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <Icon className="h-4 w-4" />
+          {title}
+        </div>
+      )}
+      <ul className="space-y-1">
+        {permissions.map((perm) => (
+          <li key={perm} className="flex items-center gap-2 text-sm">
+            <Check className="h-3 w-3 text-green-500" />
+            {formatPermission(perm)}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+#### InstallDialog
+
+```typescript
+// features/app-store/components/install/InstallDialog.tsx
+
+interface InstallDialogProps {
+  app: AppDetail;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onInstall: (grantedPermissions: string[]) => Promise<void>;
+}
+
+export function InstallDialog({ app, open, onOpenChange, onInstall }: InstallDialogProps) {
+  const [step, setStep] = useState<'review' | 'installing' | 'success'>('review');
+  const [isInstalling, setIsInstalling] = useState(false);
+  
+  const handleInstall = async () => {
+    setIsInstalling(true);
+    setStep('installing');
+    
+    try {
+      await onInstall(Object.keys(app.permissions));
+      setStep('success');
+    } catch (error) {
+      setStep('review');
+    } finally {
+      setIsInstalling(false);
+    }
+  };
+  
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <AppIcon icon={app.icon} color={app.color} className="h-10 w-10" />
+            <div>
+              <DialogTitle>Install {app.name}?</DialogTitle>
+              <DialogDescription>v{app.version} by {app.author}</DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+        
+        {step === 'review' && (
+          <>
+            <div className="py-4">
+              <AppPermissions permissions={app.permissions} compact />
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleInstall}>
+                <Download className="h-4 w-4 mr-2" />
+                Install {app.name}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+        
+        {step === 'installing' && (
+          <div className="py-8 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Installing {app.name}...</p>
+          </div>
+        )}
+        
+        {step === 'success' && (
+          <div className="py-8 text-center">
+            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <p className="font-medium">{app.name} installed!</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Configure it to get started.
+            </p>
+            <Button 
+              className="mt-4"
+              onClick={() => {
+                onOpenChange(false);
+                // Navigate to config
+              }}
+            >
+              Configure Now
+            </Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+### 13.5 Hooks App Store
+
+```typescript
+// features/app-store/hooks/useAppStore.ts
+
+interface UseAppStoreOptions {
+  category?: string;
+  search?: string;
+  featured?: boolean;
+  sort?: 'popular' | 'newest' | 'rating';
+}
+
+export function useAppStore(options: UseAppStoreOptions = {}) {
+  const [apps, setApps] = useState<AppSummary[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const fetchApps = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await appsAPI.list(options);
+      setApps(response.apps);
+      setCategories(response.categories);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch apps');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [options]);
+  
+  useEffect(() => {
+    fetchApps();
+  }, [fetchApps]);
+  
+  return {
+    apps,
+    categories,
+    isLoading,
+    error,
+    refetch: fetchApps,
+  };
+}
+```
+
+```typescript
+// features/app-store/hooks/useInstalledApps.ts
+
+export function useInstalledApps() {
+  const [apps, setApps] = useState<InstalledApp[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const install = useCallback(async (slug: string, permissions: string[]) => {
+    const installed = await appsAPI.install(slug, permissions);
+    setApps(prev => [...prev, installed]);
+    return installed;
+  }, []);
+  
+  const uninstall = useCallback(async (slug: string) => {
+    await appsAPI.uninstall(slug);
+    setApps(prev => prev.filter(a => a.slug !== slug));
+  }, []);
+  
+  const updateConfig = useCallback(async (slug: string, settings: Record<string, unknown>) => {
+    const updated = await appsAPI.updateSettings(slug, settings);
+    setApps(prev => prev.map(a => a.slug === slug ? updated : a));
+    return updated;
+  }, []);
+  
+  // ... fetch logic
+  
+  return {
+    apps,
+    isLoading,
+    error,
+    install,
+    uninstall,
+    updateConfig,
+    isInstalled: (slug: string) => apps.some(a => a.slug === slug),
+  };
+}
+```
+
+```typescript
+// features/app-store/hooks/useAppActions.ts
+
+export function useAppActions(websiteId: string, appSlug: string) {
+  const [isExecuting, setIsExecuting] = useState<string | null>(null);
+  const [lastResult, setLastResult] = useState<ActionResult | null>(null);
+  
+  const executeAction = useCallback(async (actionId: string) => {
+    setIsExecuting(actionId);
+    setLastResult(null);
+    
+    try {
+      const result = await appsAPI.executeAction(websiteId, appSlug, actionId);
+      setLastResult(result);
+      return result;
+    } finally {
+      setIsExecuting(null);
+    }
+  }, [websiteId, appSlug]);
+  
+  return {
+    executeAction,
+    isExecuting,
+    lastResult,
+    isActionExecuting: (id: string) => isExecuting === id,
+  };
+}
+```
+
+### 13.6 Types Frontend
+
+```typescript
+// features/app-store/types.ts
+
+/**
+ * App summary for listing (compact)
+ */
+export interface AppSummary {
+  slug: string;
+  name: string;
+  description: string;
+  tagline: string;
+  icon: string;
+  color: string;
+  category: AppCategory;
+  tags: string[];
+  author: string;
+  required_plan: PlanType;
+  rating_avg: number;
+  rating_count: number;
+  install_count: number;
+  featured: boolean;
+}
+
+/**
+ * Full app details
+ */
+export interface AppDetail extends AppSummary {
+  version: string;
+  homepage?: string;
+  repository?: string;
+  screenshots: string[];
+  permissions: AppPermissions;
+  config: ConfigSchema;
+  actions: AppAction[];
+  collections: CollectionDefinition[];
+  variables: VariableDefinition[];
+}
+
+/**
+ * Installed app (account level)
+ */
+export interface InstalledApp {
+  id: string;
+  app: AppSummary;
+  installed_version: string;
+  installed_at: string;
+  global_settings: Record<string, unknown>;
+  granted_permissions: string[];
+  websites: WebsiteAppStatus[];
+}
+
+/**
+ * App activation status per website
+ */
+export interface WebsiteAppStatus {
+  website_id: string;
+  website_name: string;
+  enabled: boolean;
+  settings: Record<string, unknown>;
+  activated_at: string;
+}
+
+/**
+ * App permissions structure
+ */
+export interface AppPermissions {
+  data: string[];
+  network: string[];
+  events: string[];
+}
+
+/**
+ * Config schema from manifest
+ */
+export interface ConfigSchema {
+  fields: ConfigField[];
+  sections: ConfigSection[];
+}
+
+/**
+ * App action definition
+ */
+export interface AppAction {
+  id: string;
+  label: string;
+  description?: string;
+  icon?: string;
+  style: 'primary' | 'secondary' | 'danger';
+  endpoint: string;
+  method: 'POST' | 'DELETE';
+  confirm?: string;
+  refresh_after?: boolean;
+}
+
+/**
+ * Action execution result
+ */
+export interface ActionResult {
+  success: boolean;
+  message?: string;
+  data?: unknown;
+}
+
+/**
+ * App categories
+ */
+export type AppCategory = 
+  | 'integration'
+  | 'content'
+  | 'engagement'
+  | 'analytics'
+  | 'design'
+  | 'monetization';
+
+export const APP_CATEGORIES: Record<AppCategory, { label: string; icon: string }> = {
+  integration: { label: 'Integrations', icon: 'puzzle' },
+  content: { label: 'Content', icon: 'file-text' },
+  engagement: { label: 'Engagement', icon: 'users' },
+  analytics: { label: 'Analytics', icon: 'chart-bar' },
+  design: { label: 'Design', icon: 'palette' },
+  monetization: { label: 'Monetization', icon: 'dollar-sign' },
+};
+```
+
+### 13.7 API Client Apps
+
+```typescript
+// lib/api/apps.ts
+
+import { apiClient } from './client';
+import type { 
+  AppSummary, 
+  AppDetail, 
+  InstalledApp,
+  ActionResult 
+} from '@/features/app-store/types';
+
+export const appsAPI = {
+  // Store
+  list: (params?: AppListParams) => 
+    apiClient.get<AppListResponse>('/store/apps', { params }),
+    
+  get: (slug: string) => 
+    apiClient.get<AppDetail>(`/store/apps/${slug}`),
+  
+  // Account level
+  installed: () => 
+    apiClient.get<InstalledApp[]>('/account/apps'),
+    
+  install: (slug: string, permissions: string[]) => 
+    apiClient.post<InstalledApp>(`/account/apps/${slug}/install`, { 
+      granted_permissions: permissions 
+    }),
+    
+  uninstall: (slug: string) => 
+    apiClient.delete(`/account/apps/${slug}/uninstall`),
+    
+  updateGlobalSettings: (slug: string, settings: Record<string, unknown>) =>
+    apiClient.put<InstalledApp>(`/account/apps/${slug}/settings`, { settings }),
+  
+  // Website level  
+  websiteApps: (websiteId: string) =>
+    apiClient.get<WebsiteApp[]>(`/websites/${websiteId}/apps`),
+    
+  activate: (websiteId: string, slug: string) =>
+    apiClient.post(`/websites/${websiteId}/apps/${slug}/activate`),
+    
+  deactivate: (websiteId: string, slug: string) =>
+    apiClient.delete(`/websites/${websiteId}/apps/${slug}/deactivate`),
+    
+  updateWebsiteSettings: (websiteId: string, slug: string, settings: Record<string, unknown>) =>
+    apiClient.put(`/websites/${websiteId}/apps/${slug}/settings`, { settings }),
+    
+  // Actions
+  executeAction: (websiteId: string, slug: string, actionId: string) =>
+    apiClient.post<ActionResult>(
+      `/websites/${websiteId}/apps/${slug}/actions/${actionId}`
+    ),
+};
+```
+
+### 13.8 Routing & Pages
+
+```typescript
+// Pages à créer/modifier
+
+// apps/web/src/pages/store/index.astro     → AppStorePage
+// apps/web/src/pages/store/[slug].astro    → AppDetailPage  
+// apps/web/src/pages/apps/index.astro      → Installed apps list
+// apps/web/src/pages/apps/[slug].astro     → App config page
+// apps/web/src/pages/websites/[id]/apps.astro → Website apps
+```
+
+### 13.9 Migration Frontend
+
+#### Fichiers à Supprimer
+
+```
+❌ apps/web/src/components/SchemaRenderer.tsx        → Migré vers ui/form-renderer
+❌ apps/web/src/components/features/extensions/      → Remplacé par app-store
+❌ apps/web/src/components/features/settings/extension-settings/
+```
+
+#### Fichiers à Créer
+
+```
+✅ apps/web/src/components/ui/form-renderer/         → Nouveau système
+✅ apps/web/src/components/features/app-store/       → Feature complète
+✅ apps/web/src/lib/api/apps.ts                      → API client
+✅ apps/web/src/pages/store/                         → Pages store
+```
+
+#### Fichiers à Modifier
+
+```
+📝 apps/web/src/components/studio/data-binding/     → Utiliser nouveaux types
+📝 apps/web/src/hooks/useCollections.ts             → Adapter aux apps
+📝 apps/web/src/lib/api/index.ts                    → Export apps API
+```
+
+### 13.10 Checklist d'Implémentation Frontend
+
+```
+Phase 1: Foundation
+├── [ ] Créer ui/form-renderer avec tous les field renderers
+├── [ ] Créer types.ts pour app-store
+├── [ ] Créer api/apps.ts client
+└── [ ] Tests unitaires FormRenderer
+
+Phase 2: App Store
+├── [ ] AppStorePage + routing
+├── [ ] AppCard, AppCardFeatured, AppRating
+├── [ ] AppStoreFilters, AppStoreSearch
+├── [ ] useAppStore hook
+└── [ ] Tests composants store
+
+Phase 3: App Detail & Install
+├── [ ] AppDetailPage
+├── [ ] AppPermissions, AppScreenshots
+├── [ ] InstallDialog avec PermissionsReview
+├── [ ] useAppDetail, useInstalledApps hooks
+└── [ ] Tests flow installation
+
+Phase 4: App Config
+├── [ ] AppConfigPage
+├── [ ] AppConfigForm (utilise FormRenderer)
+├── [ ] AppActions, AppDataPreview
+├── [ ] useAppConfig, useAppActions hooks
+└── [ ] Tests configuration
+
+Phase 5: Integration Studio
+├── [ ] Adapter CollectionSelector pour apps
+├── [ ] Adapter VariablePicker pour apps
+├── [ ] Connecter DataSourceEditor aux apps
+└── [ ] Tests intégration
+```
+
+---
+
+## 14. Questions Ouvertes
+
+1. **Marketplace externe ?** — Permettre des apps tierces à terme ?
+2. **Monétisation apps ?** — Apps payantes avec revenue share ?
+3. **Sandbox ?** — Isolation des apps (WASM, containers) ?
+4. **Versioning SemVer strict ?** — Breaking changes = major bump obligatoire ?
+5. **i18n Manifests ?** — Labels traduits dans le manifest ?
+6. **Dark mode icons ?** — Variantes d'icônes pour les thèmes ?
+
+---
+
+## 15. Conclusion
+
+Cette refonte transforme un système d'extensions technique en un **App Store utilisateur-centrique**:
+
+- **Pour l'utilisateur**: Expérience cohérente, permissions claires, installation simple
+- **Pour le développeur**: Un seul fichier manifest, hooks clairs, migrations gérées
+- **Pour la plateforme**: Extensibilité maîtrisée, métriques, potentiel marketplace
+
+Le manifest unifié `manifest.toml` devient le **contrat** entre l'app et la plateforme — tout ce qu'une app peut faire doit y être déclaré.
+
+Le **FormRenderer** côté frontend garantit une UX cohérente peu importe l'app — chaque type de champ est rendu de manière uniforme et validé selon le même système.
