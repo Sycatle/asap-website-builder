@@ -3,7 +3,8 @@
 //! This module is organized into submodules:
 //! - `types` - Shared data types and structs
 //! - `websites` - Website CRUD queries
-//! - `extensions` - Extension-related queries
+//! - `extensions` - Extension-related queries (legacy)
+//! - `extensions_store` - Extension Store v2 queries
 //! - `elements` - Website element queries
 //! - `presets` - Preset queries
 //! - `events` - Event batch operations
@@ -14,6 +15,7 @@ use uuid::Uuid;
 mod types;
 mod websites;
 mod extensions;
+mod extensions_store;
 mod elements;
 mod presets;
 mod events;
@@ -22,6 +24,7 @@ mod events;
 pub use types::*;
 pub use websites::*;
 pub use extensions::*;
+pub use extensions_store::*;
 pub use elements::*;
 pub use presets::*;
 pub use events::*;
