@@ -102,3 +102,30 @@ export {
   useWebsiteEditor,
   useWebsitePreview,
 } from './composites';
+// Extension Store Queries & Mutations (v2)
+export {
+  // Store queries
+  useStoreExtensionsQuery,
+  useFeaturedExtensionsQuery,
+  useStoreExtensionQuery,
+  useExtensionManifestQuery,
+  useStoreCategoriesQuery,
+  // Account extensions
+  useInstalledExtensionsQuery,
+  useInstalledExtensionQuery,
+  // Website extensions v2
+  useWebsiteExtensionsV2Query,
+  // Install/uninstall mutations
+  useInstallExtensionMutation,
+  useUninstallExtensionMutation,
+  useUpdateAccountExtensionSettingsMutation,
+  useToggleAccountExtensionMutation,
+  // Website activate/deactivate mutations
+  useActivateWebsiteExtensionMutation,
+  useDeactivateWebsiteExtensionMutation,
+  useUpdateWebsiteExtensionSettingsMutation,
+  useToggleWebsiteExtensionMutation,
+  // Composite hooks
+  useExtensionInstallFlow,
+  useExtensionStore,
+} from './store';

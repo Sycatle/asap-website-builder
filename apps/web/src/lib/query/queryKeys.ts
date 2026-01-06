@@ -60,6 +60,24 @@ export const queryKeys = {
       ['extensions', 'data', websiteId, slug] as const,
   },
 
+  // Extension Store queries (v2)
+  store: {
+    all: ['store'] as const,
+    extensions: (params?: Record<string, unknown>) => 
+      params 
+        ? ['store', 'extensions', params] as const 
+        : ['store', 'extensions'] as const,
+    featured: () => ['store', 'extensions', 'featured'] as const,
+    detail: (slug: string) => ['store', 'extensions', slug] as const,
+    manifest: (slug: string) => ['store', 'extensions', slug, 'manifest'] as const,
+    categories: () => ['store', 'categories'] as const,
+    // Account-level installed
+    installed: () => ['store', 'installed'] as const,
+    installedDetail: (slug: string) => ['store', 'installed', slug] as const,
+    // Website-level activated
+    websiteExtensions: (websiteId: string) => ['store', 'website', websiteId] as const,
+  },
+
   // File queries
   files: {
     all: ['files'] as const,
@@ -105,6 +123,9 @@ export const staleTimes = {
   files: 1 * 60 * 1000,          // 1 minute
   quota: 30 * 1000,              // 30 seconds
   notifications: 1 * 60 * 1000,  // 1 minute
+  store: 5 * 60 * 1000,          // 5 minutes (store catalog)
+  storeDetail: 10 * 60 * 1000,   // 10 minutes (extension detail)
+  installed: 2 * 60 * 1000,      // 2 minutes (installed extensions)
 } as const;
 
 // ============================================
