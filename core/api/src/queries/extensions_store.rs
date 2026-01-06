@@ -201,7 +201,7 @@ pub async fn list_store_extensions(
         r#"
         SELECT slug, name, version, description, long_description, icon, banner,
                category, tags, min_plan, author_name, author_verified, featured,
-               beta, deprecated, install_count, rating_average, rating_count,
+               beta, deprecated, install_count, rating_average::float8, rating_count,
                manifest, created_at, updated_at
         FROM extensions_v2
         WHERE {}
@@ -227,7 +227,7 @@ pub async fn get_store_extension(
         r#"
         SELECT slug, name, version, description, long_description, icon, banner,
                category, tags, min_plan, author_name, author_verified, featured,
-               beta, deprecated, install_count, rating_average, rating_count,
+               beta, deprecated, install_count, rating_average::float8, rating_count,
                manifest, created_at, updated_at
         FROM extensions_v2
         WHERE slug = $1 AND status = 'active'
@@ -247,7 +247,7 @@ pub async fn get_featured_extensions(
         r#"
         SELECT slug, name, version, description, long_description, icon, banner,
                category, tags, min_plan, author_name, author_verified, featured,
-               beta, deprecated, install_count, rating_average, rating_count,
+               beta, deprecated, install_count, rating_average::float8, rating_count,
                manifest, created_at, updated_at
         FROM extensions_v2
         WHERE featured = true AND status = 'active' AND deprecated = false
