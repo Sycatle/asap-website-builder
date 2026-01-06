@@ -21,3 +21,6 @@ export * from './landing-saas-schema';
 
 // Site rendering payloads
 export * from './site-rendering';
+
+// Extension Store Types
+export * from './extensions';
