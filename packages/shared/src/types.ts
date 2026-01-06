@@ -334,3 +334,269 @@ export interface CustomContent {
   content?: string;
   html?: string;
 }
+
+// ============================================
+// Collections & Variables Types
+// ============================================
+
+/**
+ * Sync mode for collections
+ */
+export type SyncMode = 'manual' | 'auto';
+
+/**
+ * Sync frequency for auto-sync collections
+ */
+export type SyncFrequency = 'hourly' | 'daily' | 'weekly';
+
+/**
+ * Status of collection sync
+ */
+export type SyncStatus = 'idle' | 'syncing' | 'error';
+
+/**
+ * Field types for collection schemas
+ */
+export type CollectionFieldType =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'date'
+  | 'datetime'
+  | 'url'
+  | 'email'
+  | 'image'
+  | 'rich_text'
+  | 'json'
+  | 'array'
+  | 'reference';
+
+/**
+ * Field definition in a collection schema
+ */
+export interface CollectionFieldDef {
+  key: string;
+  type: CollectionFieldType;
+  label: string;
+  description?: string;
+  required?: boolean;
+  default_value?: unknown;
+  filterable?: boolean;
+  sortable?: boolean;
+  searchable?: boolean;
+  format?: string;
+  icon?: string;
+}
+
+/**
+ * Collection schema definition
+ */
+export interface CollectionSchema {
+  primary_key: string;
+  display_field: string;
+  preview_fields: string[];
+  fields: CollectionFieldDef[];
+}
+
+/**
+ * Collection definition from extension catalog
+ */
+export interface CollectionDefinition {
+  slug: string;
+  name: string;
+  description: string;
+  sync_mode: SyncMode;
+  sync_frequency?: SyncFrequency;
+  schema: CollectionSchema;
+}
+
+/**
+ * A single item in a collection
+ */
+export interface CollectionItem {
+  id: string;
+  data: Record<string, unknown>;
+  _created_at: string;
+  _updated_at: string;
+  _source_id?: string;
+}
+
+/**
+ * Collection instance for a specific website
+ */
+export interface WebsiteCollection {
+  id: string;
+  website_id: string;
+  collection_slug: string;
+  items: CollectionItem[];
+  source_extension: string;
+  source_version?: string;
+  total_count: number;
+  sync_status: SyncStatus;
+  sync_error?: string;
+  synced_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Collection summary (for listing)
+ */
+export interface CollectionSummary {
+  collection_slug: string;
+  source_extension: string;
+  total_count: number;
+  sync_status: SyncStatus;
+  synced_at?: string;
+}
+
+/**
+ * Variable value type
+ */
+export type VariableType = 'string' | 'number' | 'boolean' | 'date' | 'datetime' | 'json';
+
+/**
+ * Variable source
+ */
+export type VariableSource = 'manual' | 'extension' | 'computed';
+
+/**
+ * Compute operation for computed variables
+ */
+export type ComputeOperation = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'first' | 'last' | 'mode';
+
+/**
+ * Variable computation definition
+ */
+export interface VariableComputation {
+  operation: ComputeOperation;
+  collection: string;
+  field?: string;
+  filter?: FilterClause[];
+  sort?: SortClause;
+}
+
+/**
+ * Variable definition from extension catalog
+ */
+export interface VariableDefinition {
+  key: string;
+  name: string;
+  description?: string;
+  value_type: VariableType;
+  source: VariableSourceDef;
+}
+
+/**
+ * Variable source definition
+ */
+export type VariableSourceDef =
+  | { type: 'manual' }
+  | { type: 'extension'; setting_key: string }
+  | { type: 'computed'; computation: VariableComputation };
+
+/**
+ * Variable instance for a specific website
+ */
+export interface WebsiteVariable {
+  id: string;
+  website_id: string;
+  key: string;
+  value: unknown;
+  value_type: VariableType;
+  source: VariableSource;
+  source_ref?: string;
+  stale: boolean;
+  computation?: VariableComputation;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Variables list response with quick lookup map
+ */
+export interface VariablesListResponse {
+  variables: WebsiteVariable[];
+  /** Quick lookup map: key → value */
+  values: Record<string, unknown>;
+}
+
+// ============================================
+// Data Binding Types (for Studio)
+// ============================================
+
+/**
+ * Filter operator for queries
+ */
+export type FilterOperator =
+  | 'eq'
+  | 'neq'
+  | 'gt'
+  | 'gte'
+  | 'lt'
+  | 'lte'
+  | 'in'
+  | 'nin'
+  | 'contains'
+  | 'starts_with'
+  | 'ends_with'
+  | 'exists'
+  | 'not_exists';
+
+/**
+ * Filter clause for queries
+ */
+export interface FilterClause {
+  field: string;
+  operator: FilterOperator;
+  value: unknown;
+}
+
+/**
+ * Sort order
+ */
+export type SortOrder = 'asc' | 'desc';
+
+/**
+ * Sort clause for queries
+ */
+export interface SortClause {
+  field: string;
+  order: SortOrder;
+}
+
+/**
+ * Collection binding for Studio components
+ */
+export interface CollectionBinding {
+  slug: string;
+  filter?: FilterClause[];
+  sort?: SortClause;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Data binding configuration for Studio sections
+ */
+export interface DataBinding {
+  /** Collection binding */
+  collection?: CollectionBinding;
+  /** Field mapping: component prop → collection field */
+  mapping?: Record<string, string | Record<string, string>>;
+  /** Variable bindings: template key → variable key */
+  variables?: Record<string, string>;
+}
+
+/**
+ * Data source configuration for sections
+ */
+export interface DataSource {
+  type: 'collection' | 'static';
+  collection?: string;
+  filter?: FilterClause[];
+  sort?: SortClause;
+  limit?: number;
+  mapping?: Record<string, string | Record<string, string>>;
+}
+
