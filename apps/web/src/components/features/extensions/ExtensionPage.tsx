@@ -492,21 +492,47 @@ interface SuggestedExtensionsProps {
 }
 
 function SuggestedExtensions({ currentSlug, category, tags, websiteId }: SuggestedExtensionsProps) {
+  const TARGET_COUNT = 4;
+  
   // Fetch extensions from the same category
   const { data: categoryExtensions } = useStoreExtensionsQuery({ 
     category,
-    per_page: 6,
+    per_page: 8,
   });
 
-  // Filter out current extension and limit to 4
+  // Fetch all extensions as fallback (only if needed)
+  const { data: allExtensions } = useStoreExtensionsQuery({ 
+    per_page: 12,
+    sort: 'popular',
+  });
+
+  // Build suggestions: prioritize same category, then fill with others
   const suggestions = useMemo(() => {
-    if (!categoryExtensions?.extensions) return [];
-    return categoryExtensions.extensions
-      .filter(ext => ext.slug !== currentSlug)
-      .slice(0, 4);
-  }, [categoryExtensions, currentSlug]);
+    // First: get extensions from same category (excluding current)
+    const sameCategoryExts = (categoryExtensions?.extensions || [])
+      .filter(ext => ext.slug !== currentSlug);
+    
+    // If we have enough from same category, return them
+    if (sameCategoryExts.length >= TARGET_COUNT) {
+      return sameCategoryExts.slice(0, TARGET_COUNT);
+    }
+    
+    // Otherwise, fill with extensions from other categories
+    const usedSlugs = new Set([currentSlug, ...sameCategoryExts.map(e => e.slug)]);
+    const otherExts = (allExtensions?.extensions || [])
+      .filter(ext => !usedSlugs.has(ext.slug));
+    
+    const remaining = TARGET_COUNT - sameCategoryExts.length;
+    return [...sameCategoryExts, ...otherExts.slice(0, remaining)];
+  }, [categoryExtensions, allExtensions, currentSlug]);
 
   if (suggestions.length === 0) return null;
+
+  // Determine subtitle based on content
+  const hasMixedCategories = suggestions.some(ext => ext.category !== category);
+  const subtitle = hasMixedCategories 
+    ? "Découvrez d'autres extensions" 
+    : `Découvrez d'autres extensions ${category}`;
 
   return (
     <section className="mt-12 pt-8 border-t">
@@ -516,7 +542,7 @@ function SuggestedExtensions({ currentSlug, category, tags, websiteId }: Suggest
         </div>
         <div>
           <h2 className="font-semibold text-lg">Extensions similaires</h2>
-          <p className="text-sm text-muted-foreground">Découvrez d'autres extensions {category}</p>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
         </div>
       </div>
       
