@@ -49,7 +49,7 @@ import {
   Play,
   Loader2,
   Sparkles,
-  ChevronRight,
+  ArrowRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -529,14 +529,14 @@ function SuggestedExtensions({ currentSlug, category, tags: _tags, websiteId }: 
 
   return (
     <section className="mt-10 pt-6 border-t">
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-5">
         <div className="p-1.5 rounded-lg bg-violet-500/10">
           <Sparkles className="w-4 h-4 text-violet-500" />
         </div>
-        <h2 className="font-medium text-sm">Extensions similaires</h2>
+        <h2 className="font-medium">Extensions similaires</h2>
       </div>
       
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {suggestions.map(ext => {
           const iconConfig = getExtensionIconConfig(ext.icon, ext.slug);
           const IconComponent = iconConfig.icon;
@@ -546,36 +546,33 @@ function SuggestedExtensions({ currentSlug, category, tags: _tags, websiteId }: 
               key={ext.slug}
               href={`/${websiteId}/extensions/${ext.slug}`}
               className={cn(
-                "group flex flex-col p-3 rounded-lg border bg-card",
-                "transition-all duration-200 hover:border-primary/30",
+                "group flex flex-col p-5 rounded-xl border bg-card/50 backdrop-blur-sm",
+                "transition-all duration-300 hover:bg-card hover:border-primary/20",
               )}
             >
-              <div className="flex items-start gap-3">
-                <div 
-                  className={cn(
-                    "shrink-0 w-9 h-9 rounded-lg flex items-center justify-center",
-                    `bg-gradient-to-br ${iconConfig.gradient}`,
-                  )}
-                >
-                  <IconComponent className="w-4 h-4 text-white" strokeWidth={1.5} />
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="font-medium text-sm truncate">{ext.name}</h3>
-                    {ext.featured && (
-                      <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
-                    )}
-                  </div>
-                  <p className="text-[11px] text-muted-foreground line-clamp-2 mt-1">
-                    {ext.description}
-                  </p>
-                </div>
+              <div 
+                className={cn(
+                  "w-12 h-12 rounded-xl flex items-center justify-center mb-4",
+                  `bg-gradient-to-br ${iconConfig.gradient}`,
+                )}
+              >
+                <IconComponent className="w-6 h-6 text-white" strokeWidth={1.5} />
               </div>
               
-              <div className="flex items-center justify-between mt-3 pt-2 border-t border-dashed">
-                <span className="text-[10px] text-muted-foreground">{ext.install_count} installs</span>
-                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="font-semibold text-base">{ext.name}</h3>
+                {ext.featured && (
+                  <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                )}
+              </div>
+              
+              <p className="text-sm text-muted-foreground line-clamp-2 flex-1">
+                {ext.description}
+              </p>
+              
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/50">
+                <span className="text-xs text-muted-foreground">{ext.install_count} installs</span>
+                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
               </div>
             </Link>
           );
