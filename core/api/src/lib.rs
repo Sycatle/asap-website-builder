@@ -24,6 +24,7 @@ pub mod csrf;
 pub mod rate_limit;
 pub mod image_converter;
 pub mod collections;
+pub mod store;
 
 pub use routes::{create_router, create_router_with_ws};
 pub use rate_limit::{RateLimiter, SharedRateLimiter, RateLimitConfig};

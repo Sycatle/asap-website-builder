@@ -194,6 +194,12 @@ pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster:
         .route("/public/websites/:slug", get(crate::websites::get_public_website))
         .route("/public/websites/:slug/elements", get(crate::websites::get_public_website_elements))
         .route("/public/websites/:slug/pages", get(crate::websites::get_public_website_pages))
+        // Extension Store routes (public browsing)
+        .route("/store/extensions", get(crate::store::list_extensions))
+        .route("/store/extensions/featured", get(crate::store::list_featured_extensions))
+        .route("/store/extensions/:slug", get(crate::store::get_extension))
+        .route("/store/extensions/:slug/manifest", get(crate::store::get_extension_manifest))
+        .route("/store/categories", get(crate::store::list_categories))
         // File download (auth via query param for media embeds)
         .route("/files/:file_id", get(crate::files::download_file))
         // Webhook routes (public but signature verified) - larger limit for Stripe events
