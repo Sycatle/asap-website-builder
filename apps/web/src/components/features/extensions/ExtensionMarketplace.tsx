@@ -71,7 +71,7 @@ interface CategorySidebarProps {
 
 function CategorySidebar({ categories, activeCategory, installedCount, onSelect }: CategorySidebarProps) {
   return (
-    <aside className="hidden lg:block w-52 shrink-0">
+    <aside className="hidden md:block w-44 lg:w-52 shrink-0">
       <nav className="sticky top-4 space-y-1">
         <button
           onClick={() => onSelect('all')}
@@ -158,7 +158,7 @@ interface MobileCategoryNavProps {
 
 function MobileCategoryNav({ categories, activeCategory, installedCount, onSelect }: MobileCategoryNavProps) {
   return (
-    <ScrollArea className="w-full whitespace-nowrap lg:hidden">
+    <ScrollArea className="w-full whitespace-nowrap md:hidden">
       <div className="flex gap-1.5 pb-2">
         <button
           onClick={() => onSelect('all')}
@@ -272,7 +272,7 @@ function FeaturedCarousel({
             const isActive = activeSlugs.has(ext.slug);
 
             return (
-              <CarouselItem key={ext.slug} className="pl-3 basis-full sm:basis-1/2 lg:basis-1/3 xl:basis-[260px]">
+              <CarouselItem key={ext.slug} className="pl-3 basis-[85%] sm:basis-1/2 md:basis-1/2 lg:basis-1/3 xl:basis-1/4 2xl:basis-[260px]">
                 <Link 
                   href={`/${websiteId}/extensions/${ext.slug}`}
                   className={cn(
@@ -679,7 +679,7 @@ export default function ExtensionMarketplace() {
           {isLoading ? (
             <div className={cn(
               viewMode === 'grid'
-                ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3"
+                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3"
                 : "flex flex-col gap-2"
             )}>
               {Array.from({ length: 6 }).map((_, i) => (
@@ -740,7 +740,7 @@ export default function ExtensionMarketplace() {
 
               <div className={cn(
                 viewMode === 'grid'
-                  ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3"
+                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3"
                   : "flex flex-col gap-2"
               )}>
                 {displayedExtensions.map(ext => (

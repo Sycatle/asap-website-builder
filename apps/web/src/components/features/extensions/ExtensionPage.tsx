@@ -127,9 +127,9 @@ function OverviewTab({ extension }: OverviewTabProps) {
   const permissions = (extension.manifest?.permissions as string[]) || [];
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-3">
       {/* Main Content */}
-      <div className="lg:col-span-2 space-y-4">
+      <div className="md:col-span-2 space-y-4">
         {/* Banner */}
         {extension.banner && (
           <Card className="overflow-hidden">
@@ -536,7 +536,7 @@ function SuggestedExtensions({ currentSlug, category, tags: _tags, websiteId }: 
         <h2 className="font-medium text-sm">Extensions similaires</h2>
       </div>
       
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {suggestions.map(ext => {
           const iconConfig = getExtensionIconConfig(ext.icon, ext.slug);
           const IconComponent = iconConfig.icon;
