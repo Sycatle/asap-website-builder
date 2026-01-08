@@ -88,7 +88,7 @@ struct RateLimitEntry {
 impl RateLimitEntry {
     fn new() -> Self {
         Self {
-            count: 1,
+            count: 0,
             window_start: Instant::now(),
             blocked_until: None,
         }
