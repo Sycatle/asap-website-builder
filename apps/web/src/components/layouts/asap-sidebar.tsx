@@ -15,6 +15,7 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar"
+import { SidebarFooterNav } from "@/components/layouts/sidebar-footer-nav"
 import { SiteSwitcher } from "@/components/features/websites/site-switcher"
 import { useWebsiteContext } from "@/contexts/WebsiteContext"
 import { Link } from "@/components/app-router"
@@ -209,6 +210,7 @@ export function AsapSidebar({
           </>
         )}
       </SidebarContent>
+      <SidebarFooterNav />
       <SidebarRail />
     </Sidebar>
   )
