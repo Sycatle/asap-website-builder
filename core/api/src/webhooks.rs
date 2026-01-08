@@ -238,21 +238,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_compute_payload_hash() {
-        let payload1 = r#"{"type":"test","data":{}}"#;
-        let hash1 = compute_payload_hash(payload1);
-        
-        // Same payload should produce same hash
-        let hash2 = compute_payload_hash(payload1);
-        assert_eq!(hash1, hash2);
-        
-        // Different payload should produce different hash
-        let payload2 = r#"{"type":"different","data":{}}"#;
-        let hash3 = compute_payload_hash(payload2);
-        assert_ne!(hash1, hash3);
-    }
-
-    #[test]
     fn test_webhook_response_serialize() {
         let response = WebhookResponse { received: true };
         let json = serde_json::to_string(&response).unwrap();

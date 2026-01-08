@@ -112,11 +112,6 @@ impl FileCleanupTask {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    #[test]
-    fn test_file_cleanup_task_creation() {
-        // Test can be expanded with mock database
-        let _task = FileCleanupTask::new(/* mock pool */);
-    }
+    // FileCleanupTask tests require a database connection
+    // and are therefore integration tests run with `cargo test --features database`
 }

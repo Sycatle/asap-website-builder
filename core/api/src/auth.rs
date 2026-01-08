@@ -264,6 +264,7 @@ mod password_tests {
         let req = LoginRequest {
             email: "user@example.com".to_string(),
             password: "password123".to_string(),
+            remember_me: false,
         };
 
         assert_eq!(req.email, "user@example.com");

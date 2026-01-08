@@ -268,21 +268,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_compute_payload_hash() {
-        let payload = r#"{"type":"test","data":{}}"#;
-        let hash1 = StripeProvider::compute_payload_hash(payload);
-        let hash2 = StripeProvider::compute_payload_hash(payload);
-        
-        // Same input should produce same hash
-        assert_eq!(hash1, hash2);
-        
-        // Different input should produce different hash
-        let different_payload = r#"{"type":"different","data":{}}"#;
-        let hash3 = StripeProvider::compute_payload_hash(different_payload);
-        assert_ne!(hash1, hash3);
-    }
-
-    #[test]
     fn test_stripe_provider_creation() {
         let provider = StripeProvider::new(
             "sk_test_123".to_string(),

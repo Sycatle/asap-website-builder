@@ -4,7 +4,7 @@
 //! that reads extension definitions from TOML files in each extension directory.
 //!
 //! Usage:
-//! ```
+//! ```ignore
 //! use asap_core_shared::extension_registry::ExtensionRegistry;
 //! 
 //! let registry = ExtensionRegistry::load_from_workspace()?;

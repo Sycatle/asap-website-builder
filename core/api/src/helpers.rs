@@ -100,6 +100,7 @@ mod tests {
         let claims = Claims {
             sub: "550e8400-e29b-41d4-a716-446655440000".to_string(),
             exp: 0,
+            jti: Some("test-jti".to_string()),
         };
         let result = parse_account_id(&claims);
         assert!(result.is_ok());
@@ -110,6 +111,7 @@ mod tests {
         let claims = Claims {
             sub: "invalid".to_string(),
             exp: 0,
+            jti: Some("test-jti".to_string()),
         };
         let result = parse_account_id(&claims);
         assert!(result.is_err());
