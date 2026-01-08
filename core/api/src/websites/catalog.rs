@@ -267,9 +267,34 @@ pub async fn execute_extension_action(
 
     match (extension_slug.as_str(), action_key.as_str()) {
         ("github-sync", "sync") => {
-            let github_username = payload.get("github_username")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
+            // Get github_username from payload or from website extension settings
+            let github_username = match payload.get("github_username").and_then(|v| v.as_str()).map(|s| s.to_string()) {
+                Some(username) if !username.is_empty() => Some(username),
+                _ => {
+                    // Try to get from extension settings
+                    let settings: Option<(serde_json::Value,)> = sqlx::query_as(
+                        r#"
+                        SELECT we.settings 
+                        FROM website_extensions we
+                        JOIN extensions e ON we.extension_id = e.id
+                        WHERE we.website_id = $1 AND e.slug = 'github-sync'
+                        "#
+                    )
+                    .bind(website_uuid)
+                    .fetch_optional(&pool)
+                    .await
+                    .ok()
+                    .flatten();
+                    
+                    settings.and_then(|(s,)| s.get("github_username").and_then(|v| v.as_str()).map(|s| s.to_string()))
+                }
+            };
+
+            if github_username.as_ref().map(|s| s.is_empty()).unwrap_or(true) {
+                return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+                    "error": "GitHub username is required. Configure it in extension settings."
+                }))).into_response();
+            }
 
             let event_payload = serde_json::json!({
                 "website_id": website_id,
@@ -287,7 +312,7 @@ pub async fn execute_extension_action(
 
             match event_result {
                 Ok(_) => {
-                    tracing::info!("GitHub sync requested for website {}", website_id);
+                    tracing::info!("GitHub sync requested for website {} with username {:?}", website_id, github_username);
                     (StatusCode::OK, Json(serde_json::json!({
                         "message": "GitHub synchronization started",
                         "status": "pending"
