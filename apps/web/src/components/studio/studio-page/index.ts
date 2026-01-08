@@ -1,7 +1,7 @@
 /**
  * StudioPage Module
  * 
- * Visual website editor with live preview and element management.
+ * AI-first website editor with live preview.
  */
 
 export { StudioPage, default } from './studio-page';
@@ -10,11 +10,6 @@ export { StudioPage, default } from './studio-page';
 export type { 
   DevicePreview,
   StudioPageProps,
-  StudioHeaderProps,
-  ElementListProps,
-  PropertyEditorPanelProps,
-  PreviewCanvasProps,
-  MobileToolbarProps,
 } from './types';
 export { DEVICE_SIZES, DEVICE_CONFIGS } from './types';
 
@@ -22,10 +17,6 @@ export { DEVICE_SIZES, DEVICE_CONFIGS } from './types';
 export { useIsMobile } from './hooks';
 
 // Components
-export { StudioHeader } from './components/studio-header';
-export { ElementList } from './components/element-list';
-export { PropertyEditorPanel } from './components/property-editor-panel';
-export { PreviewCanvas } from './components/preview-canvas';
-export { MobileToolbar } from './components/mobile-toolbar';
-export { MobileSheets } from './components/mobile-sheets';
+export { SimplePreviewCanvas } from './components/simple-preview-canvas';
+export { AIChatPanel } from './components/ai-chat-panel';
 export { LoadingState, NoWebsiteState } from './components/studio-states';

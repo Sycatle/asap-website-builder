@@ -9,92 +9,18 @@ export interface StudioPageProps {
   onBack?: () => void;
 }
 
-export interface StudioHeaderProps {
-  website: {
-    id: string;
-    title: string;
-    slug: string | null;
-    status: string;
-  };
-  currentPage: {
-    id: string;
-    slug: string;
-    title: string | null;
-    is_homepage: boolean;
-  } | null;
-  pages: Array<{
-    id: string;
-    slug: string;
-    title: string | null;
-    is_homepage: boolean;
-  }>;
-  selectedPageId: string | null;
-  setSelectedPageId: (id: string | null) => void;
+export interface SimplePreviewCanvasProps {
+  elements: Array<import('@/lib/types').WebsiteElement>;
   devicePreview: DevicePreview;
+  previewTheme: PreviewTheme;
   setDevicePreview: (device: DevicePreview) => void;
-  previewTheme: PreviewTheme;
   setPreviewTheme: (theme: PreviewTheme) => void;
-  isLoadingPages: boolean;
-  isLoadingElements: boolean;
-  mobileMenuOpen: boolean;
-  setMobileMenuOpen: (open: boolean) => void;
-  refetch: () => void;
-  onBack?: () => void;
-}
-
-export interface ElementListProps {
-  elements: Array<import('@/lib/types').WebsiteElement>;
-  currentPage: {
-    id: string;
-    slug: string;
-    title: string | null;
-    is_homepage: boolean;
-  } | null;
   selectedElementId: string | null;
-  dragOverIndex: number | null;
-  isLoading: boolean;
-  isMobile: boolean;
   onElementClick: (element: import('@/lib/types').WebsiteElement) => void;
-  onDragStart: (e: React.DragEvent, elementId: string) => void;
-  onDragOver: (e: React.DragEvent, index: number) => void;
-  onDragLeave: () => void;
-  onDrop: (e: React.DragEvent, targetIndex: number) => void;
-  onAddClick: () => void;
-}
-
-export interface PropertyEditorPanelProps {
-  selectedElement: import('@/lib/types').WebsiteElement | null;
-  onUpdate: (elementId: string, data: import('@/lib/types').UpdateElementRequest) => Promise<import('@/lib/types').WebsiteElement>;
-  isUpdating: boolean;
-}
-
-export interface PreviewCanvasProps {
-  elements: Array<import('@/lib/types').WebsiteElement>;
-  devicePreview: DevicePreview;
-  previewTheme: PreviewTheme;
-  selectedElementId: string | null;
-  isMobile: boolean;
-  leftPanelOpen: boolean;
-  rightPanelOpen: boolean;
-  setLeftPanelOpen: (open: boolean) => void;
-  setRightPanelOpen: (open: boolean) => void;
-  setPreviewTheme: (theme: PreviewTheme) => void;
-  onElementClick: (element: import('@/lib/types').WebsiteElement) => void;
-  onAddClick: () => void;
-  // Browser bar props
   websiteSlug: string | null;
   currentPageSlug: string | null;
   isHomepage: boolean;
   onRefresh: () => void;
-}
-
-export interface MobileToolbarProps {
-  leftPanelOpen: boolean;
-  rightPanelOpen: boolean;
-  selectedElement: import('@/lib/types').WebsiteElement | null;
-  setLeftPanelOpen: (open: boolean) => void;
-  setRightPanelOpen: (open: boolean) => void;
-  onAddClick: () => void;
 }
 
 // Device frame configurations for realistic preview
