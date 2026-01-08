@@ -532,7 +532,7 @@ pub async fn list_website_extensions(
     Extension(claims): Extension<Claims>,
     Path(website_id): Path<Uuid>,
 ) -> impl IntoResponse {
-    let _account_id = match Uuid::parse_str(&claims.sub) {
+    let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
@@ -541,7 +541,22 @@ pub async fn list_website_extensions(
         }
     };
 
-    // TODO: Verify website ownership using _account_id
+    // Verify website ownership
+    let has_access: Option<bool> = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND account_id = $2)"
+    )
+    .bind(website_id)
+    .bind(account_id)
+    .fetch_one(&pool)
+    .await
+    .ok()
+    .flatten();
+
+    if !has_access.unwrap_or(false) {
+        return (StatusCode::FORBIDDEN, Json(serde_json::json!({
+            "error": "Access denied to this website"
+        }))).into_response();
+    }
 
     match list_website_extensions_v2(&pool, website_id).await {
         Ok(extensions) => {
