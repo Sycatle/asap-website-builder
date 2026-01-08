@@ -131,7 +131,10 @@ pub fn validate_refresh_token(token: &str, secret: &str) -> Result<ValidatedRefr
         .map_err(|_| SharedError::InvalidToken("Invalid signature".to_string()))?;
     
     // Extract timestamp and check expiration
-    let timestamp = i64::from_be_bytes(data[..8].try_into().unwrap());
+    let timestamp_bytes: [u8; 8] = data[..8]
+        .try_into()
+        .map_err(|_| SharedError::InvalidToken("Invalid timestamp in token".to_string()))?;
+    let timestamp = i64::from_be_bytes(timestamp_bytes);
     let expires_at = timestamp + REFRESH_TOKEN_LIFETIME_SECS;
     let now = Utc::now().timestamp();
     
@@ -176,7 +179,7 @@ mod tests {
 
     #[test]
     fn test_generate_refresh_token() {
-        let token = generate_refresh_token(TEST_SECRET, None).unwrap();
+        let token = generate_refresh_token(TEST_SECRET, None, false).unwrap();
         
         assert!(!token.token.is_empty());
         assert!(!token.token_hash.is_empty());
@@ -187,14 +190,14 @@ mod tests {
     #[test]
     fn test_generate_with_family_id() {
         let family = "550e8400-e29b-41d4-a716-446655440000";
-        let token = generate_refresh_token(TEST_SECRET, Some(family)).unwrap();
+        let token = generate_refresh_token(TEST_SECRET, Some(family), false).unwrap();
         
         assert_eq!(token.family_id, family);
     }
 
     #[test]
     fn test_validate_refresh_token() {
-        let token = generate_refresh_token(TEST_SECRET, None).unwrap();
+        let token = generate_refresh_token(TEST_SECRET, None, false).unwrap();
         let validated = validate_refresh_token(&token.token, TEST_SECRET).unwrap();
         
         assert_eq!(validated.family_id, token.family_id);
@@ -203,7 +206,7 @@ mod tests {
 
     #[test]
     fn test_invalid_signature() {
-        let token = generate_refresh_token(TEST_SECRET, None).unwrap();
+        let token = generate_refresh_token(TEST_SECRET, None, false).unwrap();
         let result = validate_refresh_token(&token.token, "wrong-secret-key-different-32-b");
         
         assert!(result.is_err());
@@ -223,8 +226,8 @@ mod tests {
 
     #[test]
     fn test_different_tokens_different_hashes() {
-        let token1 = generate_refresh_token(TEST_SECRET, None).unwrap();
-        let token2 = generate_refresh_token(TEST_SECRET, None).unwrap();
+        let token1 = generate_refresh_token(TEST_SECRET, None, false).unwrap();
+        let token2 = generate_refresh_token(TEST_SECRET, None, true).unwrap();
         
         assert_ne!(token1.token_hash, token2.token_hash);
     }
