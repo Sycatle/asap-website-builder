@@ -133,7 +133,7 @@ function AppShellContent({
   const previousSidebarStateRef = React.useRef<boolean | null>(null)
   
   // AI Chat state
-  const { isOpen: isAIChatOpen, toggle: toggleAIChat, close: closeAIChat, setPanelSize } = useAIChat()
+  const { isOpen: isAIChatOpen, toggle: toggleAIChat, close: closeAIChat, panelSize, setPanelSize } = useAIChat()
   
   // Build shortcuts with translated descriptions
   const shortcuts = [
@@ -411,7 +411,7 @@ function AppShellContent({
           <ResizablePanelGroup direction="horizontal" className="flex-1">
             {/* AI Chat Panel */}
             <ResizablePanel 
-              defaultSize={isStudioPage ? 35 : 30} 
+              defaultSize={panelSize} 
               minSize={20} 
               maxSize={isStudioPage ? 50 : 45}
               className="bg-background border-r hidden sm:block"
@@ -423,7 +423,7 @@ function AppShellContent({
             <ResizableHandle withHandle className="hidden sm:flex" />
 
             {/* Main Content */}
-            <ResizablePanel defaultSize={isStudioPage ? 65 : 70} minSize={isStudioPage ? 40 : 55}>
+            <ResizablePanel defaultSize={100 - panelSize} minSize={isStudioPage ? 40 : 55}>
               <main
                 id="main-content"
                 role="main"

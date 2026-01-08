@@ -1,6 +1,31 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+
+// LocalStorage keys
+const STORAGE_KEY_IS_OPEN = 'asap_ai_chat_open';
+const STORAGE_KEY_PANEL_SIZE = 'asap_ai_chat_panel_size';
+
+// Helper to safely access localStorage (handles SSR)
+function getStoredValue<T>(key: string, defaultValue: T): T {
+  if (typeof window === 'undefined') return defaultValue;
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored === null) return defaultValue;
+    return JSON.parse(stored) as T;
+  } catch {
+    return defaultValue;
+  }
+}
+
+function setStoredValue<T>(key: string, value: T): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Ignore storage errors (e.g., quota exceeded)
+  }
+}
 
 // AI Chat Context Types
 interface AIChatContextValue {
@@ -31,14 +56,31 @@ interface AIChatProviderProps {
 /**
  * AIChatProvider - Global provider for AI chat state
  * Allows any component to control the AI chat panel visibility
+ * State is persisted to localStorage for persistence across page reloads
  */
 export function AIChatProvider({ children, defaultOpen = false, defaultPanelSize = 30 }: AIChatProviderProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-  const [panelSize, setPanelSize] = useState(defaultPanelSize);
+  // Initialize state from localStorage or defaults
+  const [isOpen, setIsOpenState] = useState(() => getStoredValue(STORAGE_KEY_IS_OPEN, defaultOpen));
+  const [panelSize, setPanelSizeState] = useState(() => getStoredValue(STORAGE_KEY_PANEL_SIZE, defaultPanelSize));
 
-  const open = useCallback(() => setIsOpen(true), []);
-  const close = useCallback(() => setIsOpen(false), []);
-  const toggle = useCallback(() => setIsOpen(prev => !prev), []);
+  // Persist isOpen to localStorage
+  const setIsOpen = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    setIsOpenState(prev => {
+      const newValue = typeof value === 'function' ? value(prev) : value;
+      setStoredValue(STORAGE_KEY_IS_OPEN, newValue);
+      return newValue;
+    });
+  }, []);
+
+  // Persist panelSize to localStorage
+  const setPanelSize = useCallback((size: number) => {
+    setPanelSizeState(size);
+    setStoredValue(STORAGE_KEY_PANEL_SIZE, size);
+  }, []);
+
+  const open = useCallback(() => setIsOpen(true), [setIsOpen]);
+  const close = useCallback(() => setIsOpen(false), [setIsOpen]);
+  const toggle = useCallback(() => setIsOpen(prev => !prev), [setIsOpen]);
 
   const value: AIChatContextValue = {
     isOpen,
