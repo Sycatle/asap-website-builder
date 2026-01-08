@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SectionRenderer } from "../../section-renderers";
 import { PreviewProvider } from "../../PreviewContext";
+import { PreviewFrame } from "./preview-frame";
 import {
   Eye,
   Layers,
@@ -109,46 +110,39 @@ export function PreviewCanvas({
             </div>
           )}
 
-          {/* Main preview content - Isolated theme container */}
-          <div 
+          {/* Main preview content - Isolated iframe for exact WYSIWYG rendering */}
+          <PreviewFrame 
+            previewTheme={previewTheme}
             className={cn(
-              "flex-1 overflow-y-auto overflow-x-hidden",
+              "flex-1",
               // Inner border radius for device frames
               devicePreview === 'mobile' && "rounded-[1.75rem]",
               devicePreview === 'tablet' && "rounded-xl",
-              // Apply isolated theme class
-              isDarkPreview ? "dark" : "",
             )}
           >
-            {/* Inner container with theme-aware colors */}
-            <div className={cn(
-              "min-h-full",
-              isDarkPreview ? "bg-slate-950 text-white" : "bg-white text-slate-950",
-            )}>
-              {/* Preview Provider gives components access to device context */}
-              <PreviewProvider device={devicePreview}>
-                {visibleElements.length === 0 ? (
-                  <EmptyPreviewState 
-                    isMobile={isMobile} 
-                    onAddClick={onAddClick}
-                    setLeftPanelOpen={setLeftPanelOpen}
-                    isDarkPreview={isDarkPreview}
-                  />
-                ) : (
-                  <div id="preview-scroll-container">
-                    {visibleElements.map((element) => (
-                      <SectionRenderer
-                        key={element.id}
-                        element={element}
-                        isSelected={selectedElementId === element.id}
-                        onClick={() => onElementClick(element)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </PreviewProvider>
-            </div>
-          </div>
+            {/* Preview Provider gives components access to device context */}
+            <PreviewProvider device={devicePreview}>
+              {visibleElements.length === 0 ? (
+                <EmptyPreviewState 
+                  isMobile={isMobile} 
+                  onAddClick={onAddClick}
+                  setLeftPanelOpen={setLeftPanelOpen}
+                  isDarkPreview={isDarkPreview}
+                />
+              ) : (
+                <div id="preview-scroll-container">
+                  {visibleElements.map((element) => (
+                    <SectionRenderer
+                      key={element.id}
+                      element={element}
+                      isSelected={selectedElementId === element.id}
+                      onClick={() => onElementClick(element)}
+                    />
+                  ))}
+                </div>
+              )}
+            </PreviewProvider>
+          </PreviewFrame>
 
           {/* Device home indicator for mobile */}
           {devicePreview === 'mobile' && (
