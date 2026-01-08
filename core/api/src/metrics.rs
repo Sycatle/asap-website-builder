@@ -265,11 +265,36 @@ pub async fn get_activation_metrics(
 
 /// Get aggregated metrics (admin only)
 pub async fn get_aggregated_metrics(
-    State(_pool): State<PgPool>,
-    Extension(_claims): Extension<Claims>,
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    // V1: Return mock data - real aggregation would query events table
-    // TODO: Add admin role check
+    // Verify admin role
+    let account_id = match uuid::Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+                "error": "Invalid account ID"
+            }))).into_response();
+        }
+    };
+
+    // Check if user has admin role (plan = 'admin' or specific flag)
+    let is_admin: Option<String> = sqlx::query_scalar(
+        "SELECT plan FROM accounts WHERE id = $1"
+    )
+    .bind(account_id)
+    .fetch_optional(&pool)
+    .await
+    .ok()
+    .flatten();
+
+    // Only allow admin users to access aggregated metrics
+    if is_admin.as_deref() != Some("admin") {
+        return (StatusCode::FORBIDDEN, Json(serde_json::json!({
+            "error": "Admin access required",
+            "code": "ADMIN_REQUIRED"
+        }))).into_response();
+    }
     
     let now = chrono::Utc::now();
     let week_ago = now - chrono::Duration::days(7);
