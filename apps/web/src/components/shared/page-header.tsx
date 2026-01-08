@@ -256,7 +256,7 @@ export function PageHeader({
       </div>
 
       {/* Fixed Header - Appears when main header scrolls out */}
-      {/* Always use fixed positioning, adjust left based on sidebar and AI chat state */}
+      {/* Always use fixed positioning, adjust right based on sidebar and AI chat state */}
     <header 
       className={cn(
         "fixed top-14 z-30 h-14 transition-[transform,opacity] duration-200",
@@ -269,13 +269,14 @@ export function PageHeader({
           : "bg-transparent -translate-y-full opacity-0 pointer-events-none"
       )}
       style={isAIChatOpen ? {
-        // Dynamic left calculation: sidebar + panelSize% of (viewport - sidebar)
+        // Left based on sidebar, right based on AI chat panel size
         // panelSize is % of the ResizablePanelGroup, which is (100vw - sidebar)
-        // Add small offset to avoid overlapping with chat panel border
         left: state === "expanded" 
-          ? `calc(var(--sidebar-width) + (100vw - var(--sidebar-width)) * ${panelSize / 100} + 1px)` 
-          : `calc(var(--sidebar-width-icon) + (100vw - var(--sidebar-width-icon)) * ${panelSize / 100} + 1px)`,
-        right: 0
+          ? `var(--sidebar-width)` 
+          : `var(--sidebar-width-icon)`,
+        right: state === "expanded" 
+          ? `calc((100vw - var(--sidebar-width)) * ${panelSize / 100} + 1px)` 
+          : `calc((100vw - var(--sidebar-width-icon)) * ${panelSize / 100} + 1px)`
       } : undefined}
     >
       <div className="px-4 h-full flex items-center w-full">
