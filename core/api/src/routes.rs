@@ -26,7 +26,11 @@ pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
 }
 
 /// Creates the main API router with WebSocket broadcaster support
-pub fn create_router_with_ws(pool: PgPool, config: SharedConfig, ws_broadcaster: Option<SharedWsBroadcaster>) -> Router {
+pub fn create_router_with_ws(
+    pool: PgPool,
+    config: SharedConfig,
+    ws_broadcaster: Option<SharedWsBroadcaster>,
+) -> Router {
     // Use no-op broadcaster if none provided
     let broadcaster: SharedWsBroadcaster = ws_broadcaster.unwrap_or_else(|| NoOpBroadcaster::new());
 

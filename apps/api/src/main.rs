@@ -113,10 +113,9 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // Create Redis cache (optional - will log warning if not available)
-    // TODO: Integrate cache into public website routes for 10-30x latency improvement
-    // See apps/api/src/website_cache.rs for ready-to-use WebsiteCacheService
-    let _cache = match std::env::var("REDIS_URL") {
+    let cache = match std::env::var("REDIS_URL") {
         Ok(redis_url) => {
+            // Create cache service
             match db::create_redis_cache(&redis_url).await {
                 Ok(cache_service) => {
                     tracing::info!("Redis cache initialized successfully");
@@ -133,6 +132,9 @@ async fn main() -> anyhow::Result<()> {
             None
         }
     };
+    
+    // Store cache for potential future use (e.g., public website caching)
+    let _cache = cache;
 
     // Create WebSocket state with shared config and database pool
     let ws_state = Arc::new(websocket::WsState::new(shared_config.clone(), pool.clone()));
@@ -159,7 +161,7 @@ async fn main() -> anyhow::Result<()> {
     let api_router = asap_core_api::create_router_with_ws(
         pool.clone(),
         shared_config,
-        Some(ws_state.clone() as asap_core_api::SharedWsBroadcaster)
+        Some(ws_state.clone() as asap_core_api::SharedWsBroadcaster),
     );
     
     // Create health routes with pool state
