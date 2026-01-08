@@ -4,24 +4,46 @@ This directory contains the feature extensions that extend ASAP's functionality.
 
 ## Extension Architecture
 
-Each extension is an independent Rust crate that provides specific functionality to the ASAP platform. Extensions follow a consistent pattern:
+Each extension is a self-contained module with both backend (Rust) and frontend (TypeScript/React) code:
+
+```
+extensions/
+  {extension-name}/
+    ├── extension.toml          # Extension manifest (metadata, config schema)
+    ├── backend/                # Rust crate for worker/API logic
+    │   ├── Cargo.toml
+    │   └── src/
+    └── frontend/               # React components for dashboard UI
+        ├── package.json        # @asap/extension-{name}
+        ├── tsconfig.json
+        └── src/
+            ├── index.ts        # Main exports
+            ├── types.ts        # TypeScript types
+            └── manager/        # Extension manager UI
+```
+
+### Design Principles
 
 1. **Self-contained** - Each extension can be built and tested independently
 2. **Event-driven** - Extensions react to events from the Core API
 3. **Well-tested** - Comprehensive unit tests for all functionality
 4. **Documented** - Clear API documentation and usage examples
+5. **Modular Frontend** - UI components are loaded dynamically from dedicated packages
 
 ## Available Extensions
 
-### Github Sync (`github-sync/`)
+### GitHub Sync (`github-sync/`)
 
 Imports repository data from GitHub and transforms it into website content.
+
+**Frontend Package:** `@asap/extension-github-sync`
 
 **Features:**
 - Fetches public repositories via GitHub API
 - Filters forks and archived repos
 - Sorts by stars and activity
 - Generates structured website data
+- Rich management UI with contribution graph, languages, organizations
 
 **Events Handled:**
 - `USER_INTEGRATION_ADDED` - When GitHub username is added
