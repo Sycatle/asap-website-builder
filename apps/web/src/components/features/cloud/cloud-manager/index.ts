@@ -1,12 +1,5 @@
 // CloudManager module exports
-// Using simplified version for cleaner UX
-export { CloudManager, CloudManager as default } from "./cloud-manager-simple";
-
-// Full-featured version (v2) for power users
-export { CloudManager as CloudManagerFull } from "./cloud-manager-v2";
-
-// Legacy export for backward compatibility
-export { CloudManager as CloudManagerLegacy } from "./cloud-manager";
+export { CloudManager, CloudManager as default } from "./cloud-manager";
 
 // Types
 export type {
