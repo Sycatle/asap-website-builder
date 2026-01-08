@@ -10,7 +10,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
 import { extensionsAPI } from '@/lib/api';
-import type { WebsiteExtension, ConfigSchema, ConfigAction } from '@/lib/api/extensions';
+import type { WebsiteExtension, ConfigSchema, ConfigAction, ConfigField } from '@/lib/api/extensions';
 import type { ExtensionStoreDetail } from '@/lib/api/store';
 import { PageHeader } from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
@@ -50,7 +50,14 @@ import {
   Loader2,
   Sparkles,
   ArrowRight,
+  Database,
+  Variable,
+  FolderOpen,
+  Eye,
 } from 'lucide-react';
+
+// Extension manager registry for modular management UIs
+import { getExtensionManager } from './extension-manager-registry';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -81,7 +88,7 @@ interface ExtensionPageProps {
   initialTab?: string;
 }
 
-type TabValue = 'overview' | 'settings' | 'actions' | 'history';
+type TabValue = 'preview' | 'config' | 'data' | 'info' | 'settings' | 'actions' | 'history';
 
 interface ChangelogEntry {
   id: string;
@@ -98,9 +105,24 @@ interface ChangelogEntry {
 const getExtensionConfig = (extension: ExtensionStoreDetail | undefined) => {
   if (!extension?.manifest) return { defaultSettings: {}, configSchema: undefined };
   const manifest = extension.manifest;
+  
+  // Build config schema from manifest fields (TOML [[fields]] sections)
+  // The fields can be at manifest.fields or manifest.config_schema.fields
+  const fields = (manifest.fields as ConfigField[]) || 
+                 (manifest.config_schema as ConfigSchema)?.fields || 
+                 [];
+  const actions = (manifest.actions as ConfigAction[]) || 
+                  (manifest.config_schema as ConfigSchema)?.actions || 
+                  [];
+  
+  const configSchema: ConfigSchema = {
+    fields,
+    actions,
+  };
+  
   return {
     defaultSettings: (manifest.default_settings as Record<string, unknown>) || {},
-    configSchema: manifest.config_schema as ConfigSchema | undefined,
+    configSchema: fields.length > 0 || actions.length > 0 ? configSchema : undefined,
   };
 };
 
@@ -116,14 +138,14 @@ const getDefaultSchemaFromSettings = (defaultSettings: Record<string, unknown>):
 };
 
 // ============================================================================
-// Overview Tab Content
+// Info Tab Content (Extension details, permissions, author)
 // ============================================================================
 
-interface OverviewTabProps {
+interface InfoTabProps {
   extension: ExtensionStoreDetail;
 }
 
-function OverviewTab({ extension }: OverviewTabProps) {
+function InfoTab({ extension }: InfoTabProps) {
   const permissions = (extension.manifest?.permissions as string[]) || [];
 
   return (
@@ -305,6 +327,342 @@ function OverviewTab({ extension }: OverviewTabProps) {
       </div>
     </div>
   );
+}
+
+// ============================================================================
+// Data Tab Content (Variables & Collections)
+// ============================================================================
+
+interface DataTabProps {
+  websiteId: string;
+  extensionSlug: string;
+}
+
+interface VariableItem {
+  key: string;
+  value: unknown;
+  updated_at?: string;
+}
+
+interface CollectionSummaryItem {
+  slug: string;
+  name: string;
+  total_count: number;
+  sync_status?: string;
+  synced_at?: string;
+}
+
+function DataTab({ websiteId, extensionSlug }: DataTabProps) {
+  const [variables, setVariables] = React.useState<VariableItem[]>([]);
+  const [collections, setCollections] = React.useState<CollectionSummaryItem[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  // Load data
+  React.useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        // Import APIs dynamically to avoid circular deps
+        const { collectionsAPI, variablesAPI } = await import('@/lib/api/collections');
+        
+        // Build prefixes for filtering - handle common naming patterns
+        // e.g., "github-sync" -> ["github_sync", "github"]
+        const basePrefixes = extensionSlug.replace('-', '_').split('_');
+        const primaryPrefix = basePrefixes[0]; // "github" from "github_sync"
+        
+        // Load variables
+        try {
+          const varsResponse = await variablesAPI.list(websiteId);
+          const allVars = varsResponse?.variables || [];
+          // Filter variables that start with the extension prefix
+          // Exclude arrays and complex objects (they should be in collections)
+          const filtered = allVars
+            .filter(v => {
+              if (!v.key.startsWith(`${primaryPrefix}_`)) return false;
+              // Exclude complex types that belong in collections
+              const val = v.value;
+              if (Array.isArray(val)) return false;
+              // Exclude large JSON objects (like contribution_calendar)
+              if (typeof val === 'object' && val !== null) {
+                const str = JSON.stringify(val);
+                if (str.length > 500) return false; // Large objects go to collections
+              }
+              return true;
+            })
+            .map(v => ({
+              key: v.key,
+              value: v.value,
+              updated_at: v.updated_at,
+            }));
+          setVariables(filtered);
+        } catch {
+          setVariables([]);
+        }
+
+        // Load collections  
+        try {
+          const collectionsResponse = await collectionsAPI.list(websiteId);
+          console.log('[DataTab] Collections raw response:', collectionsResponse);
+          // Handle different response formats
+          const allCollections = Array.isArray(collectionsResponse) 
+            ? collectionsResponse 
+            : (collectionsResponse?.collections || []);
+          console.log('[DataTab] All collections:', allCollections);
+          
+          // Filter collections related to this extension
+          const filtered = allCollections
+            .filter((c: any) => {
+              // Handle both snake_case and camelCase property names
+              const slug = c.collection_slug || c.collectionSlug || c.slug || '';
+              const source = c.source_extension || c.sourceExtension || '';
+              const matches = source === extensionSlug || 
+                     slug.startsWith(`${primaryPrefix}_`) ||
+                     slug.startsWith(extensionSlug.replace('-', '_'));
+              console.log(`[DataTab] Collection ${slug}: source=${source}, matches=${matches}`);
+              return matches;
+            })
+            .map((c: any) => ({
+              slug: c.collection_slug || c.collectionSlug || c.slug,
+              name: formatCollectionName(c.collection_slug || c.collectionSlug || c.slug),
+              total_count: c.total_count ?? c.totalCount ?? 0,
+              sync_status: c.sync_status || c.syncStatus,
+              synced_at: c.synced_at || c.syncedAt,
+            }));
+          console.log('[DataTab] Filtered collections:', filtered);
+          setCollections(filtered);
+        } catch (err) {
+          console.error('[DataTab] Failed to load collections:', err);
+          setCollections([]);
+        }
+      } catch (error) {
+        console.error('Failed to load data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, [websiteId, extensionSlug]);
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2">
+        <Skeleton className="h-64 rounded-xl" />
+        <Skeleton className="h-64 rounded-xl" />
+      </div>
+    );
+  }
+
+  const hasData = variables.length > 0 || collections.length > 0;
+
+  if (!hasData) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="py-16 text-center">
+          <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+            <Database className="w-8 h-8 text-muted-foreground/50" />
+          </div>
+          <h3 className="font-medium text-lg mb-1">Aucune donnée</h3>
+          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+            Cette extension n'a pas encore généré de données. Lancez une synchronisation depuis l'onglet Aperçu.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid gap-6 md:grid-cols-2">
+      {/* Variables Section */}
+      <Card className="md:col-span-1">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-blue-500/10">
+                <Variable className="w-4 h-4 text-blue-500" />
+              </div>
+              <CardTitle className="text-sm font-medium">Variables</CardTitle>
+            </div>
+            <Badge variant="secondary" className="text-xs">{variables.length}</Badge>
+          </div>
+          <CardDescription className="text-xs">
+            Valeurs dynamiques utilisables dans vos sections
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {variables.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              Aucune variable
+            </div>
+          ) : (
+            <div className="space-y-1 max-h-[500px] overflow-y-auto pr-1">
+              {variables.map((variable) => {
+                const typeInfo = getVariableTypeLabel(variable.value);
+                return (
+                  <div
+                    key={variable.key}
+                    className="group p-2.5 rounded-lg border bg-muted/20 hover:bg-muted/40 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <code className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-background border text-muted-foreground group-hover:text-foreground transition-colors truncate">
+                        {variable.key}
+                      </code>
+                      <span className={cn("text-[9px] font-medium uppercase", typeInfo.color)}>
+                        {typeInfo.label}
+                      </span>
+                    </div>
+                    <p className="text-xs text-foreground/80 break-all line-clamp-2" title={String(variable.value)}>
+                      {formatVariableValue(variable.value, 80)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Collections Section */}
+      <Card className="md:col-span-1">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-purple-500/10">
+                <FolderOpen className="w-4 h-4 text-purple-500" />
+              </div>
+              <CardTitle className="text-sm font-medium">Collections</CardTitle>
+            </div>
+            <Badge variant="secondary" className="text-xs">{collections.length}</Badge>
+          </div>
+          <CardDescription className="text-xs">
+            Listes de données synchronisées
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {collections.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              Aucune collection
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {collections.map((collection) => (
+                <div
+                  key={collection.slug}
+                  className="flex items-center justify-between p-3 rounded-lg border bg-muted/20 hover:bg-muted/40 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-background border">
+                      <Database className="w-4 h-4 text-purple-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">{collection.name}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <code className="text-[10px] text-muted-foreground font-mono">{collection.slug}</code>
+                        {collection.synced_at && (
+                          <>
+                            <span className="text-muted-foreground">•</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {formatDistanceToNow(new Date(collection.synced_at), { locale: fr })}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs font-mono">
+                      {collection.total_count}
+                    </Badge>
+                    {collection.sync_status === 'synced' && (
+                      <div className="w-2 h-2 rounded-full bg-emerald-500" title="Synchronisé" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Usage Tip - Full width */}
+      <Card className="md:col-span-2 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 border-primary/20">
+        <CardContent className="py-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+              <Sparkles className="w-4 h-4 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">Comment utiliser ces données ?</h4>
+              <div className="grid sm:grid-cols-2 gap-3 text-xs text-muted-foreground">
+                <div className="flex items-start gap-2">
+                  <Variable className="w-3.5 h-3.5 mt-0.5 shrink-0 text-blue-500" />
+                  <span>
+                    <strong className="text-foreground">Variables :</strong> Utilisez{' '}
+                    <code className="px-1 py-0.5 rounded bg-muted border text-[10px]">{'{{nom}}'}</code>{' '}
+                    dans vos sections
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <FolderOpen className="w-3.5 h-3.5 mt-0.5 shrink-0 text-purple-500" />
+                  <span>
+                    <strong className="text-foreground">Collections :</strong> Liez-les aux composants de liste dans le Studio
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Helper to format collection names
+function formatCollectionName(slug: string): string {
+  const names: Record<string, string> = {
+    'github_repos': 'Repositories GitHub',
+    'github_languages': 'Langages',
+    'github_gists': 'Gists GitHub',
+    'github_starred': 'Repos étoilés',
+    'github_organizations': 'Organisations',
+  };
+  return names[slug] || slug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+// Helper to format variable values for display
+function formatVariableValue(value: unknown, maxLength = 50): string {
+  if (value === null || value === undefined) return '—';
+  if (typeof value === 'boolean') return value ? 'Oui' : 'Non';
+  if (typeof value === 'number') return value.toLocaleString('fr-FR');
+  if (typeof value === 'object') {
+    // Check if it's an array
+    if (Array.isArray(value)) {
+      return `[${value.length} éléments]`;
+    }
+    const str = JSON.stringify(value);
+    if (str.length > maxLength) return `{...} (${str.length} chars)`;
+    return str;
+  }
+  const str = String(value);
+  return str.length > maxLength ? str.slice(0, maxLength) + '…' : str;
+}
+
+// Helper to get a nice display for variable type
+function getVariableTypeLabel(value: unknown): { label: string; color: string } {
+  if (value === null || value === undefined) return { label: 'null', color: 'text-muted-foreground' };
+  if (typeof value === 'boolean') return { label: 'bool', color: 'text-amber-500' };
+  if (typeof value === 'number') return { label: 'num', color: 'text-blue-500' };
+  if (typeof value === 'object') {
+    if (Array.isArray(value)) return { label: 'array', color: 'text-purple-500' };
+    return { label: 'json', color: 'text-emerald-500' };
+  }
+  if (typeof value === 'string') {
+    // Check if it looks like a URL
+    if (value.startsWith('http')) return { label: 'url', color: 'text-cyan-500' };
+    // Check if it looks like a date
+    if (/^\d{4}-\d{2}-\d{2}/.test(value)) return { label: 'date', color: 'text-orange-500' };
+    return { label: 'str', color: 'text-rose-500' };
+  }
+  return { label: 'any', color: 'text-muted-foreground' };
 }
 
 // ============================================================================
@@ -586,7 +944,7 @@ function SuggestedExtensions({ currentSlug, category, tags: _tags, websiteId }: 
 // Main Component
 // ============================================================================
 
-export default function ExtensionPage({ slug, initialTab = 'overview' }: ExtensionPageProps) {
+export default function ExtensionPage({ slug, initialTab }: ExtensionPageProps) {
   const { currentWebsiteId: websiteId } = useWebsiteContext();
 
   // Queries
@@ -599,8 +957,8 @@ export default function ExtensionPage({ slug, initialTab = 'overview' }: Extensi
   const updateSettingsMutation = useUpdateExtensionSettingsMutation();
   const deactivateMutation = useDeactivateExtensionMutation();
 
-  // Local state
-  const [activeTab, setActiveTab] = useState<TabValue>(initialTab as TabValue);
+  // Local state - default to 'preview' if we have a manager, otherwise 'info'
+  const [activeTab, setActiveTab] = useState<TabValue>('info');
   const [settings, setSettings] = useState<Record<string, unknown>>({});
   const [initialSettings, setInitialSettings] = useState<Record<string, unknown>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -621,6 +979,29 @@ export default function ExtensionPage({ slug, initialTab = 'overview' }: Extensi
   const actions = (schema.actions || []) as ConfigAction[];
   const hasConfig = schema.fields && schema.fields.length > 0;
   const hasActions = actions.length > 0;
+  
+  // Check if extension has a custom manager UI (from registry)
+  const managerConfig = useMemo(() => getExtensionManager(slug), [slug]);
+  const hasManager = !!managerConfig;
+  
+  // Set default tab based on extension state
+  // - If user explicitly provided a tab, use it
+  // - If active with manager: show "preview" by default (Aperçu)
+  // - Otherwise: show "info"
+  useEffect(() => {
+    // If user explicitly provided a valid tab via URL, use it
+    if (initialTab && ['preview', 'config', 'data', 'info', 'settings', 'actions', 'history'].includes(initialTab)) {
+      setActiveTab(initialTab as TabValue);
+      return;
+    }
+    
+    // Otherwise, auto-select the best default
+    if (isActive && hasManager) {
+      setActiveTab('preview');
+    } else {
+      setActiveTab('info');
+    }
+  }, [isActive, hasManager, initialTab]);
 
   // Icon config
   const iconConfig = extension ? getExtensionIconConfig(extension.icon, extension.slug) : null;
@@ -892,23 +1273,48 @@ export default function ExtensionPage({ slug, initialTab = 'overview' }: Extensi
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
         <TabsList className="bg-muted/50 h-9">
-          <TabsTrigger value="overview" className="gap-1.5 text-xs h-7">
+          {/* Aperçu tab - shows manager component for data preview */}
+          {isActive && hasManager && managerConfig && (
+            <TabsTrigger value="preview" className="gap-1.5 text-xs h-7">
+              <Eye className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Aperçu</span>
+            </TabsTrigger>
+          )}
+          {/* Configuration tab - settings for extensions with manager */}
+          {isActive && hasManager && hasConfig && (
+            <TabsTrigger value="config" className="gap-1.5 text-xs h-7">
+              <Settings className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Configuration</span>
+            </TabsTrigger>
+          )}
+          {/* Données tab - shows variables and collections */}
+          {isActive && hasManager && (
+            <TabsTrigger value="data" className="gap-1.5 text-xs h-7">
+              <Database className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Données</span>
+            </TabsTrigger>
+          )}
+          {/* Informations tab - extension details */}
+          <TabsTrigger value="info" className="gap-1.5 text-xs h-7">
             <Info className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Aperçu</span>
+            <span className="hidden sm:inline">Informations</span>
           </TabsTrigger>
-          {isActive && hasConfig && (
+          {/* Settings tab - only for extensions without custom manager */}
+          {isActive && hasConfig && !hasManager && (
             <TabsTrigger value="settings" className="gap-1.5 text-xs h-7">
               <Settings className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Paramètres</span>
             </TabsTrigger>
           )}
-          {isActive && hasActions && (
+          {/* Actions tab - only for extensions without custom manager */}
+          {isActive && hasActions && !hasManager && (
             <TabsTrigger value="actions" className="gap-1.5 text-xs h-7">
               <Zap className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Actions</span>
               <Badge variant="secondary" className="ml-1 h-4 text-[10px] px-1">{actions.length}</Badge>
             </TabsTrigger>
           )}
+          {/* History tab */}
           {isActive && (
             <TabsTrigger value="history" className="gap-1.5 text-xs h-7">
               <History className="w-3.5 h-3.5" />
@@ -918,10 +1324,54 @@ export default function ExtensionPage({ slug, initialTab = 'overview' }: Extensi
         </TabsList>
 
         <div className="mt-4">
-          <TabsContent value="overview" className="mt-0">
-            <OverviewTab extension={extension} />
+          {/* Preview Tab - Custom manager UI */}
+          {isActive && hasManager && managerConfig && websiteId && (
+            <TabsContent value="preview" className="mt-0">
+              <React.Suspense fallback={
+                <div className="space-y-4">
+                  <Skeleton className="h-40 w-full rounded-xl" />
+                  <div className="grid grid-cols-4 gap-3">
+                    {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}
+                  </div>
+                  <Skeleton className="h-64 w-full rounded-xl" />
+                </div>
+              }>
+                <managerConfig.component
+                  websiteId={websiteId}
+                  settings={settings}
+                  onSettingsChange={setSettings}
+                  onSave={handleSaveSettings}
+                  isSaving={isSaving}
+                  isDirty={isSettingsDirty}
+                />
+              </React.Suspense>
+            </TabsContent>
+          )}
+
+          {/* Config Tab - Settings for extensions with manager */}
+          {isActive && hasManager && hasConfig && (
+            <TabsContent value="config" className="mt-0">
+              <SettingsTab
+                schema={schema}
+                settings={settings}
+                onSettingsChange={setSettings}
+              />
+            </TabsContent>
+          )}
+
+          {/* Data Tab - Variables & Collections */}
+          {isActive && hasManager && websiteId && (
+            <TabsContent value="data" className="mt-0">
+              <DataTab websiteId={websiteId} extensionSlug={slug} />
+            </TabsContent>
+          )}
+
+          {/* Info Tab - Extension details */}
+          <TabsContent value="info" className="mt-0">
+            <InfoTab extension={extension} />
           </TabsContent>
 
+          {/* Settings Tab */}
           {isActive && hasConfig && (
             <TabsContent value="settings" className="mt-0">
               <SettingsTab
@@ -932,6 +1382,7 @@ export default function ExtensionPage({ slug, initialTab = 'overview' }: Extensi
             </TabsContent>
           )}
 
+          {/* Actions Tab */}
           {isActive && hasActions && (
             <TabsContent value="actions" className="mt-0">
               <ActionsTab
@@ -942,6 +1393,7 @@ export default function ExtensionPage({ slug, initialTab = 'overview' }: Extensi
             </TabsContent>
           )}
 
+          {/* History Tab */}
           {isActive && (
             <TabsContent value="history" className="mt-0">
               <HistoryTab changelog={changelog} />
