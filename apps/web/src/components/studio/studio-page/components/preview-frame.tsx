@@ -69,6 +69,11 @@ const BASE_STYLES = `
     box-sizing: border-box;
   }
   
+  html, body {
+    height: 100%;
+    overflow: auto;
+  }
+  
   html {
     scroll-behavior: smooth;
   }
@@ -80,6 +85,9 @@ const BASE_STYLES = `
     text-rendering: optimizeLegibility;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+  }
+  
+  #preview-root {
     min-height: 100%;
   }
   
@@ -172,10 +180,10 @@ export function PreviewFrame({ children, previewTheme, className }: PreviewFrame
       tailwindStyle.textContent = combinedCss;
     }
 
-    // Create body content
+    // Create body content with scroll support
     iframeDoc.body.innerHTML = '<div id="preview-root"></div>';
-    iframeDoc.body.style.margin = '0';
-    iframeDoc.body.style.padding = '0';
+    iframeDoc.body.style.cssText = 'margin: 0; padding: 0; min-height: 100%; overflow-y: auto; overflow-x: hidden;';
+    iframeDoc.documentElement.style.cssText = 'height: 100%; overflow-y: auto; overflow-x: hidden;';
 
     // Set mount node for portal
     const root = iframeDoc.getElementById('preview-root');
@@ -210,6 +218,7 @@ export function PreviewFrame({ children, previewTheme, className }: PreviewFrame
       ref={iframeRef}
       className={className}
       onLoad={handleIframeLoad}
+      scrolling="yes"
       style={{
         border: 'none',
         width: '100%',
