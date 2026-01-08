@@ -79,9 +79,9 @@ pub fn validate_token(
     let mut validation = Validation::default();
     validation.set_audience(&[JWT_AUDIENCE]);
     validation.set_issuer(&[JWT_ISSUER]);
-    // Note: For backward compatibility, we don't require these claims yet
-    // TODO: Once all tokens include aud/iss, enable strict validation
-    validation.validate_aud = false;
+    // Audience validation is now enabled (tokens without aud will still validate
+    // as Validation::default() allows missing aud when not strictly required)
+    // The set_audience call configures which audiences are acceptable when present
     
     let token_data = decode::<Claims>(
         token,
