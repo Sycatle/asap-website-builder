@@ -5,23 +5,13 @@ import { useTranslation } from 'react-i18next'
 import { useWebsiteContext } from "@/contexts/WebsiteContext"
 import { 
   useElementsQuery,
-  useCreateElementMutation,
-  useUpdateElementMutation,
-  useReorderElementsMutation,
   usePagesQuery,
   useHomepage,
 } from "@/lib/query"
-import type { WebsiteElement, UpdateElementRequest } from "@/lib/types"
-import { cn } from "@/lib/utils"
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable"
+import type { WebsiteElement } from "@/lib/types"
 import { StudioDataProvider } from "../data-binding"
 
 import type { DevicePreview, PreviewTheme, StudioPageProps } from "./types"
-import { AIChatPanel } from "./components/ai-chat-panel"
 import { SimplePreviewCanvas } from "./components/simple-preview-canvas"
 import { LoadingState, NoWebsiteState } from "./components/studio-states"
 
@@ -85,46 +75,22 @@ export function StudioPage({ onBack }: StudioPageProps) {
   return (
     <StudioDataProvider websiteId={website?.id}>
       {/* 
-        Use CSS calc to fill the remaining viewport height.
-        The header is 56px (h-14) on mobile, 64px (h-16) on desktop.
-        We use 56px as base since mobile is more constrained.
+        The studio content fills the available space.
+        The AI Chat panel is managed by AppShell, not by studio.
       */}
-      <div className="h-[calc(100vh-56px)] sm:h-[calc(100vh-64px)] bg-background overflow-hidden -mt-[1px]">
-        <ResizablePanelGroup direction="horizontal" className="h-full">
-          {/* Left Panel - AI Chat */}
-          <ResizablePanel 
-            defaultSize={35} 
-            minSize={25} 
-            maxSize={50}
-            className="bg-background relative"
-          >
-            <AIChatPanel 
-              websiteName={website.title}
-              websiteSlug={website.slug}
-              onBack={onBack ?? (() => window.history.back())}
-            />
-          </ResizablePanel>
-
-          <ResizableHandle withHandle />
-
-          {/* Right Panel - Preview */}
-          <ResizablePanel defaultSize={65} minSize={40}>
-            <SimplePreviewCanvas
-              elements={elements}
-              devicePreview={devicePreview}
-              previewTheme={previewTheme}
-              setDevicePreview={setDevicePreview}
-              setPreviewTheme={setPreviewTheme}
-              selectedElementId={selectedElementId}
-              onElementClick={handleElementClick}
-              websiteSlug={website.slug}
-              currentPageSlug={currentPage?.slug ?? null}
-              isHomepage={currentPage?.is_homepage ?? false}
-              onRefresh={refetch}
-            />
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </div>
+      <SimplePreviewCanvas
+        elements={elements}
+        devicePreview={devicePreview}
+        previewTheme={previewTheme}
+        setDevicePreview={setDevicePreview}
+        setPreviewTheme={setPreviewTheme}
+        selectedElementId={selectedElementId}
+        onElementClick={handleElementClick}
+        websiteSlug={website.slug}
+        currentPageSlug={currentPage?.slug ?? null}
+        isHomepage={currentPage?.is_homepage ?? false}
+        onRefresh={refetch}
+      />
     </StudioDataProvider>
   )
 }
