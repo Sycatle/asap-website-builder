@@ -307,9 +307,10 @@ pub struct ManifestField {
 }
 
 /// Supported field types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum ManifestFieldType {
+    #[default]
     Text,
     Textarea,
     Number,
@@ -327,12 +328,6 @@ pub enum ManifestFieldType {
     Json,
     Code,
     Markdown,
-}
-
-impl Default for ManifestFieldType {
-    fn default() -> Self {
-        ManifestFieldType::Text
-    }
 }
 
 /// Option for select/multiselect fields
@@ -847,16 +842,26 @@ pub enum ManifestValidationError {
     DuplicateActionId(String),
 }
 
+use std::sync::LazyLock;
+
+/// Regex for valid slugs (kebab-case) - compiled once
+static SLUG_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"^[a-z][a-z0-9-]*[a-z0-9]$").expect("Invalid slug regex")
+});
+
+/// Regex for semantic versions - compiled once
+static SEMVER_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$").expect("Invalid semver regex")
+});
+
 /// Check if a string is a valid slug (kebab-case)
 fn is_valid_slug(s: &str) -> bool {
-    let re = regex::Regex::new(r"^[a-z][a-z0-9-]*[a-z0-9]$").unwrap();
-    s.len() >= 2 && s.len() <= 50 && re.is_match(s)
+    s.len() >= 2 && s.len() <= 50 && SLUG_REGEX.is_match(s)
 }
 
 /// Check if a string is a valid semantic version
 fn is_valid_semver(s: &str) -> bool {
-    let re = regex::Regex::new(r"^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$").unwrap();
-    re.is_match(s)
+    SEMVER_REGEX.is_match(s)
 }
 
 #[cfg(test)]

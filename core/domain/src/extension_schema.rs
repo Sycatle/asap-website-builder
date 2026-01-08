@@ -282,7 +282,7 @@ pub enum DisplayFieldType {
 }
 
 /// A field in data display
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DataDisplayField {
     pub key: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -349,21 +349,6 @@ impl DataDisplayField {
             label: Some(label.to_string()),
             field_type: Some(DisplayFieldType::Number),
             ..Default::default()
-        }
-    }
-}
-
-impl Default for DataDisplayField {
-    fn default() -> Self {
-        Self {
-            key: String::new(),
-            label: None,
-            field_type: None,
-            link_key: None,
-            color_key: None,
-            icon: None,
-            prefix: None,
-            link_prefix: None,
         }
     }
 }
