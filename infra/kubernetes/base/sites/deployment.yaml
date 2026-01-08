@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: asap-sites
+  namespace: asap
+  labels:
+    app: asap-sites
+spec:
+  ports:
+    - port: 4322
+      targetPort: 4322
+  selector:
+    app: asap-sites
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asap-sites
+  namespace: asap
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: asap-sites
+  template:
+    metadata:
+      labels:
+        app: asap-sites
+    spec:
+      containers:
+        - name: sites
+          image: asap-sites:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4322
+          env:
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "4322"
+            - name: NODE_ENV
+              value: "production"
+            - name: PUBLIC_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: asap-config
+                  key: PUBLIC_API_URL
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 4322
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 4322
+            initialDelaySeconds: 30
+            periodSeconds: 30

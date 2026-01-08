@@ -1,0 +1,64 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: asap
+
+resources:
+  - ../../base
+  - ingress.yaml
+  - hpa.yaml
+
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+    target:
+      kind: Deployment
+      name: asap-api
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+    target:
+      kind: Deployment
+      name: asap-web
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+    target:
+      kind: Deployment
+      name: asap-sites
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+    target:
+      kind: Deployment
+      name: asap-worker
+
+configMapGenerator:
+  - name: asap-config
+    behavior: merge
+    literals:
+      - PUBLIC_API_URL=https://api.asap.cool/api
+      - PUBLIC_APP_URL=https://app.asap.cool
+      - PUBLIC_ACCOUNTS_URL=https://accounts.asap.cool
+
+images:
+  - name: asap-api
+    newName: ghcr.io/asap-cool/api
+    newTag: latest
+  - name: asap-worker
+    newName: ghcr.io/asap-cool/worker
+    newTag: latest
+  - name: asap-web
+    newName: ghcr.io/asap-cool/web
+    newTag: latest
+  - name: asap-sites
+    newName: ghcr.io/asap-cool/sites
+    newTag: latest
+  - name: asap-accounts
+    newName: ghcr.io/asap-cool/accounts
+    newTag: latest

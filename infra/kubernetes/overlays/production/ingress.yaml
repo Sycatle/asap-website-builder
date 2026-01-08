@@ -1,0 +1,67 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: asap-ingress
+  namespace: asap
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  tls:
+    - hosts:
+        - api.asap.cool
+        - app.asap.cool
+        - accounts.asap.cool
+        - "*.asap.cool"
+      secretName: asap-tls
+  rules:
+    # API - api.asap.cool
+    - host: api.asap.cool
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: asap-api
+                port:
+                  number: 3000
+    
+    # Dashboard - app.asap.cool
+    - host: app.asap.cool
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: asap-web
+                port:
+                  number: 4321
+    
+    # Accounts - accounts.asap.cool
+    - host: accounts.asap.cool
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: asap-accounts
+                port:
+                  number: 4323
+    
+    # Public Sites - *.asap.cool (catch-all for user sites)
+    - host: "*.asap.cool"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: asap-sites
+                port:
+                  number: 4322

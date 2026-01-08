@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asap-worker
+  namespace: asap
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: asap-worker
+  template:
+    metadata:
+      labels:
+        app: asap-worker
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:15-alpine
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until pg_isready -h asap-postgres -p 5432 -U asap; do
+                echo "Waiting for PostgreSQL..."
+                sleep 2
+              done
+              echo "PostgreSQL is ready!"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: asap-secrets
+                  key: postgres-password
+      containers:
+        - name: worker
+          image: asap-worker:latest
+          imagePullPolicy: Always
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://asap:$(POSTGRES_PASSWORD)@asap-postgres:5432/asap"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: asap-secrets
+                  key: postgres-password
+            - name: RUST_LOG
+              value: "asap_worker=info,sqlx=warn"
+            - name: POLL_INTERVAL_SECONDS
+              valueFrom:
+                configMapKeyRef:
+                  name: asap-config
+                  key: POLL_INTERVAL_SECONDS
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"

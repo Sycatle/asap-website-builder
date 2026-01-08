@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: asap-config
+  namespace: asap
+data:
+  # API Configuration
+  ASAP_API_PORT: "3000"
+  ASAP_API_HOST: "0.0.0.0"
+  RUST_LOG: "asap_api=info,asap_core_api=info,tower_http=info,sqlx=warn"
+  
+  # Worker Configuration
+  POLL_INTERVAL_SECONDS: "30"
+  
+  # Frontend URLs (overridden per environment)
+  PUBLIC_API_URL: "http://asap-api:3000/api"
+  PUBLIC_APP_URL: "http://localhost:4321"
+  PUBLIC_ACCOUNTS_URL: "http://localhost:4323"
+  
+  # Node Environment
+  NODE_ENV: "production"
+  
+  # Redis URL (internal service)
+  REDIS_URL: "redis://asap-redis:6379"

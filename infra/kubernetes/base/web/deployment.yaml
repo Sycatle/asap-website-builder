@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: asap-web
+  namespace: asap
+  labels:
+    app: asap-web
+spec:
+  ports:
+    - port: 4321
+      targetPort: 4321
+  selector:
+    app: asap-web
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asap-web
+  namespace: asap
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: asap-web
+  template:
+    metadata:
+      labels:
+        app: asap-web
+    spec:
+      containers:
+        - name: web
+          image: asap-web:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4321
+          env:
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "4321"
+            - name: NODE_ENV
+              value: "production"
+            - name: PUBLIC_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: asap-config
+                  key: PUBLIC_API_URL
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 4321
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 4321
+            initialDelaySeconds: 30
+            periodSeconds: 30

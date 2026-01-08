@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: asap-accounts
+  namespace: asap
+  labels:
+    app: asap-accounts
+spec:
+  ports:
+    - port: 4323
+      targetPort: 4323
+  selector:
+    app: asap-accounts
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asap-accounts
+  namespace: asap
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: asap-accounts
+  template:
+    metadata:
+      labels:
+        app: asap-accounts
+    spec:
+      containers:
+        - name: accounts
+          image: asap-accounts:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4323
+          env:
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "4323"
+            - name: NODE_ENV
+              value: "production"
+            - name: PUBLIC_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: asap-config
+                  key: PUBLIC_API_URL
+            - name: PUBLIC_APP_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: asap-config
+                  key: PUBLIC_APP_URL
+            - name: PUBLIC_ACCOUNTS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: asap-config
+                  key: PUBLIC_ACCOUNTS_URL
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 4323
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 4323
+            initialDelaySeconds: 30
+            periodSeconds: 30
