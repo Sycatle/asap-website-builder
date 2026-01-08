@@ -170,6 +170,11 @@
     "notifications": "Notifications",
     "bottomNav": "Main navigation"
   },
+  "theme": {
+    "light": "Light mode",
+    "dark": "Dark mode",
+    "system": "System"
+  },
   "shortcuts": {
     "navigation": "Navigation",
     "actions": "Actions",

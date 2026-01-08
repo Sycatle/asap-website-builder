@@ -170,6 +170,11 @@
     "notifications": "Notifications",
     "bottomNav": "Navigation principale"
   },
+  "theme": {
+    "light": "Mode clair",
+    "dark": "Mode sombre",
+    "system": "Système"
+  },
   "shortcuts": {
     "navigation": "Navigation",
     "actions": "Actions",

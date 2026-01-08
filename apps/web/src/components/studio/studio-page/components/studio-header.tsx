@@ -26,6 +26,8 @@ import {
   FileText,
   Home,
   MoreHorizontal,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StudioHeaderProps, DevicePreview } from "../types";
@@ -118,6 +120,9 @@ export function StudioHeader({
 
         {/* Right section */}
         <div className="flex items-center gap-1">
+          {/* Theme toggle */}
+          <ThemeToggle />
+          
           <Button
             variant="ghost"
             size="icon"
@@ -309,7 +314,90 @@ function MobileMenu({
           </a>
         </Button>
       )}
+      
+      {/* Theme toggle for mobile */}
+      <MobileThemeToggle />
     </div>
+  );
+}
+
+/**
+ * MobileThemeToggle - Theme toggle button with label for mobile menu
+ */
+function MobileThemeToggle() {
+  const { t } = useTranslation(['common']);
+  const [isDark, setIsDark] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsDark(document.documentElement.classList.contains('dark'));
+  }, []);
+
+  const toggleTheme = () => {
+    const newIsDark = !isDark;
+    setIsDark(newIsDark);
+    document.documentElement.classList[newIsDark ? 'add' : 'remove']('dark');
+  };
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={toggleTheme}
+      className="h-8 px-3"
+    >
+      {isDark ? (
+        <>
+          <Sun className="h-4 w-4 mr-1.5" aria-hidden="true" />
+          {t('common:theme.light')}
+        </>
+      ) : (
+        <>
+          <Moon className="h-4 w-4 mr-1.5" aria-hidden="true" />
+          {t('common:theme.dark')}
+        </>
+      )}
+    </Button>
+  );
+}
+
+/**
+ * ThemeToggle - Toggle button for dark/light mode
+ */
+function ThemeToggle() {
+  const { t } = useTranslation(['common']);
+  const [isDark, setIsDark] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsDark(document.documentElement.classList.contains('dark'));
+  }, []);
+
+  const toggleTheme = () => {
+    const newIsDark = !isDark;
+    setIsDark(newIsDark);
+    document.documentElement.classList[newIsDark ? 'add' : 'remove']('dark');
+  };
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTheme}
+          className="h-9 w-9"
+          aria-label={isDark ? t('common:theme.light') : t('common:theme.dark')}
+        >
+          {isDark ? (
+            <Sun className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <Moon className="h-4 w-4" aria-hidden="true" />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        {isDark ? t('common:theme.light') : t('common:theme.dark')}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
