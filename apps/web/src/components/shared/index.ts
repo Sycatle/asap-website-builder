@@ -64,3 +64,5 @@ export {
 } from './file-utils';
 export { FilePreviewDialog, type FilePreviewDialogProps } from './file-preview-dialog';
 
+// Global AI Chat
+export { GlobalAIChatPanel } from './global-ai-chat-panel';

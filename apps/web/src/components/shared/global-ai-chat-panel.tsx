@@ -27,6 +27,7 @@ import {
   Palette,
   Layout,
   Type,
+  X,
   ArrowLeft,
   MoreHorizontal,
   Loader2,
@@ -40,6 +41,7 @@ import {
   History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useWebsiteContext } from "@/contexts/WebsiteContext";
 
 interface Message {
   id: string;
@@ -48,22 +50,42 @@ interface Message {
   timestamp: Date;
 }
 
-interface AIChatPanelProps {
-  websiteName: string;
-  websiteSlug: string | null;
-  onBack: () => void;
+interface GlobalAIChatPanelProps {
+  /** Called when close/back button is clicked */
+  onClose: () => void;
+  /** If true, shows a back arrow instead of X (for studio mode) */
+  showBackButton?: boolean;
+  /** Override website name (optional, defaults to current website) */
+  websiteNameOverride?: string;
+  /** Override website slug (optional, defaults to current website) */
+  websiteSlugOverride?: string | null;
 }
 
 /**
- * AIChatPanel - AI-powered chat interface for website editing
+ * GlobalAIChatPanel - AI-powered chat interface accessible from anywhere in the app
+ * Rendered as an inline panel (not a sheet/dialog) for desktop layout integration
+ * 
+ * Can be used in two modes:
+ * - Close mode (default): Shows X button, used in app shell
+ * - Back mode: Shows back arrow, used in studio
  */
-export function AIChatPanel({ websiteName, websiteSlug, onBack }: AIChatPanelProps) {
+export function GlobalAIChatPanel({ 
+  onClose, 
+  showBackButton = false,
+  websiteNameOverride,
+  websiteSlugOverride,
+}: GlobalAIChatPanelProps) {
   const { t } = useTranslation(['common', 'editor']);
+  const { currentWebsite } = useWebsiteContext();
+  
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const websiteName = websiteNameOverride ?? currentWebsite?.title ?? 'ASAP';
+  const websiteSlug = websiteSlugOverride !== undefined ? websiteSlugOverride : (currentWebsite?.slug ?? null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -92,6 +114,7 @@ export function AIChatPanel({ websiteName, websiteSlug, onBack }: AIChatPanelPro
     setInput('');
     setIsLoading(true);
 
+    // Simulate AI response (to be replaced with actual API call)
     setTimeout(() => {
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
@@ -121,73 +144,92 @@ export function AIChatPanel({ websiteName, websiteSlug, onBack }: AIChatPanelPro
   };
 
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-background to-muted/20">
-      {/* Header - absolute top */}
-      <header className="absolute top-0 left-0 right-0 h-14 px-4 flex items-center justify-between border-b bg-background/80 backdrop-blur-sm z-10">
+    <div className="h-full flex flex-col relative overflow-hidden">
+      {/* Scrollable container with header/footer sticky inside */}
+      <div className="flex-1 overflow-y-auto flex flex-col" ref={scrollRef}>
+        {/* Header - sticky at top */}
+        <header className="sticky top-0 z-10 h-14 px-4 flex items-center justify-between border-b bg-background/80 backdrop-blur-sm shrink-0">
         <div className="flex items-center gap-3">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onBack}
-                className="h-8 w-8 rounded-full"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">{t('common:actions.back')}</TooltipContent>
-          </Tooltip>
-          
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Avatar className="h-9 w-9 border-2 border-primary/20">
-                <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
-                  <Sparkles className="h-4 w-4" />
-                </AvatarFallback>
-              </Avatar>
-              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+          {showBackButton && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onClose}
+                  className="h-8 w-8 rounded-full"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">{t('common:actions.back')}</TooltipContent>
+            </Tooltip>
+          )}
+          <div className="relative">
+            <Avatar className="h-9 w-9 border-2 border-primary/20">
+              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
+                <Sparkles className="h-4 w-4" />
+              </AvatarFallback>
+            </Avatar>
+            <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-semibold">{websiteName}</h1>
+              <Badge variant="secondary" className="h-5 text-[10px] font-normal">
+                AI
+              </Badge>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-sm font-semibold">{websiteName}</h1>
-                <Badge variant="secondary" className="h-5 text-[10px] font-normal">
-                  AI
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {websiteSlug ? `${websiteSlug}.asap.cool` : t('editor:ai.title')}
-              </p>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              {websiteSlug ? `${websiteSlug}.asap.cool` : t('editor:ai.title')}
+            </p>
           </div>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={clearChat}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              {t('editor:ai.clearChat')}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem disabled>
-              <History className="h-4 w-4 mr-2" />
-              {t('editor:ai.history')}
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled>
-              <Settings className="h-4 w-4 mr-2" />
-              {t('editor:ai.settings')}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={clearChat}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                {t('editor:ai.clearChat')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled>
+                <History className="h-4 w-4 mr-2" />
+                {t('editor:ai.history')}
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled>
+                <Settings className="h-4 w-4 mr-2" />
+                {t('editor:ai.settings')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          {!showBackButton && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onClose}
+                  className="h-8 w-8 rounded-full"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">{t('common:actions.close')}</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
       </header>
 
-      {/* Messages area - fills remaining space with padding for header/footer */}
-      <div className="absolute inset-0 pt-14 pb-[180px] overflow-y-auto" ref={scrollRef}>
+      {/* Messages area */}
+      <div className="flex-1">
         {messages.length === 0 ? (
           <div className="min-h-full flex items-center justify-center p-4">
             <EmptyState onPromptSelect={insertPrompt} />
@@ -219,10 +261,10 @@ export function AIChatPanel({ websiteName, websiteSlug, onBack }: AIChatPanelPro
         )}
       </div>
 
-      {/* Footer - absolute bottom */}
-      <div className="absolute bottom-0 left-0 right-0 bg-background border-t z-10">
+      {/* Footer - sticky at bottom */}
+      <div className="sticky bottom-0 z-10 border-t bg-background/80 backdrop-blur-sm">
         {/* Quick actions */}
-        <div className="px-4 py-3 border-b bg-background/50">
+        <div className="px-4 py-3 border-b">
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
             <QuickAction 
               icon={Plus} 
@@ -290,6 +332,7 @@ export function AIChatPanel({ websiteName, websiteSlug, onBack }: AIChatPanelPro
             {t('editor:ai.hint')}
           </p>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -445,4 +488,4 @@ function MessageBubble({ message }: { message: Message }) {
   );
 }
 
-export default AIChatPanel;
+export default GlobalAIChatPanel;

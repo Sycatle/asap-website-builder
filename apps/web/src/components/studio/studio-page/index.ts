@@ -18,5 +18,4 @@ export { useIsMobile } from './hooks';
 
 // Components
 export { SimplePreviewCanvas } from './components/simple-preview-canvas';
-export { AIChatPanel } from './components/ai-chat-panel';
 export { LoadingState, NoWebsiteState } from './components/studio-states';
