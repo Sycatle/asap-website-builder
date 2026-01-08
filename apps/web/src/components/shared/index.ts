@@ -10,9 +10,9 @@ export {
   EmptyTitle,
   EmptyDescription,
   EmptyContent,
-} from './EmptyState';
+} from './empty-state';
 export { NotificationsDropdown } from './notifications-dropdown';
-export { ErrorBoundary, type ErrorBoundaryProps } from './ErrorBoundary';
+export { ErrorBoundary, type ErrorBoundaryProps } from './error-boundary';
 export { PageHeader } from './page-header';
 export { PresenceAvatars } from './presence-avatars';
 
