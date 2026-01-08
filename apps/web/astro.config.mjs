@@ -39,6 +39,7 @@ export default defineConfig({
         '@': path.resolve(__dirname, 'src'),
         '@asap/renderers': path.resolve(__dirname, '../../packages/renderers/src'),
         '@asap/shared': path.resolve(__dirname, '../../packages/shared/src'),
+        '@asap/extension-github-sync': path.resolve(__dirname, '../../extensions/github-sync/frontend/src'),
         // Resolve dependencies from renderers package to this project's node_modules
         'dompurify': path.resolve(__dirname, 'node_modules/dompurify'),
       },
