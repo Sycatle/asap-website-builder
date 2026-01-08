@@ -22,7 +22,6 @@ import {
 } from 'lucide-react';
 import type { ExtensionStoreSummary, ExtensionStoreDetail } from '@/lib/api/store';
 import { ExtensionIcon } from '@/lib/extension-icons';
-import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Types
