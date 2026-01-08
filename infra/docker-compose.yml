@@ -106,6 +106,7 @@ services:
       - asap-network
 
   # Web application (Astro) - Dev mode with hot reload
+  # Note: In development, this is completely overridden by docker-compose.dev.yml
   web:
     image: node:20-alpine
     container_name: asap-web
@@ -118,9 +119,7 @@ services:
       PORT: 4321
       PUBLIC_API_URL: http://localhost:3000/api
       NODE_ENV: development
-    volumes:
-      - ../apps/web:/app
-      - /app/node_modules
+    # Volumes are defined in docker-compose.dev.yml for proper hot reload
     depends_on:
       api:
         condition: service_healthy
