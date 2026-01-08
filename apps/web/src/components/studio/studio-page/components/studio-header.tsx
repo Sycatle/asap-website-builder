@@ -26,11 +26,9 @@ import {
   FileText,
   Home,
   MoreHorizontal,
-  Sun,
-  Moon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { StudioHeaderProps, DevicePreview, PreviewTheme } from "../types";
+import type { StudioHeaderProps, DevicePreview } from "../types";
 
 /**
  * StudioHeader - Header component for the studio page
@@ -122,9 +120,6 @@ export function StudioHeader({
 
         {/* Right section */}
         <div className="flex items-center gap-1">
-          {/* Preview theme toggle (isolated from dashboard theme) */}
-          <PreviewThemeToggle previewTheme={previewTheme} setPreviewTheme={setPreviewTheme} />
-          
           <Button
             variant="ghost"
             size="icon"
@@ -173,8 +168,6 @@ export function StudioHeader({
           currentPage={currentPage}
           devicePreview={devicePreview}
           setDevicePreview={setDevicePreview}
-          previewTheme={previewTheme}
-          setPreviewTheme={setPreviewTheme}
         />
       )}
     </>
@@ -256,15 +249,11 @@ function MobileMenu({
   currentPage,
   devicePreview,
   setDevicePreview,
-  previewTheme,
-  setPreviewTheme,
 }: {
   website: { slug: string | null };
   currentPage: { slug: string; is_homepage: boolean } | null;
   devicePreview: DevicePreview;
   setDevicePreview: (device: DevicePreview) => void;
-  previewTheme: PreviewTheme;
-  setPreviewTheme: (theme: PreviewTheme) => void;
 }) {
   const { t } = useTranslation(['common', 'editor']);
   return (
@@ -322,90 +311,7 @@ function MobileMenu({
           </a>
         </Button>
       )}
-      
-      {/* Preview theme toggle for mobile */}
-      <MobilePreviewThemeToggle previewTheme={previewTheme} setPreviewTheme={setPreviewTheme} />
     </div>
-  );
-}
-
-/**
- * PreviewThemeToggle - Toggle button for preview dark/light mode (isolated from dashboard)
- */
-function PreviewThemeToggle({
-  previewTheme,
-  setPreviewTheme,
-}: {
-  previewTheme: PreviewTheme;
-  setPreviewTheme: (theme: PreviewTheme) => void;
-}) {
-  const { t } = useTranslation(['editor']);
-  const isDark = previewTheme === 'dark';
-
-  const toggleTheme = () => {
-    setPreviewTheme(isDark ? 'light' : 'dark');
-  };
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleTheme}
-          className="h-9 w-9"
-          aria-label={isDark ? t('editor:preview.lightMode') : t('editor:preview.darkMode')}
-        >
-          {isDark ? (
-            <Sun className="h-4 w-4" aria-hidden="true" />
-          ) : (
-            <Moon className="h-4 w-4" aria-hidden="true" />
-          )}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>
-        {isDark ? t('editor:preview.lightMode') : t('editor:preview.darkMode')}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-/**
- * MobilePreviewThemeToggle - Preview theme toggle button with label for mobile menu
- */
-function MobilePreviewThemeToggle({
-  previewTheme,
-  setPreviewTheme,
-}: {
-  previewTheme: PreviewTheme;
-  setPreviewTheme: (theme: PreviewTheme) => void;
-}) {
-  const { t } = useTranslation(['editor']);
-  const isDark = previewTheme === 'dark';
-
-  const toggleTheme = () => {
-    setPreviewTheme(isDark ? 'light' : 'dark');
-  };
-
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={toggleTheme}
-      className="h-8 px-3"
-    >
-      {isDark ? (
-        <>
-          <Sun className="h-4 w-4 mr-1.5" aria-hidden="true" />
-          {t('editor:preview.lightMode')}
-        </>
-      ) : (
-        <>
-          <Moon className="h-4 w-4 mr-1.5" aria-hidden="true" />
-          {t('editor:preview.darkMode')}
-        </>
-      )}
-    </Button>
   );
 }
 
