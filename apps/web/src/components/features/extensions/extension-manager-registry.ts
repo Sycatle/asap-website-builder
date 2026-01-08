@@ -6,7 +6,7 @@
  * displayed in the "Gestion" tab when the extension is active.
  * 
  * Extensions are loaded from their dedicated frontend packages in the
- * extensions/*/frontend directories.
+ * extensions/{slug}/frontend directories.
  */
 
 import React from 'react';
