@@ -409,19 +409,6 @@ function AppShellContent({
         {/* Main content area - with optional AI Chat panel */}
         {isAIChatOpen ? (
           <ResizablePanelGroup direction="horizontal" className="flex-1">
-            {/* AI Chat Panel */}
-            <ResizablePanel 
-              defaultSize={panelSize} 
-              minSize={20} 
-              maxSize={isStudioPage ? 50 : 45}
-              className="bg-background border-r hidden sm:block"
-              onResize={(size) => setPanelSize(size)}
-            >
-              <GlobalAIChatPanel onClose={closeAIChat} />
-            </ResizablePanel>
-
-            <ResizableHandle withHandle className="hidden sm:flex" />
-
             {/* Main Content */}
             <ResizablePanel defaultSize={100 - panelSize} minSize={isStudioPage ? 40 : 55}>
               <main
@@ -435,6 +422,19 @@ function AppShellContent({
               >
                 {children}
               </main>
+            </ResizablePanel>
+
+            <ResizableHandle withHandle className="hidden sm:flex" />
+
+            {/* AI Chat Panel */}
+            <ResizablePanel 
+              defaultSize={panelSize} 
+              minSize={20} 
+              maxSize={isStudioPage ? 50 : 45}
+              className="bg-background border-l hidden sm:block"
+              onResize={(size) => setPanelSize(size)}
+            >
+              <GlobalAIChatPanel onClose={closeAIChat} />
             </ResizablePanel>
           </ResizablePanelGroup>
         ) : (
