@@ -7,7 +7,7 @@
 # For development - use base image
 FROM asap-base-node:dev AS dev
 
-# Copy source code (will be overwritten by volume mounts in docker-compose)
+# Copy source code (node_modules excluded via .dockerignore)
 COPY packages/shared ./packages/shared
 COPY packages/renderers ./packages/renderers
 COPY apps/web ./apps/web
@@ -19,7 +19,7 @@ ENV PORT=4321
 
 EXPOSE 4321
 
-CMD ["pnpm", "dev", "--host", "0.0.0.0"]
+CMD ["./node_modules/.bin/astro", "dev", "--host", "0.0.0.0"]
 
 # ============================================================================
 # For production - separate build (not using base image)

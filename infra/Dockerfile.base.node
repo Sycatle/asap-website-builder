@@ -19,8 +19,18 @@ COPY apps/web/package.json ./apps/web/
 COPY apps/accounts/package.json ./apps/accounts/
 COPY apps/sites/package.json ./apps/sites/
 
+# Copy extension frontend package.json files
+COPY extensions/github-sync/frontend/package.json ./extensions/github-sync/frontend/
+
+# Copy source files for local packages (needed for file: dependencies)
+COPY packages/shared ./packages/shared
+COPY packages/renderers ./packages/renderers
+
+# Copy extension frontend source (needed for workspace: dependencies)
+COPY extensions/github-sync/frontend ./extensions/github-sync/frontend
+
 # Install all dependencies once (shared node_modules)
-RUN pnpm install --frozen-lockfile --force
+RUN pnpm install --frozen-lockfile
 
 # This image is now ready to be used as base for all frontend apps
 # Child images will only need to copy source code and run dev server

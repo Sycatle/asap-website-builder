@@ -25,7 +25,7 @@ COPY core/payments/Cargo.toml ./core/payments/
 COPY core/notifications/Cargo.toml ./core/notifications/
 COPY apps/api/Cargo.toml ./apps/api/
 COPY apps/worker/Cargo.toml ./apps/worker/
-COPY extensions/github-sync/Cargo.toml ./extensions/github-sync/
+COPY extensions/github-sync/backend/Cargo.toml ./extensions/github-sync/backend/
 
 # Create stub files for dependency pre-compilation
 RUN mkdir -p core/shared/src && echo "// stub" > core/shared/src/lib.rs && \
@@ -35,7 +35,7 @@ RUN mkdir -p core/shared/src && echo "// stub" > core/shared/src/lib.rs && \
     mkdir -p core/notifications/src && echo "// stub" > core/notifications/src/lib.rs && \
     mkdir -p apps/api/src && echo "fn main() {}" > apps/api/src/main.rs && \
     mkdir -p apps/worker/src && echo "fn main() {}" > apps/worker/src/main.rs && \
-    mkdir -p extensions/github-sync/src && echo "// stub" > extensions/github-sync/src/lib.rs
+    mkdir -p extensions/github-sync/backend/src && echo "// stub" > extensions/github-sync/backend/src/lib.rs
 
 # Pre-compile dependencies (major time saver)
 RUN cargo build && rm -rf target/debug/deps/*asap* target/debug/*asap*
