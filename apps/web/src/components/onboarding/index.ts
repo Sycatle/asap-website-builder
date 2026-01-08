@@ -4,14 +4,13 @@
  * Export all onboarding components for easy importing.
  */
 
-export { OnboardingLayout } from './OnboardingLayout';
-export { GitHubConnectStep } from './GitHubConnectStep';
-export { ImportProjectsStep } from './ImportProjectsStep';
-export { ReviewProfileStep } from './ReviewProfileStep';
-export { PublishStep } from './PublishStep';
-export { OnboardingWizard, MOCK_GITHUB_REPOS } from './OnboardingWizard';
-export { OnboardingFlow } from './OnboardingFlow';
-export { NewUserOnboarding } from './NewUserOnboarding';
+export { OnboardingLayout } from './onboarding-layout';
+export { OnboardingModal } from './onboarding-modal';
+export { GitHubConnectStep } from './github-connect-step';
+export { ImportProjectsStep } from './import-projects-step';
+export { ReviewProfileStep } from './review-profile-step';
+export { PublishStep } from './publish-step';
+export { NewUserOnboarding } from './new-user-onboarding';
 
 // UI Components
 export * from './ui';
