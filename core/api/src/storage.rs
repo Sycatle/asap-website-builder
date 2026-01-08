@@ -4,6 +4,7 @@ use flate2::write::GzEncoder;
 use flate2::Compression;
 use sqlx::{PgPool, Row};
 use std::io::Write;
+use std::str::FromStr;
 use uuid::Uuid;
 use sha2::{Sha256, Digest};
 use hex;
@@ -462,7 +463,7 @@ impl FileStorageService {
         file.website_id = website_id;
         file.folder_id = folder_id;
         if let Some(v) = visibility {
-            file.visibility = asap_core_domain::FileVisibility::from_str(v)
+            file.visibility = v.parse()
                 .unwrap_or(asap_core_domain::FileVisibility::Private);
         }
         file.description = description.map(|s| s.to_string());
@@ -848,7 +849,7 @@ impl FileStorageService {
                 let visibility_str: Option<String> = r.get(10);
                 let visibility = visibility_str
                     .as_deref()
-                    .and_then(asap_core_domain::FileVisibility::from_str)
+                    .and_then(|s| s.parse().ok())
                     .unwrap_or(asap_core_domain::FileVisibility::Private);
                 let tags_val: Option<Vec<String>> = r.get(13);
                 

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use std::str::FromStr;
 
 /// File visibility levels
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -20,13 +21,17 @@ impl FileVisibility {
             FileVisibility::Website => "website",
         }
     }
+}
 
-    pub fn from_str(s: &str) -> Option<Self> {
+impl FromStr for FileVisibility {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "private" => Some(FileVisibility::Private),
-            "public" => Some(FileVisibility::Public),
-            "website" => Some(FileVisibility::Website),
-            _ => None,
+            "private" => Ok(FileVisibility::Private),
+            "public" => Ok(FileVisibility::Public),
+            "website" => Ok(FileVisibility::Website),
+            _ => Err(format!("Invalid file visibility: {}", s)),
         }
     }
 }
@@ -368,13 +373,13 @@ mod tests {
         let account_id = Uuid::new_v4();
         let mut quota = AccountStorageQuota::new(account_id);
         
-        // Should allow upload initially
-        assert!(quota.can_upload(100_000_000)); // 100 MB
+        // Should allow upload initially (default quota is 50 MB)
+        assert!(quota.can_upload(10_000_000)); // 10 MB
         
         // Fill quota
-        quota.total_size_used = 1_000_000_000; // 1 GB
+        quota.total_size_used = quota.quota_limit;
         
-        // Should not allow upload
+        // Should not allow upload when full
         assert!(!quota.can_upload(1_000_000));
     }
 
@@ -383,9 +388,11 @@ mod tests {
         let account_id = Uuid::new_v4();
         let mut quota = AccountStorageQuota::new(account_id);
         
-        quota.total_size_used = 500_000_000; // 500 MB
+        quota.total_size_used = 10_000_000; // 10 MB
         
-        assert_eq!(quota.remaining(), 573_741_824); // ~573 MB
+        // Remaining should be quota_limit - used
+        let expected = AccountStorageQuota::DEFAULT_QUOTA - 10_000_000;
+        assert_eq!(quota.remaining(), expected);
     }
 
     #[test]
