@@ -78,8 +78,14 @@ export interface PreviewCanvasProps {
   rightPanelOpen: boolean;
   setLeftPanelOpen: (open: boolean) => void;
   setRightPanelOpen: (open: boolean) => void;
+  setPreviewTheme: (theme: PreviewTheme) => void;
   onElementClick: (element: import('@/lib/types').WebsiteElement) => void;
   onAddClick: () => void;
+  // Browser bar props
+  websiteSlug: string | null;
+  currentPageSlug: string | null;
+  isHomepage: boolean;
+  onRefresh: () => void;
 }
 
 export interface MobileToolbarProps {
