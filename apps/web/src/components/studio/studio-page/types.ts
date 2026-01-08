@@ -3,6 +3,7 @@
  */
 
 export type DevicePreview = 'desktop' | 'tablet' | 'mobile';
+export type PreviewTheme = 'light' | 'dark';
 
 export interface StudioPageProps {
   onBack?: () => void;
@@ -31,6 +32,8 @@ export interface StudioHeaderProps {
   setSelectedPageId: (id: string | null) => void;
   devicePreview: DevicePreview;
   setDevicePreview: (device: DevicePreview) => void;
+  previewTheme: PreviewTheme;
+  setPreviewTheme: (theme: PreviewTheme) => void;
   isLoadingPages: boolean;
   isLoadingElements: boolean;
   mobileMenuOpen: boolean;
@@ -68,6 +71,7 @@ export interface PropertyEditorPanelProps {
 export interface PreviewCanvasProps {
   elements: Array<import('@/lib/types').WebsiteElement>;
   devicePreview: DevicePreview;
+  previewTheme: PreviewTheme;
   selectedElementId: string | null;
   isMobile: boolean;
   leftPanelOpen: boolean;

@@ -23,10 +23,12 @@ import { DEVICE_CONFIGS } from "../types";
 /**
  * PreviewCanvas - Central preview area showing the website
  * Supports realistic device frame simulation for tablet and mobile views
+ * The previewTheme is isolated from the dashboard theme
  */
 export function PreviewCanvas({
   elements,
   devicePreview,
+  previewTheme,
   selectedElementId,
   isMobile,
   leftPanelOpen,
@@ -45,6 +47,7 @@ export function PreviewCanvas({
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   const isDeviceFrame = devicePreview !== 'desktop';
+  const isDarkPreview = previewTheme === 'dark';
 
   return (
     <main 
@@ -106,34 +109,45 @@ export function PreviewCanvas({
             </div>
           )}
 
-          {/* Main preview content */}
-          <div className={cn(
-            "flex-1 bg-card dark:bg-slate-950 overflow-y-auto overflow-x-hidden",
-            // Inner border radius for device frames
-            devicePreview === 'mobile' && "rounded-[1.75rem]",
-            devicePreview === 'tablet' && "rounded-xl",
-          )}>
-            {/* Preview Provider gives components access to device context */}
-            <PreviewProvider device={devicePreview}>
-              {visibleElements.length === 0 ? (
-                <EmptyPreviewState 
-                  isMobile={isMobile} 
-                  onAddClick={onAddClick}
-                  setLeftPanelOpen={setLeftPanelOpen}
-                />
-              ) : (
-                <div id="preview-scroll-container">
-                  {visibleElements.map((element) => (
-                    <SectionRenderer
-                      key={element.id}
-                      element={element}
-                      isSelected={selectedElementId === element.id}
-                      onClick={() => onElementClick(element)}
-                    />
-                  ))}
-                </div>
-              )}
-            </PreviewProvider>
+          {/* Main preview content - Isolated theme container */}
+          <div 
+            className={cn(
+              "flex-1 overflow-y-auto overflow-x-hidden",
+              // Inner border radius for device frames
+              devicePreview === 'mobile' && "rounded-[1.75rem]",
+              devicePreview === 'tablet' && "rounded-xl",
+              // Apply isolated theme class
+              isDarkPreview ? "dark" : "",
+            )}
+          >
+            {/* Inner container with theme-aware colors */}
+            <div className={cn(
+              "min-h-full",
+              isDarkPreview ? "bg-slate-950 text-white" : "bg-white text-slate-950",
+            )}>
+              {/* Preview Provider gives components access to device context */}
+              <PreviewProvider device={devicePreview}>
+                {visibleElements.length === 0 ? (
+                  <EmptyPreviewState 
+                    isMobile={isMobile} 
+                    onAddClick={onAddClick}
+                    setLeftPanelOpen={setLeftPanelOpen}
+                    isDarkPreview={isDarkPreview}
+                  />
+                ) : (
+                  <div id="preview-scroll-container">
+                    {visibleElements.map((element) => (
+                      <SectionRenderer
+                        key={element.id}
+                        element={element}
+                        isSelected={selectedElementId === element.id}
+                        onClick={() => onElementClick(element)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </PreviewProvider>
+            </div>
           </div>
 
           {/* Device home indicator for mobile */}
@@ -231,14 +245,22 @@ function EmptyPreviewState({
   isMobile,
   onAddClick,
   setLeftPanelOpen,
+  isDarkPreview,
 }: {
   isMobile: boolean;
   onAddClick: () => void;
   setLeftPanelOpen: (open: boolean) => void;
+  isDarkPreview: boolean;
 }) {
   const { t } = useTranslation(['common', 'editor']);
   return (
-    <div className="min-h-[60vh] flex items-center justify-center text-muted-foreground p-6" role="status">
+    <div 
+      className={cn(
+        "min-h-[60vh] flex items-center justify-center p-6",
+        isDarkPreview ? "text-slate-400" : "text-muted-foreground"
+      )} 
+      role="status"
+    >
       <div className="text-center">
         <Layers className="h-12 w-12 mx-auto mb-4 opacity-50" aria-hidden="true" />
         <p className="font-medium">{t('editor:canvas.emptyState.noElements')}</p>

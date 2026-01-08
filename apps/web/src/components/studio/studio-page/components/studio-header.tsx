@@ -30,7 +30,7 @@ import {
   Moon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { StudioHeaderProps, DevicePreview } from "../types";
+import type { StudioHeaderProps, DevicePreview, PreviewTheme } from "../types";
 
 /**
  * StudioHeader - Header component for the studio page
@@ -44,6 +44,8 @@ export function StudioHeader({
   setSelectedPageId,
   devicePreview,
   setDevicePreview,
+  previewTheme,
+  setPreviewTheme,
   isLoadingPages,
   isLoadingElements,
   mobileMenuOpen,
@@ -120,8 +122,8 @@ export function StudioHeader({
 
         {/* Right section */}
         <div className="flex items-center gap-1">
-          {/* Theme toggle */}
-          <ThemeToggle />
+          {/* Preview theme toggle (isolated from dashboard theme) */}
+          <PreviewThemeToggle previewTheme={previewTheme} setPreviewTheme={setPreviewTheme} />
           
           <Button
             variant="ghost"
@@ -171,6 +173,8 @@ export function StudioHeader({
           currentPage={currentPage}
           devicePreview={devicePreview}
           setDevicePreview={setDevicePreview}
+          previewTheme={previewTheme}
+          setPreviewTheme={setPreviewTheme}
         />
       )}
     </>
@@ -252,11 +256,15 @@ function MobileMenu({
   currentPage,
   devicePreview,
   setDevicePreview,
+  previewTheme,
+  setPreviewTheme,
 }: {
   website: { slug: string | null };
   currentPage: { slug: string; is_homepage: boolean } | null;
   devicePreview: DevicePreview;
   setDevicePreview: (device: DevicePreview) => void;
+  previewTheme: PreviewTheme;
+  setPreviewTheme: (theme: PreviewTheme) => void;
 }) {
   const { t } = useTranslation(['common', 'editor']);
   return (
@@ -315,27 +323,68 @@ function MobileMenu({
         </Button>
       )}
       
-      {/* Theme toggle for mobile */}
-      <MobileThemeToggle />
+      {/* Preview theme toggle for mobile */}
+      <MobilePreviewThemeToggle previewTheme={previewTheme} setPreviewTheme={setPreviewTheme} />
     </div>
   );
 }
 
 /**
- * MobileThemeToggle - Theme toggle button with label for mobile menu
+ * PreviewThemeToggle - Toggle button for preview dark/light mode (isolated from dashboard)
  */
-function MobileThemeToggle() {
-  const { t } = useTranslation(['common']);
-  const [isDark, setIsDark] = React.useState(false);
-
-  React.useEffect(() => {
-    setIsDark(document.documentElement.classList.contains('dark'));
-  }, []);
+function PreviewThemeToggle({
+  previewTheme,
+  setPreviewTheme,
+}: {
+  previewTheme: PreviewTheme;
+  setPreviewTheme: (theme: PreviewTheme) => void;
+}) {
+  const { t } = useTranslation(['editor']);
+  const isDark = previewTheme === 'dark';
 
   const toggleTheme = () => {
-    const newIsDark = !isDark;
-    setIsDark(newIsDark);
-    document.documentElement.classList[newIsDark ? 'add' : 'remove']('dark');
+    setPreviewTheme(isDark ? 'light' : 'dark');
+  };
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTheme}
+          className="h-9 w-9"
+          aria-label={isDark ? t('editor:preview.lightMode') : t('editor:preview.darkMode')}
+        >
+          {isDark ? (
+            <Sun className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <Moon className="h-4 w-4" aria-hidden="true" />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        {isDark ? t('editor:preview.lightMode') : t('editor:preview.darkMode')}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+/**
+ * MobilePreviewThemeToggle - Preview theme toggle button with label for mobile menu
+ */
+function MobilePreviewThemeToggle({
+  previewTheme,
+  setPreviewTheme,
+}: {
+  previewTheme: PreviewTheme;
+  setPreviewTheme: (theme: PreviewTheme) => void;
+}) {
+  const { t } = useTranslation(['editor']);
+  const isDark = previewTheme === 'dark';
+
+  const toggleTheme = () => {
+    setPreviewTheme(isDark ? 'light' : 'dark');
   };
 
   return (
@@ -348,56 +397,15 @@ function MobileThemeToggle() {
       {isDark ? (
         <>
           <Sun className="h-4 w-4 mr-1.5" aria-hidden="true" />
-          {t('common:theme.light')}
+          {t('editor:preview.lightMode')}
         </>
       ) : (
         <>
           <Moon className="h-4 w-4 mr-1.5" aria-hidden="true" />
-          {t('common:theme.dark')}
+          {t('editor:preview.darkMode')}
         </>
       )}
     </Button>
-  );
-}
-
-/**
- * ThemeToggle - Toggle button for dark/light mode
- */
-function ThemeToggle() {
-  const { t } = useTranslation(['common']);
-  const [isDark, setIsDark] = React.useState(false);
-
-  React.useEffect(() => {
-    setIsDark(document.documentElement.classList.contains('dark'));
-  }, []);
-
-  const toggleTheme = () => {
-    const newIsDark = !isDark;
-    setIsDark(newIsDark);
-    document.documentElement.classList[newIsDark ? 'add' : 'remove']('dark');
-  };
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleTheme}
-          className="h-9 w-9"
-          aria-label={isDark ? t('common:theme.light') : t('common:theme.dark')}
-        >
-          {isDark ? (
-            <Sun className="h-4 w-4" aria-hidden="true" />
-          ) : (
-            <Moon className="h-4 w-4" aria-hidden="true" />
-          )}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>
-        {isDark ? t('common:theme.light') : t('common:theme.dark')}
-      </TooltipContent>
-    </Tooltip>
   );
 }
 

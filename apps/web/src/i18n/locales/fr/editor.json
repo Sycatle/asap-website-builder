@@ -9,6 +9,10 @@
     "settings": "Paramètres",
     "help": "Aide"
   },
+  "preview": {
+    "lightMode": "Prévisualiser en mode clair",
+    "darkMode": "Prévisualiser en mode sombre"
+  },
   "sidebar": {
     "pages": "Pages",
     "components": "Composants",

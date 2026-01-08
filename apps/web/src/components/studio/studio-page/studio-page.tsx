@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/resizable"
 import { StudioDataProvider } from "../data-binding"
 
-import type { DevicePreview, StudioPageProps } from "./types"
+import type { DevicePreview, PreviewTheme, StudioPageProps } from "./types"
 import { useIsMobile } from "./hooks"
 import { StudioHeader } from "./components/studio-header"
 import { ElementList } from "./components/element-list"
@@ -92,6 +92,7 @@ export function StudioPage({ onBack }: StudioPageProps) {
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null)
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null)
   const [devicePreview, setDevicePreview] = useState<DevicePreview>('desktop')
+  const [previewTheme, setPreviewTheme] = useState<PreviewTheme>('light')
   const [leftPanelOpen, setLeftPanelOpen] = useState(true)
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -244,6 +245,8 @@ export function StudioPage({ onBack }: StudioPageProps) {
           setSelectedPageId={setSelectedPageId}
           devicePreview={devicePreview}
           setDevicePreview={setDevicePreview}
+          previewTheme={previewTheme}
+          setPreviewTheme={setPreviewTheme}
           isLoadingPages={isLoadingPages}
           isLoadingElements={isLoadingElements}
           mobileMenuOpen={mobileMenuOpen}
@@ -282,6 +285,7 @@ export function StudioPage({ onBack }: StudioPageProps) {
               <PreviewCanvas
                 elements={elements}
                 devicePreview={devicePreview}
+                previewTheme={previewTheme}
                 selectedElementId={selectedElementId}
                 isMobile={isMobile}
                 leftPanelOpen={leftPanelOpen}
@@ -320,6 +324,7 @@ export function StudioPage({ onBack }: StudioPageProps) {
           <PreviewCanvas
             elements={elements}
             devicePreview={devicePreview}
+            previewTheme={previewTheme}
             selectedElementId={selectedElementId}
             isMobile={isMobile}
             leftPanelOpen={leftPanelOpen}
