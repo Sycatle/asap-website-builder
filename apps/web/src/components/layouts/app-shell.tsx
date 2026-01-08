@@ -5,10 +5,8 @@ import { AsapSidebar } from "@/components/layouts/asap-sidebar"
 import { BottomNav } from "@/components/layouts/bottom-nav"
 import { SidebarProvider, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
-import { Input } from "@/components/ui/input"
 import { Kbd } from "@/components/ui/kbd"
 import { WebsiteProvider, useWebsiteContext } from "@/contexts/WebsiteContext"
-import { HeaderUser } from "@/components/layouts/header-user"
 import { useKeyboardShortcuts, getModifierKey } from "@/hooks/useKeyboardShortcuts"
 import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket"
 import { useSyncWebSocket } from "@/hooks/useSyncWebSocket"
@@ -20,17 +18,24 @@ import {
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
 } from "@/components/ui/responsive-dialog"
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Keyboard, Search } from "lucide-react"
+import { Keyboard, Search, Bot, Settings, Rocket, Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SkipLink } from "@/components/ui/accessibility"
 import { PresenceAvatars } from "@/components/shared/presence-avatars"
 import { CommandPalette, CommandPaletteProvider, useCommandPalette } from "@/components/shared/command-palette"
+import { GlobalAIChatPanel } from "@/components/shared/global-ai-chat-panel"
+import { AIChatProvider, useAIChat } from "@/contexts/AIChatContext"
 
 interface AppShellProps {
   children: React.ReactNode
@@ -76,22 +81,24 @@ export function AppShell({
 
   return (
     <WebsiteProvider websiteId={websiteId}>
-      <CommandPaletteProvider>
-        <SidebarProvider defaultOpen={!isStudioPage && showSidebar}>
-          <AppShellContent 
-            title={title} 
-            breadcrumbs={breadcrumbs}
-            showShortcutsHelp={showShortcutsHelp}
-            setShowShortcutsHelp={setShowShortcutsHelp}
-            isStudioPage={isStudioPage}
-            showSidebar={showSidebar}
-            websiteId={websiteId}
-            currentPage={currentPage}
-          >
-            {children}
-          </AppShellContent>
-        </SidebarProvider>
-      </CommandPaletteProvider>
+      <AIChatProvider>
+        <CommandPaletteProvider>
+          <SidebarProvider defaultOpen={!isStudioPage && showSidebar}>
+            <AppShellContent 
+              title={title} 
+              breadcrumbs={breadcrumbs}
+              showShortcutsHelp={showShortcutsHelp}
+              setShowShortcutsHelp={setShowShortcutsHelp}
+              isStudioPage={isStudioPage}
+              showSidebar={showSidebar}
+              websiteId={websiteId}
+              currentPage={currentPage}
+            >
+              {children}
+            </AppShellContent>
+          </SidebarProvider>
+        </CommandPaletteProvider>
+      </AIChatProvider>
     </WebsiteProvider>
   )
 }
@@ -124,6 +131,9 @@ function AppShellContent({
   const { toggleSidebar, setOpen, open } = useSidebar()
   const [pendingGoTo, setPendingGoTo] = useState(false)
   const previousSidebarStateRef = React.useRef<boolean | null>(null)
+  
+  // AI Chat state
+  const { isOpen: isAIChatOpen, toggle: toggleAIChat, close: closeAIChat, setPanelSize } = useAIChat()
   
   // Build shortcuts with translated descriptions
   const shortcuts = [
@@ -271,22 +281,44 @@ function AppShellContent({
       )}
       <SidebarInset className={isStudioPage ? "overflow-hidden" : undefined}>
         <SkipLink targetId="main-content" />
-        <header className="sticky top-0 z-40 flex h-14 sm:h-16 shrink-0 items-center gap-2 sm:gap-3 border-b bg-background px-3 sm:px-4" role="banner">
-          {/* Left section: Sidebar trigger */}
-          {showSidebar && (
-            <>
-              <SidebarTrigger className="-ml-1" />
-              <Separator orientation="vertical" className="h-4 hidden sm:block" />
-            </>
-          )}
+        <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-3 sm:px-4" role="banner">
+          {/* Left section: Sidebar trigger + AI Chat toggle */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {showSidebar && (
+              <SidebarTrigger className="-ml-1 h-8 w-8" />
+            )}
+            
+            {/* AI Assistant toggle */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "h-8 w-8 hidden sm:inline-flex",
+                    isAIChatOpen 
+                      ? "bg-primary/10 text-primary hover:bg-primary/20" 
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  onClick={toggleAIChat}
+                >
+                  <Bot className="h-4 w-4" />
+                  <span className="sr-only">{t('navigation.aiAssistant', { defaultValue: 'AI Assistant' })}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>{t('navigation.aiAssistant', { defaultValue: 'AI Assistant' })}</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
           
-          {/* Center section: Search trigger - hidden on mobile (available in bottom nav) */}
-          <div className="flex-1 flex items-center min-w-0">
+          {/* Center section: Search trigger - centered and hidden on mobile */}
+          <div className="flex-1 flex items-center justify-center min-w-0">
             <button 
               onClick={() => setCommandOpen(true)}
               className="relative w-full max-w-md group hidden sm:block"
             >
-              <div className="flex items-center gap-2 w-full bg-muted/50 hover:bg-muted/70 rounded-md px-3 h-9 text-sm text-muted-foreground transition-colors cursor-pointer">
+              <div className="flex items-center gap-2 w-full bg-muted/50 hover:bg-muted/70 rounded-md px-3 h-8 text-sm text-muted-foreground transition-colors cursor-pointer">
                 <Search className="h-4 w-4 shrink-0" />
                 <span className="flex-1 text-left truncate">{t('navigation.searchPlaceholder')}</span>
                 <Kbd className="hidden sm:inline-flex">
@@ -300,51 +332,124 @@ function AppShellContent({
             </span>
           </div>
           
-          {/* Right section: Actions - hidden on mobile (available in bottom nav) */}
-          <div className="hidden sm:flex items-center gap-1 sm:gap-2 shrink-0">
-            {/* Keyboard shortcuts - desktop only */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                  onClick={() => setShowShortcutsHelp(true)}
-                >
-                  <Keyboard className="h-4 w-4" />
-                  <span className="sr-only">{t('navigation.keyboardShortcuts')}</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>{t('navigation.keyboardShortcuts')} <Kbd className="ml-1">?</Kbd></p>
-              </TooltipContent>
-            </Tooltip>
-            
-            {/* Real-time presence avatars */}
+          {/* Right section: Presence, Settings, Studio, Publish */}
+          <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+            {/* Real-time presence avatars - only renders when there are other users */}
             {currentWebsiteId && (
               <PresenceAvatars 
                 websiteId={currentWebsiteId} 
                 currentPage={currentPage}
-                maxAvatars={2}
+                maxAvatars={3}
                 size="sm"
               />
             )}
             
-            {/* User menu */}
-            <HeaderUser />
+            {/* Settings button */}
+            {currentWebsiteId && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    onClick={() => navigate(`/${currentWebsiteId}/settings`)}
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span className="sr-only">{t('navigation.settings')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>{t('navigation.settings')}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            
+            {/* Studio button */}
+            {currentWebsiteId && !isStudioPage && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-2 px-3"
+                    onClick={() => navigate(`/${currentWebsiteId}/studio`)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    <span className="hidden lg:inline">Studio</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Studio</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            
+            {/* Publish button - rightmost */}
+            {currentWebsiteId && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="h-8 gap-2 px-3"
+                    onClick={() => navigate(`/${currentWebsiteId}/settings`)}
+                  >
+                    <Rocket className="h-4 w-4" />
+                    <span className="hidden lg:inline">{t('actions.publish', { defaultValue: 'Publish' })}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>{t('actions.publish', { defaultValue: 'Publish' })}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </header>
-        <main
-          id="main-content"
-          role="main"
-          tabIndex={-1}
-          className={cn(
-            "flex-1 focus:outline-none",
-            isStudioPage ? "p-0 overflow-hidden" : "px-3 sm:px-4 md:px-6 pt-2 sm:pt-3 md:pt-4 pb-20 md:pb-6 overflow-auto"
-          )}
-        >
-          {children}
-        </main>
+        
+        {/* Main content area - with optional AI Chat panel */}
+        {isAIChatOpen ? (
+          <ResizablePanelGroup direction="horizontal" className="flex-1">
+            {/* AI Chat Panel */}
+            <ResizablePanel 
+              defaultSize={isStudioPage ? 35 : 30} 
+              minSize={20} 
+              maxSize={isStudioPage ? 50 : 45}
+              className="bg-background border-r hidden sm:block"
+              onResize={(size) => setPanelSize(size)}
+            >
+              <GlobalAIChatPanel onClose={closeAIChat} />
+            </ResizablePanel>
+
+            <ResizableHandle withHandle className="hidden sm:flex" />
+
+            {/* Main Content */}
+            <ResizablePanel defaultSize={isStudioPage ? 65 : 70} minSize={isStudioPage ? 40 : 55}>
+              <main
+                id="main-content"
+                role="main"
+                tabIndex={-1}
+                className={cn(
+                  "h-full focus:outline-none overflow-auto",
+                  isStudioPage ? "p-0 overflow-hidden" : "px-3 sm:px-4 md:px-6 pb-20 md:pb-6"
+                )}
+              >
+                {children}
+              </main>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        ) : (
+          <main
+            id="main-content"
+            role="main"
+            tabIndex={-1}
+            className={cn(
+              "flex-1 focus:outline-none",
+              isStudioPage ? "p-0 overflow-hidden" : "px-3 sm:px-4 md:px-6 pt-2 sm:pt-3 md:pt-4 pb-20 md:pb-6 overflow-auto"
+            )}
+          >
+            {children}
+          </main>
+        )}
       </SidebarInset>
       
       {/* Bottom Navigation - Mobile only */}
