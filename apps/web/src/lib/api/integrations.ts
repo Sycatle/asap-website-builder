@@ -28,7 +28,7 @@ export interface IntegrationWebsiteData {
   source?: string;
   projects?: GitHubProject[];
   generated_at?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export const integrationsAPI = {

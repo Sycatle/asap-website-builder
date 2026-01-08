@@ -196,12 +196,13 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
             lastFetchTime: Date.now(),
           });
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error('Failed to load user data:', error);
           
           // Handle auth errors - clear local state but DON'T redirect
           // (app-router handles the redirect to avoid loops)
-          if (error?.status === 401 || error?.status === 403) {
+          const apiError = error as { status?: number; message?: string };
+          if (apiError?.status === 401 || apiError?.status === 403) {
             authAPI.logout();
             set({ 
               user: null, 
@@ -215,7 +216,7 @@ export const useAuthStore = create<AuthState>()(
           }
 
           set({
-            error: error?.message || 'Failed to load user data',
+            error: apiError?.message || 'Failed to load user data',
             isLoading: false,
           });
         }

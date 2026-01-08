@@ -451,14 +451,15 @@ export type SyncEvent =
 // Type Guards
 // ============================================
 
-export function isSyncEvent(event: any): event is SyncEvent {
+export function isSyncEvent(event: unknown): event is SyncEvent {
   return (
-    event &&
+    event !== null &&
     typeof event === 'object' &&
     'type' in event &&
     'data' in event &&
-    typeof event.type === 'string' &&
-    (event.type.startsWith('sync:') || event.type.startsWith('presence:'))
+    typeof (event as Record<string, unknown>).type === 'string' &&
+    (((event as Record<string, unknown>).type as string).startsWith('sync:') || 
+     ((event as Record<string, unknown>).type as string).startsWith('presence:'))
   );
 }
 
@@ -490,11 +491,11 @@ export function isPresenceEvent(event: SyncEvent): event is WebsitePresenceEvent
 // Parser
 // ============================================
 
-export function parseSyncEvent(message: any): SyncEvent | null {
+export function parseSyncEvent(message: unknown): SyncEvent | null {
   if (!isSyncEvent(message)) {
     return null;
   }
-  return message as SyncEvent;
+  return message;
 }
 
 // ============================================
