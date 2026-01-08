@@ -13,6 +13,50 @@
     "lightMode": "Preview in light mode",
     "darkMode": "Preview in dark mode"
   },
+  "browser": {
+    "back": "Back",
+    "forward": "Forward",
+    "refresh": "Refresh",
+    "copyUrl": "Copy URL",
+    "openExternal": "Open in new tab"
+  },
+  "ai": {
+    "title": "AI Assistant",
+    "placeholder": "Describe the changes you want to make...",
+    "hint": "Press Enter to send, Shift+Enter for new line",
+    "thinking": "Thinking...",
+    "comingSoon": "AI assistant is coming soon! For now, use the preview to see your site.",
+    "clearChat": "Clear conversation",
+    "history": "History",
+    "settings": "Settings",
+    "send": "Send message",
+    "trySaying": "Try saying...",
+    "welcome": {
+      "title": "How can I help?",
+      "description": "Describe what you want to change and I'll update your site in real-time."
+    },
+    "actions": {
+      "addSection": "Add section",
+      "changeColors": "Colors",
+      "editText": "Edit text",
+      "addImage": "Add image",
+      "changeLayout": "Layout"
+    },
+    "suggestions": {
+      "hero": {
+        "title": "Update the hero section",
+        "description": "\"Make the headline more impactful\""
+      },
+      "theme": {
+        "title": "Change the color scheme",
+        "description": "\"Use a dark theme with blue accents\""
+      },
+      "content": {
+        "title": "Edit the content",
+        "description": "\"Rewrite the about section to be more professional\""
+      }
+    }
+  },
   "sidebar": {
     "pages": "Pages",
     "components": "Components",

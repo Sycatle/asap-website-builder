@@ -13,6 +13,50 @@
     "lightMode": "Prévisualiser en mode clair",
     "darkMode": "Prévisualiser en mode sombre"
   },
+  "browser": {
+    "back": "Retour",
+    "forward": "Suivant",
+    "refresh": "Actualiser",
+    "copyUrl": "Copier l'URL",
+    "openExternal": "Ouvrir dans un nouvel onglet"
+  },
+  "ai": {
+    "title": "Assistant IA",
+    "placeholder": "Décrivez les modifications que vous souhaitez...",
+    "hint": "Entrée pour envoyer, Maj+Entrée pour nouvelle ligne",
+    "thinking": "Réflexion en cours...",
+    "comingSoon": "L'assistant IA arrive bientôt ! En attendant, utilisez l'aperçu pour voir votre site.",
+    "clearChat": "Effacer la conversation",
+    "history": "Historique",
+    "settings": "Paramètres",
+    "send": "Envoyer le message",
+    "trySaying": "Essayez de dire...",
+    "welcome": {
+      "title": "Comment puis-je vous aider ?",
+      "description": "Décrivez ce que vous voulez modifier et je mettrai à jour votre site en temps réel."
+    },
+    "actions": {
+      "addSection": "Ajouter section",
+      "changeColors": "Couleurs",
+      "editText": "Modifier texte",
+      "addImage": "Ajouter image",
+      "changeLayout": "Mise en page"
+    },
+    "suggestions": {
+      "hero": {
+        "title": "Modifier la section hero",
+        "description": "\"Rends le titre plus impactant\""
+      },
+      "theme": {
+        "title": "Changer les couleurs",
+        "description": "\"Utilise un thème sombre avec des accents bleus\""
+      },
+      "content": {
+        "title": "Modifier le contenu",
+        "description": "\"Réécris la section À propos de façon plus professionnelle\""
+      }
+    }
+  },
   "sidebar": {
     "pages": "Pages",
     "components": "Composants",
