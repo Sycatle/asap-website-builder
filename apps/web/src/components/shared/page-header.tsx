@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useSidebar } from "@/components/ui/sidebar"
+import { useAIChat } from "@/contexts/AIChatContext"
 
 interface PageHeaderAction {
   label: string
@@ -73,6 +74,7 @@ export function PageHeader({
   const sentinelRef = useRef<HTMLDivElement>(null)
   const [isSticky, setIsSticky] = useState(false)
   const { state } = useSidebar()
+  const { isOpen: isAIChatOpen, panelSize } = useAIChat()
 
   // Use Intersection Observer to detect when header leaves viewport
   useEffect(() => {
@@ -143,7 +145,11 @@ export function PageHeader({
       <div ref={sentinelRef} className="h-0 w-full" aria-hidden="true" />
 
       {/* Main Header - Normal flow */}
-      <div ref={headerRef} className={cn("relative mb-4 sm:mb-0", className)}>
+      <div ref={headerRef} className={cn(
+        "relative",
+        isAIChatOpen ? "pt-3 sm:pt-4" : "mb-4 sm:mb-6",
+        className
+      )}>
         {/* Back button - Mobile: icon only, Desktop: with label */}
         {showBackButton && (
           <div className="mb-2 sm:mb-3">
@@ -250,16 +256,29 @@ export function PageHeader({
       </div>
 
       {/* Fixed Header - Appears when main header scrolls out */}
-    <div 
+      {/* Always use fixed positioning, adjust left based on sidebar and AI chat state */}
+    <header 
       className={cn(
-        "fixed top-14 sm:top-16 left-0 right-0 z-30 transition-all duration-200",
-        state === "expanded" ? "md:left-[var(--sidebar-width)]" : "md:left-[var(--sidebar-width-icon)]",
+        "fixed top-14 z-30 h-14 transition-[transform,opacity] duration-200",
+        // Left offset based on sidebar state (AI chat offset is handled via inline style)
+        !isAIChatOpen && (state === "expanded" 
+          ? "md:left-[var(--sidebar-width)] left-0 right-0" 
+          : "md:left-[var(--sidebar-width-icon)] left-0 right-0"),
         isSticky 
-        ? "bg-background/[0.90] backdrop-blur-xl border-b shadow-sm translate-y-0 opacity-100" 
-        : "bg-transparent -translate-y-full opacity-0 pointer-events-none"
+          ? "bg-background/80 backdrop-blur-sm border-b translate-y-0 opacity-100" 
+          : "bg-transparent -translate-y-full opacity-0 pointer-events-none"
       )}
+      style={isAIChatOpen ? {
+        // Dynamic left calculation: sidebar + panelSize% of (viewport - sidebar)
+        // panelSize is % of the ResizablePanelGroup, which is (100vw - sidebar)
+        // Add small offset to avoid overlapping with chat panel border
+        left: state === "expanded" 
+          ? `calc(var(--sidebar-width) + (100vw - var(--sidebar-width)) * ${panelSize / 100} + 1px)` 
+          : `calc(var(--sidebar-width-icon) + (100vw - var(--sidebar-width-icon)) * ${panelSize / 100} + 1px)`,
+        right: 0
+      } : undefined}
     >
-      <div className="px-3 sm:px-4 md:px-6 h-11 sm:h-12 flex items-center w-full">
+      <div className="px-4 h-full flex items-center w-full">
         {/* Back button - Always visible if enabled */}
         {showBackButton && (
           <div className="mr-2 sm:mr-3 shrink-0">
@@ -357,7 +376,7 @@ export function PageHeader({
         </div>
         )}
       </div>
-    </div>
+    </header>
     </>
   )
 }
