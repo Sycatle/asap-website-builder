@@ -9,7 +9,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { SectionRenderer } from "../../section-renderers";
-import { PreviewProvider } from "../../PreviewContext";
+import { PreviewProvider } from "../../preview-context";
 import { PreviewFrame } from "./preview-frame";
 import {
   Globe,

@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useEffect, useState, type ComponentType } from "
 import { AppShell } from "./layouts/app-shell"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { QueryProvider, WebSocketProvider, I18nProvider } from "@/components/providers"
-import { ErrorBoundary } from "@/components/shared/ErrorBoundary"
+import { ErrorBoundary } from "@/components/shared"
 import { Spinner } from "@/components/ui/spinner"
 import { RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -42,7 +42,7 @@ const StudioPage = lazyWithRetry(() => import("@/components/studio/studio-page")
 const PagesPage = lazyWithRetry(() => import("@/components/features/pages/pages-page"))
 const AdministratorsPage = lazyWithRetry(() => import("@/components/features/settings/AdministratorsPage"))
 const ThemePage = lazyWithRetry(() => import("@/components/features/settings/ThemePage"))
-const WebsiteSelector = lazyWithRetry(() => import("@/components/pages/WebsiteSelector"))
+const WebsiteSelector = lazyWithRetry(() => import("@/components/pages/website-selector"))
 const AnalyticsPage = lazyWithRetry(() => import("@/components/features/analytics/analytics-page"))
 const SeoPage = lazyWithRetry(() => import("@/components/features/seo/SeoPage"))
 const NotificationsPage = lazyWithRetry(() => import("@/components/features/notifications"))
