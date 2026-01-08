@@ -13,7 +13,7 @@ export function ConversionsCard({ realtimeData, prevData }: ConversionsCardProps
   const { t } = useTranslation(['common', 'dashboard']);
 
   return (
-    <Card className="lg:col-span-5 shadow-sm">
+    <Card className="lg:col-span-5 shadow-sm hover:shadow-md transition-shadow">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Target className="h-4 w-4 text-violet-500" />

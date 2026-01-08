@@ -57,7 +57,7 @@ export function WeeklyGoalsCard({
   ];
 
   return (
-    <Card className="lg:col-span-4">
+    <Card className="lg:col-span-4 shadow-sm hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">

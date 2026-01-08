@@ -22,9 +22,9 @@ export function QuickActions({ websiteId, pagesCount, enabledExtensionsCount }: 
   const { t } = useTranslation(['common', 'dashboard']);
 
   return (
-    <Card className="shadow-sm">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-hide">
+    <Card className="shadow-sm border-dashed bg-card/50">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-1 scrollbar-hide">
           <Link
             href={`/${websiteId}/studio`}
             className="group flex items-center gap-2.5 px-4 py-2.5 rounded-full border bg-card hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all shrink-0"

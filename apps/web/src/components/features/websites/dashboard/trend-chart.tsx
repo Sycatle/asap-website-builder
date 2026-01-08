@@ -34,7 +34,7 @@ export function TrendChart({ websiteId, trendData }: TrendChartProps) {
   } satisfies ChartConfig;
 
   return (
-    <Card className="lg:col-span-7 shadow-sm">
+    <Card className="lg:col-span-7 shadow-sm hover:shadow-md transition-shadow">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">

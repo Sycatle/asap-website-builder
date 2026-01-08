@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { useFilesQuery } from "@/lib/query";
+import { useWebsiteFilesQuery } from "@/lib/query";
 import { formatBytes } from "@/lib/utils/formatters";
 import { getAuthenticatedFileUrl } from "./utils";
 import { isImage, getFileIcon } from "@/components/shared/file-utils";
@@ -34,7 +34,7 @@ export function CloudPreviewCard({
   storagePercentage 
 }: CloudPreviewCardProps) {
   const { t } = useTranslation(['common', 'dashboard']);
-  const { data: files = [], isLoading } = useFilesQuery();
+  const { data: files = [], isLoading } = useWebsiteFilesQuery(websiteId);
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
 
   // Get recent files (last 8)
@@ -62,7 +62,7 @@ export function CloudPreviewCard({
   }
 
   return (
-    <Card>
+    <Card className="shadow-sm hover:shadow-md transition-shadow h-full">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">

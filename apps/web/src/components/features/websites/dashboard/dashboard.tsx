@@ -197,7 +197,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col gap-6 sm:gap-8 animate-fade-in">
+    <div className="flex flex-col gap-8 animate-fade-in">
       {/* Page Header with sticky behavior */}
       <PageHeader
         title={website?.title || t('dashboard:dashboard.mySite')}
@@ -246,47 +246,53 @@ export default function Dashboard() {
         }
       />
 
-      {/* Stats en temps réel */}
-      <StatsCards 
-        realtimeData={realtimeData} 
-        prevData={prevDataRef.current} 
-      />
-
-      {/* Graphique + Conversions */}
-      <div className="grid gap-4 lg:grid-cols-12">
-        <TrendChart 
-          websiteId={currentWebsiteId || ''} 
-          trendData={trendData} 
-        />
-        <ConversionsCard 
+      {/* Section 1: Stats en temps réel + Graphique + Conversions */}
+      <section className="space-y-4">
+        <StatsCards 
           realtimeData={realtimeData} 
           prevData={prevDataRef.current} 
         />
-      </div>
+        
+        <div className="grid gap-4 lg:grid-cols-12">
+          <TrendChart 
+            websiteId={currentWebsiteId || ''} 
+            trendData={trendData} 
+          />
+          <ConversionsCard 
+            realtimeData={realtimeData} 
+            prevData={prevDataRef.current} 
+          />
+        </div>
+      </section>
 
-      {/* Actions rapides */}
+      {/* Section 2: Actions rapides */}
       <QuickActions 
         websiteId={currentWebsiteId || ''} 
         pagesCount={pages.length} 
         enabledExtensionsCount={enabledExtensionsCount} 
       />
 
-      {/* Cloud & Médias */}
-      <CloudPreviewCard 
-        websiteId={currentWebsiteId || ''} 
-        storageUsed={storageUsed}
-        storageLimit={storageLimit}
-        storagePercentage={storagePercentage}
-      />
+      {/* Section 3: Grid principal - Cloud + Team + Activity */}
+      <section className="grid gap-4 lg:grid-cols-12">
+        {/* Cloud - Takes more space */}
+        <div className="lg:col-span-5">
+          <CloudPreviewCard 
+            websiteId={currentWebsiteId || ''} 
+            storageUsed={storageUsed}
+            storageLimit={storageLimit}
+            storagePercentage={storagePercentage}
+          />
+        </div>
+        
+        {/* Team + Activity side by side on large screens */}
+        <div className="lg:col-span-7 grid gap-4 md:grid-cols-2 lg:grid-cols-12">
+          <TeamCard websiteId={currentWebsiteId || ''} />
+          <RecentEventsCard websiteId={currentWebsiteId || ''} />
+        </div>
+      </section>
 
-      {/* Team + Activity */}
-      <div className="grid gap-4 lg:grid-cols-12">
-        <TeamCard websiteId={currentWebsiteId || ''} />
-        <RecentEventsCard websiteId={currentWebsiteId || ''} />
-      </div>
-
-      {/* Gamification */}
-      <div className="grid gap-4 lg:grid-cols-12">
+      {/* Section 4: Gamification - Progression + Goals + Achievements */}
+      <section className="grid gap-4 lg:grid-cols-12">
         <SiteProgressionCard 
           websiteId={currentWebsiteId || ''} 
           pagesCount={pages.length}
@@ -313,7 +319,7 @@ export default function Dashboard() {
           totalVisits={realtimeData.todayVisits * 30}
           newsletterSubs={realtimeData.newsletterSubs}
         />
-      </div>
+      </section>
     </div>
   );
 }
