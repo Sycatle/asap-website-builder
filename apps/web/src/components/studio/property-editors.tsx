@@ -785,7 +785,7 @@ export function GenericPropertyEditor({ element, onUpdate, isUpdating }: Propert
 // ============================================
 // Landing SaaS Property Editor (Schema-based)
 // ============================================
-import { LandingSaaSPropertyEditor } from "./LandingSaaSPropertyEditors"
+import { LandingSaaSPropertyEditor } from "./landing-saas-property-editors"
 import { getSectionSchema } from "@asap/shared"
 
 // Landing SaaS element types that use the schema-based editor

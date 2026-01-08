@@ -20,7 +20,7 @@ import {
   ContactPreview,
   GenericPreview,
   type ElementPreviewProps as SectionRendererProps,
-} from "./ElementPreviews"
+} from "./element-previews"
 
 // Export main component
 export { SectionRenderer }
