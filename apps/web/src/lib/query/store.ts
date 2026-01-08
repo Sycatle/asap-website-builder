@@ -403,9 +403,6 @@ export function useExtensionActions(
           queryKey: queryKeys.store.websiteExtensions(websiteId) 
         });
       }
-      
-      // Log success
-      console.log(`Action "${actionKey}" completed:`, result);
     },
   });
 

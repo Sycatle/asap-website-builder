@@ -19,8 +19,7 @@ vi.mock('@/lib/api/auth', () => ({
 
 vi.mock('@/lib/api/accounts', () => ({
   accountsAPI: {
-    me: vi.fn(),
-    getAccountData: vi.fn(),
+    getAccount: vi.fn(),
   },
 }));
 
@@ -176,25 +175,26 @@ describe('authStore', () => {
       useAuthStore.setState({
         userData: {
           id: 'user-1',
-          display_name: 'Test User',
-          bio: 'Original bio',
-        } as any,
+          email: 'test@example.com',
+          name: 'Test User',
+          plan: 'free',
+        },
       });
       
       act(() => {
-        useAuthStore.getState().updateUserData({ bio: 'Updated bio' });
+        useAuthStore.getState().updateUserData({ name: 'Updated Name' });
       });
       
       const state = useAuthStore.getState();
-      expect(state.userData?.display_name).toBe('Test User');
-      expect(state.userData?.bio).toBe('Updated bio');
+      expect(state.userData?.email).toBe('test@example.com');
+      expect(state.userData?.name).toBe('Updated Name');
     });
 
     it('should do nothing if userData is null', () => {
       useAuthStore.setState({ userData: null });
       
       act(() => {
-        useAuthStore.getState().updateUserData({ bio: 'New bio' });
+        useAuthStore.getState().updateUserData({ name: 'New Name' });
       });
       
       expect(useAuthStore.getState().userData).toBeNull();
@@ -261,7 +261,7 @@ describe('authStore', () => {
       });
       
       // Should not have called APIs since data is fresh
-      expect(accountsAPI.me).not.toHaveBeenCalled();
+      expect(accountsAPI.getAccount).not.toHaveBeenCalled();
     });
 
     it('should set isLoading during fetch', async () => {

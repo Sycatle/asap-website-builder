@@ -278,7 +278,6 @@ export default function AppRouter() {
       // First, check if tokens are passed in URL hash (from accounts app redirect)
       const hashTokens = extractTokensFromHash();
       if (hashTokens) {
-        console.log('[AppRouter] Found tokens in hash, storing...');
         localStorage.setItem('auth_token', hashTokens.accessToken);
         localStorage.setItem('refresh_token', hashTokens.refreshToken);
         // Clean up URL hash
@@ -286,7 +285,6 @@ export default function AppRouter() {
       }
       
       const token = localStorage.getItem('auth_token')
-      console.log('[AppRouter] Token check:', token ? 'found' : 'not found');
       
       if (!token) {
         redirectToLogin()
@@ -295,14 +293,11 @@ export default function AppRouter() {
       
       // Validate token with API
       try {
-        console.log('[AppRouter] Validating token with API...');
         const response = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/auth/me`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
         })
-        
-        console.log('[AppRouter] API response status:', response.status);
         
         if (response.ok) {
           setIsAuthenticated(true)
@@ -311,7 +306,6 @@ export default function AppRouter() {
           const refreshToken = localStorage.getItem('refresh_token')
           if (refreshToken) {
             try {
-              console.log('[AppRouter] Attempting token refresh...');
               const refreshResponse = await fetch(
                 `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/auth/refresh`,
                 {
@@ -334,7 +328,6 @@ export default function AppRouter() {
           }
           
           // Clear invalid tokens and redirect
-          console.log('[AppRouter] Clearing invalid tokens and redirecting...');
           localStorage.removeItem('auth_token')
           localStorage.removeItem('refresh_token')
           redirectToLogin()
@@ -381,7 +374,6 @@ export default function AppRouter() {
       const isAuthPath = authPaths.some(path => currentPathname.startsWith(path))
       
       const accountsUrl = getAccountsUrl()
-      console.log('[AppRouter] Redirecting to:', accountsUrl);
       
       if (isAuthPath) {
         window.location.href = `${accountsUrl}/login`

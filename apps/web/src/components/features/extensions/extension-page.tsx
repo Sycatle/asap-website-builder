@@ -402,12 +402,10 @@ function DataTab({ websiteId, extensionSlug }: DataTabProps) {
         // Load collections  
         try {
           const collectionsResponse = await collectionsAPI.list(websiteId);
-          console.log('[DataTab] Collections raw response:', collectionsResponse);
           // Handle different response formats
           const allCollections = Array.isArray(collectionsResponse) 
             ? collectionsResponse 
             : (collectionsResponse?.collections || []);
-          console.log('[DataTab] All collections:', allCollections);
           
           // Filter collections related to this extension
           const filtered = allCollections
@@ -418,7 +416,6 @@ function DataTab({ websiteId, extensionSlug }: DataTabProps) {
               const matches = source === extensionSlug || 
                      slug.startsWith(`${primaryPrefix}_`) ||
                      slug.startsWith(extensionSlug.replace('-', '_'));
-              console.log(`[DataTab] Collection ${slug}: source=${source}, matches=${matches}`);
               return matches;
             })
             .map((c: any) => ({
@@ -428,7 +425,6 @@ function DataTab({ websiteId, extensionSlug }: DataTabProps) {
               sync_status: c.sync_status || c.syncStatus,
               synced_at: c.synced_at || c.syncedAt,
             }));
-          console.log('[DataTab] Filtered collections:', filtered);
           setCollections(filtered);
         } catch (err) {
           console.error('[DataTab] Failed to load collections:', err);

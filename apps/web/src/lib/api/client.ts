@@ -183,10 +183,12 @@ export class APIClient {
           // Calculate backoff delay
           const delay = calculateBackoffDelay(retryCount);
           
-          console.log(
-            `[APIClient] Retry attempt ${retryCount + 1}/${RETRY_CONFIG.maxRetries} ` +
-            `for ${config.method?.toUpperCase()} ${config.url} after ${Math.round(delay)}ms`
-          );
+          if (import.meta.env.DEV) {
+            console.log(
+              `[APIClient] Retry attempt ${retryCount + 1}/${RETRY_CONFIG.maxRetries} ` +
+              `for ${config.method?.toUpperCase()} ${config.url} after ${Math.round(delay)}ms`
+            );
+          }
           
           // Wait before retrying
           await sleep(delay);
