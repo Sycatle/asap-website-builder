@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronsUpDown, Plus, CheckCircle2, Clock, Globe } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 import type { Website } from "@/lib/api"
-import { OnboardingModal } from "@/components/onboarding/OnboardingModal"
+import { OnboardingModal } from "@/components/onboarding/onboarding-modal"
 import { queryKeys } from "@/lib/query"
 import { useQueryClient } from "@tanstack/react-query"
 import { navigate } from "@/components/app-router"

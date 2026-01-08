@@ -64,7 +64,7 @@ import { fr } from 'date-fns/locale';
 import { Link } from '@/components/app-router';
 import { getExtensionIconConfig } from '@/lib/extension-icons';
 import { InstallButton } from './store/InstallButton';
-import SchemaRenderer from '@/components/SchemaRenderer';
+import SchemaRenderer from '@/components/schema-renderer';
 import { FormActions } from '@/components/ui/form-actions';
 import { Spinner } from '@/components/ui/spinner';
 import {
