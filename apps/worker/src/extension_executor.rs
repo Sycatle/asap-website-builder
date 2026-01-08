@@ -314,43 +314,60 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
         // Fetch repos from GitHub (using the github-sync extension)
         // Reuse the stored client to avoid TLS/connection overhead
         
-        // Fetch user profile, organizations and repos in parallel
-        let (user_result, orgs_result, repos) = tokio::join!(
+        // Fetch all data in parallel for efficiency
+        let (user_result, orgs_result, repos, events_result, gists_result, starred_result, readme_result, contributions_result) = tokio::join!(
             self.github_client.fetch_user(&github_username),
             self.github_client.fetch_orgs(&github_username),
-            self.github_client.fetch_repos(&github_username)
+            self.github_client.fetch_repos(&github_username),
+            self.github_client.fetch_events(&github_username),
+            self.github_client.fetch_gists(&github_username),
+            self.github_client.fetch_starred(&github_username, 50), // Limit to 50 starred repos
+            self.github_client.fetch_profile_readme(&github_username),
+            self.github_client.fetch_contributions(&github_username)
         );
 
         let repos = repos?;
         let user = user_result.ok();
-        let orgs = orgs_result.ok();
+        let orgs = orgs_result.unwrap_or_default();
+        let events = events_result.unwrap_or_default();
+        let gists = gists_result.unwrap_or_default();
+        let starred = starred_result.unwrap_or_default();
+        let profile_readme = readme_result.unwrap_or(None);
+        let contributions = contributions_result.ok();
 
-        tracing::info!("Fetched {} repositories from GitHub", repos.len());
+        tracing::info!(
+            "Fetched GitHub data: {} repos, {} events, {} orgs, {} gists, {} starred", 
+            repos.len(), events.len(), orgs.len(), gists.len(), starred.len()
+        );
 
         // Generate website content from repos, user profile and orgs
-        let website_content = asap_github_sync::generate_website_content(repos, user, orgs).await?;
+        let website_content = asap_github_sync::generate_website_content(repos.clone(), user.clone(), Some(orgs.clone())).await?;
 
         tracing::debug!("Generated website content");
 
-        // Find the user's website
-        let website: Option<(uuid::Uuid,)> = sqlx::query_as(
-            "SELECT id FROM websites WHERE account_id = $1 LIMIT 1"
-        )
-        .bind(event.account_id)
-        .fetch_optional(&self.pool)
-        .await?;
+        // Find the user's website (try from payload first, then fallback)
+        let website_id = if let Some(website_id_str) = event.payload.get("website_id").and_then(|v| v.as_str()) {
+            uuid::Uuid::parse_str(website_id_str)?
+        } else {
+            let website: Option<(uuid::Uuid,)> = sqlx::query_as(
+                "SELECT id FROM websites WHERE account_id = $1 LIMIT 1"
+            )
+            .bind(event.account_id)
+            .fetch_optional(&self.pool)
+            .await?;
 
-        let website_id = match website {
-            Some((id,)) => id,
-            None => {
-                return Err(anyhow::anyhow!(
-                    "No website found for account {}",
-                    event.account_id
-                ));
+            match website {
+                Some((id,)) => id,
+                None => {
+                    return Err(anyhow::anyhow!(
+                        "No website found for account {}",
+                        event.account_id
+                    ));
+                }
             }
         };
 
-        // Update website_data with the generated content
+        // Save to website_data (legacy support)
         sqlx::query(
             "UPDATE website_data SET data = data || $1 WHERE website_id = $2"
         )
@@ -358,6 +375,401 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
         .bind(website_id)
         .execute(&self.pool)
         .await?;
+
+        // Create repos collection using the github-sync extension helpers
+        let repos_collection = asap_github_sync::create_github_repos_collection(website_id, &repos, &github_username);
+        
+        // Upsert the repos collection into database
+        sqlx::query(
+            r#"
+            INSERT INTO website_collections 
+                (id, website_id, collection_slug, items, source_extension, source_version, total_count, sync_status, synced_at, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            ON CONFLICT (website_id, collection_slug) 
+            DO UPDATE SET 
+                items = EXCLUDED.items,
+                source_version = EXCLUDED.source_version,
+                total_count = EXCLUDED.total_count,
+                sync_status = EXCLUDED.sync_status,
+                synced_at = EXCLUDED.synced_at,
+                updated_at = EXCLUDED.updated_at
+            "#
+        )
+        .bind(repos_collection.id)
+        .bind(repos_collection.website_id)
+        .bind(&repos_collection.collection_slug)
+        .bind(serde_json::to_value(&repos_collection.items)?)
+        .bind(&repos_collection.source_extension)
+        .bind(&repos_collection.source_version)
+        .bind(repos_collection.total_count)
+        .bind("idle")
+        .bind(repos_collection.synced_at)
+        .bind(repos_collection.created_at)
+        .bind(repos_collection.updated_at)
+        .execute(&self.pool)
+        .await?;
+
+        tracing::info!("Saved github_repos collection with {} items", repos_collection.total_count);
+
+        // Create languages collection
+        let languages_collection = asap_github_sync::create_github_languages_collection(website_id, &repos);
+        
+        // Upsert the languages collection into database
+        sqlx::query(
+            r#"
+            INSERT INTO website_collections 
+                (id, website_id, collection_slug, items, source_extension, source_version, total_count, sync_status, synced_at, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            ON CONFLICT (website_id, collection_slug) 
+            DO UPDATE SET 
+                items = EXCLUDED.items,
+                source_version = EXCLUDED.source_version,
+                total_count = EXCLUDED.total_count,
+                sync_status = EXCLUDED.sync_status,
+                synced_at = EXCLUDED.synced_at,
+                updated_at = EXCLUDED.updated_at
+            "#
+        )
+        .bind(languages_collection.id)
+        .bind(languages_collection.website_id)
+        .bind(&languages_collection.collection_slug)
+        .bind(serde_json::to_value(&languages_collection.items)?)
+        .bind(&languages_collection.source_extension)
+        .bind(&languages_collection.source_version)
+        .bind(languages_collection.total_count)
+        .bind("idle")
+        .bind(languages_collection.synced_at)
+        .bind(languages_collection.created_at)
+        .bind(languages_collection.updated_at)
+        .execute(&self.pool)
+        .await?;
+
+        tracing::info!("Saved github_languages collection with {} items", languages_collection.total_count);
+
+        // Create gists collection
+        let gists_collection = asap_github_sync::create_github_gists_collection(website_id, &gists);
+        sqlx::query(
+            r#"
+            INSERT INTO website_collections 
+                (id, website_id, collection_slug, items, source_extension, source_version, total_count, sync_status, synced_at, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            ON CONFLICT (website_id, collection_slug) 
+            DO UPDATE SET 
+                items = EXCLUDED.items,
+                source_version = EXCLUDED.source_version,
+                total_count = EXCLUDED.total_count,
+                sync_status = EXCLUDED.sync_status,
+                synced_at = EXCLUDED.synced_at,
+                updated_at = EXCLUDED.updated_at
+            "#
+        )
+        .bind(gists_collection.id)
+        .bind(gists_collection.website_id)
+        .bind(&gists_collection.collection_slug)
+        .bind(serde_json::to_value(&gists_collection.items)?)
+        .bind(&gists_collection.source_extension)
+        .bind(&gists_collection.source_version)
+        .bind(gists_collection.total_count)
+        .bind("idle")
+        .bind(gists_collection.synced_at)
+        .bind(gists_collection.created_at)
+        .bind(gists_collection.updated_at)
+        .execute(&self.pool)
+        .await?;
+        tracing::info!("Saved github_gists collection with {} items", gists_collection.total_count);
+
+        // Create organizations collection
+        let orgs_collection = asap_github_sync::create_github_orgs_collection(website_id, &orgs);
+        sqlx::query(
+            r#"
+            INSERT INTO website_collections 
+                (id, website_id, collection_slug, items, source_extension, source_version, total_count, sync_status, synced_at, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            ON CONFLICT (website_id, collection_slug) 
+            DO UPDATE SET 
+                items = EXCLUDED.items,
+                source_version = EXCLUDED.source_version,
+                total_count = EXCLUDED.total_count,
+                sync_status = EXCLUDED.sync_status,
+                synced_at = EXCLUDED.synced_at,
+                updated_at = EXCLUDED.updated_at
+            "#
+        )
+        .bind(orgs_collection.id)
+        .bind(orgs_collection.website_id)
+        .bind(&orgs_collection.collection_slug)
+        .bind(serde_json::to_value(&orgs_collection.items)?)
+        .bind(&orgs_collection.source_extension)
+        .bind(&orgs_collection.source_version)
+        .bind(orgs_collection.total_count)
+        .bind("idle")
+        .bind(orgs_collection.synced_at)
+        .bind(orgs_collection.created_at)
+        .bind(orgs_collection.updated_at)
+        .execute(&self.pool)
+        .await?;
+        tracing::info!("Saved github_organizations collection with {} items", orgs_collection.total_count);
+
+        // Create starred repos collection
+        let starred_collection = asap_github_sync::create_github_starred_collection(website_id, &starred);
+        sqlx::query(
+            r#"
+            INSERT INTO website_collections 
+                (id, website_id, collection_slug, items, source_extension, source_version, total_count, sync_status, synced_at, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            ON CONFLICT (website_id, collection_slug) 
+            DO UPDATE SET 
+                items = EXCLUDED.items,
+                source_version = EXCLUDED.source_version,
+                total_count = EXCLUDED.total_count,
+                sync_status = EXCLUDED.sync_status,
+                synced_at = EXCLUDED.synced_at,
+                updated_at = EXCLUDED.updated_at
+            "#
+        )
+        .bind(starred_collection.id)
+        .bind(starred_collection.website_id)
+        .bind(&starred_collection.collection_slug)
+        .bind(serde_json::to_value(&starred_collection.items)?)
+        .bind(&starred_collection.source_extension)
+        .bind(&starred_collection.source_version)
+        .bind(starred_collection.total_count)
+        .bind("idle")
+        .bind(starred_collection.synced_at)
+        .bind(starred_collection.created_at)
+        .bind(starred_collection.updated_at)
+        .execute(&self.pool)
+        .await?;
+        tracing::info!("Saved github_starred collection with {} items", starred_collection.total_count);
+
+        // Compute and save repo-based variables
+        let repo_variables = asap_github_sync::compute_github_variables(&repos);
+        let now = chrono::Utc::now();
+
+        for (key, value) in &repo_variables {
+            sqlx::query(
+                r#"
+                INSERT INTO website_variables 
+                    (id, website_id, key, value, value_type, source, source_ref, stale, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                ON CONFLICT (website_id, key) 
+                DO UPDATE SET 
+                    value = EXCLUDED.value,
+                    source_ref = EXCLUDED.source_ref,
+                    stale = EXCLUDED.stale,
+                    updated_at = EXCLUDED.updated_at
+                "#
+            )
+            .bind(uuid::Uuid::new_v4())
+            .bind(website_id)
+            .bind(key)
+            .bind(value)
+            .bind(if value.is_number() { "number" } else { "string" })
+            .bind("extension")
+            .bind("github-sync")
+            .bind(false)
+            .bind(now)
+            .bind(now)
+            .execute(&self.pool)
+            .await?;
+        }
+
+        // Save profile variables using compute_profile_variables
+        if let Some(ref user_data) = user {
+            // Save complete profile as JSON
+            let profile_value = serde_json::json!({
+                "username": user_data["login"].as_str().unwrap_or(""),
+                "name": user_data["name"].as_str(),
+                "avatar_url": user_data["avatar_url"].as_str().unwrap_or(""),
+                "gravatar_id": user_data["gravatar_id"].as_str(),
+                "bio": user_data["bio"].as_str(),
+                "company": user_data["company"].as_str(),
+                "location": user_data["location"].as_str(),
+                "blog": user_data["blog"].as_str(),
+                "twitter": user_data["twitter_username"].as_str(),
+                "email": user_data["email"].as_str(),
+                "hireable": user_data["hireable"].as_bool(),
+                "public_repos": user_data["public_repos"].as_u64().unwrap_or(0),
+                "public_gists": user_data["public_gists"].as_u64().unwrap_or(0),
+                "followers": user_data["followers"].as_u64().unwrap_or(0),
+                "following": user_data["following"].as_u64().unwrap_or(0),
+                "url": user_data["html_url"].as_str().unwrap_or(""),
+                "created_at": user_data["created_at"].as_str(),
+                "updated_at": user_data["updated_at"].as_str(),
+            });
+
+            sqlx::query(
+                r#"
+                INSERT INTO website_variables 
+                    (id, website_id, key, value, value_type, source, source_ref, stale, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                ON CONFLICT (website_id, key) 
+                DO UPDATE SET 
+                    value = EXCLUDED.value,
+                    source_ref = EXCLUDED.source_ref,
+                    stale = EXCLUDED.stale,
+                    updated_at = EXCLUDED.updated_at
+                "#
+            )
+            .bind(uuid::Uuid::new_v4())
+            .bind(website_id)
+            .bind("github_profile")
+            .bind(&profile_value)
+            .bind("json")
+            .bind("extension")
+            .bind("github-sync")
+            .bind(false)
+            .bind(now)
+            .bind(now)
+            .execute(&self.pool)
+            .await?;
+
+            // Save individual profile variables for easy access in templates
+            let profile_variables = asap_github_sync::compute_profile_variables(user_data);
+            for (key, value) in &profile_variables {
+                let value_type = if value.is_number() {
+                    "number"
+                } else if value.is_boolean() {
+                    "boolean"
+                } else {
+                    "string"
+                };
+                
+                sqlx::query(
+                    r#"
+                    INSERT INTO website_variables 
+                        (id, website_id, key, value, value_type, source, source_ref, stale, created_at, updated_at)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    ON CONFLICT (website_id, key) 
+                    DO UPDATE SET 
+                        value = EXCLUDED.value,
+                        source_ref = EXCLUDED.source_ref,
+                        stale = EXCLUDED.stale,
+                        updated_at = EXCLUDED.updated_at
+                    "#
+                )
+                .bind(uuid::Uuid::new_v4())
+                .bind(website_id)
+                .bind(key)
+                .bind(value)
+                .bind(value_type)
+                .bind("extension")
+                .bind("github-sync")
+                .bind(false)
+                .bind(now)
+                .bind(now)
+                .execute(&self.pool)
+                .await?;
+            }
+
+            tracing::info!("Saved {} profile variables", profile_variables.len());
+        }
+
+        // Use fetched contributions from GitHub profile page, fallback to events-based calculation
+        let contributions_data = if let Some(contrib) = contributions {
+            let total = contrib.get("total").and_then(|t| t.as_i64()).unwrap_or(0);
+            tracing::info!("Using scraped contributions from GitHub profile ({} total)", total);
+            contrib
+        } else {
+            tracing::info!("Falling back to events-based contributions");
+            asap_github_sync::compute_contributions_from_events(&events)
+        };
+        sqlx::query(
+            r#"
+            INSERT INTO website_variables 
+                (id, website_id, key, value, value_type, source, source_ref, stale, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ON CONFLICT (website_id, key) 
+            DO UPDATE SET 
+                value = EXCLUDED.value,
+                source_ref = EXCLUDED.source_ref,
+                stale = EXCLUDED.stale,
+                updated_at = EXCLUDED.updated_at
+            "#
+        )
+        .bind(uuid::Uuid::new_v4())
+        .bind(website_id)
+        .bind("github_contributions")
+        .bind(&contributions_data)
+        .bind("json")
+        .bind("extension")
+        .bind("github-sync")
+        .bind(false)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+
+        // Save profile README if available
+        if let Some(readme_content) = profile_readme {
+            sqlx::query(
+                r#"
+                INSERT INTO website_variables 
+                    (id, website_id, key, value, value_type, source, source_ref, stale, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                ON CONFLICT (website_id, key) 
+                DO UPDATE SET 
+                    value = EXCLUDED.value,
+                    source_ref = EXCLUDED.source_ref,
+                    stale = EXCLUDED.stale,
+                    updated_at = EXCLUDED.updated_at
+                "#
+            )
+            .bind(uuid::Uuid::new_v4())
+            .bind(website_id)
+            .bind("github_profile_readme")
+            .bind(serde_json::json!(readme_content))
+            .bind("string")
+            .bind("extension")
+            .bind("github-sync")
+            .bind(false)
+            .bind(now)
+            .bind(now)
+            .execute(&self.pool)
+            .await?;
+            tracing::info!("Saved profile README ({} chars)", readme_content.len());
+        }
+
+        // Save count variables for collections
+        let extra_vars = vec![
+            ("github_gists_count", serde_json::json!(gists.len())),
+            ("github_organizations_count", serde_json::json!(orgs.len())),
+            ("github_starred_count", serde_json::json!(starred.len())),
+        ];
+        
+        for (key, value) in extra_vars {
+            sqlx::query(
+                r#"
+                INSERT INTO website_variables 
+                    (id, website_id, key, value, value_type, source, source_ref, stale, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                ON CONFLICT (website_id, key) 
+                DO UPDATE SET 
+                    value = EXCLUDED.value,
+                    source_ref = EXCLUDED.source_ref,
+                    stale = EXCLUDED.stale,
+                    updated_at = EXCLUDED.updated_at
+                "#
+            )
+            .bind(uuid::Uuid::new_v4())
+            .bind(website_id)
+            .bind(key)
+            .bind(&value)
+            .bind("number")
+            .bind("extension")
+            .bind("github-sync")
+            .bind(false)
+            .bind(now)
+            .bind(now)
+            .execute(&self.pool)
+            .await?;
+        }
+
+        tracing::info!(
+            "Saved GitHub data: {} repo variables, {} contributions, 5 collections", 
+            repo_variables.len(), 
+            contributions_data["total"].as_i64().unwrap_or(0)
+        );
 
         tracing::info!(
             "Successfully updated website {} with GitHub data",
