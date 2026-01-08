@@ -34,17 +34,17 @@ function lazyWithRetry<T extends ComponentType<any>>(
 
 // Lazy load page components with retry logic for HMR stability
 const Dashboard = lazyWithRetry(() => import("@/components/features/websites/dashboard"))
-const ExtensionMarketplace = lazyWithRetry(() => import("@/components/features/extensions/ExtensionMarketplace"))
-const ExtensionPage = lazyWithRetry(() => import("@/components/features/extensions/ExtensionPage"))
+const ExtensionMarketplace = lazyWithRetry(() => import("@/components/features/extensions/extension-marketplace"))
+const ExtensionPage = lazyWithRetry(() => import("@/components/features/extensions/extension-page"))
 const CloudPage = lazyWithRetry(() => import("@/components/features/cloud/cloud-manager"))
-const SettingsPage = lazyWithRetry(() => import("@/components/features/settings/SettingsPage"))
+const SettingsPage = lazyWithRetry(() => import("@/components/features/settings/settings-page"))
 const StudioPage = lazyWithRetry(() => import("@/components/studio/studio-page"))
 const PagesPage = lazyWithRetry(() => import("@/components/features/pages/pages-page"))
-const AdministratorsPage = lazyWithRetry(() => import("@/components/features/settings/AdministratorsPage"))
-const ThemePage = lazyWithRetry(() => import("@/components/features/settings/ThemePage"))
+const AdministratorsPage = lazyWithRetry(() => import("@/components/features/settings/administrators-page"))
+const ThemePage = lazyWithRetry(() => import("@/components/features/settings/theme-page"))
 const WebsiteSelector = lazyWithRetry(() => import("@/components/pages/website-selector"))
 const AnalyticsPage = lazyWithRetry(() => import("@/components/features/analytics/analytics-page"))
-const SeoPage = lazyWithRetry(() => import("@/components/features/seo/SeoPage"))
+const SeoPage = lazyWithRetry(() => import("@/components/features/seo/seo-page"))
 const NotificationsPage = lazyWithRetry(() => import("@/components/features/notifications"))
 
 // UUID regex pattern

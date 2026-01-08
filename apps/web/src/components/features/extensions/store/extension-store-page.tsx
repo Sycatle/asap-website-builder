@@ -24,12 +24,12 @@ import {
   useInstallExtensionMutation,
   useUninstallExtensionMutation,
 } from '@/lib/query/store';
-import { ExtensionGrid, ExtensionGridSkeleton } from './ExtensionGrid';
-import { ExtensionFilters } from './ExtensionFilters';
-import { CategoryNav, CategoryNavHorizontal } from './CategoryNav';
-import { ExtensionDetail, ExtensionDetailSkeleton } from './ExtensionDetail';
-import { PermissionsReviewDialog } from './PermissionsReview';
-import { InstalledExtensionsGrid } from './InstalledExtensionCard';
+import { ExtensionGrid, ExtensionGridSkeleton } from './extension-grid';
+import { ExtensionFilters } from './extension-filters';
+import { CategoryNav, CategoryNavHorizontal } from './category-nav';
+import { ExtensionDetail, ExtensionDetailSkeleton } from './extension-detail';
+import { PermissionsReviewDialog } from './permissions-review';
+import { InstalledExtensionsGrid } from './installed-extension-card';
 
 interface ExtensionStorePageProps {
   className?: string;

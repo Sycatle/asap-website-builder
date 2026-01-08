@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { ExtensionCard } from './ExtensionCard';
+import { ExtensionCard } from './extension-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Package } from 'lucide-react';
 import type { ExtensionStoreSummary } from '@/lib/api/store';

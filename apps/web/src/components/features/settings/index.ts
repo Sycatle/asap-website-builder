@@ -1,7 +1,7 @@
 // Settings feature components
-export { default as SettingsPage } from './SettingsPage';
-export { default as ThemePage } from './ThemePage';
-export { default as AdministratorsPage } from './AdministratorsPage';
+export { default as SettingsPage } from './settings-page';
+export { default as ThemePage } from './theme-page';
+export { default as AdministratorsPage } from './administrators-page';
 
 // Settings modal (refactored with component-first approach)
 export { SettingsModal, type SettingsModalProps, type SettingsTab, type UserData } from './settings-modal';

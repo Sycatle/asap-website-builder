@@ -1,9 +1,9 @@
 // Extension feature components
-export { default as ExtensionPage } from './ExtensionPage';
-export { default as DynamicSidebar } from './DynamicSidebar';
-export { default as WebsiteExtensionsPage } from './WebsiteExtensionsPage';
-export { default as ExtensionMarketplace } from './ExtensionMarketplace';
-export { ExtensionActionsSection } from './ExtensionActionsSection';
+export { default as ExtensionPage } from './extension-page';
+export { default as DynamicSidebar } from './dynamic-sidebar';
+export { default as WebsiteExtensionsPage } from './website-extensions-page';
+export { default as ExtensionMarketplace } from './extension-marketplace';
+export { ExtensionActionsSection } from './extension-actions-section';
 
 // Extension manager registry
 export {

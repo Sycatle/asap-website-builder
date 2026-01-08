@@ -5,19 +5,19 @@
  */
 
 // Store browsing
-export { ExtensionCard, type ExtensionCardProps } from './ExtensionCard';
-export { ExtensionGrid, ExtensionGridSkeleton } from './ExtensionGrid';
-export { ExtensionFilters } from './ExtensionFilters';
-export { CategoryNav, CategoryNavHorizontal } from './CategoryNav';
+export { ExtensionCard, type ExtensionCardProps } from './extension-card';
+export { ExtensionGrid, ExtensionGridSkeleton } from './extension-grid';
+export { ExtensionFilters } from './extension-filters';
+export { CategoryNav, CategoryNavHorizontal } from './category-nav';
 
 // Extension detail
-export { ExtensionDetail, ExtensionDetailSkeleton } from './ExtensionDetail';
-export { PermissionsList, PermissionsReviewDialog } from './PermissionsReview';
-export { InstallButton, InstallButtonCompact } from './InstallButton';
+export { ExtensionDetail, ExtensionDetailSkeleton } from './extension-detail';
+export { PermissionsList, PermissionsReviewDialog } from './permissions-review';
+export { InstallButton, InstallButtonCompact } from './install-button';
 
 // Installed management
-export { InstalledExtensionsList } from './InstalledExtensionsList';
-export { InstalledExtensionCard, InstalledExtensionsGrid } from './InstalledExtensionCard';
+export { InstalledExtensionsList } from './installed-extensions-list';
+export { InstalledExtensionCard, InstalledExtensionsGrid } from './installed-extension-card';
 
 // Main page
-export { ExtensionStorePage } from './ExtensionStorePage';
+export { ExtensionStorePage } from './extension-store-page';

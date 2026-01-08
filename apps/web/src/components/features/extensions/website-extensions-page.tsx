@@ -43,11 +43,11 @@ import {
   useActivateWebsiteExtensionMutation,
   useDeactivateWebsiteExtensionMutation,
 } from '@/lib/query/store';
-import { ExtensionGrid, ExtensionGridSkeleton } from './store/ExtensionGrid';
-import { ExtensionFilters } from './store/ExtensionFilters';
-import { CategoryNav, CategoryNavHorizontal } from './store/CategoryNav';
-import { ExtensionDetail, ExtensionDetailSkeleton } from './store/ExtensionDetail';
-import { PermissionsReviewDialog } from './store/PermissionsReview';
+import { ExtensionGrid, ExtensionGridSkeleton } from './store/extension-grid';
+import { ExtensionFilters } from './store/extension-filters';
+import { CategoryNav, CategoryNavHorizontal } from './store/category-nav';
+import { ExtensionDetail, ExtensionDetailSkeleton } from './store/extension-detail';
+import { PermissionsReviewDialog } from './store/permissions-review';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from '@/components/app-router';
 import { Skeleton } from '@/components/ui/skeleton';

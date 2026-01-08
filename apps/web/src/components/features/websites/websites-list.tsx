@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWebsitesQuery } from '@/lib/query';
 import type { Website } from '@/lib/api';
-import { WebsiteCard } from './WebsiteCard';
+import { WebsiteCard } from './website-card';
 import { OnboardingModal } from '@/components/onboarding/onboarding-modal';
 import { EmptyState } from '@/components/shared';
 import { Button } from "@/components/ui/button";
