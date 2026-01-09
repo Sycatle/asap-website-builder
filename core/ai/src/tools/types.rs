@@ -244,3 +244,56 @@ pub struct SettingsInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub full: Option<serde_json::Value>,
 }
+
+/// Parameters for request_visual_analysis tool
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VisualAnalysisParams {
+    /// Viewport to capture
+    #[serde(default = "default_viewport")]
+    pub viewport: String,
+    /// What aspect to focus on
+    pub focus: String,
+    /// Specific section to analyze (if focus is "specific_section")
+    #[serde(default)]
+    pub section: Option<String>,
+    /// Specific question about the design
+    #[serde(default)]
+    pub question: Option<String>,
+}
+
+fn default_viewport() -> String {
+    "desktop".to_string()
+}
+
+/// Visual analysis request sent to frontend
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VisualAnalysisRequest {
+    /// Tool call ID to track this request
+    pub tool_call_id: String,
+    /// Viewport to capture
+    pub viewport: String,
+    /// Focus area for analysis
+    pub focus: String,
+    /// Optional section name
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub section: Option<String>,
+    /// Optional question
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub question: Option<String>,
+}
+
+/// Visual analysis result from frontend
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VisualAnalysisResult {
+    /// Tool call ID this responds to
+    pub tool_call_id: String,
+    /// Screenshot URL (from ai_screenshots table)
+    pub screenshot_url: String,
+    /// Original parameters
+    pub viewport: String,
+    pub focus: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub section: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub question: Option<String>,
+}

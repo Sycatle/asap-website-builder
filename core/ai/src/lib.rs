@@ -30,7 +30,13 @@ pub use intent::{analyze_intent, execute_thinking_step, IntentAnalysis, Thinking
 pub use orchestrator::AIOrchestrator;
 pub use rate_limiter::AIRateLimiter;
 pub use router::ModelRouter;
-pub use tools::{get_tool_definitions, ToolExecutor, ToolCall, ToolResult, ToolDefinition};
-pub use providers::{OpenAIProvider, OpenAIMessage, ChatCompletionWithTools};
+pub use tools::{
+    get_tool_definitions, ToolExecutor, ToolCall, ToolResult, ToolDefinition,
+    VisualAnalysisParams, VisualAnalysisRequest, VisualAnalysisResult,
+};
+pub use providers::{
+    OpenAIProvider, OpenAIMessage, ChatCompletionWithTools,
+    VisionContentPart, ImageUrlContent, MessageContent, OpenAIMessageVision,
+};
 pub use types::*;
 

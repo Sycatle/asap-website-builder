@@ -241,6 +241,124 @@ impl OpenAIProvider {
             finish_reason: response.choices.first().and_then(|c| c.finish_reason.clone()),
         })
     }
+    
+    /// Send a chat completion request with Vision support (images)
+    /// Uses GPT-4 Vision to analyze images alongside text
+    #[instrument(skip(self, text, image_urls), fields(provider = "openai"))]
+    pub async fn chat_with_vision(
+        &self,
+        text: &str,
+        image_urls: Vec<String>,
+        system_prompt: Option<&str>,
+        model: Option<&str>,
+        max_tokens: Option<u32>,
+    ) -> AIResult<ChatCompletion> {
+        // Use gpt-4o by default for vision (it has vision capabilities)
+        let model = model.unwrap_or("gpt-4o");
+        let url = format!("{}/chat/completions", self.config.base_url);
+        let max_tokens = max_tokens.unwrap_or(2048);
+        
+        // Build content parts
+        let mut content_parts = vec![
+            VisionContentPart::Text { text: text.to_string() }
+        ];
+        
+        // Add images
+        for img_url in &image_urls {
+            content_parts.push(VisionContentPart::ImageUrl {
+                image_url: ImageUrlContent {
+                    url: img_url.clone(),
+                    detail: Some("high".to_string()), // High detail for design analysis
+                },
+            });
+        }
+        
+        // Build messages
+        let mut messages = Vec::new();
+        
+        // Add system prompt if provided
+        if let Some(sys) = system_prompt {
+            messages.push(OpenAIMessageVision {
+                role: "system".to_string(),
+                content: MessageContent::Text(sys.to_string()),
+            });
+        }
+        
+        // Add user message with vision content
+        messages.push(OpenAIMessageVision {
+            role: "user".to_string(),
+            content: MessageContent::Parts(content_parts),
+        });
+        
+        let request = serde_json::json!({
+            "model": model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": 0.7
+        });
+
+        debug!(
+            "Sending vision request to OpenAI: model={}, images={}", 
+            model, image_urls.len()
+        );
+
+        let response = self
+            .client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            error!("OpenAI Vision API error: {} - {}", status, error_text);
+
+            if status.as_u16() == 429 {
+                return Err(AIError::RateLimitExceeded {
+                    retry_after_secs: 60,
+                });
+            }
+
+            return Err(AIError::ProviderError {
+                provider: "openai".to_string(),
+                message: format!("Vision HTTP {}: {}", status, error_text),
+            });
+        }
+
+        let response: OpenAIChatResponse = response.json().await?;
+
+        let content = response
+            .choices
+            .first()
+            .map(|c| c.message.content.clone())
+            .unwrap_or_default();
+
+        let usage = TokenUsage {
+            prompt_tokens: response.usage.prompt_tokens,
+            completion_tokens: response.usage.completion_tokens,
+            total_tokens: response.usage.total_tokens,
+            estimated_cost: calculate_cost(
+                model,
+                response.usage.prompt_tokens,
+                response.usage.completion_tokens,
+            ),
+        };
+
+        debug!(
+            "Vision response received: {} tokens, {} chars",
+            usage.total_tokens,
+            content.len()
+        );
+
+        Ok(ChatCompletion {
+            content,
+            usage,
+            finish_reason: response.choices.first().and_then(|c| c.finish_reason.clone()),
+        })
+    }
 }
 
 #[async_trait]
@@ -541,6 +659,52 @@ struct OpenAIChatRequestWithTools {
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_choice: Option<String>,
 }
+
+// ============================================================================
+// Vision Support Types
+// ============================================================================
+
+/// Content part for Vision API - can be text or image
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum VisionContentPart {
+    /// Text content
+    Text { text: String },
+    /// Image URL content
+    #[serde(rename = "image_url")]
+    ImageUrl { image_url: ImageUrlContent },
+}
+
+/// Image URL content for Vision API
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImageUrlContent {
+    /// URL of the image (can be http/https or data: base64)
+    pub url: String,
+    /// Detail level: "low", "high", or "auto"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+}
+
+/// Message content that can be either simple text or vision parts
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum MessageContent {
+    /// Simple text content
+    Text(String),
+    /// Array of content parts (for vision)
+    Parts(Vec<VisionContentPart>),
+}
+
+/// OpenAI message with Vision support
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OpenAIMessageVision {
+    pub role: String,
+    pub content: MessageContent,
+}
+
+// ============================================================================
+// Standard Message Types
+// ============================================================================
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpenAIMessage {
