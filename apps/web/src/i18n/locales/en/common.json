@@ -168,7 +168,8 @@
     "goTo": "Go to...",
     "search": "Search",
     "notifications": "Notifications",
-    "bottomNav": "Main navigation"
+    "bottomNav": "Main navigation",
+    "aiAssistant": "AI Assistant"
   },
   "theme": {
     "light": "Light mode",

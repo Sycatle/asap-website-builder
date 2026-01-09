@@ -35,7 +35,12 @@
     "trySaying": "Essayez de dire...",
     "welcome": {
       "title": "Comment puis-je vous aider ?",
-      "description": "Décrivez ce que vous voulez modifier et je mettrai à jour votre site en temps réel."
+      "description": "Décrivez ce que vous voulez modifier et je mettrai à jour votre site en temps réel.",
+      "greeting": {
+        "morning": "Bonjour",
+        "afternoon": "Bon après-midi",
+        "evening": "Bonsoir"
+      }
     },
     "actions": {
       "addSection": "Ajouter section",
@@ -56,6 +61,10 @@
       "content": {
         "title": "Modifier le contenu",
         "description": "\"Réécris la section À propos de façon plus professionnelle\""
+      },
+      "magic": {
+        "title": "Surprends-moi",
+        "description": "Laisse l'IA améliorer ton site"
       }
     }
   },

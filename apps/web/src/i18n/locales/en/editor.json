@@ -35,7 +35,12 @@
     "trySaying": "Try saying...",
     "welcome": {
       "title": "How can I help?",
-      "description": "Describe what you want to change and I'll update your site in real-time."
+      "description": "Describe what you want to change and I'll update your site in real-time.",
+      "greeting": {
+        "morning": "Good morning",
+        "afternoon": "Good afternoon",
+        "evening": "Good evening"
+      }
     },
     "actions": {
       "addSection": "Add section",
@@ -56,6 +61,10 @@
       "content": {
         "title": "Edit the content",
         "description": "\"Rewrite the about section to be more professional\""
+      },
+      "magic": {
+        "title": "Surprise me",
+        "description": "Let AI enhance your site"
       }
     }
   },

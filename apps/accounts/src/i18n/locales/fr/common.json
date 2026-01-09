@@ -70,7 +70,8 @@
     "passwordResetSuccess": "Mot de passe réinitialisé avec succès !",
     "backToLogin": "Retour à la connexion",
     "passwordStrength": "Force du mot de passe",
-    "passwordRequirements": "8 caractères minimum, 1 majuscule, 1 minuscule, 1 chiffre"
+    "passwordRequirements": "8 caractères minimum, 1 majuscule, 1 minuscule, 1 chiffre",
+    "orContinueWith": "Ou continuer avec"
   },
   "settings": {
     "title": "Paramètres",

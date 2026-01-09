@@ -70,7 +70,8 @@
     "passwordResetSuccess": "Password reset successfully!",
     "backToLogin": "Back to sign in",
     "passwordStrength": "Password strength",
-    "passwordRequirements": "8 characters minimum, 1 uppercase, 1 lowercase, 1 number"
+    "passwordRequirements": "8 characters minimum, 1 uppercase, 1 lowercase, 1 number",
+    "orContinueWith": "Or continue with"
   },
   "settings": {
     "title": "Settings",

@@ -168,7 +168,8 @@
     "goTo": "Aller à...",
     "search": "Rechercher",
     "notifications": "Notifications",
-    "bottomNav": "Navigation principale"
+    "bottomNav": "Navigation principale",
+    "aiAssistant": "Assistant IA"
   },
   "theme": {
     "light": "Mode clair",
