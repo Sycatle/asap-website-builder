@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { 
   useUpdateElementMutation, 
@@ -9,6 +9,7 @@ import {
   queryKeys 
 } from '@/lib/query';
 import type { AIAction } from '@/lib/api/ai';
+import { executeAIAction } from '@/lib/api/ai';
 import type { WebsiteElement, CreateElementRequest, UpdateElementRequest } from '@/lib/types';
 import type { WebsiteData } from '@/lib/types';
 
@@ -24,6 +25,8 @@ export interface ActionExecutionResult {
 
 export interface UseAIActionExecutorOptions {
   websiteId: string;
+  /** Use backend API for execution (default: false, uses client-side mutations) */
+  useBackend?: boolean;
   onActionExecuted?: (result: ActionExecutionResult) => void;
   onError?: (error: Error, action: AIAction) => void;
 }
@@ -35,9 +38,11 @@ export interface UseAIActionExecutorOptions {
 /**
  * Hook to execute AI actions on a website
  * Maps AI action types to the appropriate mutations
+ * Can use either client-side mutations or backend API
  */
 export function useAIActionExecutor(options: UseAIActionExecutorOptions) {
-  const { websiteId, onActionExecuted, onError } = options;
+  const { websiteId, useBackend = false, onActionExecuted, onError } = options;
+  const [isExecuting, setIsExecuting] = useState(false);
   
   const queryClient = useQueryClient();
   const updateElementMutation = useUpdateElementMutation();
@@ -47,12 +52,80 @@ export function useAIActionExecutor(options: UseAIActionExecutorOptions) {
   const updateWebsiteDataMutation = useUpdateWebsiteDataMutation();
   
   /**
-   * Execute a single AI action
+   * Execute via backend API
+   */
+  const executeViaBackend = useCallback(async (action: AIAction): Promise<ActionExecutionResult> => {
+    try {
+      const response = await executeAIAction({
+        website_id: websiteId,
+        action,
+      });
+      
+      if (response.success) {
+        // Invalidate relevant queries to refresh UI
+        await queryClient.invalidateQueries({ queryKey: queryKeys.elements.list(websiteId) });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.websites.detail(websiteId) });
+        
+        return { success: true, action };
+      } else {
+        return { 
+          success: false, 
+          action, 
+          error: response.error || response.message 
+        };
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Backend execution failed';
+      return { success: false, action, error: errorMessage };
+    }
+  }, [websiteId, queryClient]);
+  
+  /**
+   * Execute a single AI action (client-side)
    */
   const executeAction = useCallback(async (action: AIAction): Promise<ActionExecutionResult> => {
+    setIsExecuting(true);
+    
+    try {
+      let result: ActionExecutionResult;
+      
+      // Use backend API if enabled
+      if (useBackend) {
+        result = await executeViaBackend(action);
+      } else {
+        // Use client-side mutations
+        result = await executeClientSide(action);
+      }
+      
+      // Call callback
+      onActionExecuted?.(result);
+      
+      if (!result.success && result.error) {
+        onError?.(new Error(result.error), action);
+      }
+      
+      return result;
+    } catch (error) {
+      const errorResult: ActionExecutionResult = {
+        success: false,
+        action,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+      onActionExecuted?.(errorResult);
+      onError?.(error instanceof Error ? error : new Error('Unknown error'), action);
+      return errorResult;
+    } finally {
+      setIsExecuting(false);
+    }
+  }, [useBackend, executeViaBackend, onActionExecuted, onError]);
+  
+  /**
+   * Execute via client-side mutations (original implementation)
+   */
+  const executeClientSide = useCallback(async (action: AIAction): Promise<ActionExecutionResult> => {
     try {
       switch (action.type) {
-        // ===== Section/Element Actions =====
+      // ===== Section/Element Actions =====
         
         case 'update_section':
         case 'update_property': {
@@ -307,12 +380,7 @@ export function useAIActionExecutor(options: UseAIActionExecutorOptions) {
   return {
     executeAction,
     executeActions,
-    isExecuting: 
-      updateElementMutation.isPending || 
-      createElementMutation.isPending || 
-      deleteElementMutation.isPending || 
-      reorderElementsMutation.isPending ||
-      updateWebsiteDataMutation.isPending,
+    isExecuting,
   };
 }
 
