@@ -759,16 +759,14 @@ async fn load_website_context(
         .unwrap_or(serde_json::json!({}));
     
     // Load active extensions for this website
-    let extensions: Vec<ActiveExtension> = sqlx::query_as::<_, (String, String, bool, serde_json::Value)>(
+    let extensions: Vec<ActiveExtension> = sqlx::query_as::<_, (String, bool, serde_json::Value)>(
         r#"
         SELECT 
             ae.extension_slug,
-            COALESCE(ec.name, ae.extension_slug) as name,
             we.enabled,
             COALESCE(we.settings, '{}'::jsonb) as settings
         FROM website_extensions_v2 we
         JOIN account_extensions ae ON ae.id = we.account_extension_id
-        LEFT JOIN extension_catalog ec ON ec.slug = ae.extension_slug
         WHERE we.website_id = $1
         ORDER BY ae.extension_slug
         "#
@@ -778,15 +776,31 @@ async fn load_website_context(
     .await
     .map(|rows| {
         rows.into_iter()
-            .map(|(slug, name, enabled, settings)| ActiveExtension {
-                slug,
-                name,
-                enabled,
-                settings,
+            .map(|(slug, enabled, settings)| {
+                // Format extension name from slug (e.g., "github-sync" -> "GitHub Sync")
+                let name = slug.split('-')
+                    .map(|word| {
+                        let mut chars: Vec<char> = word.chars().collect();
+                        if let Some(first) = chars.first_mut() {
+                            *first = first.to_ascii_uppercase();
+                        }
+                        chars.into_iter().collect::<String>()
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                ActiveExtension {
+                    slug,
+                    name,
+                    enabled,
+                    settings,
+                }
             })
             .collect()
     })
-    .unwrap_or_default();
+    .unwrap_or_else(|e| {
+        tracing::warn!("Failed to load extensions: {}", e);
+        Vec::new()
+    });
     
     Ok(WebsiteContext {
         website: WebsiteInfo {
