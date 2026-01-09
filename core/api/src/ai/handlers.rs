@@ -193,24 +193,29 @@ pub async fn chat_stream(
     // TODO: Get actual daily_used from rate limiter - for now use 0
     let plan_daily_used = 0u32;
 
-    // Load user context for AI personalization
-    let user_context = load_user_context(&pool, account_id, plan_daily_limit, plan_daily_used).await.map_err(|s| {
+    // OPTIMIZATION: Load user context, website data, and website context in PARALLEL
+    // This reduces latency from ~3 sequential DB calls to 1 parallel batch
+    let (user_context_result, website_data_result, context_result) = tokio::join!(
+        load_user_context(&pool, account_id, plan_daily_limit, plan_daily_used),
+        load_website_data(&pool, account_id, req.website_id),
+        load_website_context(&pool, req.website_id),
+    );
+
+    let user_context = user_context_result.map_err(|s| {
         (s, Json(ErrorResponse {
             error: "Failed to load user context".to_string(),
             code: "internal_error".to_string(),
         }))
     })?;
 
-    // Load website variables and collections (all extensions' data)
-    let website_data = load_website_data(&pool, account_id, req.website_id).await.map_err(|s| {
+    let website_data = website_data_result.map_err(|s| {
         (s, Json(ErrorResponse {
             error: "Failed to load website data".to_string(),
             code: "internal_error".to_string(),
         }))
     })?;
 
-    // Load website context
-    let mut context = load_website_context(&pool, req.website_id).await.map_err(|s| {
+    let mut context = context_result.map_err(|s| {
         (s, Json(ErrorResponse {
             error: "Failed to load website".to_string(),
             code: "internal_error".to_string(),

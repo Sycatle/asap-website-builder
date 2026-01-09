@@ -13,8 +13,10 @@
 //! - `handlers`: Main HTTP handlers (chat, chat_stream, quota, status)
 //! - `actions`: AI action execution (update sections, themes, etc.)
 //! - `vision`: Vision/screenshot endpoints for GPT-4 Vision
+//! - `cache`: Redis-based caching for AI context (performance optimization)
 
 mod actions;
+pub mod cache;
 mod context;
 mod conversation;
 mod handlers;

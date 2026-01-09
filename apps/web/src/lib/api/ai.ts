@@ -445,9 +445,16 @@ export function streamChatMessage(
       if (error instanceof Error && error.name === 'AbortError') {
         return; // Aborted by user, don't call onError
       }
+      
+      // Check if it's a network error
+      const isNetworkError = error instanceof TypeError && 
+        (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('Failed to fetch'));
+      
       callbacks.onError?.({
-        code: 'fetch_error',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        code: isNetworkError ? 'network_error' : 'fetch_error',
+        message: isNetworkError 
+          ? 'Connection failed. Please check your internet connection and try again.'
+          : (error instanceof Error ? error.message : 'Unknown error'),
       });
     }
   })();
