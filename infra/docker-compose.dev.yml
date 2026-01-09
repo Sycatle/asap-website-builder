@@ -66,6 +66,7 @@ services:
       # AI Configuration
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      SCREENSHOT_SERVICE_URL: http://screenshot:3001
     ports:
       - "3000:3000"
     healthcheck:
@@ -205,6 +206,23 @@ services:
       - ../apps/accounts/astro.config.mjs:/app/apps/accounts/astro.config.mjs
       - ../apps/accounts/tailwind.config.cjs:/app/apps/accounts/tailwind.config.cjs
       - ../apps/accounts/tsconfig.json:/app/apps/accounts/tsconfig.json
+    networks:
+      - asap-network
+
+  # Screenshot service for AI visual analysis
+  screenshot:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.screenshot
+    container_name: asap-screenshot
+    depends_on:
+      sites:
+        condition: service_started
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      SITES_BASE_URL: http://sites:4322
     networks:
       - asap-network
 
