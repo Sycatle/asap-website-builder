@@ -581,6 +581,13 @@ pub async fn chat_stream(
                 let mut json_buffer = String::new();
                 let mut sent_tool_calls: HashSet<String> = HashSet::new();
                 let mut parsed_actions: Vec<AIAction> = Vec::new();
+                
+                // OPTIMIZATION: Token batching for SSE
+                // Accumulate tokens and flush every 50ms or when buffer reaches 5 chars
+                let mut token_buffer = String::new();
+                let mut last_flush = std::time::Instant::now();
+                const FLUSH_INTERVAL_MS: u128 = 50;
+                const MIN_BATCH_CHARS: usize = 5;
 
                 while let Some(result) = token_stream.next().await {
                     match result {
@@ -632,12 +639,32 @@ pub async fn chat_stream(
                                 json_buffer.push_str(&text);
                             }
 
-                            let token_event = SseEventData::Token(text);
-                            if let Ok(json) = serde_json::to_string(&token_event) {
-                                yield Ok(Event::default().data(json));
+                            // OPTIMIZATION: Batch tokens instead of sending each one
+                            token_buffer.push_str(&text);
+                            let elapsed = last_flush.elapsed().as_millis();
+                            
+                            // Flush if buffer is large enough OR enough time has passed
+                            if token_buffer.len() >= MIN_BATCH_CHARS || elapsed >= FLUSH_INTERVAL_MS {
+                                if !token_buffer.is_empty() {
+                                    let token_event = SseEventData::Token(token_buffer.clone());
+                                    if let Ok(json) = serde_json::to_string(&token_event) {
+                                        yield Ok(Event::default().data(json));
+                                    }
+                                    token_buffer.clear();
+                                    last_flush = std::time::Instant::now();
+                                }
                             }
                         }
                         Err(err) => {
+                            // Flush any remaining tokens before error
+                            if !token_buffer.is_empty() {
+                                let token_event = SseEventData::Token(token_buffer.clone());
+                                if let Ok(json) = serde_json::to_string(&token_event) {
+                                    yield Ok(Event::default().data(json));
+                                }
+                                token_buffer.clear();
+                            }
+                            
                             let error_event = SseEventData::Error {
                                 code: err.code().to_string(),
                                 message: err.to_string(),
@@ -646,6 +673,14 @@ pub async fn chat_stream(
                                 yield Ok(Event::default().data(json));
                             }
                         }
+                    }
+                }
+                
+                // Flush any remaining tokens in the buffer
+                if !token_buffer.is_empty() {
+                    let token_event = SseEventData::Token(token_buffer);
+                    if let Ok(json) = serde_json::to_string(&token_event) {
+                        yield Ok(Event::default().data(json));
                     }
                 }
 
