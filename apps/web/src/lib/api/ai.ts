@@ -213,6 +213,10 @@ export async function executeAIAction(request: ExecuteActionRequest): Promise<Ex
 export interface ThinkingData {
   thought: string;
   step?: number;
+  /** Status: "starting" (AI call in progress), "completed" (AI call done), or absent (legacy/simple) */
+  status?: 'starting' | 'completed';
+  /** Insight from AI execution (only when status is "completed") */
+  insight?: string;
 }
 
 export interface ToolCallData {

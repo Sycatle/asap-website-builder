@@ -191,15 +191,100 @@ export async function uploadPreviewCapture(
   formData.append('website_id', websiteId);
   formData.append('viewport', viewport);
 
-  const response = await fetch('/api/v1/ai/vision/upload', {
+  // Use the API base URL from environment
+  const apiBase = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  
+  // Get CSRF token from apiClient
+  const { apiClient } = await import('@/lib/api/client');
+  let csrfToken = apiClient.getCsrfToken();
+  if (!csrfToken) {
+    csrfToken = await apiClient.fetchCsrfToken();
+  }
+
+  const response = await fetch(`${apiBase}/ai/vision/upload`, {
     method: 'POST',
     body: formData,
     credentials: 'include',
+    headers: {
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+    },
   });
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Upload failed' }));
     throw new Error(error.error || 'Failed to upload preview capture');
+  }
+
+  return response.json();
+}
+
+/**
+ * Parameters for visual analysis
+ */
+export interface VisualAnalysisParams {
+  websiteId: string;
+  imageId: string;
+  originalMessage: string;
+  viewport: Viewport;
+  focus: 'layout' | 'colors' | 'typography' | 'spacing' | 'overall' | 'specific_section';
+  section?: string;
+  question?: string;
+  conversationId?: string;
+}
+
+/**
+ * Response from visual analysis
+ */
+export interface VisualAnalysisResponse {
+  analysis: string;
+  conversation_id: string;
+}
+
+/**
+ * Call the AI visual analysis endpoint with the captured screenshot
+ * 
+ * @param params - Analysis parameters including image and focus
+ * @returns The AI analysis of the screenshot
+ */
+export async function analyzePreviewCapture(
+  params: VisualAnalysisParams
+): Promise<VisualAnalysisResponse> {
+  // Use the API base URL from environment
+  const apiBase = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  
+  // Get CSRF token from apiClient
+  const { apiClient } = await import('@/lib/api/client');
+  let csrfToken = apiClient.getCsrfToken();
+  if (!csrfToken) {
+    csrfToken = await apiClient.fetchCsrfToken();
+  }
+
+  const response = await fetch(`${apiBase}/ai/vision/analyze`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+    },
+    body: JSON.stringify({
+      website_id: params.websiteId,
+      image_id: params.imageId,
+      original_message: params.originalMessage,
+      viewport: params.viewport,
+      focus: params.focus,
+      section: params.section,
+      question: params.question,
+      conversation_id: params.conversationId,
+    }),
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Analysis failed' }));
+    throw new Error(error.error || 'Failed to analyze preview');
   }
 
   return response.json();
