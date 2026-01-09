@@ -30,6 +30,8 @@
     "history": "History",
     "settings": "Settings",
     "send": "Send message",
+    "stop": "Stop generating",
+    "error": "Sorry, something went wrong. Please try again.",
     "trySaying": "Try saying...",
     "welcome": {
       "title": "How can I help?",

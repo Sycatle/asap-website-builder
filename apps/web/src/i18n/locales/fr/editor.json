@@ -30,6 +30,8 @@
     "history": "Historique",
     "settings": "Paramètres",
     "send": "Envoyer le message",
+    "stop": "Arrêter la génération",
+    "error": "Désolé, une erreur s'est produite. Veuillez réessayer.",
     "trySaying": "Essayez de dire...",
     "welcome": {
       "title": "Comment puis-je vous aider ?",
