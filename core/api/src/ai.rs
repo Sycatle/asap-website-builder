@@ -886,6 +886,8 @@ IMPORTANT INSTRUCTIONS:
 2. You can call MULTIPLE tools in a single response if you need different types of data
 3. After receiving tool results, you can call MORE tools if you need additional information
 4. Think step by step: what data do I need? -> call tools -> analyze results -> need more data? -> call more tools or respond
+5. NEVER call the same tool twice with the same parameters - you already have the result
+6. For request_visual_analysis: ONLY CALL ONCE per request. Once you receive "VISUAL_ANALYSIS_COMPLETE", DO NOT request another visual analysis - use the result you received.
 
 Available data sources:
 - Collections: user's content from GitHub repos, manual entries, etc. (projects, posts, etc.)
@@ -894,11 +896,13 @@ Available data sources:
 - Theme: design settings (colors, fonts, etc.)
 - Settings: website configuration
 - Extensions: installed extensions and their status
+- Visual Analysis: screenshot-based UI/UX analysis (CALL ONLY ONCE)
 
 Examples of when to use multiple tools:
 - "Tell me about my projects" → search_collections for projects + get_website_sections to see how they're displayed
 - "What's my site's style?" → get_website_theme + get_website_settings
 - "How is my GitHub data used?" → list_extensions + search_collections with source filter
+- "Analyze my site visually" → request_visual_analysis (ONCE only, then use the result)
 
 Only skip tools if the question is purely conversational or doesn't need any data."#;
     
@@ -915,6 +919,7 @@ Only skip tools if the question is purely conversational or doesn't need any dat
     let mut all_executed_calls = Vec::new();
     let mut all_context_parts = Vec::new();
     let mut iteration = 0;
+    let mut visual_analysis_done = false; // Track if visual analysis was already performed
     
     // Tool calling loop - continue until AI stops requesting tools or max iterations
     loop {
@@ -977,6 +982,16 @@ Only skip tools if the question is purely conversational or doesn't need any dat
             
             // Special handling for visual analysis - capture screenshot and analyze server-side
             if tool_name == "request_visual_analysis" {
+                // Skip if visual analysis was already done in this request
+                if visual_analysis_done {
+                    tracing::info!("Skipping duplicate visual analysis request");
+                    tool_results_for_continuation.push((
+                        tool_call.id.clone(),
+                        "ALREADY_COMPLETED: Visual analysis was already performed. Use the previous result.".to_string()
+                    ));
+                    continue;
+                }
+                
                 // Parse the tool arguments
                 let params: asap_core_ai::VisualAnalysisParams = 
                     serde_json::from_str(&tool_call.function.arguments)
@@ -1074,7 +1089,7 @@ Structure your response with clear sections:
                                 
                                 tracing::info!("Visual analysis completed successfully");
                                 
-                                all_context_parts.push(format!(
+                                let visual_result = format!(
                                     "[Visual Analysis - {} view]\n\
                                     Screenshot dimensions: {}x{} pixels\n\
                                     Focus: {}\n\n\
@@ -1084,7 +1099,18 @@ Structure your response with clear sections:
                                     screenshot_data.height,
                                     params.focus,
                                     analysis,
+                                );
+                                
+                                all_context_parts.push(visual_result.clone());
+                                
+                                // Add result for next iteration so AI knows analysis is done
+                                tool_results_for_continuation.push((
+                                    tool_call.id.clone(), 
+                                    format!("VISUAL_ANALYSIS_COMPLETE: {}", visual_result)
                                 ));
+                                
+                                // Mark visual analysis as done to prevent duplicates
+                                visual_analysis_done = true;
                                 
                                 all_executed_calls.push(ExecutedToolCall {
                                     id: tool_call.id.clone(),
