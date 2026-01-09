@@ -18,7 +18,7 @@ import type { PropertyOption } from "@asap/shared";
 // ============================================
 
 // Visual representations for common variant patterns
-const VARIANT_VISUALS: Record<string, Record<string, React.ReactNode>> = {
+export const VARIANT_VISUALS: Record<string, Record<string, React.ReactNode>> = {
   // Hero variants
   hero: {
     centered: (
