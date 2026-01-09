@@ -27,6 +27,8 @@ export interface UseAIActionExecutorOptions {
   websiteId: string;
   /** Use backend API for execution (default: false, uses client-side mutations) */
   useBackend?: boolean;
+  /** Use optimistic updates for instant UI feedback (default: true) */
+  optimistic?: boolean;
   onActionExecuted?: (result: ActionExecutionResult) => void;
   onError?: (error: Error, action: AIAction) => void;
 }
@@ -39,9 +41,10 @@ export interface UseAIActionExecutorOptions {
  * Hook to execute AI actions on a website
  * Maps AI action types to the appropriate mutations
  * Can use either client-side mutations or backend API
+ * Supports optimistic updates for instant UI feedback
  */
 export function useAIActionExecutor(options: UseAIActionExecutorOptions) {
-  const { websiteId, useBackend = false, onActionExecuted, onError } = options;
+  const { websiteId, useBackend = false, optimistic = true, onActionExecuted, onError } = options;
   const [isExecuting, setIsExecuting] = useState(false);
   
   const queryClient = useQueryClient();
@@ -50,6 +53,107 @@ export function useAIActionExecutor(options: UseAIActionExecutorOptions) {
   const deleteElementMutation = useDeleteElementMutation();
   const reorderElementsMutation = useReorderElementsMutation();
   const updateWebsiteDataMutation = useUpdateWebsiteDataMutation();
+  
+  /**
+   * Apply optimistic update to cache (instant UI feedback)
+   * Returns a rollback function to undo the change if API fails
+   */
+  const applyOptimisticUpdate = useCallback((action: AIAction): (() => void) | null => {
+    const elementsKey = queryKeys.elements.list(websiteId);
+    const previousElements = queryClient.getQueryData<WebsiteElement[]>(elementsKey);
+    
+    if (!previousElements) return null;
+    
+    switch (action.type) {
+      case 'update_section':
+      case 'update_property': {
+        if (!action.section_id) return null;
+        
+        // Optimistically update the element in cache
+        queryClient.setQueryData<WebsiteElement[]>(elementsKey, (old) => {
+          if (!old) return old;
+          return old.map(el => {
+            if (el.id !== action.section_id) return el;
+            
+            // Apply property update
+            if (action.property && action.value !== undefined) {
+              const parts = action.property.split('.');
+              if (parts[0] === 'settings') {
+                return {
+                  ...el,
+                  settings: setNestedValue(el.settings || {}, parts.slice(1), action.value),
+                };
+              } else if (parts[0] === 'data') {
+                return {
+                  ...el,
+                  data: setNestedValue(el.data || {}, parts.slice(1), action.value),
+                };
+              }
+            }
+            
+            // Apply bulk changes
+            if (action.changes) {
+              return { ...el, ...action.changes };
+            }
+            
+            return el;
+          });
+        });
+        
+        // Return rollback function
+        return () => {
+          queryClient.setQueryData<WebsiteElement[]>(elementsKey, previousElements);
+        };
+      }
+      
+      case 'add_section': {
+        if (!action.section_type) return null;
+        
+        const maxOrder = Math.max(0, ...previousElements.map(e => e.order));
+        const tempId = `temp-${Date.now()}`;
+        
+        // Optimistically add element
+        queryClient.setQueryData<WebsiteElement[]>(elementsKey, (old) => {
+          if (!old) return old;
+          return [...old, {
+            id: tempId,
+            website_id: websiteId,
+            element_type: action.section_type!,
+            slug: generateSlug(action.section_type!),
+            title: action.section_type!.charAt(0).toUpperCase() + action.section_type!.slice(1),
+            order: action.position ?? maxOrder + 1,
+            layout: action.variant || 'default',
+            settings: action.properties as Record<string, unknown> || {},
+            data: {},
+            visible: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as WebsiteElement];
+        });
+        
+        return () => {
+          queryClient.setQueryData<WebsiteElement[]>(elementsKey, previousElements);
+        };
+      }
+      
+      case 'remove_section': {
+        if (!action.section_id) return null;
+        
+        // Optimistically remove element
+        queryClient.setQueryData<WebsiteElement[]>(elementsKey, (old) => {
+          if (!old) return old;
+          return old.filter(el => el.id !== action.section_id);
+        });
+        
+        return () => {
+          queryClient.setQueryData<WebsiteElement[]>(elementsKey, previousElements);
+        };
+      }
+      
+      default:
+        return null;
+    }
+  }, [websiteId, queryClient]);
   
   /**
    * Execute via backend API
@@ -81,10 +185,18 @@ export function useAIActionExecutor(options: UseAIActionExecutorOptions) {
   }, [websiteId, queryClient]);
   
   /**
-   * Execute a single AI action (client-side)
+   * Execute a single AI action
+   * With optimistic updates, the UI is updated immediately before the API call
+   * If the API fails, the change is rolled back
    */
   const executeAction = useCallback(async (action: AIAction): Promise<ActionExecutionResult> => {
     setIsExecuting(true);
+    
+    // OPTIMISTIC UPDATE: Apply change immediately for instant feedback
+    let rollback: (() => void) | null = null;
+    if (optimistic) {
+      rollback = applyOptimisticUpdate(action);
+    }
     
     try {
       let result: ActionExecutionResult;
@@ -97,6 +209,11 @@ export function useAIActionExecutor(options: UseAIActionExecutorOptions) {
         result = await executeClientSide(action);
       }
       
+      // If API failed and we did optimistic update, rollback
+      if (!result.success && rollback) {
+        rollback();
+      }
+      
       // Call callback
       onActionExecuted?.(result);
       
@@ -106,6 +223,11 @@ export function useAIActionExecutor(options: UseAIActionExecutorOptions) {
       
       return result;
     } catch (error) {
+      // Rollback optimistic update on error
+      if (rollback) {
+        rollback();
+      }
+      
       const errorResult: ActionExecutionResult = {
         success: false,
         action,
@@ -117,7 +239,7 @@ export function useAIActionExecutor(options: UseAIActionExecutorOptions) {
     } finally {
       setIsExecuting(false);
     }
-  }, [useBackend, executeViaBackend, onActionExecuted, onError]);
+  }, [useBackend, optimistic, applyOptimisticUpdate, executeViaBackend, onActionExecuted, onError]);
   
   /**
    * Execute via client-side mutations (original implementation)
