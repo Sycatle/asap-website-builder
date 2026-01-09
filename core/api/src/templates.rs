@@ -182,8 +182,8 @@ pub async fn list_templates(
                     element_type: r.element_type,
                     variant: r.variant,
                     preview_image: r.preview_image,
-                    tags: r.tags,
-                    is_favorite: r.is_favorite,
+                    tags: r.tags.unwrap_or_default(),
+                    is_favorite: r.is_favorite.unwrap_or(false),
                     created_at: r.created_at,
                 })
                 .collect();
@@ -236,8 +236,8 @@ pub async fn get_template(
                 variant: r.variant,
                 settings: r.settings,
                 preview_image: r.preview_image,
-                tags: r.tags,
-                is_favorite: r.is_favorite,
+                tags: r.tags.unwrap_or_default(),
+                is_favorite: r.is_favorite.unwrap_or(false),
                 created_at: r.created_at,
                 updated_at: r.updated_at,
             };
@@ -317,8 +317,8 @@ pub async fn create_template(
                 variant: r.variant,
                 settings: r.settings,
                 preview_image: r.preview_image,
-                tags: r.tags,
-                is_favorite: r.is_favorite,
+                tags: r.tags.unwrap_or_default(),
+                is_favorite: r.is_favorite.unwrap_or(false),
                 created_at: r.created_at,
                 updated_at: r.updated_at,
             };
@@ -422,8 +422,8 @@ pub async fn update_template(
                 variant: r.variant,
                 settings: r.settings,
                 preview_image: r.preview_image,
-                tags: r.tags,
-                is_favorite: r.is_favorite,
+                tags: r.tags.unwrap_or_default(),
+                is_favorite: r.is_favorite.unwrap_or(false),
                 created_at: r.created_at,
                 updated_at: r.updated_at,
             };
@@ -522,8 +522,8 @@ pub async fn toggle_favorite(
                 variant: r.variant,
                 settings: r.settings,
                 preview_image: r.preview_image,
-                tags: r.tags,
-                is_favorite: r.is_favorite,
+                tags: r.tags.unwrap_or_default(),
+                is_favorite: r.is_favorite.unwrap_or(false),
                 created_at: r.created_at,
                 updated_at: r.updated_at,
             };
