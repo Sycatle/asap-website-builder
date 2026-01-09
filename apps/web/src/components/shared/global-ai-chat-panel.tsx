@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,16 +35,20 @@ import {
   Image,
   Zap,
   Plus,
+  StopCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWebsiteContext } from "@/contexts/WebsiteContext";
 import { useUserData } from "@/lib/store/authStore";
+import { streamChatMessage, type AIAction } from "@/lib/api/ai";
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  actions?: AIAction[];
+  isStreaming?: boolean;
 }
 
 interface GlobalAIChatPanelProps {
@@ -68,8 +72,10 @@ export function GlobalAIChatPanel({
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const _websiteName = websiteNameOverride ?? currentWebsite?.title ?? 'ASAP';
   const websiteSlug = websiteSlugOverride !== undefined ? websiteSlugOverride : (currentWebsite?.slug ?? null);
@@ -93,8 +99,29 @@ export function GlobalAIChatPanel({
     }
   }, [input]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  const handleStopStreaming = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsLoading(false);
+    // Mark current streaming message as complete
+    setMessages(prev => prev.map(m => 
+      m.isStreaming ? { ...m, isStreaming: false } : m
+    ));
+  }, []);
+
+  const handleSend = useCallback(async () => {
+    if (!input.trim() || isLoading || !currentWebsite?.id) return;
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -111,17 +138,61 @@ export function GlobalAIChatPanel({
       textareaRef.current.style.height = 'auto';
     }
 
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: t('editor:ai.comingSoon'),
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, assistantMessage]);
-      setIsLoading(false);
-    }, 1000);
-  };
+    const assistantMessageId = crypto.randomUUID();
+    const assistantMessage: Message = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      actions: [],
+      isStreaming: true,
+    };
+    setMessages(prev => [...prev, assistantMessage]);
+
+    // Create abort controller for this request
+    abortControllerRef.current = streamChatMessage(
+      {
+        message: userMessage.content,
+        website_id: currentWebsite.id,
+        conversation_id: conversationId ?? undefined,
+      },
+      {
+        onToken: (token: string) => {
+          setMessages(prev => prev.map(m => 
+            m.id === assistantMessageId 
+              ? { ...m, content: m.content + token }
+              : m
+          ));
+        },
+        onAction: (action: AIAction) => {
+          setMessages(prev => prev.map(m => 
+            m.id === assistantMessageId 
+              ? { ...m, actions: [...(m.actions || []), action] }
+              : m
+          ));
+        },
+        onDone: () => {
+          setMessages(prev => prev.map(m => 
+            m.id === assistantMessageId 
+              ? { ...m, isStreaming: false }
+              : m
+          ));
+          setIsLoading(false);
+          abortControllerRef.current = null;
+        },
+        onError: (error: { code: string; message: string }) => {
+          console.error('AI chat error:', error);
+          setMessages(prev => prev.map(m => 
+            m.id === assistantMessageId 
+              ? { ...m, content: t('editor:ai.error'), isStreaming: false }
+              : m
+          ));
+          setIsLoading(false);
+          abortControllerRef.current = null;
+        },
+      }
+    );
+  }, [input, isLoading, currentWebsite?.id, conversationId, t]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -130,7 +201,10 @@ export function GlobalAIChatPanel({
     }
   };
 
-  const clearChat = () => setMessages([]);
+  const clearChat = () => {
+    setMessages([]);
+    setConversationId(null);
+  };
 
   const insertPrompt = (prompt: string) => {
     setInput(prompt);
@@ -307,27 +381,34 @@ export function GlobalAIChatPanel({
             
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  className={cn(
-                    "h-9 w-9 rounded-xl shrink-0 transition-all",
-                    input.trim() 
-                      ? "bg-gradient-to-br from-primary to-violet-600 text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-105" 
-                      : "bg-muted text-muted-foreground"
-                  )}
-                  onClick={handleSend}
-                  disabled={!input.trim() || isLoading}
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
+                {isLoading ? (
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-9 w-9 rounded-xl shrink-0 transition-all border-red-500/50 hover:bg-red-500/10 hover:border-red-500"
+                    onClick={handleStopStreaming}
+                  >
+                    <StopCircle className="h-4 w-4 text-red-500" />
+                  </Button>
+                ) : (
+                  <Button
+                    size="icon"
+                    className={cn(
+                      "h-9 w-9 rounded-xl shrink-0 transition-all",
+                      input.trim() 
+                        ? "bg-gradient-to-br from-primary to-violet-600 text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-105" 
+                        : "bg-muted text-muted-foreground"
+                    )}
+                    onClick={handleSend}
+                    disabled={!input.trim() || isLoading || !currentWebsite?.id}
+                  >
                     <ArrowUp className="h-4 w-4" />
-                  )}
-                </Button>
+                  </Button>
+                )}
               </TooltipTrigger>
               <TooltipContent side="top">
-                <span>{t('editor:ai.send')}</span>
-                <kbd className="ml-2 text-[10px] bg-muted px-1.5 py-0.5 rounded">↵</kbd>
+                <span>{isLoading ? t('editor:ai.stop') : t('editor:ai.send')}</span>
+                {!isLoading && <kbd className="ml-2 text-[10px] bg-muted px-1.5 py-0.5 rounded">↵</kbd>}
               </TooltipContent>
             </Tooltip>
           </div>
