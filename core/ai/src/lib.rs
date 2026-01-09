@@ -6,10 +6,12 @@
 //! - Image generation (DALL-E 3)
 //! - Rate limiting per plan
 //! - Action parsing and execution
+//! - Intent analysis for dynamic chain of thoughts
 
 pub mod config;
 pub mod context;
 pub mod error;
+pub mod intent;
 pub mod orchestrator;
 pub mod rate_limiter;
 pub mod router;
@@ -22,6 +24,7 @@ pub mod providers;
 pub use config::AIConfig;
 pub use context::ContextBuilder;
 pub use error::{AIError, AIResult};
+pub use intent::{analyze_intent, execute_thinking_step, IntentAnalysis, ThinkingStep, StepResult};
 pub use orchestrator::AIOrchestrator;
 pub use rate_limiter::AIRateLimiter;
 pub use router::ModelRouter;
