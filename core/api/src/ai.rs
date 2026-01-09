@@ -1045,7 +1045,14 @@ Only skip tools if the question is purely conversational or doesn't need any dat
                         };
                         
                         let vision_prompt = format!(
-                            r#"You are an expert UI/UX designer analyzing a website screenshot.
+                            r#"You are an expert UI/UX designer performing a DETAILED visual analysis of this SPECIFIC website screenshot.
+
+CRITICAL INSTRUCTIONS:
+- You MUST describe what you ACTUALLY SEE in the image - real colors, real text, real elements
+- DO NOT give generic advice - every point must reference something visible in the screenshot
+- Mention specific elements by name (e.g., "the blue header", "the hero section with 'Welcome' text")
+- If you see placeholder content or lorem ipsum, point it out
+- If you see specific issues (misalignment, color contrast problems, spacing issues), describe them precisely
 
 The user asked: "{}"
 Viewport: {} view
@@ -1053,15 +1060,24 @@ Image dimensions: {}x{} pixels
 
 {}
 
-Provide actionable, specific feedback based on what you actually see in the screenshot.
-Be constructive and suggest concrete improvements.
-Keep your response focused, organized, and in the same language as the user's question.
+YOUR ANALYSIS MUST:
+1. Reference SPECIFIC visual elements you see (buttons, headers, images, text)
+2. Mention ACTUAL colors you observe (not generic "nice colors")
+3. Point out REAL issues visible in the screenshot
+4. Give recommendations that directly relate to what's shown
 
-Structure your response with clear sections:
-1. **Overall Impression** - First impression and general feel
-2. **Strengths** - What works well
-3. **Areas for Improvement** - Specific issues and how to fix them
-4. **Recommendations** - Actionable next steps"#,
+DO NOT:
+- Give generic UI/UX advice that could apply to any website
+- Say things like "ensure readability" without pointing to specific text that is/isn't readable
+- Make assumptions about things not visible in the screenshot
+
+Respond in the same language as the user's question.
+
+Structure your response:
+1. **Ce que je vois** - Describe the actual content/layout visible
+2. **Points forts** - Specific elements that work well (with examples from the screenshot)
+3. **Points faibles** - Specific issues visible (with precise locations)
+4. **Recommandations concrètes** - Actionable fixes for the issues you identified"#,
                             user_message,
                             params.viewport,
                             screenshot_data.width,
