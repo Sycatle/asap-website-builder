@@ -22,6 +22,7 @@ use asap_core_ai::{
     AIOrchestrator, AIChatRequest as CoreAIChatRequest, AIAction, 
     WebsiteContext, WebsiteInfo, SectionInfo, TokenUsage,
     UserContext, UserQuota, WebsiteDataContext, VariableGroup, CollectionSummary,
+    ActiveExtension,
     analyze_intent, execute_thinking_step, IntentAnalysis, StepResult,
     get_tool_definitions, ToolExecutor,
     OpenAIProvider,
@@ -757,6 +758,36 @@ async fn load_website_context(
         .cloned()
         .unwrap_or(serde_json::json!({}));
     
+    // Load active extensions for this website
+    let extensions: Vec<ActiveExtension> = sqlx::query_as::<_, (String, String, bool, serde_json::Value)>(
+        r#"
+        SELECT 
+            ae.extension_slug,
+            COALESCE(ec.name, ae.extension_slug) as name,
+            we.enabled,
+            COALESCE(we.settings, '{}'::jsonb) as settings
+        FROM website_extensions_v2 we
+        JOIN account_extensions ae ON ae.id = we.account_extension_id
+        LEFT JOIN extension_catalog ec ON ec.slug = ae.extension_slug
+        WHERE we.website_id = $1
+        ORDER BY ae.extension_slug
+        "#
+    )
+    .bind(website_id)
+    .fetch_all(pool)
+    .await
+    .map(|rows| {
+        rows.into_iter()
+            .map(|(slug, name, enabled, settings)| ActiveExtension {
+                slug,
+                name,
+                enabled,
+                settings,
+            })
+            .collect()
+    })
+    .unwrap_or_default();
+    
     Ok(WebsiteContext {
         website: WebsiteInfo {
             id: website_id,
@@ -782,6 +813,7 @@ async fn load_website_context(
         ],
         user: None, // Will be set by caller
         data: None, // Will be set by caller
+        extensions,
     })
 }
 

@@ -494,6 +494,23 @@ pub struct WebsiteContext {
     /// Website data (variables and collections from all extensions)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<WebsiteDataContext>,
+    /// Active extensions on this website
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extensions: Vec<ActiveExtension>,
+}
+
+/// Active extension on a website
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActiveExtension {
+    /// Extension slug (e.g., "github-sync")
+    pub slug: String,
+    /// Extension display name
+    pub name: String,
+    /// Whether the extension is enabled
+    pub enabled: bool,
+    /// Extension settings
+    #[serde(default)]
+    pub settings: serde_json::Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

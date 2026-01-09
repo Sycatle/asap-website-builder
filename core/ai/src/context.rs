@@ -63,6 +63,7 @@ impl ContextBuilder {
             available_section_types: self.available_section_types.clone(),
             user: None,
             data: None,
+            extensions: Vec::new(),
         }
     }
 
@@ -90,6 +91,7 @@ impl ContextBuilder {
             available_section_types: self.available_section_types.clone(),
             user,
             data,
+            extensions: Vec::new(),
         }
     }
 

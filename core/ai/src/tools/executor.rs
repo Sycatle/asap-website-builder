@@ -306,39 +306,30 @@ impl ToolExecutor {
 
     /// List extensions
     fn list_extensions(&self, context: &WebsiteContext) -> Result<String, String> {
-        let data = context.data.as_ref();
-        
-        // Build extension info from available data sources
-        let mut extensions: Vec<ExtensionInfo> = Vec::new();
-        let mut sources_seen: HashMap<String, ExtensionInfo> = HashMap::new();
-
-        if let Some(data) = data {
-            // Count variables per source
-            for group in &data.variables {
-                let entry = sources_seen.entry(group.source.clone()).or_insert(ExtensionInfo {
-                    id: group.source.clone(),
-                    name: format_extension_name(&group.source),
-                    active: true,
-                    variables_count: 0,
-                    collections_count: 0,
-                });
-                entry.variables_count += group.variables.len();
+        // Use the extensions list from context (loaded from website_extensions_v2)
+        let extensions: Vec<ExtensionInfo> = context.extensions.iter().map(|ext| {
+            // Count variables and collections from this extension
+            let (variables_count, collections_count) = if let Some(data) = context.data.as_ref() {
+                let vars = data.variables.iter()
+                    .filter(|g| g.source == ext.slug)
+                    .map(|g| g.variables.len())
+                    .sum();
+                let cols = data.collections.iter()
+                    .filter(|c| c.source == ext.slug)
+                    .count();
+                (vars, cols)
+            } else {
+                (0, 0)
+            };
+            
+            ExtensionInfo {
+                id: ext.slug.clone(),
+                name: ext.name.clone(),
+                active: ext.enabled,
+                variables_count,
+                collections_count,
             }
-
-            // Count collections per source
-            for collection in &data.collections {
-                let entry = sources_seen.entry(collection.source.clone()).or_insert(ExtensionInfo {
-                    id: collection.source.clone(),
-                    name: format_extension_name(&collection.source),
-                    active: true,
-                    variables_count: 0,
-                    collections_count: 0,
-                });
-                entry.collections_count += 1;
-            }
-        }
-
-        extensions.extend(sources_seen.into_values());
+        }).collect();
 
         Ok(serde_json::to_string(&json!({
             "count": extensions.len(),
