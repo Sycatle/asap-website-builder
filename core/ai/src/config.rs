@@ -45,9 +45,13 @@ pub struct OpenAIConfig {
     #[serde(default = "default_openai_base_url")]
     pub base_url: String,
 
-    /// Default model for chat
+    /// Default model for chat (fast, for intent analysis)
     #[serde(default = "default_openai_model")]
     pub model: String,
+
+    /// Model for final response (higher quality)
+    #[serde(default = "default_openai_response_model")]
+    pub response_model: String,
 
     /// Default model for image generation
     #[serde(default = "default_image_model")]
@@ -56,6 +60,14 @@ pub struct OpenAIConfig {
     /// Request timeout in seconds
     #[serde(default = "default_timeout")]
     pub timeout_secs: u64,
+
+    /// Max tokens for final response (default: 4096)
+    #[serde(default = "default_max_tokens")]
+    pub max_response_tokens: u32,
+
+    /// Temperature for final response (default: 0.7)
+    #[serde(default = "default_temperature")]
+    pub response_temperature: f32,
 }
 
 fn default_openai_base_url() -> String {
@@ -63,6 +75,10 @@ fn default_openai_base_url() -> String {
 }
 
 fn default_openai_model() -> String {
+    "gpt-4o-mini".to_string()
+}
+
+fn default_openai_response_model() -> String {
     "gpt-4o".to_string()
 }
 
@@ -72,6 +88,14 @@ fn default_image_model() -> String {
 
 fn default_timeout() -> u64 {
     60
+}
+
+fn default_max_tokens() -> u32 {
+    4096
+}
+
+fn default_temperature() -> f32 {
+    0.7
 }
 
 /// Anthropic provider configuration
@@ -175,12 +199,22 @@ impl AIConfig {
                 base_url: std::env::var("OPENAI_BASE_URL")
                     .unwrap_or_else(|_| default_openai_base_url()),
                 model: std::env::var("OPENAI_MODEL").unwrap_or_else(|_| default_openai_model()),
+                response_model: std::env::var("OPENAI_RESPONSE_MODEL")
+                    .unwrap_or_else(|_| default_openai_response_model()),
                 image_model: std::env::var("OPENAI_IMAGE_MODEL")
                     .unwrap_or_else(|_| default_image_model()),
                 timeout_secs: std::env::var("OPENAI_TIMEOUT")
                     .ok()
                     .and_then(|s| s.parse().ok())
                     .unwrap_or(default_timeout()),
+                max_response_tokens: std::env::var("OPENAI_MAX_RESPONSE_TOKENS")
+                    .ok()
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(default_max_tokens()),
+                response_temperature: std::env::var("OPENAI_RESPONSE_TEMPERATURE")
+                    .ok()
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(default_temperature()),
             },
             anthropic: AnthropicConfig {
                 api_key: std::env::var("ANTHROPIC_API_KEY").unwrap_or_default(),

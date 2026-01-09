@@ -7,6 +7,7 @@
 //! - Rate limiting per plan
 //! - Action parsing and execution
 //! - Intent analysis for dynamic chain of thoughts
+//! - Function calling (tools) for data retrieval
 
 pub mod config;
 pub mod context;
@@ -15,6 +16,7 @@ pub mod intent;
 pub mod orchestrator;
 pub mod rate_limiter;
 pub mod router;
+pub mod tools;
 pub mod types;
 
 pub mod actions;
@@ -28,4 +30,6 @@ pub use intent::{analyze_intent, execute_thinking_step, IntentAnalysis, Thinking
 pub use orchestrator::AIOrchestrator;
 pub use rate_limiter::AIRateLimiter;
 pub use router::ModelRouter;
+pub use tools::{get_tool_definitions, ToolExecutor, ToolCall, ToolResult, ToolDefinition};
 pub use types::*;
+

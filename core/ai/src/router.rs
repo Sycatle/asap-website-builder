@@ -214,9 +214,12 @@ mod tests {
             openai: OpenAIConfig {
                 api_key: "test-openai-key".to_string(),
                 base_url: "https://api.openai.com/v1".to_string(),
-                model: "gpt-4o".to_string(),
+                model: "gpt-4o-mini".to_string(),
+                response_model: "gpt-4o".to_string(),
                 image_model: "dall-e-3".to_string(),
                 timeout_secs: 60,
+                max_response_tokens: 4096,
+                response_temperature: 0.7,
             },
             anthropic: AnthropicConfig {
                 api_key: "test-anthropic-key".to_string(),
@@ -280,9 +283,12 @@ impl Default for OpenAIConfig {
         Self {
             api_key: String::new(),
             base_url: "https://api.openai.com/v1".to_string(),
-            model: "gpt-4o".to_string(),
+            model: "gpt-4o-mini".to_string(),
+            response_model: "gpt-4o".to_string(),
             image_model: "dall-e-3".to_string(),
             timeout_secs: 60,
+            max_response_tokens: 4096,
+            response_temperature: 0.7,
         }
     }
 }

@@ -603,18 +603,17 @@ async fn load_website_data(
     // Build CollectionSummaries with item previews
     let collections: Vec<CollectionSummary> = all_collections
         .into_iter()
-        .map(|(slug, source, description, items)| {
+        .map(|(slug, source, _description, items)| {
             let items_array = items.as_array().cloned().unwrap_or_default();
-            let total_items = items_array.len() as u32;
+            let count = items_array.len() as i32;
             
             // Extract preview fields from first few items (up to 5)
-            let preview_items: Vec<std::collections::HashMap<String, serde_json::Value>> = items_array
+            let preview: Vec<serde_json::Value> = items_array
                 .iter()
                 .take(5)
                 .filter_map(|item| {
                     let data = item.get("data")?;
-                    let mut preview: std::collections::HashMap<String, serde_json::Value> = 
-                        std::collections::HashMap::new();
+                    let mut preview_obj = serde_json::Map::new();
                     
                     // Extract common identifying fields for preview
                     for key in &["name", "title", "id", "slug", "description", "language", "stars", "url"] {
@@ -629,20 +628,19 @@ async fn load_website_data(
                             } else {
                                 val.clone()
                             };
-                            preview.insert((*key).to_string(), truncated);
+                            preview_obj.insert((*key).to_string(), truncated);
                         }
                     }
                     
-                    if preview.is_empty() { None } else { Some(preview) }
+                    if preview_obj.is_empty() { None } else { Some(serde_json::Value::Object(preview_obj)) }
                 })
                 .collect();
             
             CollectionSummary {
                 slug,
                 source,
-                description,
-                total_items,
-                preview_items,
+                count,
+                preview,
             }
         })
         .collect();
@@ -760,8 +758,8 @@ async fn load_website_context(
             "faq".to_string(),
             "cta".to_string(),
         ],
-        user: None,      // Will be set by caller
-        extensions: None, // Will be set by caller
+        user: None, // Will be set by caller
+        data: None, // Will be set by caller
     })
 }
 
