@@ -20,7 +20,7 @@ use uuid::Uuid;
 use asap_core_ai::{
     AIOrchestrator, AIChatRequest as CoreAIChatRequest, AIAction, 
     WebsiteContext, WebsiteInfo, SectionInfo, TokenUsage,
-    UserContext, UserQuota, ExtensionData, GitHubData, GitHubRepo, GitHubLanguage, GitHubContributions,
+    UserContext, UserQuota, WebsiteDataContext, VariableGroup, CollectionSummary,
     analyze_intent, execute_thinking_step, IntentAnalysis, StepResult,
 };
 use crate::Claims;
@@ -535,139 +535,134 @@ async fn load_user_context(
     })
 }
 
-/// Load extension data (GitHub, etc.) for AI context using website_variables and website_collections
-async fn load_extension_data(
+/// Load website variables and collections for AI context (generic, not extension-specific)
+async fn load_website_data(
     pool: &PgPool,
     _account_id: Uuid,
     website_id: Uuid,
-) -> Result<Option<ExtensionData>, StatusCode> {
-    // Load GitHub variables from website_variables table
-    let github_vars: Vec<(String, serde_json::Value)> = sqlx::query_as(
+) -> Result<Option<WebsiteDataContext>, StatusCode> {
+    // Load ALL variables grouped by source_ref
+    let all_vars: Vec<(String, String, serde_json::Value)> = sqlx::query_as(
         r#"
-        SELECT key, value 
+        SELECT source_ref, key, value 
         FROM website_variables 
-        WHERE website_id = $1 
-          AND source_ref = 'github-sync'
-          AND key LIKE 'github_%'
+        WHERE website_id = $1
+        ORDER BY source_ref, key
         "#
     )
     .bind(website_id)
     .fetch_all(pool)
     .await
     .map_err(|e| {
-        tracing::error!("Failed to load GitHub variables: {}", e);
+        tracing::error!("Failed to load website variables: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
     
-    // If no GitHub variables, no GitHub integration
-    if github_vars.is_empty() {
-        return Ok(None);
-    }
-    
-    // Build a map of variables for easy access
-    let vars_map: std::collections::HashMap<String, serde_json::Value> = 
-        github_vars.into_iter().collect();
-    
-    // Extract profile data from variables
-    let username = vars_map.get("github_username")
-        .and_then(|v| v.as_str())
-        .map(String::from);
-    let bio = vars_map.get("github_bio")
-        .and_then(|v| v.as_str())
-        .map(String::from);
-    
-    // Load top repositories from github_repos collection (limit to 5 for context)
-    let repos_collection: Option<serde_json::Value> = sqlx::query_scalar(
+    // Load ALL collections with their items
+    let all_collections: Vec<(String, String, Option<String>, serde_json::Value)> = sqlx::query_as(
         r#"
-        SELECT items
+        SELECT collection_slug, source_ref, description, items
         FROM website_collections
-        WHERE website_id = $1 AND collection_slug = 'github_repos'
+        WHERE website_id = $1
+        ORDER BY source_ref, collection_slug
         "#
     )
     .bind(website_id)
-    .fetch_optional(pool)
+    .fetch_all(pool)
     .await
     .map_err(|e| {
-        tracing::error!("Failed to load GitHub repos collection: {}", e);
+        tracing::error!("Failed to load website collections: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
     
-    let repositories: Vec<GitHubRepo> = repos_collection
-        .and_then(|items| items.as_array().cloned())
-        .map(|items| {
-            items.iter()
+    // If no data, return None
+    if all_vars.is_empty() && all_collections.is_empty() {
+        return Ok(None);
+    }
+    
+    // Group variables by source_ref
+    let mut variables_by_source: std::collections::HashMap<String, Vec<(String, serde_json::Value)>> = 
+        std::collections::HashMap::new();
+    
+    for (source_ref, key, value) in all_vars {
+        variables_by_source
+            .entry(source_ref)
+            .or_default()
+            .push((key, value));
+    }
+    
+    // Build VariableGroups
+    let variables: Vec<VariableGroup> = variables_by_source
+        .into_iter()
+        .map(|(source, vars)| VariableGroup {
+            source: source.clone(),
+            variables: vars.into_iter().collect(),
+        })
+        .collect();
+    
+    // Build CollectionSummaries with item previews
+    let collections: Vec<CollectionSummary> = all_collections
+        .into_iter()
+        .map(|(slug, source, description, items)| {
+            let items_array = items.as_array().cloned().unwrap_or_default();
+            let total_items = items_array.len() as u32;
+            
+            // Extract preview fields from first few items (up to 5)
+            let preview_items: Vec<std::collections::HashMap<String, serde_json::Value>> = items_array
+                .iter()
+                .take(5)
                 .filter_map(|item| {
                     let data = item.get("data")?;
-                    // Filter out forks and take top 5 by stars
-                    if data.get("is_fork").and_then(|v| v.as_bool()).unwrap_or(false) {
-                        return None;
+                    let mut preview: std::collections::HashMap<String, serde_json::Value> = 
+                        std::collections::HashMap::new();
+                    
+                    // Extract common identifying fields for preview
+                    for key in &["name", "title", "id", "slug", "description", "language", "stars", "url"] {
+                        if let Some(val) = data.get(*key) {
+                            // Truncate long strings for preview
+                            let truncated = if let Some(s) = val.as_str() {
+                                if s.len() > 100 {
+                                    serde_json::Value::String(format!("{}...", &s[..100]))
+                                } else {
+                                    val.clone()
+                                }
+                            } else {
+                                val.clone()
+                            };
+                            preview.insert((*key).to_string(), truncated);
+                        }
                     }
-                    Some(GitHubRepo {
-                        name: data.get("name")?.as_str()?.to_string(),
-                        description: data.get("description").and_then(|v| v.as_str()).map(String::from),
-                        language: data.get("language").and_then(|v| v.as_str()).map(String::from),
-                        stars: data.get("stars").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
-                        is_fork: false,
-                    })
+                    
+                    if preview.is_empty() { None } else { Some(preview) }
                 })
-                .take(5)
-                .collect()
+                .collect();
+            
+            CollectionSummary {
+                slug,
+                source,
+                description,
+                total_items,
+                preview_items,
+            }
         })
-        .unwrap_or_default();
+        .collect();
     
-    // Load languages from github_languages collection or from variables
-    let languages: Vec<GitHubLanguage> = vars_map.get("github_top_languages")
-        .and_then(|v| v.as_array())
-        .map(|langs| {
-            langs.iter()
-                .filter_map(|l| {
-                    Some(GitHubLanguage {
-                        name: l.get("name")?.as_str()?.to_string(),
-                        percentage: l.get("percentage").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
-                    })
-                })
-                .take(5)
-                .collect()
-        })
-        .unwrap_or_default();
-    
-    // Build contributions from variables if available
-    let contributions = {
-        let commits = vars_map.get("github_total_commits")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0) as u32;
-        let prs = vars_map.get("github_total_prs")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0) as u32;
-        let issues = vars_map.get("github_total_issues")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0) as u32;
-        
-        if commits > 0 || prs > 0 || issues > 0 {
-            Some(GitHubContributions {
-                total_commits: commits,
-                total_prs: prs,
-                total_issues: issues,
-            })
-        } else {
-            None
-        }
+    let data_context = WebsiteDataContext {
+        variables,
+        collections,
     };
     
-    let github = GitHubData {
-        username,
-        bio,
-        repositories,
-        languages,
-        contributions,
-    };
+    // Log summary for debugging
+    let var_count: usize = data_context.variables.iter().map(|g| g.variables.len()).sum();
+    let col_count = data_context.collections.len();
+    tracing::debug!(
+        "Website data loaded: {} variables in {} groups, {} collections",
+        var_count,
+        data_context.variables.len(),
+        col_count
+    );
     
-    // Only return if we have meaningful data
-    if github.username.is_some() || !github.repositories.is_empty() {
-        Ok(Some(ExtensionData { github: Some(github) }))
-    } else {
-        Ok(None)
-    }
+    Ok(Some(data_context))
 }
 
 /// Load website context for AI
@@ -968,10 +963,10 @@ pub async fn chat_stream(
         }))
     })?;
     
-    // Load extension data (GitHub, etc.)
-    let extension_data = load_extension_data(&pool, account_id, req.website_id).await.map_err(|s| {
+    // Load website variables and collections (all extensions' data)
+    let website_data = load_website_data(&pool, account_id, req.website_id).await.map_err(|s| {
         (s, Json(ErrorResponse {
-            error: "Failed to load extension data".to_string(),
+            error: "Failed to load website data".to_string(),
             code: "internal_error".to_string(),
         }))
     })?;
@@ -984,22 +979,24 @@ pub async fn chat_stream(
         }))
     })?;
     
-    // Inject user and extension data into context
+    // Inject user and website data into context
     context.user = Some(user_context);
-    context.extensions = extension_data.clone();
+    context.data = website_data.clone();
     
-    // Log extension data for debugging
-    if let Some(ref ext) = extension_data {
-        if let Some(ref gh) = ext.github {
-            tracing::info!(
-                "GitHub context loaded: username={:?}, repos={}, languages={}",
-                gh.username,
-                gh.repositories.len(),
-                gh.languages.len()
-            );
-        }
+    // Log website data summary for debugging
+    if let Some(ref data) = website_data {
+        let var_count: usize = data.variables.iter().map(|g| g.variables.len()).sum();
+        let sources: Vec<&str> = data.variables.iter().map(|g| g.source.as_str()).collect();
+        let col_slugs: Vec<&str> = data.collections.iter().map(|c| c.slug.as_str()).collect();
+        tracing::info!(
+            "Website data loaded: {} variables from {:?}, {} collections: {:?}",
+            var_count,
+            sources,
+            data.collections.len(),
+            col_slugs
+        );
     } else {
-        tracing::debug!("No extension data loaded for website {}", req.website_id);
+        tracing::debug!("No website data loaded for website {}", req.website_id);
     }
     
     // Clone user message before moving req

@@ -4,7 +4,7 @@
 
 use uuid::Uuid;
 
-use crate::types::{ExtensionData, SectionInfo, UserContext, WebsiteContext, WebsiteInfo};
+use crate::types::{SectionInfo, UserContext, WebsiteContext, WebsiteDataContext, WebsiteInfo};
 
 /// Builds context for AI from website data
 pub struct ContextBuilder {
@@ -62,12 +62,12 @@ impl ContextBuilder {
             theme,
             available_section_types: self.available_section_types.clone(),
             user: None,
-            extensions: None,
+            data: None,
         }
     }
 
-    /// Build context with user data
-    pub fn build_with_user(
+    /// Build context with user and website data
+    pub fn build_with_data(
         &self,
         website_id: Uuid,
         slug: &str,
@@ -75,8 +75,8 @@ impl ContextBuilder {
         preset: Option<&str>,
         sections: Vec<SectionInfo>,
         theme: serde_json::Value,
-        user: UserContext,
-        extensions: Option<ExtensionData>,
+        user: Option<UserContext>,
+        data: Option<WebsiteDataContext>,
     ) -> WebsiteContext {
         WebsiteContext {
             website: WebsiteInfo {
@@ -88,8 +88,8 @@ impl ContextBuilder {
             sections,
             theme,
             available_section_types: self.available_section_types.clone(),
-            user: Some(user),
-            extensions,
+            user,
+            data,
         }
     }
 
@@ -126,42 +126,43 @@ impl ContextBuilder {
             context.website.preset.as_deref().unwrap_or("(none)")
         ));
 
-        // Extension data (GitHub, etc.)
-        if let Some(ref extensions) = context.extensions {
-            if let Some(ref github) = extensions.github {
-                let mut github_parts = vec!["\n## GitHub Integration".to_string()];
-                if let Some(ref username) = github.username {
-                    github_parts.push(format!("- Username: {}", username));
-                }
-                if let Some(ref bio) = github.bio {
-                    github_parts.push(format!("- Bio: {}", bio));
-                }
-                if !github.languages.is_empty() {
-                    let top_langs: Vec<String> = github.languages
-                        .iter()
-                        .take(5)
-                        .map(|l| format!("{} ({:.0}%)", l.name, l.percentage))
-                        .collect();
-                    github_parts.push(format!("- Top Languages: {}", top_langs.join(", ")));
-                }
-                if !github.repositories.is_empty() {
-                    github_parts.push("- Top Repositories:".to_string());
-                    for repo in github.repositories.iter().take(5) {
-                        let desc = repo.description.as_deref().unwrap_or("No description");
-                        let lang = repo.language.as_deref().unwrap_or("Unknown");
-                        github_parts.push(format!(
-                            "  - {} ({}) ⭐{}: {}",
-                            repo.name, lang, repo.stars, desc
-                        ));
+        // Website Data (Variables and Collections from all extensions)
+        if let Some(ref data) = context.data {
+            // Variables grouped by source
+            if !data.variables.is_empty() {
+                parts.push("\n## Website Variables".to_string());
+                for group in &data.variables {
+                    if !group.variables.is_empty() {
+                        parts.push(format!("\n### From: {}", group.source));
+                        for (key, value) in &group.variables {
+                            // Format value nicely (truncate long strings/arrays)
+                            let formatted = format_value_for_prompt(value);
+                            parts.push(format!("- {}: {}", key, formatted));
+                        }
                     }
                 }
-                if let Some(ref contrib) = github.contributions {
-                    github_parts.push(format!(
-                        "- Contributions: {} commits, {} PRs, {} issues",
-                        contrib.total_commits, contrib.total_prs, contrib.total_issues
+            }
+            
+            // Collections summary with previews
+            if !data.collections.is_empty() {
+                parts.push("\n## Available Collections".to_string());
+                for collection in &data.collections {
+                    parts.push(format!(
+                        "\n### {} ({} items, from: {})",
+                        collection.slug, collection.count, collection.source
                     ));
+                    if !collection.preview.is_empty() {
+                        parts.push("Preview:".to_string());
+                        for (i, item) in collection.preview.iter().enumerate() {
+                            // Show compact preview of each item
+                            let preview = format_collection_item_preview(item);
+                            parts.push(format!("  {}. {}", i + 1, preview));
+                        }
+                        if collection.count as usize > collection.preview.len() {
+                            parts.push(format!("  ... and {} more", collection.count as usize - collection.preview.len()));
+                        }
+                    }
                 }
-                parts.push(github_parts.join("\n"));
             }
         }
 
@@ -226,6 +227,75 @@ impl ContextBuilder {
     }
 }
 
+/// Format a JSON value for display in prompt (truncate if too long)
+fn format_value_for_prompt(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::String(s) => {
+            if s.len() > 100 {
+                format!("\"{}...\"", &s[..100])
+            } else {
+                format!("\"{}\"", s)
+            }
+        }
+        serde_json::Value::Array(arr) => {
+            if arr.len() <= 3 {
+                format!("{:?}", arr.iter().map(|v| format_value_for_prompt(v)).collect::<Vec<_>>())
+            } else {
+                format!("[{} items]", arr.len())
+            }
+        }
+        serde_json::Value::Object(obj) => {
+            let keys: Vec<_> = obj.keys().take(5).collect();
+            if keys.len() < obj.len() {
+                format!("{{{}... ({} keys)}}", keys.iter().map(|k| k.as_str()).collect::<Vec<_>>().join(", "), obj.len())
+            } else {
+                format!("{{{}}}", keys.iter().map(|k| k.as_str()).collect::<Vec<_>>().join(", "))
+            }
+        }
+        _ => value.to_string(),
+    }
+}
+
+/// Format a collection item preview (show key fields)
+fn format_collection_item_preview(item: &serde_json::Value) -> String {
+    if let Some(data) = item.get("data").and_then(|d| d.as_object()) {
+        // Try to get common display fields
+        let name = data.get("name").or(data.get("title")).or(data.get("login"));
+        let desc = data.get("description").or(data.get("bio"));
+        
+        let mut parts = vec![];
+        if let Some(n) = name {
+            if let Some(s) = n.as_str() {
+                parts.push(s.to_string());
+            }
+        }
+        if let Some(d) = desc {
+            if let Some(s) = d.as_str() {
+                let truncated = if s.len() > 50 { format!("{}...", &s[..50]) } else { s.to_string() };
+                parts.push(truncated);
+            }
+        }
+        // Add any numeric stats
+        for key in ["stars", "count", "percentage"] {
+            if let Some(v) = data.get(key) {
+                if let Some(n) = v.as_i64() {
+                    parts.push(format!("{}: {}", key, n));
+                } else if let Some(f) = v.as_f64() {
+                    parts.push(format!("{}: {:.1}", key, f));
+                }
+            }
+        }
+        if parts.is_empty() {
+            // Fallback: show first 3 keys
+            let keys: Vec<_> = data.keys().take(3).map(|k| k.as_str()).collect();
+            return format!("{{{}}}", keys.join(", "));
+        }
+        parts.join(" | ")
+    } else {
+        format!("{}", item)
+    }
+}
+
 /// System prompt for the AI assistant
 pub fn build_system_prompt(context: &WebsiteContext) -> String {
     let context_builder = ContextBuilder::new();
@@ -252,13 +322,21 @@ pub fn build_system_prompt(context: &WebsiteContext) -> String {
         if user.plan == "free" {
             personalization.push_str("\n- The user is on a free plan. Be mindful of their limited quota.");
         }
-        if user.integrations.contains(&"github".to_string()) {
-            personalization.push_str("\n- The user has GitHub connected. You can reference their repos and skills when suggesting content.");
+    }
+    
+    // Add hints about available data
+    let mut data_hints = String::new();
+    if let Some(ref data) = context.data {
+        if !data.variables.is_empty() || !data.collections.is_empty() {
+            data_hints.push_str("\n- Website Variables and Collections are available in the context. Use this data to personalize content suggestions.");
+        }
+        if data.collections.iter().any(|c| c.slug.starts_with("github")) {
+            data_hints.push_str("\n- GitHub data is synced. Reference user's repos, languages, and profile when suggesting content.");
         }
     }
 
     let base_prompt = format!(r##"You are an AI assistant for ASAP, a website builder platform. Your role is to help users modify their websites through natural language.
-{}
+{}{}
 ## Your Capabilities
 1. **Modify text content** - Update headlines, descriptions, button text, etc.
 2. **Change design** - Update colors, fonts, spacing (via theme)
@@ -291,11 +369,12 @@ When the user asks for changes, you MUST respond with:
 6. When the user asks about their website content, provide a helpful summary
 7. When making changes, don't repeat properties - just confirm what was changed
 8. Keep responses short and action-focused
-9. If GitHub data is available, use it to personalize suggestions (e.g., feature their top repos)
+9. Use Website Variables and Collections data to personalize suggestions (e.g., user's GitHub repos, languages, profile)
+10. When the user asks about their data (e.g., "my GitHub", "my repos"), refer to the Variables and Collections in the context
 
 ---
 
-"##, personalization);
+"##, personalization, data_hints);
 
     format!("{}{}", base_prompt, context_str)
 }

@@ -447,58 +447,38 @@ pub struct UserQuota {
     pub daily_remaining: u32,
 }
 
-/// Extension data for AI context
+/// Generic website data context for AI (variables and collections from all extensions)
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct ExtensionData {
-    /// GitHub integration data
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub github: Option<GitHubData>,
-}
-
-/// GitHub integration data
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct GitHubData {
-    /// GitHub username
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub username: Option<String>,
-    /// GitHub profile bio
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bio: Option<String>,
-    /// Top repositories (name, description, language, stars)
+pub struct WebsiteDataContext {
+    /// All website variables grouped by source extension
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub repositories: Vec<GitHubRepo>,
-    /// Programming languages with usage percentage
+    pub variables: Vec<VariableGroup>,
+    /// Summary of available collections
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub languages: Vec<GitHubLanguage>,
-    /// Contribution stats
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub contributions: Option<GitHubContributions>,
+    pub collections: Vec<CollectionSummary>,
 }
 
+/// Group of variables from a single source
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GitHubRepo {
-    pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub language: Option<String>,
-    #[serde(default)]
-    pub stars: u32,
-    #[serde(default)]
-    pub is_fork: bool,
+pub struct VariableGroup {
+    /// Source extension (e.g., "github-sync", "manual")
+    pub source: String,
+    /// Variables in this group (key -> value)
+    pub variables: std::collections::HashMap<String, serde_json::Value>,
 }
 
+/// Summary of a collection (not full data, just metadata for AI context)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GitHubLanguage {
-    pub name: String,
-    pub percentage: f32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GitHubContributions {
-    pub total_commits: u32,
-    pub total_prs: u32,
-    pub total_issues: u32,
+pub struct CollectionSummary {
+    /// Collection slug (e.g., "github_repos")
+    pub slug: String,
+    /// Source extension
+    pub source: String,
+    /// Number of items
+    pub count: i32,
+    /// Preview of first few items (for context)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub preview: Vec<serde_json::Value>,
 }
 
 /// Website context for AI
@@ -511,9 +491,9 @@ pub struct WebsiteContext {
     /// User context for personalization
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user: Option<UserContext>,
-    /// Extension data (GitHub, etc.)
+    /// Website data (variables and collections from all extensions)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub extensions: Option<ExtensionData>,
+    pub data: Option<WebsiteDataContext>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
