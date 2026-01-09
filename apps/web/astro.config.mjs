@@ -43,7 +43,7 @@ export default defineConfig({
         // Resolve dependencies from renderers package to this project's node_modules
         'dompurify': path.resolve(__dirname, 'node_modules/dompurify'),
       },
-      dedupe: ['react', 'react-dom'],
+      dedupe: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
     },
     optimizeDeps: {
       include: ['react', 'react-dom', 'dompurify'],
