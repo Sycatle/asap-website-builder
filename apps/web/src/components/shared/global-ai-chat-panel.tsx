@@ -49,11 +49,54 @@ import { cn } from "@/lib/utils";
 import { useWebsiteContext } from "@/contexts/WebsiteContext";
 import { useUserData } from "@/lib/store/authStore";
 
+// Helper to clean AI response content
+// Removes section property dumps that AI sometimes includes
+function cleanAIContent(content: string): string {
+  // Remove lists of section properties (property_name: value format)
+  // Pattern: lines that start with bullet and contain technical property names
+  const propertyListPattern = /^(\s*[-*•]\s*)(\w+_\w+|\w+[A-Z]\w+):\s*.+$/gm;
+  const technicalPropertyNames = [
+    'cta_primary', 'cta_secondary', 'headline_line', 'badge_text', 'dashboard_',
+    'social_proof', 'subheadline', 'nav_links', 'show_', 'avatar_'
+  ];
+  
+  const lines = content.split('\n');
+  const cleanedLines: string[] = [];
+  let skipPropertyBlock = false;
+  let propertyBlockCount = 0;
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    
+    // Detect start of property dump (multiple consecutive property-like lines)
+    if (trimmed.match(/^[-*•]\s*\w+.*:\s*.+$/) && 
+        technicalPropertyNames.some(prop => trimmed.toLowerCase().includes(prop))) {
+      propertyBlockCount++;
+      if (propertyBlockCount >= 2) {
+        skipPropertyBlock = true;
+      }
+      continue;
+    } else {
+      propertyBlockCount = 0;
+      skipPropertyBlock = false;
+    }
+    
+    if (!skipPropertyBlock) {
+      cleanedLines.push(line);
+    }
+  }
+  
+  return cleanedLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 // Simple markdown renderer component
 function MarkdownContent({ content, className }: { content: string; className?: string }) {
+  // Clean the content first to remove property dumps
+  const cleanedContent = cleanAIContent(content);
+  
   const parseMarkdown = (text: string): React.ReactNode[] => {
     const elements: React.ReactNode[] = [];
-    const lines = text.split('\n');
+    const lines = cleanedContent.split('\n');
     let inCodeBlock = false;
     let codeBlockContent = '';
     let codeBlockLang = '';
@@ -130,11 +173,18 @@ function MarkdownContent({ content, className }: { content: string; className?: 
       if (line.startsWith('```')) {
         if (inCodeBlock) {
           flushList();
-          elements.push(
-            <pre key={`code-${elements.length}`} className="my-2 p-3 bg-muted rounded-lg overflow-x-auto">
-              <code className="text-xs font-mono">{codeBlockContent.trim()}</code>
-            </pre>
-          );
+          // Skip JSON blocks that look like AI actions (contain "type": with action keywords)
+          const isAIActionBlock = codeBlockLang === 'json' && 
+            codeBlockContent.includes('"type"') && 
+            /("type"\s*:\s*"(update_section|update_property|add_section|remove_section|reorder_sections|duplicate_section|update_theme|update_metadata|generate_content|UPDATE_SECTION_PROPERTY)"|"section_id"|"property")/i.test(codeBlockContent);
+          
+          if (!isAIActionBlock) {
+            elements.push(
+              <pre key={`code-${elements.length}`} className="my-2 p-3 bg-muted rounded-lg overflow-x-auto">
+                <code className="text-xs font-mono">{codeBlockContent.trim()}</code>
+              </pre>
+            );
+          }
           codeBlockContent = '';
           inCodeBlock = false;
         } else {
@@ -213,7 +263,7 @@ function MarkdownContent({ content, className }: { content: string; className?: 
   
   return <div className={cn("prose-sm", className)}>{parseMarkdown(content)}</div>;
 }
-import { streamChatMessage, type AIAction } from "@/lib/api/ai";
+import { streamChatMessage, type AIAction, type ThinkingData, type ToolCallData, type ToolResultData, type IterationData } from "@/lib/api/ai";
 import { useAIActionExecutor } from "@/hooks/useAIActionExecutor";
 
 // Helper to format action labels for display
@@ -241,6 +291,56 @@ function formatActionLabel(action: AIAction): string {
   }
 }
 
+// Tool icons and labels
+const TOOL_CONFIG: Record<string, { icon: React.ElementType; label: string; color: string; bgColor: string }> = {
+  'update_section': { icon: Wand2, label: 'Updating section', color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
+  'update_section_property': { icon: Wand2, label: 'Updating property', color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
+  'add_section': { icon: Plus, label: 'Adding section', color: 'text-green-500', bgColor: 'bg-green-500/10' },
+  'remove_section': { icon: Trash2, label: 'Removing section', color: 'text-red-500', bgColor: 'bg-red-500/10' },
+  'reorder_sections': { icon: Layout, label: 'Reordering', color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
+  'update_theme': { icon: Palette, label: 'Updating theme', color: 'text-pink-500', bgColor: 'bg-pink-500/10' },
+  'generate_image': { icon: Image, label: 'Generating image', color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
+  'generate_content': { icon: Sparkles, label: 'Generating content', color: 'text-violet-500', bgColor: 'bg-violet-500/10' },
+  'analyze': { icon: Sparkles, label: 'Analyzing', color: 'text-primary', bgColor: 'bg-primary/10' },
+  'thinking': { icon: Sparkles, label: 'Thinking', color: 'text-primary', bgColor: 'bg-primary/10' },
+  'default': { icon: Zap, label: 'Processing', color: 'text-primary', bgColor: 'bg-primary/10' },
+};
+
+// Chain of thought step type
+interface ChainStep {
+  id: string;
+  type: 'thinking' | 'tool' | 'result';
+  title: string;
+  description?: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  timestamp: Date;
+  tool?: string;
+  result?: { success: boolean; message?: string };
+}
+
+// Thinking/processing state in a message
+interface ThinkingState {
+  thought: string;
+  step?: number;
+}
+
+// Tool call state in a message  
+interface ToolCallState {
+  id: string;
+  tool: string;
+  description: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  result?: { success: boolean; message?: string };
+}
+
+// Iteration state
+interface IterationState {
+  current: number;
+  max: number;
+  status: 'starting' | 'processing' | 'complete' | 'finished';
+  description?: string;
+}
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -250,6 +350,12 @@ interface Message {
   executedActions?: { action: AIAction; success: boolean; error?: string }[];
   isStreaming?: boolean;
   error?: boolean;
+  // Chain of thoughts
+  thinking?: ThinkingState;
+  toolCalls?: ToolCallState[];
+  iteration?: IterationState;
+  chainSteps?: ChainStep[];
+  isAnalyzing?: boolean;
 }
 
 interface GlobalAIChatPanelProps {
@@ -398,11 +504,17 @@ export function GlobalAIChatPanel({
   }, []);
   
   // Auto-execute actions when they arrive
-  const handleActionReceived = useCallback(async (action: AIAction, messageId: string) => {
-    if (!autoExecuteActions) return;
+  const handleActionReceived = useCallback(async (action: AIAction, _messageId: string): Promise<boolean> => {
+    if (!autoExecuteActions) return true; // Skip but consider success
     
-    // Execute the action
-    await executeAction(action);
+    try {
+      // Execute the action
+      await executeAction(action);
+      return true;
+    } catch (error) {
+      console.error('Action execution failed:', error);
+      return false;
+    }
   }, [autoExecuteActions, executeAction]);
 
   const handleStopStreaming = useCallback(() => {
@@ -443,9 +555,42 @@ export function GlobalAIChatPanel({
       content: '',
       timestamp: new Date(),
       actions: [],
+      toolCalls: [],
+      chainSteps: [],
       isStreaming: true,
+      isAnalyzing: true,
     };
     setMessages(prev => [...prev, assistantMessage]);
+
+    // Helper to add chain step
+    const addChainStep = (step: Omit<ChainStep, 'id' | 'timestamp'>) => {
+      const newStep: ChainStep = {
+        ...step,
+        id: crypto.randomUUID(),
+        timestamp: new Date(),
+      };
+      setMessages(prev => prev.map(m => {
+        if (m.id !== assistantMessageId) return m;
+        const existingSteps = m.chainSteps || [];
+        return { ...m, chainSteps: [...existingSteps, newStep] };
+      }));
+      return newStep.id;
+    };
+
+    // Helper to update chain step
+    const updateChainStep = (stepId: string, updates: Partial<ChainStep>) => {
+      setMessages(prev => prev.map(m => {
+        if (m.id !== assistantMessageId) return m;
+        const steps = m.chainSteps || [];
+        return {
+          ...m,
+          chainSteps: steps.map(s => s.id === stepId ? { ...s, ...updates } : s),
+        };
+      }));
+    };
+
+    // Track current chain step IDs
+    const stepIdMap = new Map<string, string>();
 
     // Create abort controller for this request
     abortControllerRef.current = streamChatMessage(
@@ -458,36 +603,183 @@ export function GlobalAIChatPanel({
         onToken: (token: string) => {
           setMessages(prev => prev.map(m => 
             m.id === assistantMessageId 
-              ? { ...m, content: m.content + token }
+              ? { ...m, content: m.content + token, thinking: undefined, isAnalyzing: false }
+              : m
+          ));
+        },
+        onThinking: (data) => {
+          // Add or update thinking step in chain
+          const stepKey = `thinking_${data.step || 0}`;
+          if (!stepIdMap.has(stepKey)) {
+            const stepId = addChainStep({
+              type: 'thinking',
+              title: data.thought,
+              status: 'running',
+              tool: 'thinking',
+            });
+            stepIdMap.set(stepKey, stepId);
+          } else {
+            updateChainStep(stepIdMap.get(stepKey)!, {
+              title: data.thought,
+              status: 'completed',
+            });
+          }
+          
+          setMessages(prev => prev.map(m => 
+            m.id === assistantMessageId 
+              ? { ...m, thinking: { thought: data.thought, step: data.step } }
+              : m
+          ));
+        },
+        onToolCall: (data) => {
+          // Add tool call to chain steps
+          const stepKey = `tool_${data.id}`;
+          if (!stepIdMap.has(stepKey)) {
+            const stepId = addChainStep({
+              type: 'tool',
+              title: data.description || data.tool,
+              description: data.args ? `Args: ${JSON.stringify(data.args).slice(0, 100)}...` : undefined,
+              status: data.status === 'running' ? 'running' : data.status === 'completed' ? 'completed' : data.status === 'failed' ? 'failed' : 'pending',
+              tool: data.tool,
+            });
+            stepIdMap.set(stepKey, stepId);
+          } else {
+            const newStatus = data.status === 'running' ? 'running' : data.status === 'completed' ? 'completed' : data.status === 'failed' ? 'failed' : 'pending';
+            updateChainStep(stepIdMap.get(stepKey)!, { status: newStatus as ChainStep['status'] });
+          }
+          
+          setMessages(prev => prev.map(m => {
+            if (m.id !== assistantMessageId) return m;
+            const existing = m.toolCalls || [];
+            const existingIdx = existing.findIndex(tc => tc.id === data.id);
+            if (existingIdx >= 0) {
+              // Update existing tool call
+              const updated = [...existing];
+              updated[existingIdx] = { ...updated[existingIdx], status: data.status };
+              return { ...m, toolCalls: updated, isAnalyzing: false };
+            }
+            // Add new tool call
+            return { 
+              ...m, 
+              thinking: undefined,
+              isAnalyzing: false,
+              toolCalls: [...existing, {
+                id: data.id,
+                tool: data.tool,
+                description: data.description,
+                status: data.status,
+              }]
+            };
+          }));
+        },
+        onToolResult: (data) => {
+          // Update chain step with result
+          const stepKey = `tool_${data.tool_call_id}`;
+          if (stepIdMap.has(stepKey)) {
+            updateChainStep(stepIdMap.get(stepKey)!, {
+              status: data.success ? 'completed' : 'failed',
+              result: { success: data.success, message: data.message },
+            });
+          }
+          
+          setMessages(prev => prev.map(m => {
+            if (m.id !== assistantMessageId) return m;
+            const toolCalls = m.toolCalls || [];
+            return {
+              ...m,
+              toolCalls: toolCalls.map(tc => 
+                tc.id === data.tool_call_id 
+                  ? { ...tc, status: data.success ? 'completed' as const : 'failed' as const, result: { success: data.success, message: data.message } }
+                  : tc
+              ),
+            };
+          }));
+        },
+        onIteration: (data) => {
+          // Add iteration step to chain
+          const stepKey = `iteration_${data.current}`;
+          if (!stepIdMap.has(stepKey)) {
+            const stepId = addChainStep({
+              type: 'thinking',
+              title: `Iteration ${data.current}/${data.max}`,
+              description: data.description,
+              status: data.status === 'complete' || data.status === 'finished' ? 'completed' : 'running',
+              tool: 'thinking',
+            });
+            stepIdMap.set(stepKey, stepId);
+          } else {
+            updateChainStep(stepIdMap.get(stepKey)!, {
+              status: data.status === 'complete' || data.status === 'finished' ? 'completed' : 'running',
+              description: data.description,
+            });
+          }
+          
+          setMessages(prev => prev.map(m => 
+            m.id === assistantMessageId 
+              ? { ...m, iteration: data }
               : m
           ));
         },
         onAction: (action: AIAction) => {
+          // Add action execution step to chain
+          const actionLabel = formatActionLabel(action);
+          const stepId = addChainStep({
+            type: 'result',
+            title: `Executing: ${actionLabel}`,
+            status: 'running',
+            tool: action.type.includes('add') ? 'add_section' : action.type.includes('remove') ? 'remove_section' : 'update_section',
+          });
+          
           setMessages(prev => prev.map(m => 
             m.id === assistantMessageId 
               ? { ...m, actions: [...(m.actions || []), action] }
               : m
           ));
-          // Auto-execute the action
-          handleActionReceived(action, assistantMessageId);
+          
+          // Auto-execute the action with feedback
+          handleActionReceived(action, assistantMessageId).then((success: boolean) => {
+            updateChainStep(stepId, {
+              status: success ? 'completed' : 'failed',
+              result: { success, message: success ? 'Applied successfully' : 'Failed to apply' },
+            });
+          }).catch(() => {
+            updateChainStep(stepId, {
+              status: 'failed',
+              result: { success: false, message: 'Execution error' },
+            });
+          });
         },
         onDone: () => {
-          setMessages(prev => prev.map(m => 
-            m.id === assistantMessageId 
-              ? { ...m, isStreaming: false }
-              : m
-          ));
+          // Mark all remaining chain steps as completed
+          setMessages(prev => prev.map(m => {
+            if (m.id !== assistantMessageId) return m;
+            const steps = m.chainSteps || [];
+            return {
+              ...m,
+              isStreaming: false,
+              isAnalyzing: false,
+              chainSteps: steps.map(s => s.status === 'running' || s.status === 'pending' ? { ...s, status: 'completed' as const } : s),
+            };
+          }));
           setIsLoading(false);
           abortControllerRef.current = null;
           playSound('receive');
         },
         onError: (error: { code: string; message: string }) => {
           console.error('AI chat error:', error);
-          setMessages(prev => prev.map(m => 
-            m.id === assistantMessageId 
-              ? { ...m, content: error.message || t('editor:ai.error'), isStreaming: false, error: true }
-              : m
-          ));
+          // Mark chain steps as failed
+          setMessages(prev => prev.map(m => {
+            if (m.id !== assistantMessageId) return m;
+            const steps = m.chainSteps || [];
+            return {
+              ...m,
+              content: error.message || t('editor:ai.error'),
+              isStreaming: false,
+              isAnalyzing: false,
+              error: true,
+              chainSteps: steps.map(s => s.status === 'running' ? { ...s, status: 'failed' as const } : s),
+            };
+          }));
           setIsLoading(false);
           abortControllerRef.current = null;
           playSound('error');
@@ -763,6 +1055,172 @@ export function GlobalAIChatPanel({
 }
 
 /**
+ * ThinkingIndicator - Simple bouncing dots for initial thinking
+ */
+function ThinkingIndicator({ thought, step }: { thought: string; step?: number }) {
+  return (
+    <div className="mb-3 flex items-start gap-2 text-muted-foreground animate-in fade-in-0 slide-in-from-left-2">
+      <div className="shrink-0 mt-0.5">
+        <div className="flex gap-1">
+          <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+          <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+          <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+        </div>
+      </div>
+      <div className="flex-1 min-w-0">
+        {step && <span className="text-[10px] text-primary/60 mr-1.5">Step {step}</span>}
+        <p className="text-xs italic text-muted-foreground/80">{thought}</p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * ChainOfThoughtsDisplay - Visual chain of thoughts with steps
+ */
+function ChainOfThoughtsDisplay({ steps, isStreaming }: { steps: ChainStep[]; isStreaming?: boolean }) {
+  const [isCollapsed, setIsCollapsed] = useState(true);
+  const completedCount = steps.filter(s => s.status === 'completed').length;
+  const totalCount = steps.length;
+  const hasRunning = steps.some(s => s.status === 'running');
+  
+  if (steps.length === 0) return null;
+  
+  return (
+    <div className="mb-4 animate-in fade-in-0 slide-in-from-left-2">
+      {/* Header with collapse toggle */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="w-full flex items-center gap-2 mb-2 group"
+      >
+        <div className="flex items-center gap-1.5">
+          {hasRunning ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+          ) : completedCount === totalCount ? (
+            <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+          ) : (
+            <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" />
+          )}
+          <span className="text-xs font-medium text-muted-foreground">
+            {hasRunning ? 'Processing...' : completedCount === totalCount ? 'Completed' : 'Thinking'}
+          </span>
+        </div>
+        
+        {/* Progress indicator */}
+        <div className="flex-1 flex items-center gap-2">
+          <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-primary transition-all duration-300 ease-out"
+              style={{ width: `${(completedCount / totalCount) * 100}%` }}
+            />
+          </div>
+          <span className="text-[10px] text-muted-foreground">{completedCount}/{totalCount}</span>
+        </div>
+        
+        <ChevronDown className={cn(
+          "h-3.5 w-3.5 text-muted-foreground transition-transform",
+          isCollapsed && "-rotate-90"
+        )} />
+      </button>
+      
+      {/* Steps list */}
+      {!isCollapsed && (
+        <div className="space-y-1.5 pl-1 border-l-2 border-muted ml-1.5">
+          {steps.map((step, idx) => {
+            const config = TOOL_CONFIG[step.tool || step.type] || TOOL_CONFIG['default'];
+            const Icon = config.icon;
+            const isRunning = step.status === 'running';
+            const isCompleted = step.status === 'completed';
+            const isFailed = step.status === 'failed';
+            const isPending = step.status === 'pending';
+            
+            return (
+              <div 
+                key={step.id}
+                className={cn(
+                  "flex items-start gap-2 pl-3 py-1.5 transition-all relative",
+                  "animate-in fade-in-0 slide-in-from-left-1",
+                  isRunning && "bg-primary/5 rounded-r-lg"
+                )}
+                style={{ animationDelay: `${idx * 50}ms` }}
+              >
+                {/* Connection dot on the border */}
+                <div className={cn(
+                  "absolute -left-[5px] top-3 w-2 h-2 rounded-full border-2 border-background",
+                  isCompleted && "bg-green-500",
+                  isRunning && "bg-primary animate-pulse",
+                  isFailed && "bg-red-500",
+                  isPending && "bg-muted"
+                )} />
+                
+                {/* Step icon */}
+                <div className={cn(
+                  "shrink-0 h-6 w-6 rounded-md flex items-center justify-center",
+                  config.bgColor
+                )}>
+                  {isRunning ? (
+                    <Loader2 className={cn("h-3.5 w-3.5 animate-spin", config.color)} />
+                  ) : isCompleted ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                  ) : isFailed ? (
+                    <AlertCircle className="h-3.5 w-3.5 text-red-500" />
+                  ) : (
+                    <Icon className={cn("h-3.5 w-3.5", isPending ? "text-muted-foreground" : config.color)} />
+                  )}
+                </div>
+                
+                {/* Step content */}
+                <div className="flex-1 min-w-0">
+                  <p className={cn(
+                    "text-xs font-medium",
+                    isPending && "text-muted-foreground",
+                    isFailed && "text-red-600"
+                  )}>
+                    {step.title}
+                  </p>
+                  {step.description && (
+                    <p className="text-[10px] text-muted-foreground/80 mt-0.5 line-clamp-2">
+                      {step.description}
+                    </p>
+                  )}
+                  {step.result?.message && (
+                    <p className={cn(
+                      "text-[10px] mt-0.5",
+                      step.result.success ? "text-green-600" : "text-red-600"
+                    )}>
+                      {step.result.message}
+                    </p>
+                  )}
+                </div>
+                
+                {/* Status badge */}
+                {isRunning && (
+                  <span className="text-[9px] text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+                    Running
+                  </span>
+                )}
+              </div>
+            );
+          })}
+          
+          {/* Show "more steps coming" indicator when streaming */}
+          {isStreaming && hasRunning && (
+            <div className="flex items-center gap-2 pl-3 py-1.5 text-muted-foreground/60">
+              <div className="flex gap-1">
+                <span className="w-1 h-1 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1 h-1 bg-current rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1 h-1 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+              <span className="text-[10px]">More steps...</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
  * EmptyState - Welcome avec style ASAP et animations
  */
 function EmptyState({ 
@@ -1009,6 +1467,94 @@ function MessageBubble({
             <div className="flex items-center gap-2 mb-2 text-red-600 dark:text-red-400">
               <AlertCircle className="h-4 w-4 shrink-0" />
               <span className="text-xs font-medium">Failed to generate response</span>
+            </div>
+          )}
+          
+          {/* Iteration indicator */}
+          {!isUser && message.iteration && message.iteration.status !== 'finished' && (
+            <div className="mb-3 px-3 py-2 bg-primary/5 rounded-lg border border-primary/20 animate-in fade-in-0">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-medium text-primary flex items-center gap-1.5">
+                  <RotateCcw className="h-3 w-3 animate-spin" />
+                  Iteration {message.iteration.current}/{message.iteration.max}
+                </span>
+                <span className="text-[10px] text-muted-foreground capitalize">{message.iteration.status}</span>
+              </div>
+              {message.iteration.description && (
+                <p className="text-xs text-muted-foreground">{message.iteration.description}</p>
+              )}
+              <div className="mt-1.5 h-1 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary transition-all duration-300" 
+                  style={{ width: `${(message.iteration.current / message.iteration.max) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+          
+          {/* Chain of Thoughts - Visual step-by-step display */}
+          {!isUser && message.chainSteps && message.chainSteps.length > 0 && (
+            <ChainOfThoughtsDisplay steps={message.chainSteps} isStreaming={message.isStreaming} />
+          )}
+          
+          {/* Simple thinking indicator when no chain steps */}
+          {!isUser && message.thinking && (!message.chainSteps || message.chainSteps.length === 0) && (
+            <ThinkingIndicator thought={message.thinking.thought} step={message.thinking.step} />
+          )}
+          
+          {/* Tool calls display (ChatGPT style) */}
+          {!isUser && message.toolCalls && message.toolCalls.length > 0 && (
+            <div className="mb-3 space-y-2">
+              {message.toolCalls.map((toolCall) => {
+                const config = TOOL_CONFIG[toolCall.tool] || TOOL_CONFIG['default'];
+                const Icon = config.icon;
+                const isRunning = toolCall.status === 'running' || toolCall.status === 'pending';
+                const isCompleted = toolCall.status === 'completed';
+                const isFailed = toolCall.status === 'failed';
+                
+                return (
+                  <div 
+                    key={toolCall.id}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs transition-all animate-in fade-in-0 slide-in-from-left-2",
+                      isRunning && "bg-primary/5 border-primary/30",
+                      isCompleted && "bg-green-500/5 border-green-500/30",
+                      isFailed && "bg-red-500/5 border-red-500/30"
+                    )}
+                  >
+                    <div className={cn(
+                      "shrink-0 h-6 w-6 rounded-md flex items-center justify-center",
+                      isRunning && "bg-primary/10",
+                      isCompleted && "bg-green-500/10",
+                      isFailed && "bg-red-500/10"
+                    )}>
+                      {isRunning ? (
+                        <Loader2 className={cn("h-3.5 w-3.5 animate-spin", config.color)} />
+                      ) : isCompleted ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                      ) : isFailed ? (
+                        <AlertCircle className="h-3.5 w-3.5 text-red-500" />
+                      ) : (
+                        <Icon className={cn("h-3.5 w-3.5", config.color)} />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{toolCall.description}</p>
+                      {toolCall.result?.message && (
+                        <p className={cn(
+                          "text-[10px] truncate mt-0.5",
+                          toolCall.result.success ? "text-green-600" : "text-red-600"
+                        )}>
+                          {toolCall.result.message}
+                        </p>
+                      )}
+                    </div>
+                    {isRunning && (
+                      <span className="text-[10px] text-muted-foreground">Running...</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
           
