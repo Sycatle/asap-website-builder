@@ -24,6 +24,15 @@ import {
   TestimonialsSection,
   CTASection,
   FooterSection,
+  // Phase 2: New sections
+  ContentSection,
+  AboutSection,
+  FAQSection,
+  ContactSection,
+  GallerySection,
+  StatsSection,
+  LogosSection,
+  BlogListSection,
 } from './components/saas';
 
 // ============================================
@@ -121,6 +130,16 @@ const renderers: Record<string, React.ComponentType<SectionRendererProps>> = {
   
   // Footer
   footer: FooterSection,
+  
+  // Phase 2: New sections
+  content: ContentSection,
+  about: AboutSection,
+  faq: FAQSection,
+  contact: ContactSection,
+  gallery: GallerySection,
+  stats: StatsSection,
+  logos: LogosSection,
+  'blog-list': BlogListSection,
 };
 
 // ============================================
