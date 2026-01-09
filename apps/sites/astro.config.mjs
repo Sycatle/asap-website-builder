@@ -57,6 +57,10 @@ export default defineConfig({
   },
   
   vite: {
+    server: {
+      // Allow Docker internal hostname for screenshot service
+      allowedHosts: ['sites', 'localhost', '.asap.cool'],
+    },
     resolve: {
       alias: {
         '@': '/src',
