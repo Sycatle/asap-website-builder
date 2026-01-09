@@ -456,7 +456,6 @@ struct ElementRow {
 #[derive(sqlx::FromRow)]
 struct AccountRow {
     id: Uuid,
-    name: Option<String>,
     plan: String,
 }
 
@@ -472,9 +471,9 @@ async fn load_user_context(
     plan_daily_limit: u32,
     plan_daily_used: u32,
 ) -> Result<UserContext, StatusCode> {
-    // Fetch account info
+    // Fetch account info (plan)
     let account: AccountRow = sqlx::query_as(
-        "SELECT id, name, plan FROM accounts WHERE id = $1"
+        "SELECT id, plan FROM accounts WHERE id = $1"
     )
     .bind(account_id)
     .fetch_one(pool)
@@ -484,7 +483,7 @@ async fn load_user_context(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
     
-    // Fetch account_data for preferences and integrations
+    // Fetch account_data for name, preferences and integrations
     let account_data: Option<AccountDataRow> = sqlx::query_as(
         "SELECT data FROM account_data WHERE account_id = $1"
     )
@@ -496,14 +495,26 @@ async fn load_user_context(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
     
-    // Extract integrations from account_data
+    // Extract user info from account_data
+    let mut name: Option<String> = None;
     let mut integrations = vec![];
     let mut language = "en".to_string();
     
     if let Some(ref data_row) = account_data {
+        // Get display name
+        if let Some(display_name) = data_row.data.get("display_name").and_then(|v| v.as_str()) {
+            name = Some(display_name.to_string());
+        } else if let Some(given_name) = data_row.data.get("given_name").and_then(|v| v.as_str()) {
+            name = Some(given_name.to_string());
+        }
+        
         // Check for GitHub integration
         if data_row.data.get("github").is_some() {
             integrations.push("github".to_string());
+        }
+        // Check for Google OAuth (indicates google integration)
+        if data_row.data.get("oauth").and_then(|o| o.get("google")).is_some() {
+            integrations.push("google".to_string());
         }
         // Check for language preference
         if let Some(lang) = data_row.data.get("language").and_then(|v| v.as_str()) {
@@ -512,7 +523,7 @@ async fn load_user_context(
     }
     
     Ok(UserContext {
-        name: account.name,
+        name,
         language,
         plan: account.plan,
         quota: Some(UserQuota {
