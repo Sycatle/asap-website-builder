@@ -612,18 +612,28 @@ export function GlobalAIChatPanel({
         onThinking: (data) => {
           // Add or update thinking step in chain
           const stepKey = `thinking_${data.step || 0}`;
+          
+          // Determine status based on the new API response
+          const isStarting = data.status === 'starting';
+          const isCompleted = data.status === 'completed';
+          const stepStatus: ChainStep['status'] = isStarting ? 'running' : isCompleted ? 'completed' : 'running';
+          
           if (!stepIdMap.has(stepKey)) {
+            // New step - add it
             const stepId = addChainStep({
               type: 'thinking',
               title: data.thought,
-              status: 'running',
+              description: isCompleted && data.insight ? data.insight : undefined,
+              status: stepStatus,
               tool: 'thinking',
             });
             stepIdMap.set(stepKey, stepId);
           } else {
+            // Existing step - update with new status and insight
             updateChainStep(stepIdMap.get(stepKey)!, {
               title: data.thought,
-              status: 'completed',
+              description: isCompleted && data.insight ? data.insight : undefined,
+              status: stepStatus,
             });
           }
           
@@ -815,9 +825,9 @@ export function GlobalAIChatPanel({
     
     if (userMessageIndex >= 0) {
       const userMessage = messages[userMessageIndex];
-      // Remove the failed message and all after it
-      setMessages(prev => prev.slice(0, messageIndex));
-      // Re-send
+      // Remove the user message and all messages after it (including the failed one)
+      setMessages(prev => prev.slice(0, userMessageIndex));
+      // Re-send with the original user message content
       setInput(userMessage.content);
       setTimeout(() => handleSend(), 100);
     }
