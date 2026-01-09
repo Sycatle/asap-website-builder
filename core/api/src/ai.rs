@@ -86,6 +86,8 @@ pub enum SseEventData {
     ToolRequest(ToolRequestData),
     /// Iteration status
     Iteration(IterationData),
+    /// Current processing phase (for UX feedback)
+    Phase(PhaseData),
     /// Action to execute
     Action(AIAction),
     /// Conversation metadata (sent at start)
@@ -170,6 +172,15 @@ pub struct IterationData {
     pub status: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+}
+
+/// Phase event data - indicates current processing phase for UX feedback
+#[derive(Debug, Clone, Serialize)]
+pub struct PhaseData {
+    pub phase: String,
+    pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
 }
 
 /// AI usage quota information
@@ -1614,51 +1625,17 @@ pub async fn chat_stream(
     let pool_for_save = pool.clone();
     let _ = save_message(&pool_for_save, conversation_id, "user", &user_message, None, None).await;
     
-    // Execute data tools BEFORE streaming to gather context
-    // This allows the AI to use relevant data in its response
-    let data_tool_execution = execute_data_tools(
-        &orchestrator,
-        &context,
-        &user_message,
-        &history_messages,
-    ).await;
-    
-    // Log data tool results for debugging
-    if let Some(ref execution) = data_tool_execution {
-        tracing::info!(
-            "Data tools executed: {} tools, context additions: {} chars",
-            execution.tool_calls.len(),
-            execution.context_additions.len()
-        );
-    }
-    
-    // Build AI request with history and data tool context
-    let ai_request = CoreAIChatRequest {
-        website_id: req.website_id,
-        message: if let Some(ref execution) = data_tool_execution {
-            // Append tool results to the message for context
-            format!("{}\n\n{}", req.message, execution.context_additions)
-        } else {
-            req.message.clone()
-        },
-        conversation_id: Some(conversation_id),
-        history: history_messages,
-        attachments: vec![],
-        stream: true,
-    };
+    // Clone necessary data for the stream (data tools will be executed INSIDE the stream for real-time feedback)
+    let orchestrator_for_tools = orchestrator.clone();
+    let context_for_tools = context.clone();
+    let user_message_for_tools = user_message.clone();
+    let history_for_tools = history_messages.clone();
     
     // Clone for use inside the stream (needs 'static lifetime)
     let orchestrator_for_thinking = orchestrator.clone();
     let context_for_thinking = context.clone();
     let user_message_for_thinking = user_message.clone();
     let intent_for_thinking = intent_analysis.clone();
-    let data_tool_execution_for_stream = data_tool_execution.clone();
-    
-    // Start streaming
-    let _action_parser = orchestrator.action_parser().clone();
-    let stream_result = orchestrator
-        .chat_stream(&ai_request, context, account_id, &plan)
-        .await;
     
     // Clone pool for use in stream
     let pool_for_stream = pool.clone();
@@ -1666,87 +1643,123 @@ pub async fn chat_stream(
     // Clone intent analysis for use in stream
     let intent_for_stream = intent_analysis.clone();
     
-    match stream_result {
-        Ok((mut token_stream, _rate_status)) => {
-            // Create SSE stream from token stream with action parsing
-            let stream = async_stream::stream! {
-                // Send conversation ID first so frontend can track it
-                let conv_event = SseEventData::Conversation(ConversationData { id: conversation_id });
-                if let Ok(json) = serde_json::to_string(&conv_event) {
+    // Create SSE stream - data tools are executed INSIDE the stream for immediate feedback
+    let stream = async_stream::stream! {
+        // Send conversation ID first so frontend can track it
+        let conv_event = SseEventData::Conversation(ConversationData { id: conversation_id });
+        if let Ok(json) = serde_json::to_string(&conv_event) {
+            yield Ok(Event::default().data(json));
+        }
+        
+        // Send phase: analyzing
+        let phase_event = SseEventData::Phase(PhaseData {
+            phase: "analyzing".to_string(),
+            status: "starting".to_string(),
+            message: Some("Analyse de votre demande...".to_string()),
+        });
+        if let Ok(json) = serde_json::to_string(&phase_event) {
+            yield Ok(Event::default().data(json));
+        }
+        
+        // Execute data tools with real-time feedback
+        let data_tool_execution = execute_data_tools_streaming(
+            &orchestrator_for_tools,
+            &context_for_tools,
+            &user_message_for_tools,
+            &history_for_tools,
+        ).await;
+        
+        // Send tool events as they were collected
+        if let Some(ref execution) = data_tool_execution {
+            // Deduplicate consecutive tool calls with same description to avoid UI spam
+            let mut last_description: Option<String> = None;
+            
+            for tool_call in &execution.tool_calls {
+                // Skip duplicate consecutive descriptions
+                if last_description.as_ref() == Some(&tool_call.description) {
+                    continue;
+                }
+                last_description = Some(tool_call.description.clone());
+                
+                // Send tool call event
+                let tool_call_event = SseEventData::ToolCall(ToolCallData {
+                    id: tool_call.id.clone(),
+                    tool: tool_call.tool_name.clone(),
+                    description: tool_call.description.clone(),
+                    args: None,
+                    status: "completed".to_string(),
+                });
+                if let Ok(json) = serde_json::to_string(&tool_call_event) {
+                    yield Ok(Event::default().data(json));
+                }
+            }
+            
+            // If visual analysis was requested, send tool request and end stream
+            if let Some(ref visual_req) = execution.visual_analysis_request {
+                let tool_request_event = SseEventData::ToolRequest(ToolRequestData {
+                    request_id: visual_req.tool_call_id.clone(),
+                    request_type: "capture_screenshot".to_string(),
+                    params: serde_json::json!({
+                        "viewport": visual_req.viewport,
+                        "focus": visual_req.focus,
+                        "section": visual_req.section,
+                        "question": visual_req.question,
+                    }),
+                    timeout_seconds: Some(30),
+                });
+                if let Ok(json) = serde_json::to_string(&tool_request_event) {
                     yield Ok(Event::default().data(json));
                 }
                 
-                // Send data tool events if any were executed
-                // Deduplicate consecutive tool calls with same description to avoid UI spam
-                if let Some(ref execution) = data_tool_execution_for_stream {
-                    let mut last_description: Option<String> = None;
-                    let mut pending_count = 0u32;
-                    
-                    for tool_call in &execution.tool_calls {
-                        // Skip duplicate consecutive descriptions
-                        if last_description.as_ref() == Some(&tool_call.description) {
-                            pending_count += 1;
-                            continue;
-                        }
-                        
-                        // If we had duplicates, send a count update for the previous description
-                        if pending_count > 0 {
-                            // The previous description was already sent, we just skip the duplicates
-                            pending_count = 0;
-                        }
-                        
-                        last_description = Some(tool_call.description.clone());
-                        
-                        // Send tool call starting
-                        let tool_call_event = SseEventData::ToolCall(ToolCallData {
-                            id: tool_call.id.clone(),
-                            tool: tool_call.tool_name.clone(),
-                            description: tool_call.description.clone(),
-                            args: None,
-                            status: "completed".to_string(), // Already executed
-                        });
-                        if let Ok(json) = serde_json::to_string(&tool_call_event) {
-                            yield Ok(Event::default().data(json));
-                        }
-                        
-                        // Send tool result
-                        let tool_result_event = SseEventData::ToolResult(ToolResultData {
-                            tool_call_id: tool_call.id.clone(),
-                            success: tool_call.success,
-                            message: Some(tool_call.description.clone()),
-                        });
-                        if let Ok(json) = serde_json::to_string(&tool_result_event) {
-                            yield Ok(Event::default().data(json));
-                        }
-                    }
-                    
-                    // If visual analysis is requested, send ToolRequest to frontend and end stream
-                    // Frontend will capture screenshot, upload it, and send a new request with the image
-                    if let Some(ref visual_req) = execution.visual_analysis_request {
-                        let tool_request_event = SseEventData::ToolRequest(ToolRequestData {
-                            request_id: visual_req.tool_call_id.clone(),
-                            request_type: "capture_screenshot".to_string(),
-                            params: serde_json::json!({
-                                "viewport": visual_req.viewport,
-                                "focus": visual_req.focus,
-                                "section": visual_req.section,
-                                "question": visual_req.question,
-                            }),
-                            timeout_seconds: Some(30),
-                        });
-                        if let Ok(json) = serde_json::to_string(&tool_request_event) {
-                            yield Ok(Event::default().data(json));
-                        }
-                        
-                        // End stream - frontend will handle continuation
-                        let done_event = SseEventData::Done;
-                        if let Ok(json) = serde_json::to_string(&done_event) {
-                            yield Ok(Event::default().data(json));
-                        }
-                        return;
-                    }
+                let done_event = SseEventData::Done;
+                if let Ok(json) = serde_json::to_string(&done_event) {
+                    yield Ok(Event::default().data(json));
                 }
-                
+                // Early exit - visual analysis requires client-side screenshot capture
+                // The stream ends here; the client will send a new request with the screenshot
+            }
+        }
+        
+        // Check if we should continue with AI generation (skip if visual analysis was requested)
+        let should_continue = data_tool_execution.as_ref()
+            .map(|exec| exec.visual_analysis_request.is_none())
+            .unwrap_or(true);
+        
+        if !should_continue {
+            // Stream already ended with Done event above
+        } else {
+        
+        // Send phase: generating
+        let phase_event = SseEventData::Phase(PhaseData {
+            phase: "generating".to_string(),
+            status: "starting".to_string(),
+            message: Some("Génération de la réponse...".to_string()),
+        });
+        if let Ok(json) = serde_json::to_string(&phase_event) {
+            yield Ok(Event::default().data(json));
+        }
+        
+        // Build AI request with data tool context
+        let ai_request = CoreAIChatRequest {
+            website_id: req.website_id,
+            message: if let Some(ref execution) = data_tool_execution {
+                format!("{}\n\n{}", user_message_for_tools, execution.context_additions)
+            } else {
+                user_message_for_tools.clone()
+            },
+            conversation_id: Some(conversation_id),
+            history: history_for_tools.clone(),
+            attachments: vec![],
+            stream: true,
+        };
+        
+        // Start actual AI streaming
+        let stream_result = orchestrator_for_tools
+            .chat_stream(&ai_request, context_for_tools.clone(), account_id, &plan)
+            .await;
+        
+        match stream_result {
+            Ok((mut token_stream, _rate_status)) => {
                 // Execute thinking steps with real AI calls (sequential)
                 let mut step_results: Vec<StepResult> = Vec::new();
                 
@@ -1939,18 +1952,36 @@ pub async fn chat_stream(
                 if let Ok(json) = serde_json::to_string(&done) {
                     yield Ok(Event::default().data(json));
                 }
-            };
-            
-            Ok(Sse::new(stream).keep_alive(
-                KeepAlive::default()
-                    .interval(Duration::from_secs(15))
-                    .text("keep-alive")
-            ))
+            }
+            Err(e) => {
+                // Send error in stream
+                let error_event = SseEventData::Error {
+                    code: "stream_error".to_string(),
+                    message: e.to_string(),
+                };
+                if let Ok(json) = serde_json::to_string(&error_event) {
+                    yield Ok(Event::default().data(json));
+                }
+            }
         }
-        Err(e) => {
-            Err(ai_error_to_response(e))
-        }
-    }
+        } // End of if should_continue else block
+    };
+    
+    Ok(Sse::new(stream).keep_alive(
+        KeepAlive::default()
+            .interval(Duration::from_secs(15))
+            .text("keep-alive")
+    ))
+}
+
+/// Alias for execute_data_tools - streaming is handled at the SSE level
+async fn execute_data_tools_streaming(
+    orchestrator: &AIOrchestrator,
+    context: &WebsiteContext,
+    user_message: &str,
+    history: &[asap_core_ai::Message],
+) -> Option<DataToolExecution> {
+    execute_data_tools(orchestrator, context, user_message, history).await
 }
 
 /// Get AI quota information
