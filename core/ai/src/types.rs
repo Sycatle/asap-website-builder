@@ -141,17 +141,106 @@ pub enum AIStreamEvent {
     /// Token chunk
     Token(String),
 
-    /// Action to execute
+    /// AI is thinking/reasoning (shows intermediate state)
+    Thinking(ThinkingEvent),
+
+    /// AI is calling a tool/executing an action
+    ToolCall(ToolCallEvent),
+
+    /// Result from a tool call
+    ToolResult(ToolResultEvent),
+
+    /// Action to execute (final parsed action)
     Action(AIAction),
 
     /// Suggestion for the user
     Suggestion(Suggestion),
+
+    /// Iteration status (for multi-step workflows)
+    Iteration(IterationEvent),
 
     /// Stream complete
     Done,
 
     /// Error occurred
     Error(AIErrorData),
+}
+
+/// Thinking event - AI is reasoning
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThinkingEvent {
+    /// Short description of what AI is thinking about
+    pub thought: String,
+    /// Current step in the reasoning process
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub step: Option<u32>,
+}
+
+/// Tool call event - AI is using a tool
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolCallEvent {
+    /// Unique ID for this tool call
+    pub id: String,
+    /// Tool name being called
+    pub tool: String,
+    /// Human-readable description of what the tool does
+    pub description: String,
+    /// Tool arguments (for display)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub args: Option<serde_json::Value>,
+    /// Status: pending, running, completed, failed
+    pub status: ToolCallStatus,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ToolCallStatus {
+    Pending,
+    Running,
+    Completed,
+    Failed,
+}
+
+/// Tool result event - result from a tool call
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolResultEvent {
+    /// Tool call ID this result is for
+    pub tool_call_id: String,
+    /// Whether the tool succeeded
+    pub success: bool,
+    /// Result message or error
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    /// Detailed result data
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<serde_json::Value>,
+}
+
+/// Iteration event - for multi-step workflows
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IterationEvent {
+    /// Current iteration number (1-based)
+    pub current: u32,
+    /// Maximum iterations allowed
+    pub max: u32,
+    /// What's happening in this iteration
+    pub status: IterationStatus,
+    /// Optional description
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum IterationStatus {
+    /// Starting a new iteration
+    Starting,
+    /// Processing
+    Processing,
+    /// Iteration complete
+    Complete,
+    /// All iterations done
+    Finished,
 }
 
 /// Error data in stream

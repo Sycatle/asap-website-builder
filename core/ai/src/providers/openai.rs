@@ -240,39 +240,56 @@ impl AIProvider for OpenAIProvider {
 }
 
 /// Parse SSE stream from OpenAI
+/// This correctly handles multiple events per chunk and partial chunks
 fn parse_sse_stream(
     stream: impl Stream<Item = Result<Bytes, reqwest::Error>> + Send + 'static,
 ) -> impl Stream<Item = AIResult<String>> + Send {
-    stream.filter_map(|result| async move {
-        match result {
-            Ok(bytes) => {
-                let text = String::from_utf8_lossy(&bytes);
-                
-                // Parse SSE format: data: {...}\n\n
-                for line in text.lines() {
-                    if line.starts_with("data: ") {
-                        let data = &line[6..];
+    use futures::stream::StreamExt;
+    
+    // Use flat_map to emit multiple tokens from a single chunk
+    stream
+        .scan(String::new(), |buffer, result| {
+            let output = match result {
+                Ok(bytes) => {
+                    buffer.push_str(&String::from_utf8_lossy(&bytes));
+                    
+                    let mut tokens = Vec::new();
+                    
+                    // Process complete lines
+                    while let Some(pos) = buffer.find("\n\n") {
+                        let event = buffer.drain(..pos + 2).collect::<String>();
                         
-                        // Check for stream end
-                        if data == "[DONE]" {
-                            return None;
-                        }
-
-                        // Parse JSON chunk
-                        if let Ok(chunk) = serde_json::from_str::<OpenAIStreamChunk>(data) {
-                            if let Some(choice) = chunk.choices.first() {
-                                if let Some(content) = &choice.delta.content {
-                                    return Some(Ok(content.clone()));
+                        for line in event.lines() {
+                            if line.starts_with("data: ") {
+                                let data = &line[6..];
+                                
+                                // Check for stream end
+                                if data == "[DONE]" {
+                                    continue;
+                                }
+                                
+                                // Parse JSON chunk
+                                if let Ok(chunk) = serde_json::from_str::<OpenAIStreamChunk>(data) {
+                                    if let Some(choice) = chunk.choices.first() {
+                                        if let Some(content) = &choice.delta.content {
+                                            if !content.is_empty() {
+                                                tokens.push(Ok(content.clone()));
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
+                    
+                    tokens
                 }
-                None
-            }
-            Err(e) => Some(Err(AIError::HttpError(e))),
-        }
-    })
+                Err(e) => vec![Err(AIError::HttpError(e))],
+            };
+            
+            async move { Some(output) }
+        })
+        .flat_map(|tokens| futures::stream::iter(tokens))
 }
 
 /// Calculate estimated cost for OpenAI models
