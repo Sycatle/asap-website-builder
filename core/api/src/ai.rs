@@ -4,7 +4,7 @@
 //! Supports both streaming (SSE) and non-streaming responses.
 
 use axum::{
-    extract::State,
+    extract::{State, multipart::Multipart},
     http::StatusCode,
     response::sse::{Event, KeepAlive, Sse},
     Extension, Json,
@@ -16,6 +16,7 @@ use std::convert::Infallible;
 use std::sync::Arc;
 use std::time::Duration;
 use uuid::Uuid;
+use chrono::Utc;
 
 use asap_core_ai::{
     AIOrchestrator, AIChatRequest as CoreAIChatRequest, AIAction, 
@@ -79,6 +80,9 @@ pub enum SseEventData {
     /// Result from a tool call
     #[serde(rename = "toolresult")]
     ToolResult(ToolResultData),
+    /// Request frontend to perform an action (e.g., capture screenshot)
+    #[serde(rename = "toolrequest")]
+    ToolRequest(ToolRequestData),
     /// Iteration status
     Iteration(IterationData),
     /// Action to execute
@@ -141,6 +145,20 @@ pub struct ToolResultData {
     pub success: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
+}
+
+/// Tool request event data - asks frontend to perform an action
+#[derive(Debug, Clone, Serialize)]
+pub struct ToolRequestData {
+    /// Unique request ID for correlation
+    pub request_id: String,
+    /// Type of request (e.g., "capture_screenshot")
+    pub request_type: String,
+    /// Request parameters
+    pub params: serde_json::Value,
+    /// Timeout in seconds
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeout_seconds: Option<u32>,
 }
 
 /// Iteration event data
@@ -2059,6 +2077,230 @@ async fn execute_ai_action(
             Ok(("Image generation queued (coming soon)".to_string(), *target_section_id))
         }
     }
+}
+
+// ============================================================================
+// Vision / Screenshot Upload
+// ============================================================================
+
+/// Request for uploading a preview screenshot for AI vision analysis
+#[derive(Debug, Serialize)]
+pub struct VisionUploadResponse {
+    /// Unique ID for this screenshot
+    pub image_id: String,
+    /// URL to access the uploaded image (signed, temporary)
+    pub url: String,
+    /// When the URL expires
+    pub expires_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// Upload a preview screenshot for AI visual analysis
+/// POST /api/v1/ai/vision/upload
+/// 
+/// Accepts multipart form data with:
+/// - image: The screenshot file (PNG/JPEG)
+/// - website_id: The website this screenshot is for
+/// - viewport: The viewport used (desktop/tablet/mobile)
+pub async fn upload_vision_screenshot(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    mut multipart: Multipart,
+) -> Result<Json<VisionUploadResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let account_id = get_account_id(&claims).map_err(|s| {
+        (s, Json(ErrorResponse {
+            error: "Unauthorized".to_string(),
+            code: "unauthorized".to_string(),
+        }))
+    })?;
+
+    // Parse multipart fields
+    let mut image_data: Option<bytes::Bytes> = None;
+    let mut website_id: Option<Uuid> = None;
+    let mut viewport: String = "desktop".to_string();
+    let mut content_type: String = "image/png".to_string();
+
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|e| (StatusCode::BAD_REQUEST, Json(ErrorResponse {
+            error: format!("Multipart error: {}", e),
+            code: "multipart_error".to_string(),
+        })))?
+    {
+        let field_name = field.name().map(|s| s.to_string());
+
+        match field_name.as_deref() {
+            Some("image") => {
+                content_type = field.content_type()
+                    .unwrap_or("image/png")
+                    .to_string();
+                image_data = Some(field.bytes().await.map_err(|e| {
+                    (StatusCode::BAD_REQUEST, Json(ErrorResponse {
+                        error: format!("Failed to read image: {}", e),
+                        code: "read_error".to_string(),
+                    }))
+                })?);
+            }
+            Some("website_id") => {
+                let value = field.text().await.unwrap_or_default();
+                website_id = Uuid::parse_str(&value).ok();
+            }
+            Some("viewport") => {
+                let value = field.text().await.unwrap_or_default();
+                if !value.is_empty() {
+                    viewport = value;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    // Validate required fields
+    let image_bytes = image_data.ok_or_else(|| {
+        (StatusCode::BAD_REQUEST, Json(ErrorResponse {
+            error: "No image provided".to_string(),
+            code: "missing_image".to_string(),
+        }))
+    })?;
+
+    let website_id = website_id.ok_or_else(|| {
+        (StatusCode::BAD_REQUEST, Json(ErrorResponse {
+            error: "website_id is required".to_string(),
+            code: "missing_website_id".to_string(),
+        }))
+    })?;
+
+    // Verify website access
+    verify_website_ownership(&pool, account_id, website_id)
+        .await
+        .map_err(|s| {
+            (s, Json(ErrorResponse {
+                error: "Website not found or access denied".to_string(),
+                code: "not_found".to_string(),
+            }))
+        })?;
+
+    // Validate image
+    if !content_type.starts_with("image/") {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
+            error: "File must be an image".to_string(),
+            code: "invalid_content_type".to_string(),
+        })));
+    }
+
+    // Limit image size (10MB max for screenshots)
+    if image_bytes.len() > 10 * 1024 * 1024 {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
+            error: "Image too large (max 10MB)".to_string(),
+            code: "image_too_large".to_string(),
+        })));
+    }
+
+    // Generate unique image ID
+    let image_id = Uuid::new_v4();
+    let extension = match content_type.as_str() {
+        "image/jpeg" | "image/jpg" => "jpg",
+        "image/webp" => "webp",
+        _ => "png",
+    };
+    let filename = format!("{}_{}.{}", viewport, image_id, extension);
+
+    // Store in database (ai_screenshots table)
+    // For now, we store as base64 in JSONB - later we'll migrate to R2
+    let expires_at = Utc::now() + chrono::Duration::hours(1);
+    
+    sqlx::query(
+        r#"
+        INSERT INTO ai_screenshots (id, account_id, website_id, viewport, filename, content_type, data, expires_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (id) DO NOTHING
+        "#
+    )
+    .bind(image_id)
+    .bind(account_id)
+    .bind(website_id)
+    .bind(&viewport)
+    .bind(&filename)
+    .bind(&content_type)
+    .bind(image_bytes.as_ref()) // Store as bytea
+    .bind(expires_at)
+    .execute(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to store screenshot: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse {
+            error: "Failed to store screenshot".to_string(),
+            code: "storage_error".to_string(),
+        }))
+    })?;
+
+    // Generate URL (internal endpoint to retrieve the image)
+    let url = format!("/api/v1/ai/vision/{}", image_id);
+
+    tracing::info!(
+        image_id = %image_id,
+        website_id = %website_id,
+        viewport = %viewport,
+        size_bytes = image_bytes.len(),
+        "Vision screenshot uploaded"
+    );
+
+    Ok(Json(VisionUploadResponse {
+        image_id: image_id.to_string(),
+        url,
+        expires_at,
+    }))
+}
+
+/// Retrieve a vision screenshot by ID
+/// GET /api/v1/ai/vision/:id
+pub async fn get_vision_screenshot(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    axum::extract::Path(image_id): axum::extract::Path<Uuid>,
+) -> Result<axum::response::Response, (StatusCode, Json<ErrorResponse>)> {
+    let account_id = get_account_id(&claims).map_err(|s| {
+        (s, Json(ErrorResponse {
+            error: "Unauthorized".to_string(),
+            code: "unauthorized".to_string(),
+        }))
+    })?;
+
+    // Fetch screenshot (must belong to user and not expired)
+    let row: Option<(Vec<u8>, String)> = sqlx::query_as(
+        r#"
+        SELECT data, content_type
+        FROM ai_screenshots
+        WHERE id = $1 AND account_id = $2 AND expires_at > NOW()
+        "#
+    )
+    .bind(image_id)
+    .bind(account_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch screenshot: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse {
+            error: "Database error".to_string(),
+            code: "db_error".to_string(),
+        }))
+    })?;
+
+    let (data, content_type) = row.ok_or_else(|| {
+        (StatusCode::NOT_FOUND, Json(ErrorResponse {
+            error: "Screenshot not found or expired".to_string(),
+            code: "not_found".to_string(),
+        }))
+    })?;
+
+    // Return image with proper content type
+    use axum::response::IntoResponse;
+    use axum::http::header;
+    
+    Ok((
+        [(header::CONTENT_TYPE, content_type)],
+        data
+    ).into_response())
 }
 
 // ============================================================================

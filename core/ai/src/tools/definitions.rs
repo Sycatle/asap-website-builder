@@ -15,6 +15,7 @@ pub fn get_tool_definitions() -> Vec<ToolDefinition> {
         get_settings_tool(),
         list_extensions_tool(),
         get_page_content_tool(),
+        request_visual_analysis_tool(),
     ]
 }
 
@@ -193,6 +194,43 @@ fn get_page_content_tool() -> ToolDefinition {
     }
 }
 
+/// Tool to request visual analysis of the website preview
+/// This is a special "async" tool that triggers frontend capture
+fn request_visual_analysis_tool() -> ToolDefinition {
+    ToolDefinition {
+        tool_type: "function".to_string(),
+        function: FunctionDefinition {
+            name: "request_visual_analysis".to_string(),
+            description: "Request a visual analysis of the website preview. This captures a screenshot and analyzes the design, layout, colors, and UX. Use this when the user asks about how their site looks, design feedback, or visual improvements.".to_string(),
+            parameters: json!({
+                "type": "object",
+                "properties": {
+                    "viewport": {
+                        "type": "string",
+                        "enum": ["desktop", "tablet", "mobile"],
+                        "description": "Which viewport/device to capture. Default: desktop",
+                        "default": "desktop"
+                    },
+                    "focus": {
+                        "type": "string",
+                        "enum": ["layout", "colors", "typography", "spacing", "overall", "specific_section"],
+                        "description": "What aspect to focus the analysis on"
+                    },
+                    "section": {
+                        "type": "string",
+                        "description": "If focus is 'specific_section', which section to analyze (e.g., 'hero', 'footer')"
+                    },
+                    "question": {
+                        "type": "string",
+                        "description": "Specific question about the design to answer"
+                    }
+                },
+                "required": ["focus"]
+            }),
+        },
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -200,7 +238,7 @@ mod tests {
     #[test]
     fn test_tool_definitions_valid() {
         let tools = get_tool_definitions();
-        assert_eq!(tools.len(), 7);
+        assert_eq!(tools.len(), 8);
         
         for tool in &tools {
             assert_eq!(tool.tool_type, "function");
@@ -219,5 +257,12 @@ mod tests {
         unique_names.dedup();
         
         assert_eq!(names.len(), unique_names.len(), "Tool names must be unique");
+    }
+    
+    #[test]
+    fn test_visual_analysis_tool_exists() {
+        let tools = get_tool_definitions();
+        let visual_tool = tools.iter().find(|t| t.function.name == "request_visual_analysis");
+        assert!(visual_tool.is_some(), "Visual analysis tool should exist");
     }
 }

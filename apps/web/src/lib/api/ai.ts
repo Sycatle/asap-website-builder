@@ -94,6 +94,16 @@ export interface SseToolResultEvent {
   };
 }
 
+export interface SseToolRequestEvent {
+  type: 'toolrequest';
+  data: {
+    request_id: string;
+    request_type: string;
+    params: Record<string, unknown>;
+    timeout_seconds?: number;
+  };
+}
+
 export interface SseIterationEvent {
   type: 'iteration';
   data: {
@@ -136,6 +146,7 @@ export type SseEvent =
   | SseThinkingEvent
   | SseToolCallEvent
   | SseToolResultEvent
+  | SseToolRequestEvent
   | SseIterationEvent
   | SseActionEvent 
   | SseConversationEvent
@@ -219,6 +230,13 @@ export interface ToolResultData {
   data?: unknown;
 }
 
+export interface ToolRequestData {
+  request_id: string;
+  request_type: string;
+  params: Record<string, unknown>;
+  timeout_seconds?: number;
+}
+
 export interface IterationData {
   current: number;
   max: number;
@@ -231,6 +249,7 @@ export interface StreamCallbacks {
   onThinking?: (data: ThinkingData) => void;
   onToolCall?: (data: ToolCallData) => void;
   onToolResult?: (data: ToolResultData) => void;
+  onToolRequest?: (data: ToolRequestData) => void;
   onIteration?: (data: IterationData) => void;
   onAction?: (action: AIAction) => void;
   onConversation?: (data: { id: string }) => void;
@@ -355,6 +374,9 @@ export function streamChatMessage(
                   break;
                 case 'toolresult':
                   callbacks.onToolResult?.(event.data);
+                  break;
+                case 'toolrequest':
+                  callbacks.onToolRequest?.(event.data);
                   break;
                 case 'iteration':
                   callbacks.onIteration?.(event.data);

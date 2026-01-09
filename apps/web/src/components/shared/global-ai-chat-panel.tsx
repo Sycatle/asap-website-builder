@@ -50,6 +50,7 @@ import {
   Puzzle,
   FileText,
   Search,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWebsiteContext } from "@/contexts/WebsiteContext";
@@ -321,6 +322,7 @@ const AI_DATA_TOOL_CONFIG: Record<string, { icon: React.ElementType; label: stri
   'get_website_settings': { icon: Settings, label: 'Paramètres' },
   'list_extensions': { icon: Puzzle, label: 'Extensions' },
   'get_page_content': { icon: FileText, label: 'Contenu de page' },
+  'request_visual_analysis': { icon: Eye, label: 'Analyse visuelle' },
 };
 
 // Chain of thought step type
