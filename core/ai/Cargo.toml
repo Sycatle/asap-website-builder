@@ -1,0 +1,50 @@
+[package]
+name = "asap-core-ai"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Internal crates
+asap-core-domain = { path = "../domain" }
+asap-core-shared = { path = "../shared" }
+
+# Async runtime
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# HTTP client for AI providers
+reqwest = { version = "0.11", features = ["json", "stream"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+bytes = { workspace = true }
+regex = "1.10"
+
+# SSE parsing
+eventsource-stream = "0.2"
+
+# Redis for rate limiting
+redis = { workspace = true }
+
+# Streaming
+tokio-stream = "0.1"
+pin-project-lite = "0.2"
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+mockall = { workspace = true }
+wiremock = "0.5"
