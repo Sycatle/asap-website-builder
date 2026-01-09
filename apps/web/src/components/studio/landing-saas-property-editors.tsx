@@ -47,6 +47,7 @@ import {
   List,
   Palette,
   Hash,
+  Star,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -59,6 +60,7 @@ import {
   AVAILABLE_ICONS,
 } from "@asap/shared";
 import { VariantPicker, isVariantProperty } from "./variant-picker";
+import { SaveTemplateDialog } from "./save-template-dialog";
 
 // ============================================
 // Types
@@ -709,6 +711,7 @@ export function LandingSaaSPropertyEditor({
     mergeWithDefaults(element.settings as Record<string, unknown>, defaults)
   );
   const [isDirty, setIsDirty] = useState(false);
+  const [showSaveTemplateDialog, setShowSaveTemplateDialog] = useState(false);
 
   // Sync settings when element changes (e.g., selecting a different element)
   useEffect(() => {
@@ -768,6 +771,15 @@ export function LandingSaaSPropertyEditor({
           <Button
             size="sm"
             variant="ghost"
+            onClick={() => setShowSaveTemplateDialog(true)}
+            disabled={isUpdating}
+            title="Sauvegarder comme template"
+          >
+            <Star className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
             onClick={handleReset}
             disabled={isUpdating}
             title="Réinitialiser"
@@ -824,6 +836,15 @@ export function LandingSaaSPropertyEditor({
             ))}
         </div>
       </ScrollArea>
+
+      {/* Save as Template Dialog */}
+      <SaveTemplateDialog
+        open={showSaveTemplateDialog}
+        onOpenChange={setShowSaveTemplateDialog}
+        elementType={element.element_type}
+        settings={settings}
+        defaultName={element.title || ''}
+      />
     </div>
   );
 }
