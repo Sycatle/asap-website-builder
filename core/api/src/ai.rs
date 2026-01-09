@@ -20,7 +20,7 @@ use uuid::Uuid;
 use asap_core_ai::{
     AIOrchestrator, AIChatRequest as CoreAIChatRequest, AIAction, 
     WebsiteContext, WebsiteInfo, SectionInfo, TokenUsage,
-    UserContext, UserQuota, ExtensionData, GitHubData, GitHubRepo, GitHubLanguage,
+    UserContext, UserQuota, ExtensionData, GitHubData, GitHubRepo, GitHubLanguage, GitHubContributions,
     analyze_intent, execute_thinking_step, IntentAnalysis, StepResult,
 };
 use crate::Claims;
@@ -535,66 +535,136 @@ async fn load_user_context(
     })
 }
 
-/// Load extension data (GitHub, etc.) for AI context
+/// Load extension data (GitHub, etc.) for AI context using website_variables and website_collections
 async fn load_extension_data(
     pool: &PgPool,
-    account_id: Uuid,
-    _website_id: Uuid,
+    _account_id: Uuid,
+    website_id: Uuid,
 ) -> Result<Option<ExtensionData>, StatusCode> {
-    // Fetch account_data for GitHub info
-    let account_data: Option<AccountDataRow> = sqlx::query_as(
-        "SELECT data FROM account_data WHERE account_id = $1"
+    // Load GitHub variables from website_variables table
+    let github_vars: Vec<(String, serde_json::Value)> = sqlx::query_as(
+        r#"
+        SELECT key, value 
+        FROM website_variables 
+        WHERE website_id = $1 
+          AND source_ref = 'github-sync'
+          AND key LIKE 'github_%'
+        "#
     )
-    .bind(account_id)
-    .fetch_optional(pool)
+    .bind(website_id)
+    .fetch_all(pool)
     .await
     .map_err(|e| {
-        tracing::error!("Failed to load account_data for extensions: {}", e);
+        tracing::error!("Failed to load GitHub variables: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
     
-    let Some(data_row) = account_data else {
+    // If no GitHub variables, no GitHub integration
+    if github_vars.is_empty() {
         return Ok(None);
-    };
+    }
     
-    // Extract GitHub data if present
-    let github = if let Some(gh) = data_row.data.get("github") {
-        Some(GitHubData {
-            username: gh.get("username").and_then(|v| v.as_str()).map(String::from),
-            bio: gh.get("bio").and_then(|v| v.as_str()).map(String::from),
-            repositories: gh.get("repositories")
-                .and_then(|v| v.as_array())
-                .map(|repos| {
-                    repos.iter().filter_map(|r| {
-                        Some(GitHubRepo {
-                            name: r.get("name")?.as_str()?.to_string(),
-                            description: r.get("description").and_then(|v| v.as_str()).map(String::from),
-                            language: r.get("language").and_then(|v| v.as_str()).map(String::from),
-                            stars: r.get("stargazers_count").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
-                            is_fork: r.get("fork").and_then(|v| v.as_bool()).unwrap_or(false),
-                        })
-                    }).take(10).collect()
+    // Build a map of variables for easy access
+    let vars_map: std::collections::HashMap<String, serde_json::Value> = 
+        github_vars.into_iter().collect();
+    
+    // Extract profile data from variables
+    let username = vars_map.get("github_username")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+    let bio = vars_map.get("github_bio")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+    
+    // Load top repositories from github_repos collection (limit to 5 for context)
+    let repos_collection: Option<serde_json::Value> = sqlx::query_scalar(
+        r#"
+        SELECT items
+        FROM website_collections
+        WHERE website_id = $1 AND collection_slug = 'github_repos'
+        "#
+    )
+    .bind(website_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to load GitHub repos collection: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    
+    let repositories: Vec<GitHubRepo> = repos_collection
+        .and_then(|items| items.as_array().cloned())
+        .map(|items| {
+            items.iter()
+                .filter_map(|item| {
+                    let data = item.get("data")?;
+                    // Filter out forks and take top 5 by stars
+                    if data.get("is_fork").and_then(|v| v.as_bool()).unwrap_or(false) {
+                        return None;
+                    }
+                    Some(GitHubRepo {
+                        name: data.get("name")?.as_str()?.to_string(),
+                        description: data.get("description").and_then(|v| v.as_str()).map(String::from),
+                        language: data.get("language").and_then(|v| v.as_str()).map(String::from),
+                        stars: data.get("stars").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+                        is_fork: false,
+                    })
                 })
-                .unwrap_or_default(),
-            languages: gh.get("languages")
-                .and_then(|v| v.as_array())
-                .map(|langs| {
-                    langs.iter().filter_map(|l| {
-                        Some(GitHubLanguage {
-                            name: l.get("name")?.as_str()?.to_string(),
-                            percentage: l.get("percentage").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
-                        })
-                    }).take(10).collect()
-                })
-                .unwrap_or_default(),
-            contributions: None, // TODO: Add when we sync contribution data
+                .take(5)
+                .collect()
         })
-    } else {
-        None
+        .unwrap_or_default();
+    
+    // Load languages from github_languages collection or from variables
+    let languages: Vec<GitHubLanguage> = vars_map.get("github_top_languages")
+        .and_then(|v| v.as_array())
+        .map(|langs| {
+            langs.iter()
+                .filter_map(|l| {
+                    Some(GitHubLanguage {
+                        name: l.get("name")?.as_str()?.to_string(),
+                        percentage: l.get("percentage").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                    })
+                })
+                .take(5)
+                .collect()
+        })
+        .unwrap_or_default();
+    
+    // Build contributions from variables if available
+    let contributions = {
+        let commits = vars_map.get("github_total_commits")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as u32;
+        let prs = vars_map.get("github_total_prs")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as u32;
+        let issues = vars_map.get("github_total_issues")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as u32;
+        
+        if commits > 0 || prs > 0 || issues > 0 {
+            Some(GitHubContributions {
+                total_commits: commits,
+                total_prs: prs,
+                total_issues: issues,
+            })
+        } else {
+            None
+        }
     };
     
-    if github.is_some() {
-        Ok(Some(ExtensionData { github }))
+    let github = GitHubData {
+        username,
+        bio,
+        repositories,
+        languages,
+        contributions,
+    };
+    
+    // Only return if we have meaningful data
+    if github.username.is_some() || !github.repositories.is_empty() {
+        Ok(Some(ExtensionData { github: Some(github) }))
     } else {
         Ok(None)
     }
