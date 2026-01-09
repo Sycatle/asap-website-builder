@@ -61,6 +61,45 @@ export interface SseTokenEvent {
   data: string;
 }
 
+export interface SseThinkingEvent {
+  type: 'thinking';
+  data: {
+    thought: string;
+    step?: number;
+  };
+}
+
+export interface SseToolCallEvent {
+  type: 'toolcall';
+  data: {
+    id: string;
+    tool: string;
+    description: string;
+    args?: Record<string, unknown>;
+    status: 'pending' | 'running' | 'completed' | 'failed';
+  };
+}
+
+export interface SseToolResultEvent {
+  type: 'toolresult';
+  data: {
+    tool_call_id: string;
+    success: boolean;
+    message?: string;
+    data?: unknown;
+  };
+}
+
+export interface SseIterationEvent {
+  type: 'iteration';
+  data: {
+    current: number;
+    max: number;
+    status: 'starting' | 'processing' | 'complete' | 'finished';
+    description?: string;
+  };
+}
+
 export interface SseActionEvent {
   type: 'action';
   data: AIAction;
@@ -76,7 +115,15 @@ export interface SseErrorEvent {
   message: string;
 }
 
-export type SseEvent = SseTokenEvent | SseActionEvent | SseDoneEvent | SseErrorEvent;
+export type SseEvent = 
+  | SseTokenEvent 
+  | SseThinkingEvent
+  | SseToolCallEvent
+  | SseToolResultEvent
+  | SseIterationEvent
+  | SseActionEvent 
+  | SseDoneEvent 
+  | SseErrorEvent;
 
 // ============================================================================
 // API Functions
@@ -107,11 +154,66 @@ export async function getAIStatus(): Promise<AIStatusResponse> {
 }
 
 // ============================================================================
+// Action Execution
+// ============================================================================
+
+export interface ExecuteActionRequest {
+  website_id: string;
+  action: AIAction;
+}
+
+export interface ExecuteActionResponse {
+  success: boolean;
+  message: string;
+  affected_element_id?: string;
+  error?: string;
+}
+
+/**
+ * Execute an AI action on the backend
+ * This persists the change to the database
+ */
+export async function executeAIAction(request: ExecuteActionRequest): Promise<ExecuteActionResponse> {
+  return apiClient.post<ExecuteActionResponse>('/ai/execute', request);
+}
+
+// ============================================================================
 // SSE Streaming
 // ============================================================================
 
+export interface ThinkingData {
+  thought: string;
+  step?: number;
+}
+
+export interface ToolCallData {
+  id: string;
+  tool: string;
+  description: string;
+  args?: Record<string, unknown>;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+}
+
+export interface ToolResultData {
+  tool_call_id: string;
+  success: boolean;
+  message?: string;
+  data?: unknown;
+}
+
+export interface IterationData {
+  current: number;
+  max: number;
+  status: 'starting' | 'processing' | 'complete' | 'finished';
+  description?: string;
+}
+
 export interface StreamCallbacks {
   onToken?: (token: string) => void;
+  onThinking?: (data: ThinkingData) => void;
+  onToolCall?: (data: ToolCallData) => void;
+  onToolResult?: (data: ToolResultData) => void;
+  onIteration?: (data: IterationData) => void;
   onAction?: (action: AIAction) => void;
   onDone?: () => void;
   onError?: (error: { code: string; message: string }) => void;
@@ -127,31 +229,39 @@ export function streamChatMessage(
 ): AbortController {
   const controller = new AbortController();
   
-  // Get auth token
-  const token = localStorage.getItem('access_token');
-  const csrfToken = localStorage.getItem('csrf_token');
-  
-  // Build URL
-  const apiBase = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
-  const url = `${apiBase}/ai/chat/stream`;
-  
-  // Start streaming
-  fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'text/event-stream',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-      ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-    },
-    body: JSON.stringify({
-      ...request,
-      stream: true,
-    }),
-    signal: controller.signal,
-    credentials: 'include',
-  })
-    .then(async (response) => {
+  // Start the async streaming process
+  (async () => {
+    try {
+      // Get auth token from localStorage (same as apiClient)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      
+      // Ensure we have a CSRF token
+      let csrfToken = apiClient.getCsrfToken();
+      if (!csrfToken) {
+        csrfToken = await apiClient.fetchCsrfToken();
+      }
+      
+      // Build URL
+      const apiBase = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
+      const url = `${apiBase}/ai/chat/stream`;
+      
+      // Start streaming
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+        },
+        body: JSON.stringify({
+          ...request,
+          stream: true,
+        }),
+        signal: controller.signal,
+        credentials: 'include',
+      });
+      
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         callbacks.onError?.({
@@ -182,16 +292,17 @@ export function streamChatMessage(
         
         buffer += decoder.decode(value, { stream: true });
         
-        // Parse SSE events from buffer
+        // Process complete SSE messages
         const lines = buffer.split('\n');
         buffer = lines.pop() || ''; // Keep incomplete line in buffer
         
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
+            
             if (data === '[DONE]') {
               callbacks.onDone?.();
-              continue;
+              return;
             }
             
             try {
@@ -201,39 +312,54 @@ export function streamChatMessage(
                 case 'token':
                   callbacks.onToken?.(event.data);
                   break;
+                case 'thinking':
+                  callbacks.onThinking?.(event.data);
+                  break;
+                case 'toolcall':
+                  callbacks.onToolCall?.(event.data);
+                  break;
+                case 'toolresult':
+                  callbacks.onToolResult?.(event.data);
+                  break;
+                case 'iteration':
+                  callbacks.onIteration?.(event.data);
+                  break;
                 case 'action':
                   callbacks.onAction?.(event.data);
                   break;
                 case 'done':
                   callbacks.onDone?.();
-                  break;
+                  return;
                 case 'error':
                   callbacks.onError?.({
                     code: event.code,
                     message: event.message,
                   });
-                  break;
+                  return;
               }
-            } catch {
-              // Ignore parse errors for malformed events
+            } catch (e) {
+              // Not JSON, might be a token directly
+              if (data.trim()) {
+                callbacks.onToken?.(data);
+              }
             }
           }
         }
       }
       
-      // Final done callback if not already called
+      // If we reach here without a done event, call onDone
       callbacks.onDone?.();
-    })
-    .catch((error) => {
-      if (error.name === 'AbortError') {
-        // Intentionally cancelled, don't report as error
-        return;
+      
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return; // Aborted by user, don't call onError
       }
       callbacks.onError?.({
-        code: 'network_error',
-        message: error.message || 'Network error',
+        code: 'fetch_error',
+        message: error instanceof Error ? error.message : 'Unknown error',
       });
-    });
+    }
+  })();
   
   return controller;
 }
