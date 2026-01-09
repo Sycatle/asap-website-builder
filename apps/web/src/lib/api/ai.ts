@@ -66,6 +66,10 @@ export interface SseThinkingEvent {
   data: {
     thought: string;
     step?: number;
+    /** Status: "starting" (AI call in progress), "completed" (AI call done), or absent (legacy/simple) */
+    status?: 'starting' | 'completed';
+    /** Insight from AI execution (only when status is "completed") */
+    insight?: string;
   };
 }
 
@@ -251,32 +255,47 @@ export function streamChatMessage(
       // Get auth token from localStorage (same as apiClient)
       const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
       
+      // Build URL
+      const apiBase = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
+      const url = `${apiBase}/ai/chat/stream`;
+      
+      // Helper to make the fetch request
+      const makeRequest = async (csrfToken: string | null) => {
+        return fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
+            ...(token && { 'Authorization': `Bearer ${token}` }),
+            ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+          },
+          body: JSON.stringify({
+            ...request,
+            stream: true,
+          }),
+          signal: controller.signal,
+          credentials: 'include',
+        });
+      };
+      
       // Ensure we have a CSRF token
       let csrfToken = apiClient.getCsrfToken();
       if (!csrfToken) {
         csrfToken = await apiClient.fetchCsrfToken();
       }
       
-      // Build URL
-      const apiBase = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
-      const url = `${apiBase}/ai/chat/stream`;
-      
       // Start streaming
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream',
-          ...(token && { 'Authorization': `Bearer ${token}` }),
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-        },
-        body: JSON.stringify({
-          ...request,
-          stream: true,
-        }),
-        signal: controller.signal,
-        credentials: 'include',
-      });
+      let response = await makeRequest(csrfToken);
+      
+      // If CSRF error, refresh token and retry once
+      if (response.status === 403) {
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData.code?.startsWith('CSRF_')) {
+          apiClient.clearCsrfToken();
+          csrfToken = await apiClient.fetchCsrfToken();
+          response = await makeRequest(csrfToken);
+        }
+      }
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
