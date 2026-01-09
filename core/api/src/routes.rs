@@ -10,6 +10,7 @@ use sqlx::PgPool;
 use serde_json::json;
 use std::sync::Arc;
 use asap_core_shared::{SharedConfig, SharedWsBroadcaster, NoOpBroadcaster};
+use asap_core_ai::{AIOrchestrator, AIConfig, AIRateLimiter};
 use crate::rate_limit::{RateLimiter, SharedRateLimiter};
 
 async fn root() -> Json<serde_json::Value> {
@@ -21,12 +22,12 @@ async fn root() -> Json<serde_json::Value> {
 }
 
 /// Creates the main API router with all routes
-pub fn create_router(pool: PgPool, config: SharedConfig) -> Router {
-    create_router_with_ws(pool, config, None)
+pub async fn create_router(pool: PgPool, config: SharedConfig) -> Router {
+    create_router_with_ws(pool, config, None).await
 }
 
 /// Creates the main API router with WebSocket broadcaster support
-pub fn create_router_with_ws(
+pub async fn create_router_with_ws(
     pool: PgPool,
     config: SharedConfig,
     ws_broadcaster: Option<SharedWsBroadcaster>,
@@ -57,6 +58,50 @@ pub fn create_router_with_ws(
                 std::sync::Arc::new(asap_core_payments::NoOpPaymentGateway::new())
             }
         }
+    };
+
+    // Initialize AI Orchestrator - graceful fallback if not configured
+    let ai_orchestrator: Arc<AIOrchestrator> = {
+        let ai_config = AIConfig::from_env();
+        
+        // Try to initialize Redis-backed rate limiter for AI
+        let ai_rate_limiter = match std::env::var("REDIS_URL") {
+            Ok(redis_url) => {
+                // Create Redis connection manager
+                match redis::Client::open(redis_url.as_str()) {
+                    Ok(client) => {
+                        match redis::aio::ConnectionManager::new(client).await {
+                            Ok(conn_manager) => {
+                                tracing::info!("AI rate limiter initialized with Redis");
+                                Some(Arc::new(AIRateLimiter::new(conn_manager, ai_config.clone())))
+                            }
+                            Err(e) => {
+                                tracing::warn!("Failed to create Redis connection manager: {}. AI rate limiting disabled.", e);
+                                None
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to create Redis client: {}. AI rate limiting disabled.", e);
+                        None
+                    }
+                }
+            }
+            Err(_) => {
+                tracing::warn!("REDIS_URL not set. AI rate limiting disabled.");
+                None
+            }
+        };
+        
+        let orchestrator = AIOrchestrator::new(ai_config, ai_rate_limiter);
+        
+        if orchestrator.is_configured() {
+            tracing::info!("AI Orchestrator initialized with providers: {:?}", orchestrator.available_providers());
+        } else {
+            tracing::warn!("AI Orchestrator initialized but no providers configured. Set OPENAI_API_KEY or ANTHROPIC_API_KEY.");
+        }
+        
+        Arc::new(orchestrator)
     };
 
     // Authenticated routes (require JWT)
@@ -182,6 +227,12 @@ pub fn create_router_with_ws(
         .route("/websites/:id/extensions/v2/:slug", delete(crate::store::deactivate_extension_from_website))
         .route("/websites/:id/extensions/v2/:slug/settings", patch(crate::store::update_website_extension_settings))
         .route("/websites/:id/extensions/v2/:slug/toggle", patch(crate::store::toggle_website_extension))
+        // AI Chat routes
+        .route("/ai/chat", post(crate::ai::chat))
+        .route("/ai/chat/stream", post(crate::ai::chat_stream))
+        .route("/ai/quota", get(crate::ai::get_quota))
+        .route("/ai/status", get(crate::ai::status))
+        .layer(Extension(ai_orchestrator.clone()))
         .layer(Extension(storage_service.clone()))
         .layer(Extension(payment_gateway.clone()))
         .layer(Extension(config.clone()))

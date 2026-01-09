@@ -162,7 +162,7 @@ async fn main() -> anyhow::Result<()> {
         pool.clone(),
         shared_config,
         Some(ws_state.clone() as asap_core_api::SharedWsBroadcaster),
-    );
+    ).await;
     
     // Create health routes with pool state
     let health_router = Router::new()
