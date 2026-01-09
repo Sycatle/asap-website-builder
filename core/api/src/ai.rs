@@ -877,6 +877,9 @@ pub struct ExecutedToolCall {
 /// Maximum iterations for tool calling loop to prevent infinite loops
 const MAX_TOOL_ITERATIONS: usize = 5;
 
+/// Preloaded screenshot handle type alias for clarity
+type PreloadedScreenshot = tokio::task::JoinHandle<Result<ScreenshotData, String>>;
+
 /// Execute data tools in a loop to gather comprehensive context before generating the final response.
 /// Uses chain-of-thought: the AI can request multiple tools across multiple iterations
 /// until it has gathered all the information it needs.
@@ -885,7 +888,11 @@ async fn execute_data_tools(
     context: &WebsiteContext,
     user_message: &str,
     history: &[asap_core_ai::Message],
+    preloaded_screenshot: Option<PreloadedScreenshot>,
 ) -> Option<DataToolExecution> {
+    // Store preloaded screenshot in Option so we can take it when needed
+    let mut preloaded_screenshot = preloaded_screenshot;
+    
     // Create OpenAI provider for tools calls
     let openai_config = orchestrator.config().openai.clone();
     if openai_config.api_key.is_empty() {
@@ -1024,17 +1031,36 @@ Only skip tools if the question is purely conversational or doesn't need any dat
                 // Get website slug for screenshot service
                 let website_slug = context.website.slug.clone();
                 
-                // Capture screenshot via the screenshot service
-                let screenshot_url = std::env::var("SCREENSHOT_SERVICE_URL")
-                    .unwrap_or_else(|_| "http://screenshot:3001".to_string());
+                // OPTIMIZATION #8: Use preloaded screenshot if available and viewport matches
+                // Otherwise capture a new one (different viewport requested)
+                let can_use_preloaded = params.viewport == "desktop" && preloaded_screenshot.is_some();
                 
-                tracing::info!("Capturing screenshot for visual analysis: {}", website_slug);
+                tracing::info!(
+                    "Visual analysis for {}: preloaded={}, viewport={}", 
+                    website_slug, can_use_preloaded, params.viewport
+                );
                 
-                let capture_result = capture_screenshot_server_side(
-                    &screenshot_url,
-                    &website_slug,
-                    &params.viewport,
-                ).await;
+                let capture_result = if can_use_preloaded {
+                    // Use preloaded screenshot (captured in parallel during stream start)
+                    let handle = preloaded_screenshot.take().unwrap();
+                    match handle.await {
+                        Ok(result) => {
+                            tracing::info!("Using preloaded screenshot (saved ~2-3s)");
+                            result
+                        }
+                        Err(e) => {
+                            tracing::warn!("Preloaded screenshot failed, capturing new: {}", e);
+                            let screenshot_url = std::env::var("SCREENSHOT_SERVICE_URL")
+                                .unwrap_or_else(|_| "http://screenshot:3001".to_string());
+                            capture_screenshot_server_side(&screenshot_url, &website_slug, &params.viewport).await
+                        }
+                    }
+                } else {
+                    // Capture new screenshot (different viewport or no preload)
+                    let screenshot_url = std::env::var("SCREENSHOT_SERVICE_URL")
+                        .unwrap_or_else(|_| "http://screenshot:3001".to_string());
+                    capture_screenshot_server_side(&screenshot_url, &website_slug, &params.viewport).await
+                };
                 
                 match capture_result {
                     Ok(screenshot_data) => {
@@ -1646,6 +1672,18 @@ pub async fn chat_stream(
     let pool_for_stream = pool.clone();
     let plan_for_stream = plan.clone();
     
+    // OPTIMIZATION #8: Preload screenshot in background at stream start
+    // This captures the screenshot asynchronously while we do intent analysis
+    let screenshot_url = std::env::var("SCREENSHOT_SERVICE_URL")
+        .unwrap_or_else(|_| "http://screenshot:3001".to_string());
+    let website_slug_for_screenshot = context.website.slug.clone();
+    let preloaded_screenshot: PreloadedScreenshot = tokio::spawn(async move {
+        capture_screenshot_server_side(&screenshot_url, &website_slug_for_screenshot, "desktop").await
+    });
+    
+    // Wrap in Option and Mutex for moving into stream and consuming once
+    let preloaded_screenshot_for_stream = std::sync::Arc::new(tokio::sync::Mutex::new(Some(preloaded_screenshot)));
+    
     // Create SSE stream - ALL AI operations are executed INSIDE the stream for immediate feedback
     let stream = async_stream::stream! {
         // OPTIMIZATION #6: Send Typing event IMMEDIATELY (<50ms perceived latency)
@@ -1761,11 +1799,15 @@ pub async fn chat_stream(
         }
         
         // Execute data tools with real-time feedback
+        // Take the preloaded screenshot from the Arc<Mutex<Option<...>>>
+        let preloaded = preloaded_screenshot_for_stream.lock().await.take();
+        
         let data_tool_execution = execute_data_tools_streaming(
             &orchestrator_for_stream,
             &context_for_stream,
             &user_message_for_stream,
             &history_for_stream,
+            preloaded,
         ).await;
         
         // Send tool events as they were collected
@@ -2076,13 +2118,15 @@ pub async fn chat_stream(
 }
 
 /// Alias for execute_data_tools - streaming is handled at the SSE level
+/// Accepts optional preloaded screenshot for optimization
 async fn execute_data_tools_streaming(
     orchestrator: &AIOrchestrator,
     context: &WebsiteContext,
     user_message: &str,
     history: &[asap_core_ai::Message],
+    preloaded_screenshot: Option<PreloadedScreenshot>,
 ) -> Option<DataToolExecution> {
-    execute_data_tools(orchestrator, context, user_message, history).await
+    execute_data_tools(orchestrator, context, user_message, history, preloaded_screenshot).await
 }
 
 /// Get AI quota information
