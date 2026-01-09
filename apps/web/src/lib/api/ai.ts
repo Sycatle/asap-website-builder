@@ -304,7 +304,16 @@ export function streamChatMessage(
       // Ensure we have a CSRF token
       let csrfToken = apiClient.getCsrfToken();
       if (!csrfToken) {
+        console.log('[AI Stream] No CSRF token, fetching new one...');
         csrfToken = await apiClient.fetchCsrfToken();
+      }
+      
+      if (!csrfToken) {
+        callbacks.onError?.({
+          code: 'csrf_fetch_failed',
+          message: 'Failed to obtain CSRF token',
+        });
+        return;
       }
       
       // Start streaming
@@ -314,9 +323,24 @@ export function streamChatMessage(
       if (response.status === 403) {
         const errorData = await response.json().catch(() => ({}));
         if (errorData.code?.startsWith('CSRF_')) {
+          console.log('[AI Stream] CSRF error, refreshing token and retrying...');
           apiClient.clearCsrfToken();
           csrfToken = await apiClient.fetchCsrfToken();
+          if (!csrfToken) {
+            callbacks.onError?.({
+              code: 'csrf_refresh_failed',
+              message: 'Failed to refresh CSRF token',
+            });
+            return;
+          }
           response = await makeRequest(csrfToken);
+        } else {
+          // Non-CSRF 403 error
+          callbacks.onError?.({
+            code: errorData.code || 'forbidden',
+            message: errorData.error || 'Access forbidden',
+          });
+          return;
         }
       }
       

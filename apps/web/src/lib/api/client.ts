@@ -355,8 +355,16 @@ export class APIClient {
 
   /**
    * Get the current CSRF token (for manual use if needed)
+   * Always reads from sessionStorage to ensure we have the latest token
    */
   getCsrfToken(): string | null {
+    if (typeof window !== 'undefined') {
+      // Always read from sessionStorage to get the freshest token
+      const storedToken = sessionStorage.getItem(CSRF_TOKEN_KEY);
+      if (storedToken) {
+        this.csrfToken = storedToken;
+      }
+    }
     return this.csrfToken;
   }
 
