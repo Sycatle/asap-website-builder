@@ -9,6 +9,7 @@ license.workspace = true
 asap-core-domain = { path = "../domain" }
 asap-core-shared = { path = "../shared" }
 asap-core-payments = { path = "../payments" }
+asap-core-ai = { path = "../ai" }
 
 # Async runtime
 tokio = { workspace = true }
@@ -51,6 +52,9 @@ flate2 = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }
 futures = { workspace = true }
+tokio-stream = "0.1"
+async-stream = "0.3"
+redis = { workspace = true }
 
 # Image processing
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp", "bmp", "tiff"] }
