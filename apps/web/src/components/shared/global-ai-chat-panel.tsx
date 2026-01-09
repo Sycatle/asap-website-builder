@@ -48,6 +48,171 @@ import {
 import { cn } from "@/lib/utils";
 import { useWebsiteContext } from "@/contexts/WebsiteContext";
 import { useUserData } from "@/lib/store/authStore";
+
+// Simple markdown renderer component
+function MarkdownContent({ content, className }: { content: string; className?: string }) {
+  const parseMarkdown = (text: string): React.ReactNode[] => {
+    const elements: React.ReactNode[] = [];
+    const lines = text.split('\n');
+    let inCodeBlock = false;
+    let codeBlockContent = '';
+    let codeBlockLang = '';
+    let listItems: string[] = [];
+    let listType: 'ul' | 'ol' | null = null;
+    
+    const flushList = () => {
+      if (listItems.length > 0 && listType) {
+        const ListTag = listType;
+        elements.push(
+          <ListTag key={`list-${elements.length}`} className={listType === 'ul' ? 'list-disc pl-4 my-2 space-y-1' : 'list-decimal pl-4 my-2 space-y-1'}>
+            {listItems.map((item, i) => <li key={i}>{parseInline(item)}</li>)}
+          </ListTag>
+        );
+        listItems = [];
+        listType = null;
+      }
+    };
+    
+    const parseInline = (text: string): React.ReactNode => {
+      // Parse inline elements: bold, italic, code, links
+      const parts: React.ReactNode[] = [];
+      let remaining = text;
+      let key = 0;
+      
+      while (remaining) {
+        // Bold **text** or __text__
+        const boldMatch = remaining.match(/^(.*?)(\*\*|__)(.*?)\2(.*)$/s);
+        if (boldMatch) {
+          if (boldMatch[1]) parts.push(boldMatch[1]);
+          parts.push(<strong key={key++} className="font-semibold">{parseInline(boldMatch[3])}</strong>);
+          remaining = boldMatch[4];
+          continue;
+        }
+        
+        // Italic *text* or _text_
+        const italicMatch = remaining.match(/^(.*?)(\*|_)([^*_]+)\2(.*)$/s);
+        if (italicMatch && !italicMatch[1].endsWith('*') && !italicMatch[1].endsWith('_')) {
+          if (italicMatch[1]) parts.push(italicMatch[1]);
+          parts.push(<em key={key++} className="italic">{italicMatch[3]}</em>);
+          remaining = italicMatch[4];
+          continue;
+        }
+        
+        // Inline code `code`
+        const codeMatch = remaining.match(/^(.*?)`([^`]+)`(.*)$/s);
+        if (codeMatch) {
+          if (codeMatch[1]) parts.push(codeMatch[1]);
+          parts.push(<code key={key++} className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">{codeMatch[2]}</code>);
+          remaining = codeMatch[3];
+          continue;
+        }
+        
+        // Links [text](url)
+        const linkMatch = remaining.match(/^(.*?)\[([^\]]+)\]\(([^)]+)\)(.*)$/s);
+        if (linkMatch) {
+          if (linkMatch[1]) parts.push(linkMatch[1]);
+          parts.push(<a key={key++} href={linkMatch[3]} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:no-underline">{linkMatch[2]}</a>);
+          remaining = linkMatch[4];
+          continue;
+        }
+        
+        parts.push(remaining);
+        break;
+      }
+      
+      return parts.length === 1 ? parts[0] : parts;
+    };
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Code block start/end
+      if (line.startsWith('```')) {
+        if (inCodeBlock) {
+          flushList();
+          elements.push(
+            <pre key={`code-${elements.length}`} className="my-2 p-3 bg-muted rounded-lg overflow-x-auto">
+              <code className="text-xs font-mono">{codeBlockContent.trim()}</code>
+            </pre>
+          );
+          codeBlockContent = '';
+          inCodeBlock = false;
+        } else {
+          flushList();
+          inCodeBlock = true;
+          codeBlockLang = line.slice(3).trim();
+        }
+        continue;
+      }
+      
+      if (inCodeBlock) {
+        codeBlockContent += line + '\n';
+        continue;
+      }
+      
+      // Headers
+      const headerMatch = line.match(/^(#{1,6})\s+(.+)$/);
+      if (headerMatch) {
+        flushList();
+        const level = headerMatch[1].length;
+        const sizes = ['text-xl font-bold', 'text-lg font-bold', 'text-base font-semibold', 'text-sm font-semibold', 'text-sm font-medium', 'text-xs font-medium'];
+        elements.push(<div key={`h-${elements.length}`} className={`${sizes[level-1]} my-2`}>{parseInline(headerMatch[2])}</div>);
+        continue;
+      }
+      
+      // Unordered list
+      const ulMatch = line.match(/^\s*[-*+]\s+(.+)$/);
+      if (ulMatch) {
+        if (listType !== 'ul') flushList();
+        listType = 'ul';
+        listItems.push(ulMatch[1]);
+        continue;
+      }
+      
+      // Ordered list
+      const olMatch = line.match(/^\s*\d+\.\s+(.+)$/);
+      if (olMatch) {
+        if (listType !== 'ol') flushList();
+        listType = 'ol';
+        listItems.push(olMatch[1]);
+        continue;
+      }
+      
+      // Horizontal rule
+      if (line.match(/^[-*_]{3,}$/)) {
+        flushList();
+        elements.push(<hr key={`hr-${elements.length}`} className="my-3 border-border" />);
+        continue;
+      }
+      
+      // Blockquote
+      if (line.startsWith('>')) {
+        flushList();
+        elements.push(
+          <blockquote key={`bq-${elements.length}`} className="border-l-2 border-primary/50 pl-3 my-2 text-muted-foreground italic">
+            {parseInline(line.slice(1).trim())}
+          </blockquote>
+        );
+        continue;
+      }
+      
+      // Empty line
+      if (!line.trim()) {
+        flushList();
+        continue;
+      }
+      
+      // Regular paragraph
+      flushList();
+      elements.push(<p key={`p-${elements.length}`} className="my-1">{parseInline(line)}</p>);
+    }
+    
+    flushList();
+    return elements;
+  };
+  
+  return <div className={cn("prose-sm", className)}>{parseMarkdown(content)}</div>;
+}
 import { streamChatMessage, type AIAction } from "@/lib/api/ai";
 import { useAIActionExecutor } from "@/hooks/useAIActionExecutor";
 
@@ -830,14 +995,14 @@ function MessageBubble({
       )}
       
       {/* Bubble */}
-      <div className="flex flex-col gap-1 max-w-[80%]">
+      <div className={cn("flex flex-col gap-1", isUser && "max-w-[80%]")}>
         <div className={cn(
-          "px-4 py-2.5 shadow-sm transition-all",
+          "transition-all",
           isUser 
-            ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md" 
-            : "bg-muted rounded-2xl rounded-bl-md",
-          hasError && !isUser && "border border-red-500/50 bg-red-50 dark:bg-red-950/30",
-          message.isStreaming && !isUser && "border border-primary/30"
+            ? "px-4 py-2.5 shadow-sm bg-primary text-primary-foreground rounded-2xl rounded-br-md" 
+            : "py-1",
+          hasError && !isUser && "px-4 py-2.5 border border-red-500/50 bg-red-50 dark:bg-red-950/30 rounded-2xl",
+          message.isStreaming && !isUser && "border-l-2 border-primary/50 pl-3"
         )}>
           {/* Error indicator */}
           {hasError && !isUser && (
@@ -847,17 +1012,21 @@ function MessageBubble({
             </div>
           )}
           
-          {/* Message content with streaming cursor */}
-          <div className="text-sm whitespace-pre-wrap leading-relaxed">
-            {message.content}
-            {message.isStreaming && (
-              <span className="inline-block w-2 h-4 ml-0.5 bg-current animate-pulse rounded-sm" />
-            )}
-          </div>
+          {/* Message content with markdown rendering */}
+          {isUser ? (
+            <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+          ) : (
+            <div className="text-sm leading-relaxed">
+              <MarkdownContent content={message.content} />
+              {message.isStreaming && (
+                <span className="inline-block w-2 h-4 ml-0.5 bg-primary animate-pulse rounded-sm" />
+              )}
+            </div>
+          )}
           
           {/* AI Actions indicator - improved design */}
           {!isUser && message.actions && message.actions.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-border/50">
+            <div className="mt-3 pt-3 border-t border-border/30">
               {/* Summary bar */}
               {actionStats && (
                 <div className="flex items-center justify-between mb-2">
