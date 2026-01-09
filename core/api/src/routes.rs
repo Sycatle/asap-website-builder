@@ -1,4 +1,4 @@
-use axum::{
+    use axum::{
     Router,
     routing::{get, post, put, patch, delete},
     middleware,
@@ -244,6 +244,7 @@ pub async fn create_router_with_ws(
         // AI Vision routes (screenshot analysis)
         .route("/ai/vision/upload", post(crate::ai::upload_vision_screenshot))
         .route("/ai/vision/:id", get(crate::ai::get_vision_screenshot))
+        .route("/ai/vision/analyze", post(crate::ai::analyze_vision))
         // AI Conversations routes
         .route("/ai/conversations", get(crate::ai::list_conversations))
         .route("/ai/conversations/:id", get(crate::ai::get_conversation))

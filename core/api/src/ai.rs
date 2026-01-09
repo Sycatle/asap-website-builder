@@ -795,6 +795,8 @@ pub struct DataToolExecution {
     pub tool_calls: Vec<ExecutedToolCall>,
     /// Combined tool results as context for the final response
     pub context_additions: String,
+    /// Visual analysis request if the AI wants to analyze a screenshot
+    pub visual_analysis_request: Option<asap_core_ai::VisualAnalysisRequest>,
 }
 
 /// A single executed tool call with its result
@@ -914,6 +916,7 @@ Only skip tools if the question is purely conversational or doesn't need any dat
         
         // Execute each tool and collect results
         let mut tool_results_for_continuation = Vec::new();
+        let mut visual_request: Option<asap_core_ai::VisualAnalysisRequest> = None;
         
         for tool_call in &response.tool_calls {
             let tool_name = &tool_call.function.name;
@@ -925,7 +928,168 @@ Only skip tools if the question is purely conversational or doesn't need any dat
                 tool_call.function.arguments
             );
             
-            // Execute the tool
+            // Special handling for visual analysis - capture screenshot and analyze server-side
+            if tool_name == "request_visual_analysis" {
+                // Parse the tool arguments
+                let params: asap_core_ai::VisualAnalysisParams = 
+                    serde_json::from_str(&tool_call.function.arguments)
+                        .unwrap_or_else(|_| asap_core_ai::VisualAnalysisParams {
+                            viewport: "desktop".to_string(),
+                            focus: "overall".to_string(),
+                            section: None,
+                            question: None,
+                        });
+                
+                // Get website slug for screenshot service
+                let website_slug = context.website.slug.clone();
+                
+                // Capture screenshot via the screenshot service
+                let screenshot_url = std::env::var("SCREENSHOT_SERVICE_URL")
+                    .unwrap_or_else(|_| "http://screenshot:3001".to_string());
+                
+                tracing::info!("Capturing screenshot for visual analysis: {}", website_slug);
+                
+                let capture_result = capture_screenshot_server_side(
+                    &screenshot_url,
+                    &website_slug,
+                    &params.viewport,
+                ).await;
+                
+                match capture_result {
+                    Ok(screenshot_data) => {
+                        tracing::info!(
+                            "Screenshot captured successfully: {}x{}", 
+                            screenshot_data.width, 
+                            screenshot_data.height
+                        );
+                        
+                        // Build the image data URL for GPT-4 Vision
+                        let image_url = format!("data:image/png;base64,{}", screenshot_data.image_base64);
+                        
+                        // Build analysis prompt based on focus
+                        let focus_instruction = match params.focus.as_str() {
+                            "layout" => "Focus your analysis on the layout structure, visual hierarchy, and how elements are arranged on the page.",
+                            "colors" => "Focus your analysis on the color scheme, color harmony, contrast, and whether the colors effectively communicate the intended mood/brand.",
+                            "typography" => "Focus your analysis on typography choices, font sizes, line heights, readability, and typographic hierarchy.",
+                            "spacing" => "Focus your analysis on whitespace usage, margins, padding, and overall breathing room between elements.",
+                            "specific_section" => {
+                                if let Some(ref section) = params.section {
+                                    &format!("Focus your analysis specifically on the '{}' section.", section)
+                                } else {
+                                    "Analyze the specific section mentioned by the user."
+                                }
+                            }
+                            _ => "Provide a comprehensive UI/UX analysis covering layout, colors, typography, and overall design quality.",
+                        };
+                        
+                        let vision_prompt = format!(
+                            r#"You are an expert UI/UX designer analyzing a website screenshot.
+
+The user asked: "{}"
+Viewport: {} view
+Image dimensions: {}x{} pixels
+
+{}
+
+Provide actionable, specific feedback based on what you actually see in the screenshot.
+Be constructive and suggest concrete improvements.
+Keep your response focused, organized, and in the same language as the user's question.
+
+Structure your response with clear sections:
+1. **Overall Impression** - First impression and general feel
+2. **Strengths** - What works well
+3. **Areas for Improvement** - Specific issues and how to fix them
+4. **Recommendations** - Actionable next steps"#,
+                            user_message,
+                            params.viewport,
+                            screenshot_data.width,
+                            screenshot_data.height,
+                            focus_instruction
+                        );
+                        
+                        // Call GPT-4 Vision for the actual analysis
+                        tracing::info!("Calling GPT-4 Vision for visual analysis");
+                        let vision_result = openai.chat_with_vision(
+                            &vision_prompt,
+                            vec![image_url],
+                            None, // No additional system prompt
+                            Some("gpt-4o"),
+                            Some(2000),
+                        ).await;
+                        
+                        match vision_result {
+                            Ok(vision_response) => {
+                                let analysis = if vision_response.content.is_empty() {
+                                    "Unable to analyze image.".to_string()
+                                } else {
+                                    vision_response.content
+                                };
+                                
+                                tracing::info!("Visual analysis completed successfully");
+                                
+                                all_context_parts.push(format!(
+                                    "[Visual Analysis - {} view]\n\
+                                    Screenshot dimensions: {}x{} pixels\n\
+                                    Focus: {}\n\n\
+                                    Analysis:\n{}",
+                                    params.viewport,
+                                    screenshot_data.width,
+                                    screenshot_data.height,
+                                    params.focus,
+                                    analysis,
+                                ));
+                                
+                                all_executed_calls.push(ExecutedToolCall {
+                                    id: tool_call.id.clone(),
+                                    tool_name: tool_name.clone(),
+                                    success: true,
+                                    description: description.to_string(),
+                                });
+                            }
+                            Err(vision_error) => {
+                                tracing::error!("Vision analysis failed: {:?}", vision_error);
+                                all_context_parts.push(format!(
+                                    "[Visual Analysis - Error]\n\
+                                    Screenshot captured ({}x{}) but vision analysis failed: {}.\n\
+                                    Please try again.",
+                                    screenshot_data.width,
+                                    screenshot_data.height,
+                                    vision_error
+                                ));
+                                
+                                all_executed_calls.push(ExecutedToolCall {
+                                    id: tool_call.id.clone(),
+                                    tool_name: tool_name.clone(),
+                                    success: false,
+                                    description: format!("{} (vision failed)", description),
+                                });
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("Screenshot capture failed: {}", e);
+                        all_context_parts.push(format!(
+                            "[Visual Analysis - Error]\n\
+                            Unable to capture screenshot: {}.\n\
+                            Make sure the website is published and accessible.\n\
+                            Proceeding with structural analysis only.",
+                            e
+                        ));
+                        
+                        all_executed_calls.push(ExecutedToolCall {
+                            id: tool_call.id.clone(),
+                            tool_name: tool_name.clone(),
+                            success: false,
+                            description: format!("{} (capture failed)", description),
+                        });
+                    }
+                }
+                
+                // Continue processing other tools instead of returning early
+                continue;
+            }
+            
+            // Execute the tool (standard flow)
             let tool_result = tool_executor.execute(tool_call, context);
             
             all_executed_calls.push(ExecutedToolCall {
@@ -983,6 +1147,7 @@ Only skip tools if the question is purely conversational or doesn't need any dat
     Some(DataToolExecution {
         tool_calls: all_executed_calls,
         context_additions,
+        visual_analysis_request: None,
     })
 }
 
@@ -996,6 +1161,7 @@ fn get_tool_description(tool_name: &str) -> &'static str {
         "get_website_settings" => "Consultation des paramètres",
         "list_extensions" => "Liste des extensions",
         "get_page_content" => "Lecture du contenu de page",
+        "request_visual_analysis" => "Analyse visuelle du site",
         _ => "Outil de données",
     }
 }
@@ -1007,6 +1173,68 @@ fn truncate_tool_result(content: &str, max_len: usize) -> &str {
     } else {
         &content[..max_len]
     }
+}
+
+/// Screenshot capture result
+#[derive(Debug)]
+struct ScreenshotData {
+    #[allow(dead_code)]
+    image_base64: String,
+    width: u32,
+    height: u32,
+}
+
+/// Capture a screenshot via the screenshot service
+async fn capture_screenshot_server_side(
+    screenshot_url: &str,
+    website_slug: &str,
+    viewport: &str,
+) -> Result<ScreenshotData, String> {
+    let client = reqwest::Client::new();
+    
+    #[derive(Serialize)]
+    struct CaptureRequest<'a> {
+        #[serde(rename = "websiteSlug")]
+        website_slug: &'a str,
+        viewport: &'a str,
+        #[serde(rename = "waitFor")]
+        wait_for: u32,
+    }
+    
+    #[derive(Deserialize)]
+    struct CaptureResponse {
+        image: String,
+        width: u32,
+        height: u32,
+    }
+    
+    let response = client
+        .post(format!("{}/capture", screenshot_url))
+        .json(&CaptureRequest {
+            website_slug,
+            viewport,
+            wait_for: 1500,
+        })
+        .timeout(Duration::from_secs(30))
+        .send()
+        .await
+        .map_err(|e| format!("Failed to connect to screenshot service: {}", e))?;
+    
+    if !response.status().is_success() {
+        let error_text = response.text().await.unwrap_or_default();
+        return Err(format!("Screenshot service error: {}", error_text));
+    }
+    
+    let capture: CaptureResponse = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse screenshot response: {}", e))?;
+    
+    Ok(ScreenshotData {
+        image_base64: capture.image,
+        width: capture.width,
+        height: capture.height,
+    })
 }
 
 /// Convert AI error to HTTP response
@@ -1383,6 +1611,32 @@ pub async fn chat_stream(
                         if let Ok(json) = serde_json::to_string(&tool_result_event) {
                             yield Ok(Event::default().data(json));
                         }
+                    }
+                    
+                    // If visual analysis is requested, send ToolRequest to frontend and end stream
+                    // Frontend will capture screenshot, upload it, and send a new request with the image
+                    if let Some(ref visual_req) = execution.visual_analysis_request {
+                        let tool_request_event = SseEventData::ToolRequest(ToolRequestData {
+                            request_id: visual_req.tool_call_id.clone(),
+                            request_type: "capture_screenshot".to_string(),
+                            params: serde_json::json!({
+                                "viewport": visual_req.viewport,
+                                "focus": visual_req.focus,
+                                "section": visual_req.section,
+                                "question": visual_req.question,
+                            }),
+                            timeout_seconds: Some(30),
+                        });
+                        if let Ok(json) = serde_json::to_string(&tool_request_event) {
+                            yield Ok(Event::default().data(json));
+                        }
+                        
+                        // End stream - frontend will handle continuation
+                        let done_event = SseEventData::Done;
+                        if let Ok(json) = serde_json::to_string(&done_event) {
+                            yield Ok(Event::default().data(json));
+                        }
+                        return;
                     }
                 }
                 
@@ -2301,6 +2555,232 @@ pub async fn get_vision_screenshot(
         [(header::CONTENT_TYPE, content_type)],
         data
     ).into_response())
+}
+
+/// Request for visual analysis with screenshot
+#[derive(Debug, Deserialize)]
+pub struct VisualAnalyzeRequest {
+    /// Website ID
+    pub website_id: Uuid,
+    /// Screenshot image ID (from upload endpoint)
+    pub image_id: String,
+    /// Original user message (the question about design)
+    pub original_message: String,
+    /// Viewport used for screenshot
+    pub viewport: String,
+    /// Focus area for analysis
+    pub focus: String,
+    /// Optional section name
+    #[serde(default)]
+    pub section: Option<String>,
+    /// Optional specific question
+    #[serde(default)]
+    pub question: Option<String>,
+    /// Conversation ID for context
+    #[serde(default)]
+    pub conversation_id: Option<Uuid>,
+}
+
+/// Response from visual analysis
+#[derive(Debug, Serialize)]
+pub struct VisualAnalyzeResponse {
+    /// Analysis from GPT-4 Vision
+    pub analysis: String,
+    /// Conversation ID
+    pub conversation_id: Uuid,
+}
+
+/// Analyze a website screenshot using GPT-4 Vision
+/// POST /api/v1/ai/vision/analyze
+pub async fn analyze_vision(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Extension(orchestrator): Extension<Arc<AIOrchestrator>>,
+    Json(req): Json<VisualAnalyzeRequest>,
+) -> Result<Json<VisualAnalyzeResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let account_id = get_account_id(&claims).map_err(|s| {
+        (s, Json(ErrorResponse {
+            error: "Unauthorized".to_string(),
+            code: "unauthorized".to_string(),
+        }))
+    })?;
+
+    // Verify website ownership
+    verify_website_ownership(&pool, account_id, req.website_id)
+        .await
+        .map_err(|s| {
+            (s, Json(ErrorResponse {
+                error: "Website not found or access denied".to_string(),
+                code: "not_found".to_string(),
+            }))
+        })?;
+
+    // Verify image exists and belongs to user
+    let image_id = Uuid::parse_str(&req.image_id).map_err(|_| {
+        (StatusCode::BAD_REQUEST, Json(ErrorResponse {
+            error: "Invalid image_id".to_string(),
+            code: "invalid_image_id".to_string(),
+        }))
+    })?;
+
+    let image_exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM ai_screenshots WHERE id = $1 AND account_id = $2 AND expires_at > NOW())"
+    )
+    .bind(image_id)
+    .bind(account_id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to check image: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse {
+            error: "Database error".to_string(),
+            code: "db_error".to_string(),
+        }))
+    })?;
+
+    if !image_exists {
+        return Err((StatusCode::NOT_FOUND, Json(ErrorResponse {
+            error: "Screenshot not found or expired".to_string(),
+            code: "image_not_found".to_string(),
+        })));
+    }
+
+    // Build image URL (internal endpoint)
+    // Note: For OpenAI Vision, we need a publicly accessible URL or base64 data
+    // Since our screenshots are stored in DB, we'll fetch and convert to base64 data URL
+    let (image_data, content_type): (Vec<u8>, String) = sqlx::query_as(
+        "SELECT data, content_type FROM ai_screenshots WHERE id = $1"
+    )
+    .bind(image_id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch image data: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse {
+            error: "Failed to retrieve image".to_string(),
+            code: "fetch_error".to_string(),
+        }))
+    })?;
+
+    // Convert to base64 data URL for OpenAI Vision API
+    use base64::{Engine as _, engine::general_purpose};
+    let base64_image = general_purpose::STANDARD.encode(&image_data);
+    let image_url = format!("data:{};base64,{}", content_type, base64_image);
+
+    // Build analysis prompt based on focus
+    let focus_instruction = match req.focus.as_str() {
+        "layout" => "Focus your analysis on the layout structure, visual hierarchy, and how elements are arranged on the page.",
+        "colors" => "Focus your analysis on the color scheme, color harmony, contrast, and whether the colors effectively communicate the intended mood/brand.",
+        "typography" => "Focus your analysis on typography choices, font sizes, line heights, readability, and typographic hierarchy.",
+        "spacing" => "Focus your analysis on whitespace usage, margins, padding, and overall breathing room between elements.",
+        "specific_section" => {
+            if let Some(ref section) = req.section {
+                &format!("Focus your analysis specifically on the '{}' section.", section)
+            } else {
+                "Analyze the specific section mentioned by the user."
+            }
+        }
+        _ => "Provide a comprehensive UI/UX analysis covering layout, colors, typography, and overall design quality.",
+    };
+
+    let specific_question = req.question.as_deref().unwrap_or("");
+    
+    let vision_prompt = format!(
+        r#"You are an expert UI/UX designer analyzing a website screenshot.
+
+The user asked: "{}"
+{}
+Viewport: {} view
+
+{}
+
+Provide actionable, specific feedback. Reference what you actually see in the screenshot.
+Be constructive and suggest improvements with specific recommendations.
+Keep your response focused and organized.
+Respond in the same language as the user's question."#,
+        req.original_message,
+        if !specific_question.is_empty() { format!("Specific question: {}", specific_question) } else { String::new() },
+        req.viewport,
+        focus_instruction
+    );
+
+    // Get or create conversation
+    let conversation_id = req.conversation_id.unwrap_or_else(Uuid::new_v4);
+    
+    // Ensure conversation exists
+    let _ = sqlx::query(
+        r#"
+        INSERT INTO ai_conversations (id, account_id, website_id, title, context_summary, last_intent)
+        VALUES ($1, $2, $3, $4, '', '{}')
+        ON CONFLICT (id) DO NOTHING
+        "#
+    )
+    .bind(conversation_id)
+    .bind(account_id)
+    .bind(req.website_id)
+    .bind(&req.original_message[..req.original_message.len().min(100)])
+    .execute(&pool)
+    .await;
+
+    // Call GPT-4 Vision
+    let openai_config = orchestrator.config().openai.clone();
+    if openai_config.api_key.is_empty() {
+        return Err((StatusCode::SERVICE_UNAVAILABLE, Json(ErrorResponse {
+            error: "OpenAI not configured".to_string(),
+            code: "provider_unavailable".to_string(),
+        })));
+    }
+
+    let openai = asap_core_ai::OpenAIProvider::new(openai_config);
+    
+    let vision_result = openai.chat_with_vision(
+        &vision_prompt,
+        vec![image_url],
+        None, // No additional system prompt
+        Some("gpt-4o"), // Use GPT-4 Vision
+        Some(2000), // Max tokens for detailed analysis
+    ).await;
+
+    let analysis = match vision_result {
+        Ok(response) => {
+            // ChatCompletion has direct content field
+            if response.content.is_empty() {
+                "Unable to analyze image.".to_string()
+            } else {
+                response.content
+            }
+        }
+        Err(e) => {
+            tracing::error!("Vision analysis failed: {:?}", e);
+            return Err((StatusCode::BAD_GATEWAY, Json(ErrorResponse {
+                error: "Vision analysis failed".to_string(),
+                code: "vision_error".to_string(),
+            })));
+        }
+    };
+
+    // Save the analysis as an AI message in the conversation
+    let _ = save_message(
+        &pool,
+        conversation_id,
+        "assistant",
+        &analysis,
+        None,
+        None,
+    ).await;
+
+    tracing::info!(
+        image_id = %image_id,
+        conversation_id = %conversation_id,
+        focus = %req.focus,
+        viewport = %req.viewport,
+        "Visual analysis completed"
+    );
+
+    Ok(Json(VisualAnalyzeResponse {
+        analysis,
+        conversation_id,
+    }))
 }
 
 // ============================================================================
