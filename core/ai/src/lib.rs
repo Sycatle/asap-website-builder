@@ -23,7 +23,7 @@ pub mod actions;
 pub mod providers;
 
 // Re-exports
-pub use config::AIConfig;
+pub use config::{AIConfig, OpenAIConfig};
 pub use context::ContextBuilder;
 pub use error::{AIError, AIResult};
 pub use intent::{analyze_intent, execute_thinking_step, IntentAnalysis, ThinkingStep, StepResult};
@@ -31,5 +31,6 @@ pub use orchestrator::AIOrchestrator;
 pub use rate_limiter::AIRateLimiter;
 pub use router::ModelRouter;
 pub use tools::{get_tool_definitions, ToolExecutor, ToolCall, ToolResult, ToolDefinition};
+pub use providers::{OpenAIProvider, OpenAIMessage, ChatCompletionWithTools};
 pub use types::*;
 

@@ -185,6 +185,11 @@ impl AIOrchestrator {
         &self.router
     }
 
+    /// Get the AI config
+    pub fn config(&self) -> &AIConfig {
+        &self.config
+    }
+
     /// Get available providers
     pub fn available_providers(&self) -> Vec<&str> {
         self.router.available_providers()

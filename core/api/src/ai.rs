@@ -22,6 +22,8 @@ use asap_core_ai::{
     WebsiteContext, WebsiteInfo, SectionInfo, TokenUsage,
     UserContext, UserQuota, WebsiteDataContext, VariableGroup, CollectionSummary,
     analyze_intent, execute_thinking_step, IntentAnalysis, StepResult,
+    get_tool_definitions, ToolExecutor,
+    OpenAIProvider,
 };
 use crate::Claims;
 
@@ -764,6 +766,231 @@ async fn load_website_context(
     })
 }
 
+// ============================================================================
+// Data Tools Integration
+// ============================================================================
+
+/// Result of executing data tools
+#[derive(Debug, Clone)]
+pub struct DataToolExecution {
+    /// Tool calls that were made
+    pub tool_calls: Vec<ExecutedToolCall>,
+    /// Combined tool results as context for the final response
+    pub context_additions: String,
+}
+
+/// A single executed tool call with its result
+#[derive(Debug, Clone, Serialize)]
+pub struct ExecutedToolCall {
+    pub id: String,
+    pub tool_name: String,
+    pub success: bool,
+    pub description: String,
+}
+
+/// Maximum iterations for tool calling loop to prevent infinite loops
+const MAX_TOOL_ITERATIONS: usize = 5;
+
+/// Execute data tools in a loop to gather comprehensive context before generating the final response.
+/// Uses chain-of-thought: the AI can request multiple tools across multiple iterations
+/// until it has gathered all the information it needs.
+async fn execute_data_tools(
+    orchestrator: &AIOrchestrator,
+    context: &WebsiteContext,
+    user_message: &str,
+    history: &[asap_core_ai::Message],
+) -> Option<DataToolExecution> {
+    // Create OpenAI provider for tools calls
+    let openai_config = orchestrator.config().openai.clone();
+    if openai_config.api_key.is_empty() {
+        tracing::debug!("OpenAI not configured, skipping data tools");
+        return None;
+    }
+    
+    let openai = OpenAIProvider::new(openai_config);
+    let tool_definitions = get_tool_definitions();
+    let tool_executor = ToolExecutor::new();
+    
+    // Build initial messages for the tool call
+    let system_prompt = r#"You are an AI assistant for a website builder with access to tools to search the user's website data.
+
+IMPORTANT INSTRUCTIONS:
+1. Use tools to find ALL relevant information before answering
+2. You can call MULTIPLE tools in a single response if you need different types of data
+3. After receiving tool results, you can call MORE tools if you need additional information
+4. Think step by step: what data do I need? -> call tools -> analyze results -> need more data? -> call more tools or respond
+
+Available data sources:
+- Collections: user's content from GitHub repos, manual entries, etc. (projects, posts, etc.)
+- Variables: configuration values from various sources
+- Sections: website page sections and their content
+- Theme: design settings (colors, fonts, etc.)
+- Settings: website configuration
+- Extensions: installed extensions and their status
+
+Examples of when to use multiple tools:
+- "Tell me about my projects" → search_collections for projects + get_website_sections to see how they're displayed
+- "What's my site's style?" → get_website_theme + get_website_settings
+- "How is my GitHub data used?" → list_extensions + search_collections with source filter
+
+Only skip tools if the question is purely conversational or doesn't need any data."#;
+    
+    let mut messages = vec![asap_core_ai::Message::system(system_prompt)];
+    
+    // Add conversation history
+    for msg in history {
+        messages.push(msg.clone());
+    }
+    
+    // Add current user message
+    messages.push(asap_core_ai::Message::user(user_message));
+    
+    let mut all_executed_calls = Vec::new();
+    let mut all_context_parts = Vec::new();
+    let mut iteration = 0;
+    
+    // Tool calling loop - continue until AI stops requesting tools or max iterations
+    loop {
+        iteration += 1;
+        if iteration > MAX_TOOL_ITERATIONS {
+            tracing::warn!("Data tools reached max iterations ({}), stopping", MAX_TOOL_ITERATIONS);
+            break;
+        }
+        
+        tracing::debug!("Data tools iteration {}", iteration);
+        
+        // Call OpenAI with tools
+        let result = openai.chat_with_tools(
+            messages.clone(),
+            Some(&tool_definitions),
+            None, // Use default model
+            Some(1024), // Token limit for tool decision
+            Some(0.3), // Lower temperature for deterministic tool selection
+        ).await;
+        
+        let response = match result {
+            Ok(r) => r,
+            Err(e) => {
+                tracing::warn!("Data tools call failed at iteration {}: {}", iteration, e);
+                break;
+            }
+        };
+        
+        // If no tool calls, AI has finished gathering data
+        if response.tool_calls.is_empty() {
+            tracing::debug!("AI finished gathering data after {} iterations", iteration);
+            break;
+        }
+        
+        tracing::info!(
+            "Iteration {}: AI requested {} data tools: {:?}", 
+            iteration, 
+            response.tool_calls.len(),
+            response.tool_calls.iter().map(|t| &t.function.name).collect::<Vec<_>>()
+        );
+        
+        // Add assistant message with tool calls to conversation
+        // This maintains the conversation flow for the next iteration
+        let assistant_content = response.content.clone().unwrap_or_default();
+        messages.push(asap_core_ai::Message::assistant(&assistant_content));
+        
+        // Execute each tool and collect results
+        let mut tool_results_for_continuation = Vec::new();
+        
+        for tool_call in &response.tool_calls {
+            let tool_name = &tool_call.function.name;
+            let description = get_tool_description(tool_name);
+            
+            tracing::debug!(
+                "Executing data tool: {} with args: {}", 
+                tool_name, 
+                tool_call.function.arguments
+            );
+            
+            // Execute the tool
+            let tool_result = tool_executor.execute(tool_call, context);
+            
+            all_executed_calls.push(ExecutedToolCall {
+                id: tool_call.id.clone(),
+                tool_name: tool_name.clone(),
+                success: tool_result.success,
+                description: description.to_string(),
+            });
+            
+            // Store result for context
+            if tool_result.success {
+                all_context_parts.push(format!(
+                    "[Data from {}]:\n{}\n",
+                    tool_name,
+                    truncate_tool_result(&tool_result.content, 2000)
+                ));
+            }
+            
+            // Store result for next iteration
+            tool_results_for_continuation.push((tool_call.id.clone(), tool_result.content.clone()));
+        }
+        
+        // Add tool results as user messages for the next iteration
+        // (OpenAI expects tool results with role "tool", but we simulate with user messages)
+        for (tool_call_id, result_content) in tool_results_for_continuation {
+            messages.push(asap_core_ai::Message::user(
+                format!("[Tool result for {}]: {}", tool_call_id, result_content)
+            ));
+        }
+    }
+    
+    // If no tools were called, return None
+    if all_executed_calls.is_empty() {
+        tracing::debug!("AI decided no data tools needed");
+        return None;
+    }
+    
+    // Build combined context from all tool results
+    let context_additions = if all_context_parts.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "\n--- Retrieved Data (from {} tool calls) ---\n{}\n--- End Retrieved Data ---\n", 
+            all_executed_calls.len(),
+            all_context_parts.join("\n")
+        )
+    };
+    
+    tracing::info!(
+        "Data tools completed: {} tools executed across {} iterations",
+        all_executed_calls.len(),
+        iteration
+    );
+    
+    Some(DataToolExecution {
+        tool_calls: all_executed_calls,
+        context_additions,
+    })
+}
+
+/// Get a human-readable description for a tool
+fn get_tool_description(tool_name: &str) -> &'static str {
+    match tool_name {
+        "search_collections" => "Recherche dans les collections",
+        "search_variables" => "Recherche dans les variables",
+        "get_website_sections" => "Analyse des sections du site",
+        "get_website_theme" => "Consultation du thème",
+        "get_website_settings" => "Consultation des paramètres",
+        "list_extensions" => "Liste des extensions",
+        "get_page_content" => "Lecture du contenu de page",
+        _ => "Outil de données",
+    }
+}
+
+/// Truncate tool result to avoid context overflow
+fn truncate_tool_result(content: &str, max_len: usize) -> &str {
+    if content.len() <= max_len {
+        content
+    } else {
+        &content[..max_len]
+    }
+}
+
 /// Convert AI error to HTTP response
 fn ai_error_to_response(err: asap_core_ai::AIError) -> (StatusCode, Json<ErrorResponse>) {
     use asap_core_ai::AIError;
@@ -1052,10 +1279,33 @@ pub async fn chat_stream(
     let pool_for_save = pool.clone();
     let _ = save_message(&pool_for_save, conversation_id, "user", &user_message, None, None).await;
     
-    // Build AI request with history
+    // Execute data tools BEFORE streaming to gather context
+    // This allows the AI to use relevant data in its response
+    let data_tool_execution = execute_data_tools(
+        &orchestrator,
+        &context,
+        &user_message,
+        &history_messages,
+    ).await;
+    
+    // Log data tool results for debugging
+    if let Some(ref execution) = data_tool_execution {
+        tracing::info!(
+            "Data tools executed: {} tools, context additions: {} chars",
+            execution.tool_calls.len(),
+            execution.context_additions.len()
+        );
+    }
+    
+    // Build AI request with history and data tool context
     let ai_request = CoreAIChatRequest {
         website_id: req.website_id,
-        message: req.message.clone(),
+        message: if let Some(ref execution) = data_tool_execution {
+            // Append tool results to the message for context
+            format!("{}\n\n{}", req.message, execution.context_additions)
+        } else {
+            req.message.clone()
+        },
         conversation_id: Some(conversation_id),
         history: history_messages,
         attachments: vec![],
@@ -1067,6 +1317,7 @@ pub async fn chat_stream(
     let context_for_thinking = context.clone();
     let user_message_for_thinking = user_message.clone();
     let intent_for_thinking = intent_analysis.clone();
+    let data_tool_execution_for_stream = data_tool_execution.clone();
     
     // Start streaming
     let _action_parser = orchestrator.action_parser().clone();
@@ -1088,6 +1339,33 @@ pub async fn chat_stream(
                 let conv_event = SseEventData::Conversation(ConversationData { id: conversation_id });
                 if let Ok(json) = serde_json::to_string(&conv_event) {
                     yield Ok(Event::default().data(json));
+                }
+                
+                // Send data tool events if any were executed
+                if let Some(ref execution) = data_tool_execution_for_stream {
+                    for tool_call in &execution.tool_calls {
+                        // Send tool call starting
+                        let tool_call_event = SseEventData::ToolCall(ToolCallData {
+                            id: tool_call.id.clone(),
+                            tool: tool_call.tool_name.clone(),
+                            description: tool_call.description.clone(),
+                            args: None,
+                            status: "completed".to_string(), // Already executed
+                        });
+                        if let Ok(json) = serde_json::to_string(&tool_call_event) {
+                            yield Ok(Event::default().data(json));
+                        }
+                        
+                        // Send tool result
+                        let tool_result_event = SseEventData::ToolResult(ToolResultData {
+                            tool_call_id: tool_call.id.clone(),
+                            success: tool_call.success,
+                            message: Some(tool_call.description.clone()),
+                        });
+                        if let Ok(json) = serde_json::to_string(&tool_result_event) {
+                            yield Ok(Event::default().data(json));
+                        }
+                    }
                 }
                 
                 // Execute thinking steps with real AI calls (sequential)
