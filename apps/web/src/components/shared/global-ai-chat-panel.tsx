@@ -270,8 +270,20 @@ function MarkdownContent({ content, className }: { content: string; className?: 
   
   return <div className={cn("prose-sm", className)}>{parseMarkdown(content)}</div>;
 }
-import { streamChatMessage, type AIAction, type ThinkingData, type ToolCallData, type ToolResultData, type IterationData } from "@/lib/api/ai";
+import { streamChatMessage, type AIAction, type ThinkingData, type ToolCallData, type ToolResultData, type ToolRequestData, type IterationData } from "@/lib/api/ai";
 import { useAIActionExecutor } from "@/hooks/useAIActionExecutor";
+import { uploadPreviewCapture, analyzePreviewCapture, type Viewport } from "@/hooks/use-preview-capture";
+
+// ============================================================================
+// Visual Analysis Event System
+// ============================================================================
+
+// Global type declaration for preview capture function
+declare global {
+  interface Window {
+    __capturePreview?: (viewport?: 'desktop' | 'tablet' | 'mobile') => Promise<{ imageId: string } | null>;
+  }
+}
 
 // Helper to format action labels for display
 function formatActionLabel(action: AIAction): string {
@@ -462,6 +474,8 @@ export function GlobalAIChatPanel({
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const conversationIdRef = useRef<string | null>(null);
+  const pendingMessageRef = useRef<string>('');
   const { enabled: soundEnabled, toggle: toggleSound, playSound } = useSoundEffects();
   
   // AI Action Executor
@@ -560,6 +574,11 @@ export function GlobalAIChatPanel({
     ));
   }, []);
 
+  // Sync conversationId ref with state
+  useEffect(() => {
+    conversationIdRef.current = conversationId;
+  }, [conversationId]);
+
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading || !currentWebsite?.id) return;
 
@@ -569,6 +588,9 @@ export function GlobalAIChatPanel({
       content: input.trim(),
       timestamp: new Date(),
     };
+
+    // Store pending message for async tool requests
+    pendingMessageRef.current = input.trim();
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
@@ -735,6 +757,11 @@ export function GlobalAIChatPanel({
               ),
             };
           }));
+        },
+        onToolRequest: async (data: ToolRequestData) => {
+          // Visual analysis is now handled fully server-side via the screenshot service
+          // This callback is kept for backwards compatibility but is a no-op
+          console.log('[AI Chat] Received tool request (handled server-side):', data.request_type);
         },
         onIteration: (data) => {
           // Add iteration step to chain
