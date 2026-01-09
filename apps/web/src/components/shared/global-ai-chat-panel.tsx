@@ -1545,7 +1545,7 @@ function MessageBubble({
       )}
       
       {/* Bubble */}
-      <div className={cn("flex flex-col gap-1", isUser && "max-w-[80%]")}>
+      <div className={cn("flex flex-col gap-1", isUser && "max-w-[80%]", !isUser && "w-full")}>
         <div className={cn(
           "transition-all",
           isUser 
