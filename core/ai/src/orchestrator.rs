@@ -180,6 +180,11 @@ impl AIOrchestrator {
         &self.context_builder
     }
 
+    /// Get the model router (for intent analysis)
+    pub fn router(&self) -> &ModelRouter {
+        &self.router
+    }
+
     /// Get available providers
     pub fn available_providers(&self) -> Vec<&str> {
         self.router.available_providers()
