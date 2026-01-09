@@ -58,6 +58,7 @@ import {
   getPropertiesByGroup,
   AVAILABLE_ICONS,
 } from "@asap/shared";
+import { VariantPicker, isVariantProperty } from "./variant-picker";
 
 // ============================================
 // Types
@@ -578,7 +579,23 @@ function NestedArrayPropertyEditor({ prop, value, onChange }: NestedArrayPropert
 // Property Field Router
 // ============================================
 
-function PropertyFieldRouter({ prop, value, onChange }: PropertyEditorFieldProps) {
+interface PropertyFieldRouterProps extends PropertyEditorFieldProps {
+  sectionType?: string;
+}
+
+function PropertyFieldRouter({ prop, value, onChange, sectionType }: PropertyFieldRouterProps) {
+  // Use VariantPicker for variant properties
+  if (isVariantProperty(prop.key) && prop.type === 'select' && prop.options && sectionType) {
+    return (
+      <VariantPicker
+        sectionType={sectionType}
+        options={prop.options}
+        value={(value as string) || prop.defaultValue as string || ''}
+        onChange={(val) => onChange(prop.key, val)}
+      />
+    );
+  }
+  
   switch (prop.type) {
     case 'text':
       return <TextPropertyEditor prop={prop} value={value} onChange={onChange} />;
@@ -624,9 +641,10 @@ interface PropertyGroupProps {
   properties: PropertySchema[];
   settings: SettingsData;
   onChange: (key: string, value: unknown) => void;
+  sectionType?: string;
 }
 
-function PropertyGroup({ groupKey, properties, settings, onChange }: PropertyGroupProps) {
+function PropertyGroup({ groupKey, properties, settings, onChange, sectionType }: PropertyGroupProps) {
   const [isOpen, setIsOpen] = useState(true);
   const groupInfo = GROUP_LABELS[groupKey] || { label: groupKey, icon: Settings };
   const GroupIcon = groupInfo.icon;
@@ -660,6 +678,7 @@ function PropertyGroup({ groupKey, properties, settings, onChange }: PropertyGro
               prop={prop}
               value={settings[prop.key]}
               onChange={onChange}
+              sectionType={sectionType}
             />
           ))}
         </div>
@@ -786,6 +805,7 @@ export function LandingSaaSPropertyEditor({
                 properties={groupProperties}
                 settings={settings}
                 onChange={handleChange}
+                sectionType={element.element_type}
               />
             );
           })}
@@ -799,6 +819,7 @@ export function LandingSaaSPropertyEditor({
                 prop={prop}
                 value={settings[prop.key]}
                 onChange={handleChange}
+                sectionType={element.element_type}
               />
             ))}
         </div>
