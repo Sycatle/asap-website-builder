@@ -82,6 +82,9 @@ pub enum SseEventData {
     /// Conversation metadata (sent at start)
     #[serde(rename = "conversation")]
     Conversation(ConversationData),
+    /// Token usage statistics (sent at end)
+    #[serde(rename = "usage")]
+    Usage(UsageData),
     /// Stream complete
     Done,
     /// Error occurred
@@ -92,6 +95,14 @@ pub enum SseEventData {
 #[derive(Debug, Clone, Serialize)]
 pub struct ConversationData {
     pub id: Uuid,
+}
+
+/// Token usage data event
+#[derive(Debug, Clone, Serialize)]
+pub struct UsageData {
+    pub prompt_tokens: u32,
+    pub completion_tokens: u32,
+    pub total_tokens: u32,
 }
 
 /// Thinking event data
@@ -972,6 +983,12 @@ pub async fn chat_stream(
                     }
                 }
                 
+                // Estimate token usage (rough approximation: ~4 chars per token)
+                // This is a simplification - actual tokenization varies by model
+                let completion_tokens = (full_content.len() / 4) as u32;
+                let prompt_tokens = (user_message.len() / 4) as u32 + 500; // +500 for system prompt estimate
+                let total_tokens = prompt_tokens + completion_tokens;
+                
                 // Save assistant response to conversation history
                 if !full_content.is_empty() {
                     let actions_to_save: Option<&[AIAction]> = if parsed_actions.is_empty() { 
@@ -985,8 +1002,18 @@ pub async fn chat_stream(
                         "assistant", 
                         &full_content, 
                         actions_to_save,
-                        None
+                        Some(total_tokens as i32)
                     ).await;
+                }
+                
+                // Send usage event before done
+                let usage_event = SseEventData::Usage(UsageData {
+                    prompt_tokens,
+                    completion_tokens,
+                    total_tokens,
+                });
+                if let Ok(json) = serde_json::to_string(&usage_event) {
+                    yield Ok(Event::default().data(json));
                 }
                 
                 // Send done event at the end

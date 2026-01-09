@@ -356,6 +356,8 @@ interface Message {
   iteration?: IterationState;
   chainSteps?: ChainStep[];
   isAnalyzing?: boolean;
+  // Token usage
+  usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
 }
 
 interface GlobalAIChatPanelProps {
@@ -752,6 +754,14 @@ export function GlobalAIChatPanel({
         onConversation: (data: { id: string }) => {
           // Store conversation ID for follow-up messages
           setConversationId(data.id);
+        },
+        onUsage: (data) => {
+          // Store token usage in the message
+          setMessages(prev => prev.map(m => 
+            m.id === assistantMessageId 
+              ? { ...m, usage: data }
+              : m
+          ));
         },
         onDone: () => {
           // Mark all remaining chain steps as completed
@@ -1647,7 +1657,7 @@ function MessageBubble({
           )}
         </div>
         
-        {/* Timestamp & Actions */}
+        {/* Timestamp, Tokens & Actions */}
         <div className={cn(
           "flex items-center gap-2 px-1",
           isUser ? "flex-row-reverse" : "flex-row"
@@ -1655,6 +1665,24 @@ function MessageBubble({
           <span className="text-[10px] text-muted-foreground">
             {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
+          
+          {/* Token usage for assistant messages */}
+          {!isUser && message.usage && (
+            <Tooltip>
+              <TooltipTrigger>
+                <span className="text-[10px] text-muted-foreground/60 font-mono">
+                  {message.usage.total_tokens} tokens
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <div className="text-xs space-y-0.5">
+                  <p>Prompt: {message.usage.prompt_tokens}</p>
+                  <p>Completion: {message.usage.completion_tokens}</p>
+                  <p className="font-medium">Total: {message.usage.total_tokens}</p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          )}
           
           {/* Copy button */}
           {!isUser && !hasError && message.content && (

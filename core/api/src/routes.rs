@@ -64,32 +64,40 @@ pub async fn create_router_with_ws(
     let ai_orchestrator: Arc<AIOrchestrator> = {
         let ai_config = AIConfig::from_env();
         
-        // Try to initialize Redis-backed rate limiter for AI
-        let ai_rate_limiter = match std::env::var("REDIS_URL") {
-            Ok(redis_url) => {
-                // Create Redis connection manager
-                match redis::Client::open(redis_url.as_str()) {
-                    Ok(client) => {
-                        match redis::aio::ConnectionManager::new(client).await {
-                            Ok(conn_manager) => {
-                                tracing::info!("AI rate limiter initialized with Redis");
-                                Some(Arc::new(AIRateLimiter::new(conn_manager, ai_config.clone())))
-                            }
-                            Err(e) => {
-                                tracing::warn!("Failed to create Redis connection manager: {}. AI rate limiting disabled.", e);
-                                None
+        // Check if we're in dev mode (disable rate limiting for easier development)
+        let is_dev = std::env::var("ENVIRONMENT").map(|e| e == "development").unwrap_or(true);
+        
+        // Try to initialize Redis-backed rate limiter for AI (disabled in dev)
+        let ai_rate_limiter = if is_dev {
+            tracing::info!("Development mode: AI rate limiting disabled");
+            None
+        } else {
+            match std::env::var("REDIS_URL") {
+                Ok(redis_url) => {
+                    // Create Redis connection manager
+                    match redis::Client::open(redis_url.as_str()) {
+                        Ok(client) => {
+                            match redis::aio::ConnectionManager::new(client).await {
+                                Ok(conn_manager) => {
+                                    tracing::info!("AI rate limiter initialized with Redis");
+                                    Some(Arc::new(AIRateLimiter::new(conn_manager, ai_config.clone())))
+                                }
+                                Err(e) => {
+                                    tracing::warn!("Failed to create Redis connection manager: {}. AI rate limiting disabled.", e);
+                                    None
+                                }
                             }
                         }
-                    }
-                    Err(e) => {
-                        tracing::warn!("Failed to create Redis client: {}. AI rate limiting disabled.", e);
-                        None
+                        Err(e) => {
+                            tracing::warn!("Failed to create Redis client: {}. AI rate limiting disabled.", e);
+                            None
+                        }
                     }
                 }
-            }
-            Err(_) => {
-                tracing::warn!("REDIS_URL not set. AI rate limiting disabled.");
-                None
+                Err(_) => {
+                    tracing::warn!("REDIS_URL not set. AI rate limiting disabled.");
+                    None
+                }
             }
         };
         
