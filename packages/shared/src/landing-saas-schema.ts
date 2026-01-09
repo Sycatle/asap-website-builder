@@ -1273,6 +1273,1091 @@ export const FOOTER_SCHEMA: SectionSchema = {
 };
 
 // ============================================
+// Content Section Schema
+// ============================================
+
+export const CONTENT_SCHEMA: SectionSchema = {
+  type: 'content',
+  label: 'Contenu',
+  description: 'Section de contenu riche',
+  icon: 'text',
+  properties: [
+    // Variant
+    {
+      key: 'variant',
+      type: 'select',
+      label: 'Variante',
+      options: [
+        { value: 'centered', label: 'Centré' },
+        { value: 'split', label: 'Image/Texte' },
+        { value: 'full-width', label: 'Pleine largeur' },
+      ],
+      defaultValue: 'centered',
+      group: 'layout',
+    },
+    
+    // Content
+    commonTextProps.headline('Titre'),
+    commonTextProps.subheadline('Introduction'),
+    {
+      key: 'content',
+      type: 'textarea',
+      label: 'Contenu',
+      placeholder: 'Votre contenu ici...',
+      group: 'content',
+    },
+    
+    // Image (for split variant)
+    {
+      key: 'image_url',
+      type: 'image',
+      label: 'Image',
+      placeholder: 'URL de l\'image',
+      group: 'media',
+      showIf: { key: 'variant', value: 'split' },
+    },
+    {
+      key: 'image_position',
+      type: 'select',
+      label: 'Position de l\'image',
+      options: [
+        { value: 'left', label: 'Gauche' },
+        { value: 'right', label: 'Droite' },
+      ],
+      defaultValue: 'right',
+      group: 'media',
+      showIf: { key: 'variant', value: 'split' },
+    },
+    {
+      key: 'image_alt',
+      type: 'text',
+      label: 'Texte alternatif',
+      placeholder: 'Description de l\'image',
+      group: 'media',
+    },
+    
+    // CTA
+    ...commonCtaProps.cta_primary(),
+    
+    // Style
+    {
+      key: 'background',
+      type: 'select',
+      label: 'Arrière-plan',
+      options: [
+        { value: 'default', label: 'Par défaut' },
+        { value: 'muted', label: 'Grisé' },
+        { value: 'gradient', label: 'Dégradé' },
+      ],
+      defaultValue: 'default',
+      group: 'style',
+    },
+  ],
+  defaultSettings: {
+    variant: 'centered',
+    headline: 'Notre histoire',
+    subheadline: 'Découvrez ce qui nous motive et nous anime au quotidien.',
+    content: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+    image_url: '',
+    image_position: 'right',
+    image_alt: '',
+    cta_primary_text: 'En savoir plus',
+    cta_primary_href: '/about',
+    cta_primary_icon: '',
+    cta_primary_variant: 'default',
+    background: 'default',
+  },
+};
+
+// ============================================
+// About Section Schema
+// ============================================
+
+export const ABOUT_SCHEMA: SectionSchema = {
+  type: 'about',
+  label: 'À propos',
+  description: 'Section bio/présentation',
+  icon: 'user',
+  properties: [
+    // Variant
+    {
+      key: 'variant',
+      type: 'select',
+      label: 'Variante',
+      options: [
+        { value: 'simple', label: 'Simple' },
+        { value: 'with-image', label: 'Avec image' },
+        { value: 'team', label: 'Équipe' },
+        { value: 'timeline', label: 'Timeline' },
+      ],
+      defaultValue: 'simple',
+      group: 'layout',
+    },
+    
+    // Header
+    commonTextProps.badge_text('Badge'),
+    commonTextProps.headline('Titre'),
+    commonTextProps.subheadline('Description'),
+    
+    // Main person/company info
+    {
+      key: 'name',
+      type: 'text',
+      label: 'Nom',
+      placeholder: 'John Doe',
+      group: 'content',
+    },
+    {
+      key: 'role',
+      type: 'text',
+      label: 'Rôle/Titre',
+      placeholder: 'Fondateur & CEO',
+      group: 'content',
+    },
+    {
+      key: 'bio',
+      type: 'textarea',
+      label: 'Biographie',
+      placeholder: 'Votre histoire...',
+      group: 'content',
+    },
+    {
+      key: 'avatar_url',
+      type: 'image',
+      label: 'Photo',
+      group: 'media',
+    },
+    
+    // Team members (for team variant)
+    {
+      key: 'team_members',
+      type: 'array',
+      label: 'Membres de l\'équipe',
+      itemLabel: 'Membre',
+      maxItems: 8,
+      group: 'team',
+      showIf: { key: 'variant', value: 'team' },
+      itemSchema: [
+        {
+          key: 'name',
+          type: 'text',
+          label: 'Nom',
+          placeholder: 'Jane Doe',
+        },
+        {
+          key: 'role',
+          type: 'text',
+          label: 'Rôle',
+          placeholder: 'Designer',
+        },
+        {
+          key: 'avatar_url',
+          type: 'image',
+          label: 'Photo',
+        },
+        {
+          key: 'linkedin',
+          type: 'url',
+          label: 'LinkedIn',
+        },
+      ],
+    },
+    
+    // Timeline (for timeline variant)
+    {
+      key: 'milestones',
+      type: 'array',
+      label: 'Étapes clés',
+      itemLabel: 'Étape',
+      maxItems: 10,
+      group: 'timeline',
+      showIf: { key: 'variant', value: 'timeline' },
+      itemSchema: [
+        {
+          key: 'year',
+          type: 'text',
+          label: 'Année',
+          placeholder: '2024',
+        },
+        {
+          key: 'title',
+          type: 'text',
+          label: 'Titre',
+          placeholder: 'Lancement',
+        },
+        {
+          key: 'description',
+          type: 'textarea',
+          label: 'Description',
+        },
+      ],
+    },
+    
+    // Social links
+    {
+      key: 'show_social',
+      type: 'boolean',
+      label: 'Afficher les réseaux sociaux',
+      defaultValue: true,
+      group: 'social',
+    },
+    {
+      key: 'social_links',
+      type: 'array',
+      label: 'Réseaux sociaux',
+      itemLabel: 'Réseau',
+      maxItems: 5,
+      group: 'social',
+      showIf: { key: 'show_social', value: true },
+      itemSchema: [
+        {
+          key: 'platform',
+          type: 'select',
+          label: 'Plateforme',
+          options: [
+            { value: 'twitter', label: 'Twitter/X' },
+            { value: 'linkedin', label: 'LinkedIn' },
+            { value: 'github', label: 'GitHub' },
+            { value: 'youtube', label: 'YouTube' },
+          ],
+        },
+        {
+          key: 'href',
+          type: 'url',
+          label: 'URL',
+        },
+      ],
+    },
+  ],
+  defaultSettings: {
+    variant: 'simple',
+    badge_text: 'À propos',
+    headline: 'Notre mission',
+    subheadline: 'Nous simplifions la création de sites web pour tous.',
+    name: '',
+    role: '',
+    bio: '',
+    avatar_url: '',
+    team_members: [],
+    milestones: [],
+    show_social: true,
+    social_links: [],
+  },
+};
+
+// ============================================
+// FAQ Section Schema
+// ============================================
+
+export const FAQ_SCHEMA: SectionSchema = {
+  type: 'faq',
+  label: 'FAQ',
+  description: 'Questions fréquentes',
+  icon: 'help-circle',
+  properties: [
+    // Variant
+    {
+      key: 'variant',
+      type: 'select',
+      label: 'Variante',
+      options: [
+        { value: 'accordion', label: 'Accordéon' },
+        { value: 'grid', label: 'Grille' },
+        { value: 'two-columns', label: 'Deux colonnes' },
+      ],
+      defaultValue: 'accordion',
+      group: 'layout',
+    },
+    
+    // Header
+    commonTextProps.badge_text('Badge'),
+    commonTextProps.headline('Titre'),
+    commonTextProps.subheadline('Sous-titre'),
+    
+    // Questions
+    {
+      key: 'questions',
+      type: 'array',
+      label: 'Questions',
+      itemLabel: 'Question',
+      maxItems: 20,
+      minItems: 1,
+      group: 'content',
+      itemSchema: [
+        {
+          key: 'question',
+          type: 'text',
+          label: 'Question',
+          placeholder: 'Comment fonctionne votre service ?',
+        },
+        {
+          key: 'answer',
+          type: 'textarea',
+          label: 'Réponse',
+          placeholder: 'Notre service fonctionne...',
+        },
+        {
+          key: 'category',
+          type: 'text',
+          label: 'Catégorie (optionnel)',
+          placeholder: 'Général',
+        },
+      ],
+    },
+    
+    // CTA
+    {
+      key: 'show_cta',
+      type: 'boolean',
+      label: 'Afficher le CTA',
+      defaultValue: true,
+      group: 'cta',
+    },
+    {
+      key: 'cta_text',
+      type: 'text',
+      label: 'Texte CTA',
+      placeholder: 'Une autre question ?',
+      group: 'cta',
+      showIf: { key: 'show_cta', value: true },
+    },
+    {
+      key: 'cta_button_text',
+      type: 'text',
+      label: 'Bouton CTA',
+      placeholder: 'Contactez-nous',
+      group: 'cta',
+      showIf: { key: 'show_cta', value: true },
+    },
+    {
+      key: 'cta_href',
+      type: 'url',
+      label: 'Lien CTA',
+      placeholder: '/contact',
+      group: 'cta',
+      showIf: { key: 'show_cta', value: true },
+    },
+    
+    // Style
+    {
+      key: 'first_open',
+      type: 'boolean',
+      label: 'Première question ouverte',
+      defaultValue: true,
+      group: 'style',
+    },
+    {
+      key: 'show_categories',
+      type: 'boolean',
+      label: 'Afficher les catégories',
+      defaultValue: false,
+      group: 'style',
+    },
+  ],
+  defaultSettings: {
+    variant: 'accordion',
+    badge_text: 'FAQ',
+    headline: 'Questions fréquentes',
+    subheadline: 'Tout ce que vous devez savoir sur notre service.',
+    questions: [
+      {
+        question: 'Comment puis-je commencer ?',
+        answer: 'Créez simplement un compte gratuit et suivez notre guide de démarrage.',
+        category: 'Démarrage',
+      },
+      {
+        question: 'Quels moyens de paiement acceptez-vous ?',
+        answer: 'Nous acceptons les cartes Visa, Mastercard, et les virements SEPA.',
+        category: 'Paiement',
+      },
+      {
+        question: 'Puis-je annuler mon abonnement ?',
+        answer: 'Oui, vous pouvez annuler à tout moment depuis votre tableau de bord.',
+        category: 'Abonnement',
+      },
+    ],
+    show_cta: true,
+    cta_text: 'Vous avez encore des questions ?',
+    cta_button_text: 'Contactez-nous',
+    cta_href: '/contact',
+    first_open: true,
+    show_categories: false,
+  },
+};
+
+// ============================================
+// Contact Section Schema
+// ============================================
+
+export const CONTACT_SCHEMA: SectionSchema = {
+  type: 'contact',
+  label: 'Contact',
+  description: 'Formulaire de contact',
+  icon: 'mail',
+  properties: [
+    // Variant
+    {
+      key: 'variant',
+      type: 'select',
+      label: 'Variante',
+      options: [
+        { value: 'simple', label: 'Simple' },
+        { value: 'split', label: 'Formulaire + Info' },
+        { value: 'map', label: 'Avec carte' },
+      ],
+      defaultValue: 'simple',
+      group: 'layout',
+    },
+    
+    // Header
+    commonTextProps.badge_text('Badge'),
+    commonTextProps.headline('Titre'),
+    commonTextProps.subheadline('Sous-titre'),
+    
+    // Contact info
+    {
+      key: 'email',
+      type: 'text',
+      label: 'Email',
+      placeholder: 'contact@example.com',
+      group: 'info',
+    },
+    {
+      key: 'phone',
+      type: 'text',
+      label: 'Téléphone',
+      placeholder: '+33 1 23 45 67 89',
+      group: 'info',
+    },
+    {
+      key: 'address',
+      type: 'textarea',
+      label: 'Adresse',
+      placeholder: '123 Rue Example, 75001 Paris',
+      group: 'info',
+    },
+    
+    // Form fields
+    {
+      key: 'show_name',
+      type: 'boolean',
+      label: 'Champ nom',
+      defaultValue: true,
+      group: 'form',
+    },
+    {
+      key: 'show_phone',
+      type: 'boolean',
+      label: 'Champ téléphone',
+      defaultValue: false,
+      group: 'form',
+    },
+    {
+      key: 'show_subject',
+      type: 'boolean',
+      label: 'Champ sujet',
+      defaultValue: true,
+      group: 'form',
+    },
+    {
+      key: 'submit_text',
+      type: 'text',
+      label: 'Texte du bouton',
+      placeholder: 'Envoyer',
+      group: 'form',
+    },
+    {
+      key: 'success_message',
+      type: 'text',
+      label: 'Message de succès',
+      placeholder: 'Message envoyé !',
+      group: 'form',
+    },
+    
+    // Social links
+    {
+      key: 'show_social',
+      type: 'boolean',
+      label: 'Afficher les réseaux',
+      defaultValue: true,
+      group: 'social',
+    },
+    {
+      key: 'social_links',
+      type: 'array',
+      label: 'Réseaux sociaux',
+      itemLabel: 'Réseau',
+      maxItems: 5,
+      group: 'social',
+      showIf: { key: 'show_social', value: true },
+      itemSchema: [
+        {
+          key: 'platform',
+          type: 'select',
+          label: 'Plateforme',
+          options: [
+            { value: 'twitter', label: 'Twitter/X' },
+            { value: 'linkedin', label: 'LinkedIn' },
+            { value: 'github', label: 'GitHub' },
+          ],
+        },
+        {
+          key: 'href',
+          type: 'url',
+          label: 'URL',
+        },
+      ],
+    },
+  ],
+  defaultSettings: {
+    variant: 'simple',
+    badge_text: 'Contact',
+    headline: 'Contactez-nous',
+    subheadline: 'Nous serions ravis d\'échanger avec vous.',
+    email: 'contact@example.com',
+    phone: '',
+    address: '',
+    show_name: true,
+    show_phone: false,
+    show_subject: true,
+    submit_text: 'Envoyer le message',
+    success_message: 'Merci ! Nous vous répondrons rapidement.',
+    show_social: true,
+    social_links: [],
+  },
+};
+
+// ============================================
+// Gallery Section Schema
+// ============================================
+
+export const GALLERY_SCHEMA: SectionSchema = {
+  type: 'gallery',
+  label: 'Galerie',
+  description: 'Galerie d\'images',
+  icon: 'image',
+  properties: [
+    // Variant
+    {
+      key: 'variant',
+      type: 'select',
+      label: 'Variante',
+      options: [
+        { value: 'grid', label: 'Grille' },
+        { value: 'masonry', label: 'Masonry' },
+        { value: 'carousel', label: 'Carousel' },
+      ],
+      defaultValue: 'grid',
+      group: 'layout',
+    },
+    
+    // Header
+    commonTextProps.badge_text('Badge'),
+    commonTextProps.headline('Titre'),
+    commonTextProps.subheadline('Sous-titre'),
+    
+    // Layout options
+    {
+      key: 'columns',
+      type: 'select',
+      label: 'Colonnes',
+      options: [
+        { value: '2', label: '2 colonnes' },
+        { value: '3', label: '3 colonnes' },
+        { value: '4', label: '4 colonnes' },
+      ],
+      defaultValue: '3',
+      group: 'layout',
+    },
+    {
+      key: 'gap',
+      type: 'select',
+      label: 'Espacement',
+      options: [
+        { value: 'sm', label: 'Petit' },
+        { value: 'md', label: 'Moyen' },
+        { value: 'lg', label: 'Grand' },
+      ],
+      defaultValue: 'md',
+      group: 'layout',
+    },
+    
+    // Images
+    {
+      key: 'images',
+      type: 'array',
+      label: 'Images',
+      itemLabel: 'Image',
+      maxItems: 20,
+      minItems: 1,
+      group: 'content',
+      itemSchema: [
+        {
+          key: 'url',
+          type: 'image',
+          label: 'Image',
+        },
+        {
+          key: 'alt',
+          type: 'text',
+          label: 'Texte alternatif',
+          placeholder: 'Description de l\'image',
+        },
+        {
+          key: 'caption',
+          type: 'text',
+          label: 'Légende (optionnel)',
+        },
+      ],
+    },
+    
+    // Features
+    {
+      key: 'lightbox',
+      type: 'boolean',
+      label: 'Lightbox au clic',
+      defaultValue: true,
+      group: 'features',
+    },
+    {
+      key: 'rounded',
+      type: 'boolean',
+      label: 'Coins arrondis',
+      defaultValue: true,
+      group: 'features',
+    },
+    {
+      key: 'hover_effect',
+      type: 'boolean',
+      label: 'Effet au survol',
+      defaultValue: true,
+      group: 'features',
+    },
+  ],
+  defaultSettings: {
+    variant: 'grid',
+    badge_text: '',
+    headline: 'Notre galerie',
+    subheadline: 'Découvrez nos réalisations en images.',
+    columns: '3',
+    gap: 'md',
+    images: [
+      { url: '/placeholder-1.jpg', alt: 'Image 1', caption: '' },
+      { url: '/placeholder-2.jpg', alt: 'Image 2', caption: '' },
+      { url: '/placeholder-3.jpg', alt: 'Image 3', caption: '' },
+    ],
+    lightbox: true,
+    rounded: true,
+    hover_effect: true,
+  },
+};
+
+// ============================================
+// Stats Section Schema
+// ============================================
+
+export const STATS_SCHEMA: SectionSchema = {
+  type: 'stats',
+  label: 'Statistiques',
+  description: 'Chiffres clés',
+  icon: 'bar-chart',
+  properties: [
+    // Variant
+    {
+      key: 'variant',
+      type: 'select',
+      label: 'Variante',
+      options: [
+        { value: 'simple', label: 'Simple' },
+        { value: 'cards', label: 'Cartes' },
+        { value: 'inline', label: 'En ligne' },
+      ],
+      defaultValue: 'simple',
+      group: 'layout',
+    },
+    
+    // Header
+    commonTextProps.badge_text('Badge'),
+    commonTextProps.headline('Titre'),
+    commonTextProps.subheadline('Sous-titre'),
+    
+    // Stats
+    {
+      key: 'stats',
+      type: 'array',
+      label: 'Statistiques',
+      itemLabel: 'Stat',
+      maxItems: 6,
+      minItems: 1,
+      group: 'content',
+      itemSchema: [
+        {
+          key: 'value',
+          type: 'text',
+          label: 'Valeur',
+          placeholder: '10K+',
+        },
+        {
+          key: 'label',
+          type: 'text',
+          label: 'Label',
+          placeholder: 'Utilisateurs',
+        },
+        {
+          key: 'icon',
+          type: 'icon',
+          label: 'Icône (optionnel)',
+        },
+        {
+          key: 'description',
+          type: 'text',
+          label: 'Description (optionnel)',
+        },
+      ],
+    },
+    
+    // Animation
+    {
+      key: 'animate_numbers',
+      type: 'boolean',
+      label: 'Animer les chiffres',
+      defaultValue: true,
+      group: 'animation',
+    },
+    
+    // Style
+    {
+      key: 'background',
+      type: 'select',
+      label: 'Arrière-plan',
+      options: [
+        { value: 'default', label: 'Par défaut' },
+        { value: 'muted', label: 'Grisé' },
+        { value: 'primary', label: 'Couleur primaire' },
+      ],
+      defaultValue: 'default',
+      group: 'style',
+    },
+  ],
+  defaultSettings: {
+    variant: 'simple',
+    badge_text: '',
+    headline: 'Nos chiffres',
+    subheadline: 'Des résultats qui parlent d\'eux-mêmes.',
+    stats: [
+      { value: '10K+', label: 'Utilisateurs', icon: 'users', description: '' },
+      { value: '99.9%', label: 'Uptime', icon: 'check-circle', description: '' },
+      { value: '4.9/5', label: 'Note moyenne', icon: 'star', description: '' },
+      { value: '24/7', label: 'Support', icon: 'headphones', description: '' },
+    ],
+    animate_numbers: true,
+    background: 'default',
+  },
+};
+
+// ============================================
+// Logos Section Schema
+// ============================================
+
+export const LOGOS_SCHEMA: SectionSchema = {
+  type: 'logos',
+  label: 'Logos',
+  description: 'Logo cloud / Partenaires',
+  icon: 'building',
+  properties: [
+    // Variant
+    {
+      key: 'variant',
+      type: 'select',
+      label: 'Variante',
+      options: [
+        { value: 'simple', label: 'Simple' },
+        { value: 'marquee', label: 'Défilant' },
+        { value: 'grid', label: 'Grille' },
+      ],
+      defaultValue: 'simple',
+      group: 'layout',
+    },
+    
+    // Header
+    {
+      key: 'show_header',
+      type: 'boolean',
+      label: 'Afficher le titre',
+      defaultValue: true,
+      group: 'header',
+    },
+    {
+      key: 'headline',
+      type: 'text',
+      label: 'Titre',
+      placeholder: 'Ils nous font confiance',
+      group: 'header',
+      showIf: { key: 'show_header', value: true },
+    },
+    
+    // Logos
+    {
+      key: 'logos',
+      type: 'array',
+      label: 'Logos',
+      itemLabel: 'Logo',
+      maxItems: 12,
+      minItems: 1,
+      group: 'content',
+      itemSchema: [
+        {
+          key: 'name',
+          type: 'text',
+          label: 'Nom',
+          placeholder: 'Entreprise',
+        },
+        {
+          key: 'url',
+          type: 'image',
+          label: 'Logo',
+        },
+        {
+          key: 'href',
+          type: 'url',
+          label: 'Lien (optionnel)',
+        },
+      ],
+    },
+    
+    // Style
+    {
+      key: 'grayscale',
+      type: 'boolean',
+      label: 'Niveaux de gris',
+      defaultValue: true,
+      group: 'style',
+    },
+    {
+      key: 'hover_color',
+      type: 'boolean',
+      label: 'Couleur au survol',
+      defaultValue: true,
+      group: 'style',
+    },
+    {
+      key: 'size',
+      type: 'select',
+      label: 'Taille des logos',
+      options: [
+        { value: 'sm', label: 'Petit' },
+        { value: 'md', label: 'Moyen' },
+        { value: 'lg', label: 'Grand' },
+      ],
+      defaultValue: 'md',
+      group: 'style',
+    },
+  ],
+  defaultSettings: {
+    variant: 'simple',
+    show_header: true,
+    headline: 'Ils nous font confiance',
+    logos: [
+      { name: 'Company 1', url: '/logo-1.svg', href: '' },
+      { name: 'Company 2', url: '/logo-2.svg', href: '' },
+      { name: 'Company 3', url: '/logo-3.svg', href: '' },
+      { name: 'Company 4', url: '/logo-4.svg', href: '' },
+    ],
+    grayscale: true,
+    hover_color: true,
+    size: 'md',
+  },
+};
+
+// ============================================
+// Blog List Section Schema
+// ============================================
+
+export const BLOG_LIST_SCHEMA: SectionSchema = {
+  type: 'blog-list',
+  label: 'Liste d\'articles',
+  description: 'Liste d\'articles de blog',
+  icon: 'newspaper',
+  properties: [
+    // Variant
+    {
+      key: 'variant',
+      type: 'select',
+      label: 'Variante',
+      options: [
+        { value: 'grid', label: 'Grille' },
+        { value: 'list', label: 'Liste' },
+        { value: 'featured', label: 'Article mis en avant' },
+      ],
+      defaultValue: 'grid',
+      group: 'layout',
+    },
+    
+    // Header
+    commonTextProps.badge_text('Badge'),
+    commonTextProps.headline('Titre'),
+    commonTextProps.subheadline('Sous-titre'),
+    
+    // Layout
+    {
+      key: 'columns',
+      type: 'select',
+      label: 'Colonnes',
+      options: [
+        { value: '2', label: '2 colonnes' },
+        { value: '3', label: '3 colonnes' },
+      ],
+      defaultValue: '3',
+      group: 'layout',
+    },
+    
+    // Articles
+    {
+      key: 'articles',
+      type: 'array',
+      label: 'Articles',
+      itemLabel: 'Article',
+      maxItems: 12,
+      minItems: 1,
+      group: 'content',
+      itemSchema: [
+        {
+          key: 'title',
+          type: 'text',
+          label: 'Titre',
+          placeholder: 'Titre de l\'article',
+        },
+        {
+          key: 'excerpt',
+          type: 'textarea',
+          label: 'Extrait',
+          placeholder: 'Résumé de l\'article...',
+        },
+        {
+          key: 'image_url',
+          type: 'image',
+          label: 'Image',
+        },
+        {
+          key: 'category',
+          type: 'text',
+          label: 'Catégorie',
+          placeholder: 'Tech',
+        },
+        {
+          key: 'date',
+          type: 'text',
+          label: 'Date',
+          placeholder: '15 Jan 2024',
+        },
+        {
+          key: 'author',
+          type: 'text',
+          label: 'Auteur',
+          placeholder: 'John Doe',
+        },
+        {
+          key: 'href',
+          type: 'url',
+          label: 'Lien',
+          placeholder: '/blog/article-1',
+        },
+      ],
+    },
+    
+    // Features
+    {
+      key: 'show_category',
+      type: 'boolean',
+      label: 'Afficher la catégorie',
+      defaultValue: true,
+      group: 'features',
+    },
+    {
+      key: 'show_date',
+      type: 'boolean',
+      label: 'Afficher la date',
+      defaultValue: true,
+      group: 'features',
+    },
+    {
+      key: 'show_author',
+      type: 'boolean',
+      label: 'Afficher l\'auteur',
+      defaultValue: true,
+      group: 'features',
+    },
+    
+    // CTA
+    {
+      key: 'show_view_all',
+      type: 'boolean',
+      label: 'Afficher "Voir tout"',
+      defaultValue: true,
+      group: 'cta',
+    },
+    {
+      key: 'view_all_text',
+      type: 'text',
+      label: 'Texte "Voir tout"',
+      placeholder: 'Voir tous les articles',
+      group: 'cta',
+      showIf: { key: 'show_view_all', value: true },
+    },
+    {
+      key: 'view_all_href',
+      type: 'url',
+      label: 'Lien "Voir tout"',
+      placeholder: '/blog',
+      group: 'cta',
+      showIf: { key: 'show_view_all', value: true },
+    },
+  ],
+  defaultSettings: {
+    variant: 'grid',
+    badge_text: 'Blog',
+    headline: 'Derniers articles',
+    subheadline: 'Restez informé des dernières actualités.',
+    columns: '3',
+    articles: [
+      {
+        title: 'Comment créer un site web en 5 minutes',
+        excerpt: 'Découvrez comment lancer votre site rapidement avec ASAP.',
+        image_url: '/blog-1.jpg',
+        category: 'Tutoriel',
+        date: '15 Jan 2024',
+        author: 'John Doe',
+        href: '/blog/article-1',
+      },
+      {
+        title: 'Les tendances web design 2024',
+        excerpt: 'Explorez les dernières tendances en matière de design web.',
+        image_url: '/blog-2.jpg',
+        category: 'Design',
+        date: '10 Jan 2024',
+        author: 'Jane Doe',
+        href: '/blog/article-2',
+      },
+      {
+        title: 'Optimiser son SEO facilement',
+        excerpt: 'Conseils pratiques pour améliorer votre référencement.',
+        image_url: '/blog-3.jpg',
+        category: 'SEO',
+        date: '5 Jan 2024',
+        author: 'John Doe',
+        href: '/blog/article-3',
+      },
+    ],
+    show_category: true,
+    show_date: true,
+    show_author: true,
+    show_view_all: true,
+    view_all_text: 'Voir tous les articles',
+    view_all_href: '/blog',
+  },
+};
+
+// ============================================
 // Schema Registry
 // ============================================
 
@@ -1285,6 +2370,15 @@ export const LANDING_SAAS_SCHEMAS: Record<string, SectionSchema> = {
   testimonials: TESTIMONIALS_SCHEMA,
   cta: CTA_SCHEMA,
   footer: FOOTER_SCHEMA,
+  // New sections
+  content: CONTENT_SCHEMA,
+  about: ABOUT_SCHEMA,
+  faq: FAQ_SCHEMA,
+  contact: CONTACT_SCHEMA,
+  gallery: GALLERY_SCHEMA,
+  stats: STATS_SCHEMA,
+  logos: LOGOS_SCHEMA,
+  'blog-list': BLOG_LIST_SCHEMA,
 };
 
 /**
