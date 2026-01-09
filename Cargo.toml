@@ -6,6 +6,7 @@ members = [
     "core/shared",
     "core/payments",
     "core/notifications",
+    "core/ai",
     "extensions/github-sync/backend",
     "apps/api",
     "apps/worker",
@@ -51,7 +52,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 dotenv = "0.15"
 
 # HTTP client (for modules)
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", features = ["json", "stream"] }
 
 # Async traits
 async-trait = "0.1"
