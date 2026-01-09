@@ -20,6 +20,7 @@ use uuid::Uuid;
 use asap_core_ai::{
     AIOrchestrator, AIChatRequest as CoreAIChatRequest, AIAction, 
     WebsiteContext, WebsiteInfo, SectionInfo, TokenUsage,
+    UserContext, UserQuota, ExtensionData, GitHubData, GitHubRepo, GitHubLanguage,
     analyze_intent, execute_thinking_step, IntentAnalysis, StepResult,
 };
 use crate::Claims;
@@ -452,6 +453,142 @@ struct ElementRow {
     data: serde_json::Value,
 }
 
+#[derive(sqlx::FromRow)]
+struct AccountRow {
+    id: Uuid,
+    name: Option<String>,
+    plan: String,
+}
+
+#[derive(sqlx::FromRow)]
+struct AccountDataRow {
+    data: serde_json::Value,
+}
+
+/// Load user context for AI personalization
+async fn load_user_context(
+    pool: &PgPool,
+    account_id: Uuid,
+    plan_daily_limit: u32,
+    plan_daily_used: u32,
+) -> Result<UserContext, StatusCode> {
+    // Fetch account info
+    let account: AccountRow = sqlx::query_as(
+        "SELECT id, name, plan FROM accounts WHERE id = $1"
+    )
+    .bind(account_id)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to load account: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    
+    // Fetch account_data for preferences and integrations
+    let account_data: Option<AccountDataRow> = sqlx::query_as(
+        "SELECT data FROM account_data WHERE account_id = $1"
+    )
+    .bind(account_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to load account_data: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    
+    // Extract integrations from account_data
+    let mut integrations = vec![];
+    let mut language = "en".to_string();
+    
+    if let Some(ref data_row) = account_data {
+        // Check for GitHub integration
+        if data_row.data.get("github").is_some() {
+            integrations.push("github".to_string());
+        }
+        // Check for language preference
+        if let Some(lang) = data_row.data.get("language").and_then(|v| v.as_str()) {
+            language = lang.to_string();
+        }
+    }
+    
+    Ok(UserContext {
+        name: account.name,
+        language,
+        plan: account.plan,
+        quota: Some(UserQuota {
+            daily_limit: plan_daily_limit,
+            daily_used: plan_daily_used,
+            daily_remaining: plan_daily_limit.saturating_sub(plan_daily_used),
+        }),
+        integrations,
+    })
+}
+
+/// Load extension data (GitHub, etc.) for AI context
+async fn load_extension_data(
+    pool: &PgPool,
+    account_id: Uuid,
+    _website_id: Uuid,
+) -> Result<Option<ExtensionData>, StatusCode> {
+    // Fetch account_data for GitHub info
+    let account_data: Option<AccountDataRow> = sqlx::query_as(
+        "SELECT data FROM account_data WHERE account_id = $1"
+    )
+    .bind(account_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to load account_data for extensions: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    
+    let Some(data_row) = account_data else {
+        return Ok(None);
+    };
+    
+    // Extract GitHub data if present
+    let github = if let Some(gh) = data_row.data.get("github") {
+        Some(GitHubData {
+            username: gh.get("username").and_then(|v| v.as_str()).map(String::from),
+            bio: gh.get("bio").and_then(|v| v.as_str()).map(String::from),
+            repositories: gh.get("repositories")
+                .and_then(|v| v.as_array())
+                .map(|repos| {
+                    repos.iter().filter_map(|r| {
+                        Some(GitHubRepo {
+                            name: r.get("name")?.as_str()?.to_string(),
+                            description: r.get("description").and_then(|v| v.as_str()).map(String::from),
+                            language: r.get("language").and_then(|v| v.as_str()).map(String::from),
+                            stars: r.get("stargazers_count").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+                            is_fork: r.get("fork").and_then(|v| v.as_bool()).unwrap_or(false),
+                        })
+                    }).take(10).collect()
+                })
+                .unwrap_or_default(),
+            languages: gh.get("languages")
+                .and_then(|v| v.as_array())
+                .map(|langs| {
+                    langs.iter().filter_map(|l| {
+                        Some(GitHubLanguage {
+                            name: l.get("name")?.as_str()?.to_string(),
+                            percentage: l.get("percentage").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                        })
+                    }).take(10).collect()
+                })
+                .unwrap_or_default(),
+            contributions: None, // TODO: Add when we sync contribution data
+        })
+    } else {
+        None
+    };
+    
+    if github.is_some() {
+        Ok(Some(ExtensionData { github }))
+    } else {
+        Ok(None)
+    }
+}
+
 /// Load website context for AI
 async fn load_website_context(
     pool: &PgPool,
@@ -547,6 +684,8 @@ async fn load_website_context(
             "faq".to_string(),
             "cta".to_string(),
         ],
+        user: None,      // Will be set by caller
+        extensions: None, // Will be set by caller
     })
 }
 
@@ -735,13 +874,38 @@ pub async fn chat_stream(
         }))
     })?;
     
+    // Get plan daily limit for quota info
+    let plan_daily_limit = get_plan_daily_limit(&plan);
+    // TODO: Get actual daily_used from rate limiter - for now use 0
+    let plan_daily_used = 0u32;
+    
+    // Load user context for AI personalization
+    let user_context = load_user_context(&pool, account_id, plan_daily_limit, plan_daily_used).await.map_err(|s| {
+        (s, Json(ErrorResponse {
+            error: "Failed to load user context".to_string(),
+            code: "internal_error".to_string(),
+        }))
+    })?;
+    
+    // Load extension data (GitHub, etc.)
+    let extension_data = load_extension_data(&pool, account_id, req.website_id).await.map_err(|s| {
+        (s, Json(ErrorResponse {
+            error: "Failed to load extension data".to_string(),
+            code: "internal_error".to_string(),
+        }))
+    })?;
+    
     // Load website context
-    let context = load_website_context(&pool, req.website_id).await.map_err(|s| {
+    let mut context = load_website_context(&pool, req.website_id).await.map_err(|s| {
         (s, Json(ErrorResponse {
             error: "Failed to load website".to_string(),
             code: "internal_error".to_string(),
         }))
     })?;
+    
+    // Inject user and extension data into context
+    context.user = Some(user_context);
+    context.extensions = extension_data;
     
     // Clone user message before moving req
     let user_message = req.message.clone();
