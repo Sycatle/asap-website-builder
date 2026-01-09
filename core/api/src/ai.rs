@@ -1677,8 +1677,26 @@ pub async fn chat_stream(
                 }
                 
                 // Send data tool events if any were executed
+                // Deduplicate consecutive tool calls with same description to avoid UI spam
                 if let Some(ref execution) = data_tool_execution_for_stream {
+                    let mut last_description: Option<String> = None;
+                    let mut pending_count = 0u32;
+                    
                     for tool_call in &execution.tool_calls {
+                        // Skip duplicate consecutive descriptions
+                        if last_description.as_ref() == Some(&tool_call.description) {
+                            pending_count += 1;
+                            continue;
+                        }
+                        
+                        // If we had duplicates, send a count update for the previous description
+                        if pending_count > 0 {
+                            // The previous description was already sent, we just skip the duplicates
+                            pending_count = 0;
+                        }
+                        
+                        last_description = Some(tool_call.description.clone());
+                        
                         // Send tool call starting
                         let tool_call_event = SseEventData::ToolCall(ToolCallData {
                             id: tool_call.id.clone(),
