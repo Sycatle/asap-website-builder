@@ -67,7 +67,7 @@ export function SimplePreviewCanvas({
   
   // Get visible elements sorted by order
   const visibleElements = elements
-    .filter(e => e && e.id && e.visible)
+    .filter(e => e && e.id && e.visible !== false)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   const isDeviceFrame = devicePreview !== 'desktop';
