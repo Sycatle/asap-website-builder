@@ -562,12 +562,13 @@ async fn load_website_data(
     website_id: Uuid,
 ) -> Result<Option<WebsiteDataContext>, StatusCode> {
     // Load ALL variables grouped by source
+    // Use source_ref (extension slug) when source is 'extension', otherwise use source itself
     let all_vars: Vec<(String, String, serde_json::Value)> = sqlx::query_as(
         r#"
-        SELECT source, key, value 
+        SELECT COALESCE(source_ref, source) as effective_source, key, value 
         FROM website_variables 
         WHERE website_id = $1
-        ORDER BY source, key
+        ORDER BY effective_source, key
         "#
     )
     .bind(website_id)
