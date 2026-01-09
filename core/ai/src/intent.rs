@@ -179,6 +179,7 @@ Be concise. The insight will be shown to the user in real-time.
 "##;
 
 /// Analyze user intent with a quick AI call
+/// Uses GPT-4o-mini for faster/cheaper intent analysis
 pub async fn analyze_intent(
     router: &ModelRouter,
     user_message: &str,
@@ -188,9 +189,9 @@ pub async fn analyze_intent(
         Message::user(user_message),
     ];
 
-    // Use the default provider's model - None lets the router choose automatically
-    // This works with whichever provider is configured (OpenAI or Anthropic)
-    let completion = router.chat(messages, None, None).await?;
+    // Use GPT-4o-mini for intent analysis - faster and cheaper than GPT-4
+    // This is a simple classification task that doesn't need full GPT-4 capabilities
+    let completion = router.chat(messages, None, Some("gpt-4o-mini")).await?;
 
     // Parse JSON response
     let content = completion.content.trim();
@@ -329,7 +330,7 @@ fn build_website_context_string(context: &WebsiteContext) -> String {
 }
 
 /// Simple language detection fallback
-fn detect_language_simple(text: &str) -> String {
+pub fn detect_language_simple(text: &str) -> String {
     let lower = text.to_lowercase();
     
     // French indicators

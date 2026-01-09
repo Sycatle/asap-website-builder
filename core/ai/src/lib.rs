@@ -26,7 +26,7 @@ pub mod providers;
 pub use config::{AIConfig, OpenAIConfig};
 pub use context::ContextBuilder;
 pub use error::{AIError, AIResult};
-pub use intent::{analyze_intent, execute_thinking_step, IntentAnalysis, ThinkingStep, StepResult};
+pub use intent::{analyze_intent, execute_thinking_step, detect_language_simple, IntentAnalysis, ThinkingStep, StepResult};
 pub use orchestrator::AIOrchestrator;
 pub use rate_limiter::AIRateLimiter;
 pub use router::ModelRouter;

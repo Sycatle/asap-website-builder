@@ -23,7 +23,7 @@ use asap_core_ai::{
     WebsiteContext, WebsiteInfo, SectionInfo, TokenUsage,
     UserContext, UserQuota, WebsiteDataContext, VariableGroup, CollectionSummary,
     ActiveExtension,
-    analyze_intent, execute_thinking_step, IntentAnalysis, StepResult,
+    analyze_intent, execute_thinking_step, detect_language_simple, IntentAnalysis, StepResult,
     get_tool_definitions, ToolExecutor,
     OpenAIProvider,
 };
@@ -71,6 +71,8 @@ pub struct ChatResponse {
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "lowercase")]
 pub enum SseEventData {
+    /// Typing indicator - sent immediately on request receipt
+    Typing,
     /// Text token from AI
     Token(String),
     /// AI is thinking/reasoning
@@ -181,6 +183,12 @@ pub struct PhaseData {
     pub status: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
+    /// Progress from 0.0 to 1.0
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub progress: Option<f32>,
+    /// Estimated time remaining in seconds
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub eta_seconds: Option<u32>,
 }
 
 /// AI usage quota information
@@ -1167,13 +1175,30 @@ Structure your response:
                         }
                     }
                     Err(e) => {
-                        tracing::warn!("Screenshot capture failed: {}", e);
+                        tracing::warn!("Screenshot capture failed, using structural fallback: {}", e);
+                        
+                        // OPTIMIZATION #6: Graceful fallback - provide structural analysis instead
+                        let sections_summary = context.sections.iter()
+                            .map(|s| format!("- {} ({}): {}", s.section_type, s.id, 
+                                s.properties.get("title")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("untitled")))
+                            .collect::<Vec<_>>()
+                            .join("\n");
+                        
                         all_context_parts.push(format!(
-                            "[Visual Analysis - Error]\n\
-                            Unable to capture screenshot: {}.\n\
-                            Make sure the website is published and accessible.\n\
-                            Proceeding with structural analysis only.",
-                            e
+                            "[Visual Analysis - Fallback to Structural Analysis]\n\
+                            Screenshot unavailable ({}). Analyzing website structure instead:\n\n\
+                            Website: {} ({})\n\
+                            Preset: {}\n\
+                            Sections ({}):\n{}\n\n\
+                            Note: For detailed visual feedback, ensure the website is published and accessible.",
+                            e,
+                            context.website.title.as_deref().unwrap_or(&context.website.slug),
+                            context.website.slug,
+                            context.website.preset.as_deref().unwrap_or("default"),
+                            context.sections.len(),
+                            sections_summary
                         ));
                         
                         all_executed_calls.push(ExecutedToolCall {
@@ -1623,35 +1648,91 @@ pub async fn chat_stream(
     
     // Create SSE stream - ALL AI operations are executed INSIDE the stream for immediate feedback
     let stream = async_stream::stream! {
-        // Send conversation ID first so frontend can track it
+        // OPTIMIZATION #6: Send Typing event IMMEDIATELY (<50ms perceived latency)
+        let typing_event = SseEventData::Typing;
+        if let Ok(json) = serde_json::to_string(&typing_event) {
+            yield Ok(Event::default().data(json));
+        }
+        
+        // Send conversation ID so frontend can track it
         let conv_event = SseEventData::Conversation(ConversationData { id: conversation_id });
         if let Ok(json) = serde_json::to_string(&conv_event) {
             yield Ok(Event::default().data(json));
         }
+        
+        // OPTIMIZATION #2: Skip intent analysis for short/simple messages
+        let is_short_message = user_message_for_stream.chars().count() < 20;
+        let is_simple_message = {
+            let lower = user_message_for_stream.to_lowercase();
+            lower == "ok" || lower == "merci" || lower == "thanks" || lower == "oui" || 
+            lower == "non" || lower == "yes" || lower == "no" || lower.starts_with("salut") ||
+            lower.starts_with("bonjour") || lower.starts_with("hello") || lower.starts_with("hi")
+        };
         
         // Phase 1: Understanding the request
         let phase_event = SseEventData::Phase(PhaseData {
             phase: "understanding".to_string(),
             status: "starting".to_string(),
             message: Some("Compréhension de votre demande...".to_string()),
+            progress: Some(0.0),
+            eta_seconds: if is_short_message { Some(1) } else { Some(3) },
         });
         if let Ok(json) = serde_json::to_string(&phase_event) {
             yield Ok(Event::default().data(json));
         }
         
-        // Perform intent analysis (now inside stream for real-time feedback)
-        let intent_analysis = analyze_intent(orchestrator_for_stream.router(), &user_message_for_stream)
-            .await
-            .unwrap_or_else(|e| {
-                tracing::warn!("Intent analysis failed, using fallback: {}", e);
-                IntentAnalysis {
-                    intent: "other".to_string(),
-                    summary: user_message_for_stream.chars().take(50).collect(),
-                    needs_thinking: false,
-                    thinking_steps: vec![],
-                    language: "en".to_string(),
+        // Perform intent analysis - skip API call for simple messages
+        let intent_analysis = if is_simple_message {
+            // Fast path: no API call needed
+            IntentAnalysis {
+                intent: if is_short_message && !is_simple_message { "simple".to_string() } else { "greeting".to_string() },
+                summary: user_message_for_stream.chars().take(50).collect(),
+                needs_thinking: false,
+                thinking_steps: vec![],
+                language: detect_language_simple(&user_message_for_stream),
+            }
+        } else {
+            // OPTIMIZATION #5: Retry with exponential backoff on rate limit
+            let mut retry_count = 0;
+            let max_retries = 3;
+            loop {
+                match analyze_intent(orchestrator_for_stream.router(), &user_message_for_stream).await {
+                    Ok(analysis) => break analysis,
+                    Err(e) => {
+                        let is_rate_limit = e.to_string().contains("Rate limit") || e.to_string().contains("429");
+                        if is_rate_limit && retry_count < max_retries {
+                            retry_count += 1;
+                            let delay_secs = 1u64 << retry_count; // 2, 4, 8 seconds
+                            tracing::warn!("Rate limit hit, retrying in {}s (attempt {}/{})", delay_secs, retry_count, max_retries);
+                            
+                            // Send retry phase to client
+                            let phase_event = SseEventData::Phase(PhaseData {
+                                phase: "retrying".to_string(),
+                                status: "waiting".to_string(),
+                                message: Some(format!("Limite atteinte, nouvelle tentative dans {}s...", delay_secs)),
+                                progress: None,
+                                eta_seconds: Some(delay_secs as u32),
+                            });
+                            if let Ok(json) = serde_json::to_string(&phase_event) {
+                                yield Ok(Event::default().data(json));
+                            }
+                            
+                            tokio::time::sleep(tokio::time::Duration::from_secs(delay_secs)).await;
+                            continue;
+                        }
+                        
+                        tracing::warn!("Intent analysis failed, using fallback: {}", e);
+                        break IntentAnalysis {
+                            intent: "other".to_string(),
+                            summary: user_message_for_stream.chars().take(50).collect(),
+                            needs_thinking: false,
+                            thinking_steps: vec![],
+                            language: "en".to_string(),
+                        };
+                    }
                 }
-            });
+            }
+        };
         
         tracing::debug!("Intent analysis: {:?}", intent_analysis);
         
@@ -1660,6 +1741,8 @@ pub async fn chat_stream(
             phase: "understanding".to_string(),
             status: "completed".to_string(),
             message: Some(intent_analysis.summary.clone()),
+            progress: Some(0.25),
+            eta_seconds: None,
         });
         if let Ok(json) = serde_json::to_string(&phase_event) {
             yield Ok(Event::default().data(json));
@@ -1670,6 +1753,8 @@ pub async fn chat_stream(
             phase: "gathering".to_string(),
             status: "starting".to_string(),
             message: Some("Collecte des informations...".to_string()),
+            progress: Some(0.3),
+            eta_seconds: Some(5),
         });
         if let Ok(json) = serde_json::to_string(&phase_event) {
             yield Ok(Event::default().data(json));
@@ -1748,6 +1833,8 @@ pub async fn chat_stream(
             phase: "generating".to_string(),
             status: "starting".to_string(),
             message: Some("Génération de la réponse...".to_string()),
+            progress: Some(0.6),
+            eta_seconds: Some(10),
         });
         if let Ok(json) = serde_json::to_string(&phase_event) {
             yield Ok(Event::default().data(json));
