@@ -411,6 +411,96 @@ pub struct GeneratedImage {
     pub revised_prompt: String,
 }
 
+/// User context for AI personalization
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UserContext {
+    /// User's display name
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Preferred language (detected from messages or profile)
+    #[serde(default = "default_language")]
+    pub language: String,
+    /// User's plan (free, pro, business)
+    #[serde(default = "default_plan")]
+    pub plan: String,
+    /// AI messages used today vs limit
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub quota: Option<UserQuota>,
+    /// Connected integrations (GitHub, etc.)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub integrations: Vec<String>,
+}
+
+fn default_language() -> String {
+    "en".to_string()
+}
+
+fn default_plan() -> String {
+    "free".to_string()
+}
+
+/// User's AI quota information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserQuota {
+    pub daily_limit: u32,
+    pub daily_used: u32,
+    pub daily_remaining: u32,
+}
+
+/// Extension data for AI context
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ExtensionData {
+    /// GitHub integration data
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub github: Option<GitHubData>,
+}
+
+/// GitHub integration data
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct GitHubData {
+    /// GitHub username
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub username: Option<String>,
+    /// GitHub profile bio
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bio: Option<String>,
+    /// Top repositories (name, description, language, stars)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub repositories: Vec<GitHubRepo>,
+    /// Programming languages with usage percentage
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub languages: Vec<GitHubLanguage>,
+    /// Contribution stats
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contributions: Option<GitHubContributions>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GitHubRepo {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
+    #[serde(default)]
+    pub stars: u32,
+    #[serde(default)]
+    pub is_fork: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GitHubLanguage {
+    pub name: String,
+    pub percentage: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GitHubContributions {
+    pub total_commits: u32,
+    pub total_prs: u32,
+    pub total_issues: u32,
+}
+
 /// Website context for AI
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebsiteContext {
@@ -418,6 +508,12 @@ pub struct WebsiteContext {
     pub sections: Vec<SectionInfo>,
     pub theme: serde_json::Value,
     pub available_section_types: Vec<String>,
+    /// User context for personalization
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user: Option<UserContext>,
+    /// Extension data (GitHub, etc.)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub extensions: Option<ExtensionData>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
