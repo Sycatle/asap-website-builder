@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +16,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -38,6 +39,11 @@ import {
   StopCircle,
   CheckCircle2,
   AlertCircle,
+  RotateCcw,
+  Volume2,
+  VolumeX,
+  MessageSquare,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWebsiteContext } from "@/contexts/WebsiteContext";
@@ -78,6 +84,7 @@ interface Message {
   actions?: AIAction[];
   executedActions?: { action: AIAction; success: boolean; error?: string }[];
   isStreaming?: boolean;
+  error?: boolean;
 }
 
 interface GlobalAIChatPanelProps {
@@ -85,6 +92,52 @@ interface GlobalAIChatPanelProps {
   showBackButton?: boolean;
   websiteNameOverride?: string;
   websiteSlugOverride?: string | null;
+}
+
+// Sound effects hook (optional subtle audio feedback)
+function useSoundEffects() {
+  const [enabled, setEnabled] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('ai-chat-sounds') !== 'false';
+    }
+    return true;
+  });
+
+  const toggle = useCallback(() => {
+    setEnabled(prev => {
+      const newVal = !prev;
+      localStorage.setItem('ai-chat-sounds', String(newVal));
+      return newVal;
+    });
+  }, []);
+
+  const playSound = useCallback((type: 'send' | 'receive' | 'success' | 'error') => {
+    if (!enabled || typeof window === 'undefined') return;
+    
+    // Simple tone generation with Web Audio API
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      const frequencies = { send: 880, receive: 440, success: 660, error: 220 };
+      oscillator.frequency.value = frequencies[type];
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.1);
+    } catch {
+      // Audio not supported, ignore
+    }
+  }, [enabled]);
+
+  return { enabled, toggle, playSound };
 }
 
 export function GlobalAIChatPanel({ 
@@ -103,9 +156,11 @@ export function GlobalAIChatPanel({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [autoExecuteActions, setAutoExecuteActions] = useState(true);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const { enabled: soundEnabled, toggle: toggleSound, playSound } = useSoundEffects();
   
   // AI Action Executor
   const { executeAction, isExecuting } = useAIActionExecutor({
@@ -126,6 +181,7 @@ export function GlobalAIChatPanel({
         }
         return m;
       }));
+      playSound(result.success ? 'success' : 'error');
     },
   });
 
@@ -136,12 +192,28 @@ export function GlobalAIChatPanel({
   const userAvatar = userData?.avatar;
   const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
 
-  // Auto scroll to bottom
-  useEffect(() => {
+  // Check if user is near bottom for scroll button
+  const handleScroll = useCallback(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      setShowScrollButton(!isNearBottom && messages.length > 0);
     }
-  }, [messages, isLoading]);
+  }, [messages.length]);
+
+  // Auto scroll to bottom
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior,
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom('auto');
+  }, [messages, isLoading, scrollToBottom]);
 
   // Auto resize textarea
   useEffect(() => {
@@ -193,6 +265,7 @@ export function GlobalAIChatPanel({
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+    playSound('send');
 
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -241,20 +314,43 @@ export function GlobalAIChatPanel({
           ));
           setIsLoading(false);
           abortControllerRef.current = null;
+          playSound('receive');
         },
         onError: (error: { code: string; message: string }) => {
           console.error('AI chat error:', error);
           setMessages(prev => prev.map(m => 
             m.id === assistantMessageId 
-              ? { ...m, content: t('editor:ai.error'), isStreaming: false }
+              ? { ...m, content: error.message || t('editor:ai.error'), isStreaming: false, error: true }
               : m
           ));
           setIsLoading(false);
           abortControllerRef.current = null;
+          playSound('error');
         },
       }
     );
-  }, [input, isLoading, currentWebsite?.id, conversationId, t, handleActionReceived]);
+  }, [input, isLoading, currentWebsite?.id, conversationId, t, handleActionReceived, playSound]);
+
+  // Retry failed message
+  const handleRetry = useCallback((messageId: string) => {
+    const messageIndex = messages.findIndex(m => m.id === messageId);
+    if (messageIndex === -1) return;
+    
+    // Find the user message before this assistant message
+    let userMessageIndex = messageIndex - 1;
+    while (userMessageIndex >= 0 && messages[userMessageIndex].role !== 'user') {
+      userMessageIndex--;
+    }
+    
+    if (userMessageIndex >= 0) {
+      const userMessage = messages[userMessageIndex];
+      // Remove the failed message and all after it
+      setMessages(prev => prev.slice(0, messageIndex));
+      // Re-send
+      setInput(userMessage.content);
+      setTimeout(() => handleSend(), 100);
+    }
+  }, [messages, handleSend]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -333,6 +429,21 @@ export function GlobalAIChatPanel({
                 <Trash2 className="h-4 w-4 mr-2" />
                 {t('editor:ai.clearChat')}
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={toggleSound}>
+                {soundEnabled ? (
+                  <Volume2 className="h-4 w-4 mr-2" />
+                ) : (
+                  <VolumeX className="h-4 w-4 mr-2" />
+                )}
+                {soundEnabled ? 'Mute sounds' : 'Enable sounds'}
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => setAutoExecuteActions(!autoExecuteActions)}
+              >
+                <Zap className={cn("h-4 w-4 mr-2", autoExecuteActions && "text-primary")} />
+                {autoExecuteActions ? 'Auto-execute on' : 'Auto-execute off'}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
@@ -352,7 +463,8 @@ export function GlobalAIChatPanel({
       {/* Messages Area - scrollable, takes remaining space */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-4"
+        className="flex-1 overflow-y-auto px-4 py-4 scroll-smooth"
+        onScroll={handleScroll}
       >
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center min-h-[300px]">
@@ -361,7 +473,7 @@ export function GlobalAIChatPanel({
         ) : (
           <div className="flex flex-col min-h-full justify-end">
             <div className="space-y-3">
-              {messages.map((message) => (
+              {messages.map((message, idx) => (
                 <MessageBubble 
                   key={message.id} 
                   message={message} 
@@ -370,26 +482,23 @@ export function GlobalAIChatPanel({
                   userName={userName}
                   onCopy={() => copyMessage(message.id, message.content)}
                   isCopied={copiedId === message.id}
+                  onRetry={message.error ? () => handleRetry(message.id) : undefined}
+                  animationDelay={idx * 50}
                 />
               ))}
-              
-              {/* Typing indicator */}
-              {isLoading && (
-                <div className="flex items-end gap-2">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center shadow-md">
-                    <Sparkles className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-full bg-foreground/40 animate-bounce [animation-delay:-0.3s]" />
-                      <span className="h-2 w-2 rounded-full bg-foreground/40 animate-bounce [animation-delay:-0.15s]" />
-                      <span className="h-2 w-2 rounded-full bg-foreground/40 animate-bounce" />
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
+        )}
+        
+        {/* Scroll to bottom button */}
+        {showScrollButton && (
+          <button
+            onClick={() => scrollToBottom()}
+            className="sticky bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/90 border shadow-lg backdrop-blur-sm hover:bg-muted transition-all animate-in fade-in slide-in-from-bottom-2"
+          >
+            <ChevronDown className="h-4 w-4" />
+            <span className="text-xs font-medium">New messages</span>
+          </button>
         )}
       </div>
 
@@ -403,24 +512,28 @@ export function GlobalAIChatPanel({
               label={t('editor:ai.actions.addSection')}
               color="primary"
               onClick={() => insertPrompt("Add a new section for ")}
+              index={0}
             />
             <QuickPill 
               icon={Palette} 
               label={t('editor:ai.actions.changeColors')}
               color="pink"
               onClick={() => insertPrompt("Change the color scheme to ")}
+              index={1}
             />
             <QuickPill 
               icon={Type} 
               label={t('editor:ai.actions.editText')}
               color="blue"
               onClick={() => insertPrompt("Update the text in ")}
+              index={2}
             />
             <QuickPill 
               icon={Image} 
               label={t('editor:ai.actions.addImage')}
               color="emerald"
               onClick={() => insertPrompt("Add an image to ")}
+              index={3}
             />
           </div>
         )}
@@ -485,7 +598,7 @@ export function GlobalAIChatPanel({
 }
 
 /**
- * EmptyState - Welcome avec style ASAP
+ * EmptyState - Welcome avec style ASAP et animations
  */
 function EmptyState({ 
   onPromptSelect,
@@ -511,6 +624,7 @@ function EmptyState({
       prompt: "Make the headline more impactful and add a subtle animation",
       gradient: "from-primary/20 to-violet-500/20",
       iconColor: "text-primary",
+      hoverGradient: "hover:from-primary/30 hover:to-violet-500/30",
     },
     {
       icon: Palette,
@@ -519,6 +633,7 @@ function EmptyState({
       prompt: "Use a dark theme with blue accents",
       gradient: "from-pink-500/20 to-rose-500/20",
       iconColor: "text-pink-500",
+      hoverGradient: "hover:from-pink-500/30 hover:to-rose-500/30",
     },
     {
       icon: Type,
@@ -527,6 +642,7 @@ function EmptyState({
       prompt: "Rewrite the about section to be more professional",
       gradient: "from-blue-500/20 to-cyan-500/20",
       iconColor: "text-blue-500",
+      hoverGradient: "hover:from-blue-500/30 hover:to-cyan-500/30",
     },
     {
       icon: Wand2,
@@ -535,16 +651,17 @@ function EmptyState({
       prompt: "Make my website look more modern and professional",
       gradient: "from-amber-500/20 to-orange-500/20",
       iconColor: "text-amber-500",
+      hoverGradient: "hover:from-amber-500/30 hover:to-orange-500/30",
     },
   ];
   
   return (
-    <div className="flex flex-col items-center justify-center h-full py-8 px-4">
+    <div className="flex flex-col items-center justify-center h-full py-8 px-4 animate-in fade-in-0 duration-500">
       {/* AI Avatar with glow effect */}
-      <div className="relative mb-6">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary to-violet-600 rounded-3xl blur-xl opacity-30 animate-pulse" />
-        <div className="relative h-20 w-20 rounded-3xl bg-gradient-to-br from-primary via-primary/90 to-violet-600 flex items-center justify-center shadow-2xl">
-          <Sparkles className="h-10 w-10 text-white" />
+      <div className="relative mb-6 animate-in zoom-in-50 duration-700">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary to-violet-600 rounded-3xl blur-2xl opacity-40 animate-pulse" />
+        <div className="relative h-20 w-20 rounded-3xl bg-gradient-to-br from-primary via-primary/90 to-violet-600 flex items-center justify-center shadow-2xl shadow-primary/30">
+          <Sparkles className="h-10 w-10 text-white animate-pulse" />
         </div>
         <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-green-500 border-4 border-background flex items-center justify-center shadow-lg">
           <Zap className="h-3.5 w-3.5 text-white" />
@@ -552,12 +669,20 @@ function EmptyState({
       </div>
       
       {/* Greeting */}
-      <h2 className="text-xl font-semibold mb-1">
+      <h2 className="text-xl font-semibold mb-1 animate-in fade-in-0 slide-in-from-bottom-2 duration-500 delay-100">
         {getGreeting()}, {userName.split(' ')[0]} 👋
       </h2>
-      <p className="text-sm text-muted-foreground mb-6 text-center max-w-xs">
+      <p className="text-sm text-muted-foreground mb-6 text-center max-w-xs animate-in fade-in-0 slide-in-from-bottom-2 duration-500 delay-150">
         {t('editor:ai.welcome.description')}
       </p>
+      
+      {/* Keyboard shortcut hint */}
+      <div className="flex items-center gap-2 mb-4 text-xs text-muted-foreground animate-in fade-in-0 duration-500 delay-200">
+        <kbd className="px-2 py-1 bg-muted rounded text-[10px] font-mono">⌘</kbd>
+        <span>+</span>
+        <kbd className="px-2 py-1 bg-muted rounded text-[10px] font-mono">K</kbd>
+        <span>to focus</span>
+      </div>
       
       {/* Suggestions Grid */}
       <div className="w-full max-w-sm space-y-2">
@@ -565,52 +690,65 @@ function EmptyState({
           <Card 
             key={index}
             className={cn(
-              "cursor-pointer border-transparent transition-all hover:scale-[1.02]",
+              "cursor-pointer border-transparent transition-all duration-300 hover:scale-[1.02] group animate-in fade-in-0 slide-in-from-bottom-2",
               "bg-gradient-to-r",
               suggestion.gradient,
-              "hover:shadow-lg"
+              suggestion.hoverGradient,
+              "hover:shadow-lg hover:border-border/50"
             )}
+            style={{ animationDelay: `${200 + index * 75}ms` }}
             onClick={() => onPromptSelect(suggestion.prompt)}
           >
             <CardContent className="p-3 flex items-center gap-3">
               <div className={cn(
-                "h-10 w-10 rounded-xl bg-background/80 flex items-center justify-center shrink-0",
+                "h-10 w-10 rounded-xl bg-background/80 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110",
                 suggestion.iconColor
               )}>
                 <suggestion.icon className="h-5 w-5" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="font-medium text-sm">{suggestion.title}</p>
                 <p className="text-xs text-muted-foreground truncate">{suggestion.description}</p>
               </div>
+              <ArrowUp className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all -rotate-45 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </CardContent>
           </Card>
         ))}
+      </div>
+      
+      {/* Pro tip */}
+      <div className="mt-6 flex items-start gap-2 text-xs text-muted-foreground max-w-sm animate-in fade-in-0 duration-500 delay-500">
+        <MessageSquare className="h-4 w-4 shrink-0 mt-0.5" />
+        <p>
+          <span className="font-medium">Pro tip:</span> Be specific! Instead of "change colors", try "use a warm orange and cream color palette".
+        </p>
       </div>
     </div>
   );
 }
 
 /**
- * QuickPill - Quick action pill style ASAP
+ * QuickPill - Quick action pill style ASAP with animations
  */
 function QuickPill({ 
   icon: Icon, 
   label,
   color,
   onClick,
+  index = 0,
 }: { 
   icon: React.ElementType;
   label: string;
   color: 'primary' | 'pink' | 'blue' | 'emerald' | 'violet';
   onClick: () => void;
+  index?: number;
 }) {
   const colorClasses = {
-    primary: 'hover:bg-primary hover:text-primary-foreground hover:border-primary',
-    pink: 'hover:bg-pink-500 hover:text-white hover:border-pink-500',
-    blue: 'hover:bg-blue-500 hover:text-white hover:border-blue-500',
-    emerald: 'hover:bg-emerald-500 hover:text-white hover:border-emerald-500',
-    violet: 'hover:bg-violet-500 hover:text-white hover:border-violet-500',
+    primary: 'hover:bg-primary hover:text-primary-foreground hover:border-primary hover:shadow-primary/25',
+    pink: 'hover:bg-pink-500 hover:text-white hover:border-pink-500 hover:shadow-pink-500/25',
+    blue: 'hover:bg-blue-500 hover:text-white hover:border-blue-500 hover:shadow-blue-500/25',
+    emerald: 'hover:bg-emerald-500 hover:text-white hover:border-emerald-500 hover:shadow-emerald-500/25',
+    violet: 'hover:bg-violet-500 hover:text-white hover:border-violet-500 hover:shadow-violet-500/25',
   };
 
   return (
@@ -618,9 +756,11 @@ function QuickPill({
       onClick={onClick}
       className={cn(
         "flex items-center gap-2 px-3 py-2 rounded-full border bg-card text-sm shrink-0",
-        "transition-all hover:shadow-md",
+        "transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95",
+        "animate-in fade-in-0 slide-in-from-bottom-2",
         colorClasses[color]
       )}
+      style={{ animationDelay: `${index * 50}ms` }}
     >
       <Icon className="h-3.5 w-3.5" />
       <span className="font-medium">{label}</span>
@@ -629,7 +769,7 @@ function QuickPill({
 }
 
 /**
- * MessageBubble - iMessage/WhatsApp style bubble
+ * MessageBubble - iMessage/WhatsApp style bubble with animations
  */
 function MessageBubble({ 
   message, 
@@ -638,6 +778,8 @@ function MessageBubble({
   userName,
   onCopy,
   isCopied,
+  onRetry,
+  animationDelay = 0,
 }: { 
   message: Message;
   userAvatar?: string;
@@ -645,25 +787,41 @@ function MessageBubble({
   userName: string;
   onCopy: () => void;
   isCopied: boolean;
+  onRetry?: () => void;
+  animationDelay?: number;
 }) {
   const isUser = message.role === 'user';
+  const hasError = message.error;
+  
+  // Memoize action status calculations
+  const actionStats = useMemo(() => {
+    if (!message.actions?.length) return null;
+    const total = message.actions.length;
+    const executed = message.executedActions?.length || 0;
+    const successful = message.executedActions?.filter(e => e.success).length || 0;
+    const failed = message.executedActions?.filter(e => !e.success).length || 0;
+    return { total, executed, successful, failed };
+  }, [message.actions, message.executedActions]);
   
   return (
-    <div className={cn(
-      "flex items-end gap-2 group",
-      isUser ? "flex-row-reverse" : "flex-row"
-    )}>
+    <div 
+      className={cn(
+        "flex items-end gap-2 group animate-in fade-in-0 slide-in-from-bottom-2",
+        isUser ? "flex-row-reverse" : "flex-row"
+      )}
+      style={{ animationDelay: `${animationDelay}ms` }}
+    >
       {/* Avatar */}
       {!isUser && (
-        <Avatar className="h-8 w-8 shrink-0 shadow-md">
+        <Avatar className="h-8 w-8 shrink-0 shadow-md ring-2 ring-background">
           <AvatarFallback className="bg-gradient-to-br from-primary to-violet-600 text-white">
-            <Sparkles className="h-4 w-4" />
+            <Sparkles className={cn("h-4 w-4", message.isStreaming && "animate-pulse")} />
           </AvatarFallback>
         </Avatar>
       )}
       
       {isUser && (
-        <Avatar className="h-8 w-8 shrink-0 shadow-md">
+        <Avatar className="h-8 w-8 shrink-0 shadow-md ring-2 ring-background">
           <AvatarImage src={userAvatar} alt={userName} />
           <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
             {userInitials}
@@ -672,40 +830,100 @@ function MessageBubble({
       )}
       
       {/* Bubble */}
-      <div className="flex flex-col gap-1 max-w-[75%]">
+      <div className="flex flex-col gap-1 max-w-[80%]">
         <div className={cn(
-          "px-4 py-2.5 shadow-sm",
+          "px-4 py-2.5 shadow-sm transition-all",
           isUser 
             ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md" 
-            : "bg-muted rounded-2xl rounded-bl-md"
+            : "bg-muted rounded-2xl rounded-bl-md",
+          hasError && !isUser && "border border-red-500/50 bg-red-50 dark:bg-red-950/30",
+          message.isStreaming && !isUser && "border border-primary/30"
         )}>
-          <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+          {/* Error indicator */}
+          {hasError && !isUser && (
+            <div className="flex items-center gap-2 mb-2 text-red-600 dark:text-red-400">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span className="text-xs font-medium">Failed to generate response</span>
+            </div>
+          )}
           
-          {/* AI Actions indicator */}
+          {/* Message content with streaming cursor */}
+          <div className="text-sm whitespace-pre-wrap leading-relaxed">
+            {message.content}
+            {message.isStreaming && (
+              <span className="inline-block w-2 h-4 ml-0.5 bg-current animate-pulse rounded-sm" />
+            )}
+          </div>
+          
+          {/* AI Actions indicator - improved design */}
           {!isUser && message.actions && message.actions.length > 0 && (
-            <div className="mt-2 pt-2 border-t border-border/50 space-y-1">
-              {message.actions.map((action, idx) => {
-                const executed = message.executedActions?.find(e => e.action === action);
-                return (
-                  <div key={idx} className="flex items-center gap-2 text-xs">
-                    {executed ? (
-                      executed.success ? (
-                        <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
+            <div className="mt-3 pt-3 border-t border-border/50">
+              {/* Summary bar */}
+              {actionStats && (
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                    <Zap className="h-3 w-3" />
+                    {actionStats.total} action{actionStats.total > 1 ? 's' : ''}
+                  </span>
+                  {actionStats.executed > 0 && (
+                    <div className="flex items-center gap-2 text-xs">
+                      {actionStats.successful > 0 && (
+                        <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                          <CheckCircle2 className="h-3 w-3" />
+                          {actionStats.successful}
+                        </span>
+                      )}
+                      {actionStats.failed > 0 && (
+                        <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
+                          <AlertCircle className="h-3 w-3" />
+                          {actionStats.failed}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Action list */}
+              <div className="space-y-1.5">
+                {message.actions.map((action, idx) => {
+                  const executed = message.executedActions?.find(e => e.action === action);
+                  return (
+                    <div 
+                      key={idx} 
+                      className={cn(
+                        "flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg transition-colors",
+                        executed?.success && "bg-green-500/10",
+                        executed?.success === false && "bg-red-500/10",
+                        !executed && "bg-muted/50"
+                      )}
+                    >
+                      {executed ? (
+                        executed.success ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                        ) : (
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <AlertCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-xs">{executed.error || 'Action failed'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )
                       ) : (
-                        <AlertCircle className="h-3 w-3 text-red-500 shrink-0" />
-                      )
-                    ) : (
-                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
-                    )}
-                    <span className={cn(
-                      "truncate",
-                      executed?.success === false && "text-red-500"
-                    )}>
-                      {formatActionLabel(action)}
-                    </span>
-                  </div>
-                );
-              })}
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-primary shrink-0" />
+                      )}
+                      <span className={cn(
+                        "truncate flex-1",
+                        executed?.success === false && "text-red-600 dark:text-red-400"
+                      )}>
+                        {formatActionLabel(action)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -719,17 +937,43 @@ function MessageBubble({
             {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
           
-          {!isUser && (
-            <button
-              onClick={onCopy}
-              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded"
-            >
-              {isCopied ? (
-                <Check className="h-3 w-3 text-green-500" />
-              ) : (
-                <Copy className="h-3 w-3 text-muted-foreground" />
-              )}
-            </button>
+          {/* Copy button */}
+          {!isUser && !hasError && message.content && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={onCopy}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded"
+                >
+                  {isCopied ? (
+                    <Check className="h-3 w-3 text-green-500" />
+                  ) : (
+                    <Copy className="h-3 w-3 text-muted-foreground" />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="text-xs">{isCopied ? 'Copied!' : 'Copy message'}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          
+          {/* Retry button for errors */}
+          {hasError && onRetry && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={onRetry}
+                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 rounded-md transition-colors"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  Retry
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="text-xs">Try again</p>
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
       </div>
