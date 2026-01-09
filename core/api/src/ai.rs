@@ -20,6 +20,7 @@ use uuid::Uuid;
 use asap_core_ai::{
     AIOrchestrator, AIChatRequest as CoreAIChatRequest, AIAction, 
     WebsiteContext, WebsiteInfo, SectionInfo, TokenUsage,
+    analyze_intent, execute_thinking_step, IntentAnalysis, StepResult,
 };
 use crate::Claims;
 
@@ -111,6 +112,12 @@ pub struct ThinkingData {
     pub thought: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub step: Option<u32>,
+    /// Status: "starting", "completed", or absent
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    /// Insight from step execution (only when status is "completed")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub insight: Option<String>,
 }
 
 /// Tool call event data
@@ -231,36 +238,6 @@ fn format_action_description(action: &AIAction) -> String {
         AIAction::UpdateMetadata { .. } => "Updating metadata".to_string(),
         AIAction::GenerateImage { .. } => "Generating image".to_string(),
     }
-}
-
-/// Analyze user message to determine intent for authentic chain of thoughts
-fn analyze_user_intent(message: &str) -> (String, Vec<&'static str>) {
-    let msg_lower = message.to_lowercase();
-    
-    // Detect primary intent
-    let (intent, keywords) = if msg_lower.contains("add") || msg_lower.contains("create") || msg_lower.contains("new") || msg_lower.contains("ajoute") || msg_lower.contains("crée") {
-        ("adding content", vec!["section", "hero", "contact", "about", "footer", "header", "projects", "skills", "testimonials", "pricing", "faq", "cta", "features"])
-    } else if msg_lower.contains("change") || msg_lower.contains("update") || msg_lower.contains("modify") || msg_lower.contains("edit") || msg_lower.contains("modifie") || msg_lower.contains("change") {
-        ("modifying content", vec!["text", "title", "headline", "description", "color", "image", "button", "link"])
-    } else if msg_lower.contains("remove") || msg_lower.contains("delete") || msg_lower.contains("supprime") || msg_lower.contains("enlève") {
-        ("removing content", vec!["section", "element", "block"])
-    } else if msg_lower.contains("color") || msg_lower.contains("theme") || msg_lower.contains("style") || msg_lower.contains("couleur") || msg_lower.contains("dark") || msg_lower.contains("light") {
-        ("styling", vec!["theme", "color", "dark", "light", "accent", "primary", "background"])
-    } else if msg_lower.contains("move") || msg_lower.contains("reorder") || msg_lower.contains("déplace") || msg_lower.contains("ordre") {
-        ("reorganizing", vec!["order", "position", "up", "down", "before", "after"])
-    } else if msg_lower.contains("what") || msg_lower.contains("show") || msg_lower.contains("list") || msg_lower.contains("describe") || msg_lower.contains("qu'est") || msg_lower.contains("montre") || msg_lower.contains("décris") {
-        ("analyzing", vec!["sections", "content", "structure", "elements"])
-    } else {
-        ("processing", vec!["request", "changes"])
-    };
-    
-    // Find which keyword matches
-    let matched_keyword = keywords.iter()
-        .find(|k| msg_lower.contains(*k))
-        .copied()
-        .unwrap_or(keywords[0]);
-    
-    (intent.to_string(), vec![matched_keyword])
 }
 
 /// Get the user's plan from the database
@@ -766,9 +743,24 @@ pub async fn chat_stream(
         }))
     })?;
     
-    // Analyze user intent BEFORE building the request (req.message will be moved)
-    let (intent, matched_keywords) = analyze_user_intent(&req.message);
+    // Clone user message before moving req
     let user_message = req.message.clone();
+    
+    // Perform intent analysis first (fast AI call to determine thinking steps)
+    let intent_analysis = analyze_intent(orchestrator.router(), &user_message)
+        .await
+        .unwrap_or_else(|e| {
+            tracing::warn!("Intent analysis failed, using fallback: {}", e);
+            IntentAnalysis {
+                intent: "other".to_string(),
+                summary: user_message.chars().take(50).collect(),
+                needs_thinking: false,
+                thinking_steps: vec![],
+                language: "en".to_string(),
+            }
+        });
+    
+    tracing::debug!("Intent analysis: {:?}", intent_analysis);
     
     // Get or create conversation
     let conversation_id = get_or_create_conversation(
@@ -808,12 +800,18 @@ pub async fn chat_stream(
     // Build AI request with history
     let ai_request = CoreAIChatRequest {
         website_id: req.website_id,
-        message: req.message,
+        message: req.message.clone(),
         conversation_id: Some(conversation_id),
         history: history_messages,
         attachments: vec![],
         stream: true,
     };
+    
+    // Clone for use inside the stream (needs 'static lifetime)
+    let orchestrator_for_thinking = orchestrator.clone();
+    let context_for_thinking = context.clone();
+    let user_message_for_thinking = user_message.clone();
+    let intent_for_thinking = intent_analysis.clone();
     
     // Start streaming
     let _action_parser = orchestrator.action_parser().clone();
@@ -823,6 +821,9 @@ pub async fn chat_stream(
     
     // Clone pool for use in stream
     let pool_for_stream = pool.clone();
+    
+    // Clone intent analysis for use in stream
+    let intent_for_stream = intent_analysis.clone();
     
     match stream_result {
         Ok((mut token_stream, _rate_status)) => {
@@ -834,32 +835,75 @@ pub async fn chat_stream(
                     yield Ok(Event::default().data(json));
                 }
                 
-                // Send contextual initial thought based on user intent
-                let initial_thought = match intent.as_str() {
-                    "adding content" => {
-                        let keyword = matched_keywords.first().unwrap_or(&"content");
-                        format!("Looking at how to add {} to your site...", keyword)
-                    }
-                    "modifying content" => {
-                        let keyword = matched_keywords.first().unwrap_or(&"content");
-                        format!("Examining the {} you want to change...", keyword)
-                    }
-                    "removing content" => "Identifying what to remove...".to_string(),
-                    "styling" => {
-                        let keyword = matched_keywords.first().unwrap_or(&"style");
-                        format!("Analyzing {} options for your site...", keyword)
-                    }
-                    "reorganizing" => "Planning the new arrangement...".to_string(),
-                    "analyzing" => "Looking at your website structure...".to_string(),
-                    _ => "Processing your request...".to_string(),
-                };
+                // Execute thinking steps with real AI calls (sequential)
+                let mut step_results: Vec<StepResult> = Vec::new();
                 
-                let thinking = SseEventData::Thinking(ThinkingData {
-                    thought: initial_thought,
-                    step: None,
-                });
-                if let Ok(json) = serde_json::to_string(&thinking) {
-                    yield Ok(Event::default().data(json));
+                if intent_for_thinking.needs_thinking && !intent_for_thinking.thinking_steps.is_empty() {
+                    let total_steps = intent_for_thinking.thinking_steps.len() as u32;
+                    
+                    for thinking_step in &intent_for_thinking.thinking_steps {
+                        // Send "starting" event for this step
+                        let thinking_start = SseEventData::Thinking(ThinkingData {
+                            thought: thinking_step.description.clone(),
+                            step: Some(thinking_step.step),
+                            status: Some("starting".to_string()),
+                            insight: None,
+                        });
+                        if let Ok(json) = serde_json::to_string(&thinking_start) {
+                            yield Ok(Event::default().data(json));
+                        }
+                        
+                        // Execute real AI call for this step
+                        let step_result = execute_thinking_step(
+                            orchestrator_for_thinking.router(),
+                            thinking_step,
+                            total_steps,
+                            &user_message_for_thinking,
+                            &context_for_thinking,
+                            &intent_for_thinking.language,
+                            &step_results,
+                        ).await;
+                        
+                        match step_result {
+                            Ok(result) => {
+                                // Send "completed" event with insight
+                                let thinking_done = SseEventData::Thinking(ThinkingData {
+                                    thought: thinking_step.description.clone(),
+                                    step: Some(thinking_step.step),
+                                    status: Some("completed".to_string()),
+                                    insight: Some(result.insight.clone()),
+                                });
+                                if let Ok(json) = serde_json::to_string(&thinking_done) {
+                                    yield Ok(Event::default().data(json));
+                                }
+                                step_results.push(result);
+                            }
+                            Err(e) => {
+                                tracing::warn!("Step {} execution failed: {}", thinking_step.step, e);
+                                // Send completed with fallback insight
+                                let thinking_done = SseEventData::Thinking(ThinkingData {
+                                    thought: thinking_step.description.clone(),
+                                    step: Some(thinking_step.step),
+                                    status: Some("completed".to_string()),
+                                    insight: Some(thinking_step.description.clone()),
+                                });
+                                if let Ok(json) = serde_json::to_string(&thinking_done) {
+                                    yield Ok(Event::default().data(json));
+                                }
+                            }
+                        }
+                    }
+                } else if !intent_for_stream.summary.is_empty() {
+                    // For simple requests, just show the summary briefly
+                    let thinking = SseEventData::Thinking(ThinkingData {
+                        thought: intent_for_stream.summary.clone(),
+                        step: None,
+                        status: None,
+                        insight: None,
+                    });
+                    if let Ok(json) = serde_json::to_string(&thinking) {
+                        yield Ok(Event::default().data(json));
+                    }
                 }
                 
                 // Buffer for action detection
@@ -868,56 +912,18 @@ pub async fn chat_stream(
                 let mut in_json_block = false;
                 let mut json_buffer = String::new();
                 let mut sent_tool_calls: std::collections::HashSet<String> = std::collections::HashSet::new();
-                let mut sent_response_thought = false;
-                let mut sent_action_thought = false;
                 let mut parsed_actions: Vec<AIAction> = Vec::new();
-                
-                // Track content patterns for progressive feedback
-                let mut word_count = 0usize;
                 
                 while let Some(result) = token_stream.next().await {
                     match result {
                         Ok(text) => {
                             // Accumulate content for action detection
                             full_content.push_str(&text);
-                            word_count += text.split_whitespace().count();
-                            
-                            // Send "writing response" after substantial content (not just first token)
-                            if !sent_response_thought && word_count > 15 && !in_json_block {
-                                sent_response_thought = true;
-                                let thinking = SseEventData::Thinking(ThinkingData {
-                                    thought: "Writing response...".to_string(),
-                                    step: None,
-                                });
-                                if let Ok(json) = serde_json::to_string(&thinking) {
-                                    yield Ok(Event::default().data(json));
-                                }
-                            }
                             
                             // Detect JSON code blocks for action parsing
                             if text.contains("```json") {
                                 in_json_block = true;
                                 json_buffer.clear();
-                                
-                                // Send contextual action thought (only once)
-                                if !sent_action_thought {
-                                    sent_action_thought = true;
-                                    let action_thought = match intent.as_str() {
-                                        "adding content" => "Creating new content...".to_string(),
-                                        "modifying content" => "Applying changes...".to_string(),
-                                        "removing content" => "Preparing removal...".to_string(),
-                                        "styling" => "Updating styles...".to_string(),
-                                        "reorganizing" => "Rearranging elements...".to_string(),
-                                        _ => "Preparing action...".to_string(),
-                                    };
-                                    let thinking = SseEventData::Thinking(ThinkingData {
-                                        thought: action_thought,
-                                        step: None,
-                                    });
-                                    if let Ok(json) = serde_json::to_string(&thinking) {
-                                        yield Ok(Event::default().data(json));
-                                    }
-                                }
                             } else if in_json_block && text.contains("```") {
                                 in_json_block = false;
                                 // Try to parse JSON as action
