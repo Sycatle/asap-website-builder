@@ -21,6 +21,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY core/shared/Cargo.toml ./core/shared/
 COPY core/domain/Cargo.toml ./core/domain/
 COPY core/api/Cargo.toml ./core/api/
+COPY core/ai/Cargo.toml ./core/ai/
 COPY core/payments/Cargo.toml ./core/payments/
 COPY core/notifications/Cargo.toml ./core/notifications/
 COPY apps/api/Cargo.toml ./apps/api/
@@ -31,6 +32,7 @@ COPY extensions/github-sync/backend/Cargo.toml ./extensions/github-sync/backend/
 RUN mkdir -p core/shared/src && echo "// stub" > core/shared/src/lib.rs && \
     mkdir -p core/domain/src && echo "// stub" > core/domain/src/lib.rs && \
     mkdir -p core/api/src && echo "// stub" > core/api/src/lib.rs && \
+    mkdir -p core/ai/src && echo "// stub" > core/ai/src/lib.rs && \
     mkdir -p core/payments/src && echo "// stub" > core/payments/src/lib.rs && \
     mkdir -p core/notifications/src && echo "// stub" > core/notifications/src/lib.rs && \
     mkdir -p apps/api/src && echo "fn main() {}" > apps/api/src/main.rs && \
