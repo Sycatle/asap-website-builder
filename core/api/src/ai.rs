@@ -1574,21 +1574,7 @@ pub async fn chat_stream(
     // Clone user message before moving req
     let user_message = req.message.clone();
     
-    // Perform intent analysis first (fast AI call to determine thinking steps)
-    let intent_analysis = analyze_intent(orchestrator.router(), &user_message)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!("Intent analysis failed, using fallback: {}", e);
-            IntentAnalysis {
-                intent: "other".to_string(),
-                summary: user_message.chars().take(50).collect(),
-                needs_thinking: false,
-                thinking_steps: vec![],
-                language: "en".to_string(),
-            }
-        });
-    
-    tracing::debug!("Intent analysis: {:?}", intent_analysis);
+    // NOTE: Intent analysis moved INSIDE the stream for real-time feedback
     
     // Get or create conversation
     let conversation_id = get_or_create_conversation(
@@ -1625,25 +1611,17 @@ pub async fn chat_stream(
     let pool_for_save = pool.clone();
     let _ = save_message(&pool_for_save, conversation_id, "user", &user_message, None, None).await;
     
-    // Clone necessary data for the stream (data tools will be executed INSIDE the stream for real-time feedback)
-    let orchestrator_for_tools = orchestrator.clone();
-    let context_for_tools = context.clone();
-    let user_message_for_tools = user_message.clone();
-    let history_for_tools = history_messages.clone();
-    
-    // Clone for use inside the stream (needs 'static lifetime)
-    let orchestrator_for_thinking = orchestrator.clone();
-    let context_for_thinking = context.clone();
-    let user_message_for_thinking = user_message.clone();
-    let intent_for_thinking = intent_analysis.clone();
+    // Clone necessary data for the stream (all AI operations now happen INSIDE the stream for real-time feedback)
+    let orchestrator_for_stream = orchestrator.clone();
+    let context_for_stream = context.clone();
+    let user_message_for_stream = user_message.clone();
+    let history_for_stream = history_messages.clone();
     
     // Clone pool for use in stream
     let pool_for_stream = pool.clone();
+    let plan_for_stream = plan.clone();
     
-    // Clone intent analysis for use in stream
-    let intent_for_stream = intent_analysis.clone();
-    
-    // Create SSE stream - data tools are executed INSIDE the stream for immediate feedback
+    // Create SSE stream - ALL AI operations are executed INSIDE the stream for immediate feedback
     let stream = async_stream::stream! {
         // Send conversation ID first so frontend can track it
         let conv_event = SseEventData::Conversation(ConversationData { id: conversation_id });
@@ -1651,11 +1629,47 @@ pub async fn chat_stream(
             yield Ok(Event::default().data(json));
         }
         
-        // Send phase: analyzing
+        // Phase 1: Understanding the request
         let phase_event = SseEventData::Phase(PhaseData {
-            phase: "analyzing".to_string(),
+            phase: "understanding".to_string(),
             status: "starting".to_string(),
-            message: Some("Analyse de votre demande...".to_string()),
+            message: Some("Compréhension de votre demande...".to_string()),
+        });
+        if let Ok(json) = serde_json::to_string(&phase_event) {
+            yield Ok(Event::default().data(json));
+        }
+        
+        // Perform intent analysis (now inside stream for real-time feedback)
+        let intent_analysis = analyze_intent(orchestrator_for_stream.router(), &user_message_for_stream)
+            .await
+            .unwrap_or_else(|e| {
+                tracing::warn!("Intent analysis failed, using fallback: {}", e);
+                IntentAnalysis {
+                    intent: "other".to_string(),
+                    summary: user_message_for_stream.chars().take(50).collect(),
+                    needs_thinking: false,
+                    thinking_steps: vec![],
+                    language: "en".to_string(),
+                }
+            });
+        
+        tracing::debug!("Intent analysis: {:?}", intent_analysis);
+        
+        // Send understanding complete
+        let phase_event = SseEventData::Phase(PhaseData {
+            phase: "understanding".to_string(),
+            status: "completed".to_string(),
+            message: Some(intent_analysis.summary.clone()),
+        });
+        if let Ok(json) = serde_json::to_string(&phase_event) {
+            yield Ok(Event::default().data(json));
+        }
+        
+        // Phase 2: Gathering context
+        let phase_event = SseEventData::Phase(PhaseData {
+            phase: "gathering".to_string(),
+            status: "starting".to_string(),
+            message: Some("Collecte des informations...".to_string()),
         });
         if let Ok(json) = serde_json::to_string(&phase_event) {
             yield Ok(Event::default().data(json));
@@ -1663,10 +1677,10 @@ pub async fn chat_stream(
         
         // Execute data tools with real-time feedback
         let data_tool_execution = execute_data_tools_streaming(
-            &orchestrator_for_tools,
-            &context_for_tools,
-            &user_message_for_tools,
-            &history_for_tools,
+            &orchestrator_for_stream,
+            &context_for_stream,
+            &user_message_for_stream,
+            &history_for_stream,
         ).await;
         
         // Send tool events as they were collected
@@ -1743,19 +1757,19 @@ pub async fn chat_stream(
         let ai_request = CoreAIChatRequest {
             website_id: req.website_id,
             message: if let Some(ref execution) = data_tool_execution {
-                format!("{}\n\n{}", user_message_for_tools, execution.context_additions)
+                format!("{}\n\n{}", user_message_for_stream, execution.context_additions)
             } else {
-                user_message_for_tools.clone()
+                user_message_for_stream.clone()
             },
             conversation_id: Some(conversation_id),
-            history: history_for_tools.clone(),
+            history: history_for_stream.clone(),
             attachments: vec![],
             stream: true,
         };
         
         // Start actual AI streaming
-        let stream_result = orchestrator_for_tools
-            .chat_stream(&ai_request, context_for_tools.clone(), account_id, &plan)
+        let stream_result = orchestrator_for_stream
+            .chat_stream(&ai_request, context_for_stream.clone(), account_id, &plan_for_stream)
             .await;
         
         match stream_result {
@@ -1763,10 +1777,10 @@ pub async fn chat_stream(
                 // Execute thinking steps with real AI calls (sequential)
                 let mut step_results: Vec<StepResult> = Vec::new();
                 
-                if intent_for_thinking.needs_thinking && !intent_for_thinking.thinking_steps.is_empty() {
-                    let total_steps = intent_for_thinking.thinking_steps.len() as u32;
+                if intent_analysis.needs_thinking && !intent_analysis.thinking_steps.is_empty() {
+                    let total_steps = intent_analysis.thinking_steps.len() as u32;
                     
-                    for thinking_step in &intent_for_thinking.thinking_steps {
+                    for thinking_step in &intent_analysis.thinking_steps {
                         // Send "starting" event for this step
                         let thinking_start = SseEventData::Thinking(ThinkingData {
                             thought: thinking_step.description.clone(),
@@ -1780,12 +1794,12 @@ pub async fn chat_stream(
                         
                         // Execute real AI call for this step
                         let step_result = execute_thinking_step(
-                            orchestrator_for_thinking.router(),
+                            orchestrator_for_stream.router(),
                             thinking_step,
                             total_steps,
-                            &user_message_for_thinking,
-                            &context_for_thinking,
-                            &intent_for_thinking.language,
+                            &user_message_for_stream,
+                            &context_for_stream,
+                            &intent_analysis.language,
                             &step_results,
                         ).await;
                         
@@ -1818,10 +1832,10 @@ pub async fn chat_stream(
                             }
                         }
                     }
-                } else if !intent_for_stream.summary.is_empty() {
+                } else if !intent_analysis.summary.is_empty() {
                     // For simple requests, just show the summary briefly
                     let thinking = SseEventData::Thinking(ThinkingData {
-                        thought: intent_for_stream.summary.clone(),
+                        thought: intent_analysis.summary.clone(),
                         step: None,
                         status: None,
                         insight: None,
