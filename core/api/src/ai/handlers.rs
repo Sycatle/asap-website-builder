@@ -342,6 +342,7 @@ pub async fn chat_stream(
                 needs_thinking: false,
                 thinking_steps: vec![],
                 language: detect_language_simple(&user_message_for_stream),
+                proactive_hints: vec![],
             }
         } else {
             // OPTIMIZATION #5: Retry with exponential backoff on rate limit
@@ -379,6 +380,7 @@ pub async fn chat_stream(
                             needs_thinking: false,
                             thinking_steps: vec![],
                             language: "en".to_string(),
+                            proactive_hints: vec![],
                         };
                     }
                 }
