@@ -44,6 +44,12 @@ import {
   VolumeX,
   MessageSquare,
   ChevronDown,
+  Database,
+  Variable,
+  Settings,
+  Puzzle,
+  FileText,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWebsiteContext } from "@/contexts/WebsiteContext";
@@ -306,6 +312,17 @@ const TOOL_CONFIG: Record<string, { icon: React.ElementType; label: string; colo
   'default': { icon: Zap, label: 'Processing', color: 'text-primary', bgColor: 'bg-primary/10' },
 };
 
+// AI Data tools config (search tools)
+const AI_DATA_TOOL_CONFIG: Record<string, { icon: React.ElementType; label: string }> = {
+  'search_collections': { icon: Database, label: 'Collections' },
+  'search_variables': { icon: Variable, label: 'Variables' },
+  'get_website_sections': { icon: Layout, label: 'Sections' },
+  'get_website_theme': { icon: Palette, label: 'Thème' },
+  'get_website_settings': { icon: Settings, label: 'Paramètres' },
+  'list_extensions': { icon: Puzzle, label: 'Extensions' },
+  'get_page_content': { icon: FileText, label: 'Contenu de page' },
+};
+
 // Chain of thought step type
 interface ChainStep {
   id: string;
@@ -341,6 +358,14 @@ interface IterationState {
   description?: string;
 }
 
+// Used tool information (displayed after response)
+interface UsedTool {
+  id: string;
+  name: string;
+  description: string;
+  success: boolean;
+}
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -358,6 +383,8 @@ interface Message {
   isAnalyzing?: boolean;
   // Token usage
   usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+  // Used tools (for display after completion)
+  usedTools?: UsedTool[];
 }
 
 interface GlobalAIChatPanelProps {
@@ -774,15 +801,27 @@ export function GlobalAIChatPanel({
           ));
         },
         onDone: () => {
-          // Mark all remaining chain steps as completed
+          // Mark all remaining chain steps as completed and collect used tools
           setMessages(prev => prev.map(m => {
             if (m.id !== assistantMessageId) return m;
             const steps = m.chainSteps || [];
+            
+            // Collect used tools from toolCalls
+            const usedTools: UsedTool[] = (m.toolCalls || [])
+              .filter(tc => AI_DATA_TOOL_CONFIG[tc.tool]) // Only AI data tools
+              .map(tc => ({
+                id: tc.id,
+                name: tc.tool,
+                description: tc.description,
+                success: tc.status === 'completed',
+              }));
+            
             return {
               ...m,
               isStreaming: false,
               isAnalyzing: false,
               chainSteps: steps.map(s => s.status === 'running' || s.status === 'pending' ? { ...s, status: 'completed' as const } : s),
+              usedTools: usedTools.length > 0 ? usedTools : undefined,
             };
           }));
           setIsLoading(false);
@@ -1660,6 +1699,49 @@ function MessageBubble({
                         {formatActionLabel(action)}
                       </span>
                     </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          
+          {/* Used tools/sources display - shown after response is complete */}
+          {!isUser && !message.isStreaming && message.usedTools && message.usedTools.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-border/30">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Search className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                  Sources consultées
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {message.usedTools.map((tool) => {
+                  const config = AI_DATA_TOOL_CONFIG[tool.name];
+                  const Icon = config?.icon || Database;
+                  const label = config?.label || tool.name.replace(/_/g, ' ');
+                  
+                  return (
+                    <Tooltip key={tool.id}>
+                      <TooltipTrigger asChild>
+                        <div className={cn(
+                          "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors",
+                          tool.success 
+                            ? "bg-muted/50 text-muted-foreground hover:bg-muted" 
+                            : "bg-red-500/10 text-red-600 dark:text-red-400"
+                        )}>
+                          <Icon className="h-3 w-3" />
+                          <span>{label}</span>
+                          {tool.success ? (
+                            <CheckCircle2 className="h-2.5 w-2.5 text-green-500" />
+                          ) : (
+                            <AlertCircle className="h-2.5 w-2.5" />
+                          )}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        <p className="text-xs">{tool.description}</p>
+                      </TooltipContent>
+                    </Tooltip>
                   );
                 })}
               </div>
