@@ -63,6 +63,9 @@ services:
       GITHUB_CLIENT_ID: ""
       GITHUB_CLIENT_SECRET: ""
       GITHUB_REDIRECT_URI: "http://localhost:4323/oauth/github/callback"
+      # AI Configuration
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "3000:3000"
     healthcheck:

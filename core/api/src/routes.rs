@@ -230,6 +230,7 @@ pub async fn create_router_with_ws(
         // AI Chat routes
         .route("/ai/chat", post(crate::ai::chat))
         .route("/ai/chat/stream", post(crate::ai::chat_stream))
+        .route("/ai/execute", post(crate::ai::execute_action))
         .route("/ai/quota", get(crate::ai::get_quota))
         .route("/ai/status", get(crate::ai::status))
         .layer(Extension(ai_orchestrator.clone()))
