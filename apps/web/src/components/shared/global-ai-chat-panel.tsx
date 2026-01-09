@@ -749,6 +749,10 @@ export function GlobalAIChatPanel({
             });
           });
         },
+        onConversation: (data: { id: string }) => {
+          // Store conversation ID for follow-up messages
+          setConversationId(data.id);
+        },
         onDone: () => {
           // Mark all remaining chain steps as completed
           setMessages(prev => prev.map(m => {

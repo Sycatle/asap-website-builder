@@ -233,6 +233,10 @@ pub async fn create_router_with_ws(
         .route("/ai/execute", post(crate::ai::execute_action))
         .route("/ai/quota", get(crate::ai::get_quota))
         .route("/ai/status", get(crate::ai::status))
+        // AI Conversations routes
+        .route("/ai/conversations", get(crate::ai::list_conversations))
+        .route("/ai/conversations/:id", get(crate::ai::get_conversation))
+        .route("/ai/conversations/:id", delete(crate::ai::delete_conversation))
         // Element Templates routes
         .route("/templates", get(crate::templates::list_templates))
         .route("/templates", post(crate::templates::create_template))

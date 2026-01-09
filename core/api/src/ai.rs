@@ -79,10 +79,19 @@ pub enum SseEventData {
     Iteration(IterationData),
     /// Action to execute
     Action(AIAction),
+    /// Conversation metadata (sent at start)
+    #[serde(rename = "conversation")]
+    Conversation(ConversationData),
     /// Stream complete
     Done,
     /// Error occurred
     Error { code: String, message: String },
+}
+
+/// Conversation metadata event
+#[derive(Debug, Clone, Serialize)]
+pub struct ConversationData {
+    pub id: Uuid,
 }
 
 /// Thinking event data
@@ -131,6 +140,51 @@ pub struct QuotaResponse {
     pub daily_used: u32,
     pub daily_remaining: u32,
     pub resets_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// Conversation history message
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConversationMessage {
+    pub role: String,
+    pub content: String,
+}
+
+/// List conversations response
+#[derive(Debug, Clone, Serialize)]
+pub struct ConversationsResponse {
+    pub conversations: Vec<ConversationSummary>,
+}
+
+/// Summary of a conversation
+#[derive(Debug, Clone, Serialize)]
+pub struct ConversationSummary {
+    pub id: Uuid,
+    pub title: Option<String>,
+    pub website_id: Uuid,
+    pub message_count: i64,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// Full conversation with messages
+#[derive(Debug, Clone, Serialize)]
+pub struct ConversationDetail {
+    pub id: Uuid,
+    pub title: Option<String>,
+    pub website_id: Uuid,
+    pub messages: Vec<ConversationMessageDetail>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// Message detail in a conversation
+#[derive(Debug, Clone, Serialize)]
+pub struct ConversationMessageDetail {
+    pub id: Uuid,
+    pub role: String,
+    pub content: String,
+    pub actions: Vec<AIAction>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Error response format
@@ -255,6 +309,140 @@ async fn verify_website_ownership(
     }
     
     Ok(())
+}
+
+// ============================================================================
+// Conversation History Management
+// ============================================================================
+
+/// Get or create a conversation for the given website
+async fn get_or_create_conversation(
+    pool: &PgPool,
+    account_id: Uuid,
+    website_id: Uuid,
+    conversation_id: Option<Uuid>,
+    first_message: &str,
+) -> Result<Uuid, StatusCode> {
+    // If conversation_id provided, verify it exists and belongs to the user
+    if let Some(conv_id) = conversation_id {
+        let exists: (bool,) = sqlx::query_as(
+            "SELECT EXISTS(SELECT 1 FROM ai_conversations WHERE id = $1 AND account_id = $2 AND website_id = $3)"
+        )
+        .bind(conv_id)
+        .bind(account_id)
+        .bind(website_id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to check conversation: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+        
+        if exists.0 {
+            return Ok(conv_id);
+        }
+        // If not found, create a new one (don't error, just start fresh)
+    }
+    
+    // Create a new conversation with auto-generated title from first message
+    let title = generate_conversation_title(first_message);
+    let new_id = Uuid::new_v4();
+    
+    sqlx::query(
+        "INSERT INTO ai_conversations (id, account_id, website_id, title) VALUES ($1, $2, $3, $4)"
+    )
+    .bind(new_id)
+    .bind(account_id)
+    .bind(website_id)
+    .bind(&title)
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to create conversation: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    
+    Ok(new_id)
+}
+
+/// Generate a short title from the first message
+fn generate_conversation_title(message: &str) -> String {
+    // Take first 50 chars, cut at word boundary
+    let truncated: String = message.chars().take(60).collect();
+    if let Some(pos) = truncated.rfind(' ') {
+        if pos > 20 {
+            return format!("{}...", &truncated[..pos]);
+        }
+    }
+    if truncated.len() < message.len() {
+        format!("{}...", truncated)
+    } else {
+        truncated
+    }
+}
+
+/// Save a message to the conversation
+async fn save_message(
+    pool: &PgPool,
+    conversation_id: Uuid,
+    role: &str,
+    content: &str,
+    actions: Option<&[AIAction]>,
+    tokens: Option<i32>,
+) -> Result<Uuid, StatusCode> {
+    let actions_json = actions
+        .map(|a| serde_json::to_value(a).unwrap_or_default())
+        .unwrap_or(serde_json::json!([]));
+    
+    let message_id = Uuid::new_v4();
+    
+    sqlx::query(
+        "INSERT INTO ai_messages (id, conversation_id, role, content, actions, tokens_used) VALUES ($1, $2, $3, $4, $5, $6)"
+    )
+    .bind(message_id)
+    .bind(conversation_id)
+    .bind(role)
+    .bind(content)
+    .bind(&actions_json)
+    .bind(tokens)
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to save message: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    
+    Ok(message_id)
+}
+
+/// Load conversation history for AI context
+async fn load_conversation_history(
+    pool: &PgPool,
+    conversation_id: Uuid,
+    max_messages: i64,
+) -> Result<Vec<ConversationMessage>, StatusCode> {
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        r#"
+        SELECT role, content 
+        FROM ai_messages 
+        WHERE conversation_id = $1 
+        ORDER BY created_at DESC 
+        LIMIT $2
+        "#
+    )
+    .bind(conversation_id)
+    .bind(max_messages)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to load conversation history: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    
+    // Reverse to get chronological order
+    Ok(rows.into_iter().rev().map(|(role, content)| {
+        ConversationMessage { role, content }
+    }).collect())
 }
 
 // Row types for SQL queries
@@ -454,11 +642,46 @@ pub async fn chat(
         }))
     })?;
     
-    // Build AI request
+    // Get or create conversation
+    let conversation_id = get_or_create_conversation(
+        &pool, 
+        account_id, 
+        req.website_id, 
+        req.conversation_id,
+        &req.message
+    ).await.map_err(|s| {
+        (s, Json(ErrorResponse {
+            error: "Failed to manage conversation".to_string(),
+            code: "internal_error".to_string(),
+        }))
+    })?;
+    
+    // Load conversation history
+    let history = load_conversation_history(&pool, conversation_id, 20).await.map_err(|s| {
+        (s, Json(ErrorResponse {
+            error: "Failed to load conversation history".to_string(),
+            code: "internal_error".to_string(),
+        }))
+    })?;
+    
+    // Convert history to AI Message format
+    let history_messages: Vec<asap_core_ai::Message> = history.iter().map(|m| {
+        match m.role.as_str() {
+            "user" => asap_core_ai::Message::user(&m.content),
+            "assistant" => asap_core_ai::Message::assistant(&m.content),
+            _ => asap_core_ai::Message::user(&m.content),
+        }
+    }).collect();
+    
+    // Save user message
+    let _ = save_message(&pool, conversation_id, "user", &req.message, None, None).await;
+    
+    // Build AI request with history
     let ai_request = CoreAIChatRequest {
         website_id: req.website_id,
         message: req.message,
-        conversation_id: req.conversation_id,
+        conversation_id: Some(conversation_id),
+        history: history_messages,
         attachments: vec![],
         stream: false,
     };
@@ -469,9 +692,19 @@ pub async fn chat(
         .await
         .map_err(|e| ai_error_to_response(e))?;
     
+    // Save assistant response
+    let _ = save_message(
+        &pool, 
+        conversation_id, 
+        "assistant", 
+        &response.message, 
+        if response.actions.is_empty() { None } else { Some(&response.actions) },
+        Some(response.usage.total_tokens as i32)
+    ).await;
+    
     Ok(Json(ChatResponse {
         id: response.id,
-        conversation_id: response.conversation_id,
+        conversation_id,
         message: response.message,
         actions: response.actions,
         usage: response.usage,
@@ -524,12 +757,49 @@ pub async fn chat_stream(
     
     // Analyze user intent BEFORE building the request (req.message will be moved)
     let (intent, matched_keywords) = analyze_user_intent(&req.message);
+    let user_message = req.message.clone();
     
-    // Build AI request
+    // Get or create conversation
+    let conversation_id = get_or_create_conversation(
+        &pool, 
+        account_id, 
+        req.website_id, 
+        req.conversation_id,
+        &user_message
+    ).await.map_err(|s| {
+        (s, Json(ErrorResponse {
+            error: "Failed to manage conversation".to_string(),
+            code: "internal_error".to_string(),
+        }))
+    })?;
+    
+    // Load conversation history (last 20 messages for context)
+    let history = load_conversation_history(&pool, conversation_id, 20).await.map_err(|s| {
+        (s, Json(ErrorResponse {
+            error: "Failed to load conversation history".to_string(),
+            code: "internal_error".to_string(),
+        }))
+    })?;
+    
+    // Convert history to AI Message format
+    let history_messages: Vec<asap_core_ai::Message> = history.iter().map(|m| {
+        match m.role.as_str() {
+            "user" => asap_core_ai::Message::user(&m.content),
+            "assistant" => asap_core_ai::Message::assistant(&m.content),
+            _ => asap_core_ai::Message::user(&m.content),
+        }
+    }).collect();
+    
+    // Save user message to conversation
+    let pool_for_save = pool.clone();
+    let _ = save_message(&pool_for_save, conversation_id, "user", &user_message, None, None).await;
+    
+    // Build AI request with history
     let ai_request = CoreAIChatRequest {
         website_id: req.website_id,
         message: req.message,
-        conversation_id: req.conversation_id,
+        conversation_id: Some(conversation_id),
+        history: history_messages,
         attachments: vec![],
         stream: true,
     };
@@ -540,10 +810,19 @@ pub async fn chat_stream(
         .chat_stream(&ai_request, context, account_id, &plan)
         .await;
     
+    // Clone pool for use in stream
+    let pool_for_stream = pool.clone();
+    
     match stream_result {
         Ok((mut token_stream, _rate_status)) => {
             // Create SSE stream from token stream with action parsing
             let stream = async_stream::stream! {
+                // Send conversation ID first so frontend can track it
+                let conv_event = SseEventData::Conversation(ConversationData { id: conversation_id });
+                if let Ok(json) = serde_json::to_string(&conv_event) {
+                    yield Ok(Event::default().data(json));
+                }
+                
                 // Send contextual initial thought based on user intent
                 let initial_thought = match intent.as_str() {
                     "adding content" => {
@@ -580,6 +859,7 @@ pub async fn chat_stream(
                 let mut sent_tool_calls: std::collections::HashSet<String> = std::collections::HashSet::new();
                 let mut sent_response_thought = false;
                 let mut sent_action_thought = false;
+                let mut parsed_actions: Vec<AIAction> = Vec::new();
                 
                 // Track content patterns for progressive feedback
                 let mut word_count = 0usize;
@@ -634,6 +914,9 @@ pub async fn chat_stream(
                                     let action_id = format!("action_{}", detected_action_count);
                                     detected_action_count += 1;
                                     
+                                    // Collect action for saving
+                                    parsed_actions.push(action.clone());
+                                    
                                     // Send tool call event (running)
                                     if !sent_tool_calls.contains(&action_id) {
                                         sent_tool_calls.insert(action_id.clone());
@@ -687,6 +970,23 @@ pub async fn chat_stream(
                             }
                         }
                     }
+                }
+                
+                // Save assistant response to conversation history
+                if !full_content.is_empty() {
+                    let actions_to_save: Option<&[AIAction]> = if parsed_actions.is_empty() { 
+                        None 
+                    } else { 
+                        Some(&parsed_actions) 
+                    };
+                    let _ = save_message(
+                        &pool_for_stream, 
+                        conversation_id, 
+                        "assistant", 
+                        &full_content, 
+                        actions_to_save,
+                        None
+                    ).await;
                 }
                 
                 // Send done event at the end
@@ -766,6 +1066,197 @@ pub async fn status(
         "available": available,
         "providers": providers,
     }))
+}
+
+// ============================================================================
+// Conversation History Endpoints
+// ============================================================================
+
+/// List conversations for a website
+/// GET /api/v1/ai/conversations?website_id=...
+pub async fn list_conversations(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> Result<Json<ConversationsResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let account_id = get_account_id(&claims).map_err(|s| {
+        (s, Json(ErrorResponse {
+            error: "Unauthorized".to_string(),
+            code: "unauthorized".to_string(),
+        }))
+    })?;
+    
+    let website_id = params.get("website_id")
+        .and_then(|s| Uuid::parse_str(s).ok())
+        .ok_or_else(|| {
+            (StatusCode::BAD_REQUEST, Json(ErrorResponse {
+                error: "website_id is required".to_string(),
+                code: "bad_request".to_string(),
+            }))
+        })?;
+    
+    // Verify ownership
+    verify_website_ownership(&pool, account_id, website_id).await.map_err(|s| {
+        (s, Json(ErrorResponse {
+            error: "Website not found".to_string(),
+            code: "not_found".to_string(),
+        }))
+    })?;
+    
+    // Fetch conversations with message counts
+    let rows: Vec<(Uuid, Option<String>, Uuid, i64, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(
+        r#"
+        SELECT 
+            c.id, c.title, c.website_id,
+            COUNT(m.id) as message_count,
+            c.created_at, c.updated_at
+        FROM ai_conversations c
+        LEFT JOIN ai_messages m ON m.conversation_id = c.id
+        WHERE c.account_id = $1 AND c.website_id = $2
+        GROUP BY c.id
+        ORDER BY c.updated_at DESC
+        LIMIT 50
+        "#
+    )
+    .bind(account_id)
+    .bind(website_id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch conversations: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse {
+            error: "Failed to fetch conversations".to_string(),
+            code: "internal_error".to_string(),
+        }))
+    })?;
+    
+    let conversations = rows.into_iter().map(|(id, title, website_id, message_count, created_at, updated_at)| {
+        ConversationSummary {
+            id,
+            title,
+            website_id,
+            message_count,
+            created_at,
+            updated_at,
+        }
+    }).collect();
+    
+    Ok(Json(ConversationsResponse { conversations }))
+}
+
+/// Get conversation details with messages
+/// GET /api/v1/ai/conversations/:id
+pub async fn get_conversation(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    axum::extract::Path(conversation_id): axum::extract::Path<Uuid>,
+) -> Result<Json<ConversationDetail>, (StatusCode, Json<ErrorResponse>)> {
+    let account_id = get_account_id(&claims).map_err(|s| {
+        (s, Json(ErrorResponse {
+            error: "Unauthorized".to_string(),
+            code: "unauthorized".to_string(),
+        }))
+    })?;
+    
+    // Fetch conversation
+    let conv: Option<(Uuid, Option<String>, Uuid, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(
+        "SELECT id, title, website_id, created_at, updated_at FROM ai_conversations WHERE id = $1 AND account_id = $2"
+    )
+    .bind(conversation_id)
+    .bind(account_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch conversation: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse {
+            error: "Failed to fetch conversation".to_string(),
+            code: "internal_error".to_string(),
+        }))
+    })?;
+    
+    let (id, title, website_id, created_at, updated_at) = conv.ok_or_else(|| {
+        (StatusCode::NOT_FOUND, Json(ErrorResponse {
+            error: "Conversation not found".to_string(),
+            code: "not_found".to_string(),
+        }))
+    })?;
+    
+    // Fetch messages
+    let message_rows: Vec<(Uuid, String, String, serde_json::Value, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(
+        r#"
+        SELECT id, role, content, COALESCE(actions, '[]'::jsonb), created_at 
+        FROM ai_messages 
+        WHERE conversation_id = $1 
+        ORDER BY created_at
+        "#
+    )
+    .bind(conversation_id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch messages: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse {
+            error: "Failed to fetch messages".to_string(),
+            code: "internal_error".to_string(),
+        }))
+    })?;
+    
+    let messages = message_rows.into_iter().map(|(id, role, content, actions_json, created_at)| {
+        let actions: Vec<AIAction> = serde_json::from_value(actions_json).unwrap_or_default();
+        ConversationMessageDetail {
+            id,
+            role,
+            content,
+            actions,
+            created_at,
+        }
+    }).collect();
+    
+    Ok(Json(ConversationDetail {
+        id,
+        title,
+        website_id,
+        messages,
+        created_at,
+        updated_at,
+    }))
+}
+
+/// Delete a conversation
+/// DELETE /api/v1/ai/conversations/:id
+pub async fn delete_conversation(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    axum::extract::Path(conversation_id): axum::extract::Path<Uuid>,
+) -> Result<StatusCode, (StatusCode, Json<ErrorResponse>)> {
+    let account_id = get_account_id(&claims).map_err(|s| {
+        (s, Json(ErrorResponse {
+            error: "Unauthorized".to_string(),
+            code: "unauthorized".to_string(),
+        }))
+    })?;
+    
+    let result = sqlx::query("DELETE FROM ai_conversations WHERE id = $1 AND account_id = $2")
+        .bind(conversation_id)
+        .bind(account_id)
+        .execute(&pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to delete conversation: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse {
+                error: "Failed to delete conversation".to_string(),
+                code: "internal_error".to_string(),
+            }))
+        })?;
+    
+    if result.rows_affected() == 0 {
+        return Err((StatusCode::NOT_FOUND, Json(ErrorResponse {
+            error: "Conversation not found".to_string(),
+            code: "not_found".to_string(),
+        })));
+    }
+    
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // ============================================================================

@@ -61,6 +61,10 @@ pub struct AIChatRequest {
     /// Conversation ID (to continue an existing conversation)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub conversation_id: Option<Uuid>,
+    
+    /// Conversation history (previous messages)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub history: Vec<Message>,
 
     /// Optional attachments (images, files)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

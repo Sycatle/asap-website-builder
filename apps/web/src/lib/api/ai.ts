@@ -105,6 +105,13 @@ export interface SseActionEvent {
   data: AIAction;
 }
 
+export interface SseConversationEvent {
+  type: 'conversation';
+  data: {
+    id: string;
+  };
+}
+
 export interface SseDoneEvent {
   type: 'done';
 }
@@ -122,6 +129,7 @@ export type SseEvent =
   | SseToolResultEvent
   | SseIterationEvent
   | SseActionEvent 
+  | SseConversationEvent
   | SseDoneEvent 
   | SseErrorEvent;
 
@@ -215,6 +223,7 @@ export interface StreamCallbacks {
   onToolResult?: (data: ToolResultData) => void;
   onIteration?: (data: IterationData) => void;
   onAction?: (action: AIAction) => void;
+  onConversation?: (data: { id: string }) => void;
   onDone?: () => void;
   onError?: (error: { code: string; message: string }) => void;
 }
@@ -326,6 +335,9 @@ export function streamChatMessage(
                   break;
                 case 'action':
                   callbacks.onAction?.(event.data);
+                  break;
+                case 'conversation':
+                  callbacks.onConversation?.(event.data);
                   break;
                 case 'done':
                   callbacks.onDone?.();

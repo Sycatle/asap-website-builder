@@ -66,16 +66,22 @@ impl AIOrchestrator {
             None
         };
 
-        // Build messages
+        // Build messages with history
         let system_prompt = build_system_prompt(&context);
-        let messages = vec![
-            Message::system(system_prompt),
-            Message::user(&request.message),
-        ];
+        let mut messages = vec![Message::system(system_prompt)];
+        
+        // Add conversation history
+        for msg in &request.history {
+            messages.push(msg.clone());
+        }
+        
+        // Add current user message
+        messages.push(Message::user(&request.message));
 
         info!(
             account_id = %account_id,
             message_length = request.message.len(),
+            history_length = request.history.len(),
             "Processing chat request"
         );
 
@@ -134,16 +140,22 @@ impl AIOrchestrator {
             None
         };
 
-        // Build messages
+        // Build messages with history
         let system_prompt = build_system_prompt(&context);
-        let messages = vec![
-            Message::system(system_prompt),
-            Message::user(&request.message),
-        ];
+        let mut messages = vec![Message::system(system_prompt)];
+        
+        // Add conversation history
+        for msg in &request.history {
+            messages.push(msg.clone());
+        }
+        
+        // Add current user message
+        messages.push(Message::user(&request.message));
 
         info!(
             account_id = %account_id,
             message_length = request.message.len(),
+            history_length = request.history.len(),
             "Processing streaming chat request"
         );
 
