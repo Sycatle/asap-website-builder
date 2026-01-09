@@ -541,13 +541,13 @@ async fn load_website_data(
     _account_id: Uuid,
     website_id: Uuid,
 ) -> Result<Option<WebsiteDataContext>, StatusCode> {
-    // Load ALL variables grouped by source_ref
+    // Load ALL variables grouped by source
     let all_vars: Vec<(String, String, serde_json::Value)> = sqlx::query_as(
         r#"
-        SELECT source_ref, key, value 
+        SELECT source, key, value 
         FROM website_variables 
         WHERE website_id = $1
-        ORDER BY source_ref, key
+        ORDER BY source, key
         "#
     )
     .bind(website_id)
@@ -559,12 +559,12 @@ async fn load_website_data(
     })?;
     
     // Load ALL collections with their items
-    let all_collections: Vec<(String, String, Option<String>, serde_json::Value)> = sqlx::query_as(
+    let all_collections: Vec<(String, String, i32, serde_json::Value)> = sqlx::query_as(
         r#"
-        SELECT collection_slug, source_ref, description, items
+        SELECT collection_slug, source_extension, total_count, items
         FROM website_collections
         WHERE website_id = $1
-        ORDER BY source_ref, collection_slug
+        ORDER BY source_extension, collection_slug
         "#
     )
     .bind(website_id)
@@ -580,13 +580,13 @@ async fn load_website_data(
         return Ok(None);
     }
     
-    // Group variables by source_ref
+    // Group variables by source
     let mut variables_by_source: std::collections::HashMap<String, Vec<(String, serde_json::Value)>> = 
         std::collections::HashMap::new();
     
-    for (source_ref, key, value) in all_vars {
+    for (source, key, value) in all_vars {
         variables_by_source
-            .entry(source_ref)
+            .entry(source)
             .or_default()
             .push((key, value));
     }
@@ -603,9 +603,10 @@ async fn load_website_data(
     // Build CollectionSummaries with item previews
     let collections: Vec<CollectionSummary> = all_collections
         .into_iter()
-        .map(|(slug, source, _description, items)| {
+        .map(|(slug, source, total_count, items)| {
             let items_array = items.as_array().cloned().unwrap_or_default();
-            let count = items_array.len() as i32;
+            // Use total_count from DB if available, otherwise count items array
+            let count = if total_count > 0 { total_count } else { items_array.len() as i32 };
             
             // Extract preview fields from first few items (up to 5)
             let preview: Vec<serde_json::Value> = items_array
