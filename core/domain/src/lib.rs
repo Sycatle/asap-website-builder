@@ -8,6 +8,7 @@ pub mod extension_schema;
 pub mod administrators;
 pub mod collections;
 pub mod extensions;
+pub mod templates;
 
 pub use users::{Account, AccountData};
 pub use websites::{
@@ -45,6 +46,10 @@ pub use collections::{
     CollectionResponse, VariablesResponse, PaginationInfo,
     // Helper
     field,
+};
+pub use templates::{
+    ElementTemplate, ElementTemplateSummary,
+    CreateElementTemplateRequest, UpdateElementTemplateRequest, ListElementTemplatesQuery,
 };
 pub use extensions::{
     // Manifest types
