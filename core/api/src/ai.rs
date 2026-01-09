@@ -986,7 +986,21 @@ pub async fn chat_stream(
     
     // Inject user and extension data into context
     context.user = Some(user_context);
-    context.extensions = extension_data;
+    context.extensions = extension_data.clone();
+    
+    // Log extension data for debugging
+    if let Some(ref ext) = extension_data {
+        if let Some(ref gh) = ext.github {
+            tracing::info!(
+                "GitHub context loaded: username={:?}, repos={}, languages={}",
+                gh.username,
+                gh.repositories.len(),
+                gh.languages.len()
+            );
+        }
+    } else {
+        tracing::debug!("No extension data loaded for website {}", req.website_id);
+    }
     
     // Clone user message before moving req
     let user_message = req.message.clone();
