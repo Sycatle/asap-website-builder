@@ -36,11 +36,39 @@ import {
   Zap,
   Plus,
   StopCircle,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWebsiteContext } from "@/contexts/WebsiteContext";
 import { useUserData } from "@/lib/store/authStore";
 import { streamChatMessage, type AIAction } from "@/lib/api/ai";
+import { useAIActionExecutor } from "@/hooks/useAIActionExecutor";
+
+// Helper to format action labels for display
+function formatActionLabel(action: AIAction): string {
+  switch (action.type) {
+    case 'update_section':
+    case 'update_property':
+      return `Update ${action.property || 'section'}`;
+    case 'add_section':
+      return `Add ${action.section_type || 'section'}`;
+    case 'remove_section':
+      return 'Remove section';
+    case 'reorder_sections':
+      return 'Reorder sections';
+    case 'duplicate_section':
+      return 'Duplicate section';
+    case 'update_theme':
+      return 'Update theme';
+    case 'update_metadata':
+      return 'Update metadata';
+    case 'generate_content':
+      return 'Generate content';
+    default:
+      return action.type.replace(/_/g, ' ');
+  }
+}
 
 interface Message {
   id: string;
@@ -48,6 +76,7 @@ interface Message {
   content: string;
   timestamp: Date;
   actions?: AIAction[];
+  executedActions?: { action: AIAction; success: boolean; error?: string }[];
   isStreaming?: boolean;
 }
 
@@ -73,9 +102,32 @@ export function GlobalAIChatPanel({
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [autoExecuteActions, setAutoExecuteActions] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // AI Action Executor
+  const { executeAction, isExecuting } = useAIActionExecutor({
+    websiteId: currentWebsite?.id || '',
+    onActionExecuted: (result) => {
+      // Update message with execution result
+      setMessages(prev => prev.map(m => {
+        if (m.role === 'assistant' && m.actions?.some(a => a === result.action)) {
+          const existingExecuted = m.executedActions || [];
+          return {
+            ...m,
+            executedActions: [...existingExecuted, {
+              action: result.action,
+              success: result.success,
+              error: result.error,
+            }],
+          };
+        }
+        return m;
+      }));
+    },
+  });
 
   const _websiteName = websiteNameOverride ?? currentWebsite?.title ?? 'ASAP';
   const websiteSlug = websiteSlugOverride !== undefined ? websiteSlugOverride : (currentWebsite?.slug ?? null);
@@ -107,6 +159,14 @@ export function GlobalAIChatPanel({
       }
     };
   }, []);
+  
+  // Auto-execute actions when they arrive
+  const handleActionReceived = useCallback(async (action: AIAction, messageId: string) => {
+    if (!autoExecuteActions) return;
+    
+    // Execute the action
+    await executeAction(action);
+  }, [autoExecuteActions, executeAction]);
 
   const handleStopStreaming = useCallback(() => {
     if (abortControllerRef.current) {
@@ -170,6 +230,8 @@ export function GlobalAIChatPanel({
               ? { ...m, actions: [...(m.actions || []), action] }
               : m
           ));
+          // Auto-execute the action
+          handleActionReceived(action, assistantMessageId);
         },
         onDone: () => {
           setMessages(prev => prev.map(m => 
@@ -192,7 +254,7 @@ export function GlobalAIChatPanel({
         },
       }
     );
-  }, [input, isLoading, currentWebsite?.id, conversationId, t]);
+  }, [input, isLoading, currentWebsite?.id, conversationId, t, handleActionReceived]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -618,6 +680,34 @@ function MessageBubble({
             : "bg-muted rounded-2xl rounded-bl-md"
         )}>
           <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+          
+          {/* AI Actions indicator */}
+          {!isUser && message.actions && message.actions.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-border/50 space-y-1">
+              {message.actions.map((action, idx) => {
+                const executed = message.executedActions?.find(e => e.action === action);
+                return (
+                  <div key={idx} className="flex items-center gap-2 text-xs">
+                    {executed ? (
+                      executed.success ? (
+                        <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
+                      ) : (
+                        <AlertCircle className="h-3 w-3 text-red-500 shrink-0" />
+                      )
+                    ) : (
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
+                    )}
+                    <span className={cn(
+                      "truncate",
+                      executed?.success === false && "text-red-500"
+                    )}>
+                      {formatActionLabel(action)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
         
         {/* Timestamp & Actions */}
