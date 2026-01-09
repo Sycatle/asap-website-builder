@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
 import {
@@ -8,9 +8,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { SectionRenderer } from "../../section-renderers";
-import { PreviewProvider } from "../../preview-context";
-import { PreviewFrame } from "./preview-frame";
+import { PreviewFrame, type PreviewFrameHandle } from "./preview-frame";
 import {
   Globe,
   Layers,
@@ -31,6 +29,15 @@ import { cn } from "@/lib/utils";
 import type { DevicePreview, PreviewTheme } from "../types";
 import { DEVICE_CONFIGS } from "../types";
 import type { WebsiteElement } from "@/lib/types";
+import { useWebsiteContext } from "@/contexts/WebsiteContext";
+import type { Viewport } from "@/hooks/use-preview-capture";
+
+// Global capture function type
+declare global {
+  interface Window {
+    __capturePreview?: (viewport?: Viewport) => Promise<{ imageId: string } | null>;
+  }
+}
 
 export interface SimplePreviewCanvasProps {
   elements: WebsiteElement[];
@@ -42,13 +49,16 @@ export interface SimplePreviewCanvasProps {
   onElementClick: (element: WebsiteElement) => void;
   websiteSlug: string | null;
   currentPageSlug: string | null;
+  currentPageId?: string;
   isHomepage: boolean;
   onRefresh: () => void;
 }
 
 /**
  * SimplePreviewCanvas - Simplified browser-like preview for two-column layout
- * Clean design without panel toggles (those are managed by the parent)
+ * 
+ * Uses an iframe-based architecture where the preview runs as a separate React app.
+ * This ensures proper React hooks support inside the preview.
  */
 export function SimplePreviewCanvas({
   elements,
@@ -60,10 +70,115 @@ export function SimplePreviewCanvas({
   onElementClick,
   websiteSlug,
   currentPageSlug,
+  currentPageId,
   isHomepage,
   onRefresh,
 }: SimplePreviewCanvasProps) {
+  const { currentWebsite } = useWebsiteContext();
   const deviceConfig = DEVICE_CONFIGS[devicePreview];
+  const previewFrameRef = useRef<PreviewFrameHandle>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [previewReady, setPreviewReady] = useState(false);
+  
+  // Use refs for values that change but shouldn't cause listener re-registration
+  const devicePreviewRef = useRef(devicePreview);
+  const websiteIdRef = useRef(currentWebsite?.id);
+  
+  // Keep refs in sync
+  useEffect(() => {
+    devicePreviewRef.current = devicePreview;
+  }, [devicePreview]);
+  
+  useEffect(() => {
+    websiteIdRef.current = currentWebsite?.id;
+  }, [currentWebsite?.id]);
+  
+  // Handle element click from iframe
+  const handleElementClick = useCallback((elementId: string) => {
+    const element = elements.find(e => e.id === elementId);
+    if (element) {
+      onElementClick(element);
+    }
+  }, [elements, onElementClick]);
+  
+  // Handle preview ready
+  const handlePreviewReady = useCallback(() => {
+    console.log('[Preview Canvas] Preview is now ready');
+    setPreviewReady(true);
+  }, []);
+  
+  // Expose global capture function for AI chat to call directly
+  useEffect(() => {
+    console.log('[Preview Canvas] Exposing global capture function');
+    
+    window.__capturePreview = async (viewport: Viewport = 'desktop'): Promise<{ imageId: string } | null> => {
+      console.log('[Preview Canvas] __capturePreview called with viewport:', viewport);
+      
+      // Map viewport to device
+      const viewportToDevice: Record<Viewport, DevicePreview> = {
+        desktop: 'desktop',
+        tablet: 'tablet',
+        mobile: 'mobile',
+      };
+      
+      const currentDevice = devicePreviewRef.current;
+      
+      // If we need to switch device, do it first
+      if (viewportToDevice[viewport] !== currentDevice) {
+        setDevicePreview(viewportToDevice[viewport]);
+        // Wait for re-render
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+      
+      setIsCapturing(true);
+      
+      try {
+        // Wait a bit for the preview to be fully rendered
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const frameRef = previewFrameRef.current;
+        if (!frameRef) {
+          console.error('[Preview Canvas] previewFrameRef is null');
+          throw new Error('Preview frame not available');
+        }
+        
+        console.log('[Preview Canvas] Starting screenshot capture...');
+        const dataUrl = await frameRef.captureScreenshot();
+        
+        if (!dataUrl) {
+          throw new Error('Failed to capture preview - no data returned');
+        }
+        
+        console.log('[Preview Canvas] Screenshot captured, uploading...');
+        
+        // Convert data URL to blob for upload
+        const response = await fetch(dataUrl);
+        const blob = await response.blob();
+        
+        // Upload the capture
+        const { uploadPreviewCapture } = await import('@/hooks/use-preview-capture');
+        const uploadResult = await uploadPreviewCapture(
+          blob,
+          websiteIdRef.current || '',
+          viewport
+        );
+        
+        console.log('[Preview Canvas] Upload successful:', uploadResult.imageId);
+        return { imageId: uploadResult.imageId };
+        
+      } catch (error) {
+        console.error('[Preview Canvas] Capture failed:', error);
+        return null;
+      } finally {
+        setIsCapturing(false);
+      }
+    };
+    
+    return () => {
+      console.log('[Preview Canvas] Removing global capture function');
+      delete window.__capturePreview;
+    };
+  }, [setDevicePreview]);
   
   // Get visible elements sorted by order
   const visibleElements = elements
@@ -80,6 +195,16 @@ export function SimplePreviewCanvas({
 
   return (
     <div className="h-full flex flex-col bg-muted/30 min-w-0">
+      {/* Capture loading indicator */}
+      {isCapturing && (
+        <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="flex items-center gap-2 px-4 py-2 bg-background rounded-lg shadow-lg border">
+            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm">Capture en cours...</span>
+          </div>
+        </div>
+      )}
+      
       {/* Browser Chrome */}
       <BrowserToolbar
         previewUrl={previewUrl}
@@ -134,30 +259,21 @@ export function SimplePreviewCanvas({
 
           {/* Main preview content */}
           <PreviewFrame 
+            ref={previewFrameRef}
+            websiteId={currentWebsite?.id || ''}
+            elements={visibleElements}
+            pageId={currentPageId}
             previewTheme={previewTheme}
+            selectedElementId={selectedElementId}
+            onElementClick={handleElementClick}
+            onReady={handlePreviewReady}
+            device={devicePreview}
             className={cn(
               "flex-1 min-h-0",
               devicePreview === 'mobile' && "rounded-[1.75rem]",
               devicePreview === 'tablet' && "rounded-xl",
             )}
-          >
-            <PreviewProvider device={devicePreview}>
-              {visibleElements.length === 0 ? (
-                <EmptyPreviewState isDarkPreview={isDarkPreview} />
-              ) : (
-                <div>
-                  {visibleElements.map((element) => (
-                    <SectionRenderer
-                      key={element.id}
-                      element={element}
-                      isSelected={selectedElementId === element.id}
-                      onClick={() => onElementClick(element)}
-                    />
-                  ))}
-                </div>
-              )}
-            </PreviewProvider>
-          </PreviewFrame>
+          />
 
           {/* Device home indicator for mobile */}
           {devicePreview === 'mobile' && (

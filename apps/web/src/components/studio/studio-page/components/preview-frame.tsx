@@ -1,12 +1,15 @@
 "use client"
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import type { WebsiteElement } from '@/lib/api';
+import { SectionRenderer } from '../../section-renderers';
+import { PreviewProvider } from '../../preview-context';
 import type { PreviewTheme } from '../types';
+import type { DevicePreview } from '../types';
 
 /**
  * CSS Variables for light/dark themes matching the public sites
- * These are copied from apps/sites/src/styles/global.css
  */
 const THEME_STYLES = {
   light: `
@@ -60,177 +63,250 @@ const THEME_STYLES = {
 };
 
 /**
- * Base styles that match the public site (from apps/sites global.css)
+ * Base styles that match the public site
  */
 const BASE_STYLES = `
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-  
-  html, body {
-    height: 100%;
-    overflow: auto;
-  }
-  
-  html {
-    scroll-behavior: smooth;
-  }
-  
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: auto; }
+  html { scroll-behavior: smooth; }
   body {
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
   }
-  
-  #preview-root {
-    min-height: 100%;
-  }
-  
-  ::selection {
-    background-color: hsl(var(--primary) / 0.3);
-    color: hsl(var(--foreground));
-  }
-  
-  /* Utility classes for HSL colors */
-  .bg-background { background-color: hsl(var(--background)); }
-  .bg-foreground { background-color: hsl(var(--foreground)); }
-  .bg-card { background-color: hsl(var(--card)); }
-  .bg-primary { background-color: hsl(var(--primary)); }
-  .bg-secondary { background-color: hsl(var(--secondary)); }
-  .bg-muted { background-color: hsl(var(--muted)); }
-  .bg-accent { background-color: hsl(var(--accent)); }
-  .bg-destructive { background-color: hsl(var(--destructive)); }
-  
-  .text-foreground { color: hsl(var(--foreground)); }
-  .text-card-foreground { color: hsl(var(--card-foreground)); }
-  .text-primary { color: hsl(var(--primary)); }
-  .text-primary-foreground { color: hsl(var(--primary-foreground)); }
-  .text-secondary-foreground { color: hsl(var(--secondary-foreground)); }
-  .text-muted-foreground { color: hsl(var(--muted-foreground)); }
-  .text-accent-foreground { color: hsl(var(--accent-foreground)); }
-  
-  .border-border { border-color: hsl(var(--border)); }
-  .border-input { border-color: hsl(var(--input)); }
-  
-  .ring-ring { --tw-ring-color: hsl(var(--ring)); }
+  #preview-root { min-height: 100%; }
 `;
 
 interface PreviewFrameProps {
-  children: React.ReactNode;
+  websiteId: string;
+  elements: WebsiteElement[];
+  pageId?: string;
   previewTheme: PreviewTheme;
+  selectedElementId?: string | null;
+  onElementClick?: (elementId: string) => void;
+  onReady?: () => void;
   className?: string;
+  device?: DevicePreview;
+}
+
+export interface PreviewFrameHandle {
+  getIframeRef: () => HTMLIFrameElement | null;
+  captureScreenshot: () => Promise<string>;
 }
 
 /**
- * PreviewFrame - Isolated iframe for WYSIWYG preview
+ * PreviewFrame - Renders React content inside an iframe with its own React root
  * 
- * Uses an iframe to completely isolate the preview styles from the dashboard.
- * This ensures Tailwind's dark mode works correctly (class on html element)
- * and the preview matches the public site exactly.
+ * Instead of createPortal (which doesn't work with hooks across iframe boundaries),
+ * we create a new React root inside the iframe. This gives the iframe its own
+ * React context, allowing hooks to work correctly.
  */
-export function PreviewFrame({ children, previewTheme, className }: PreviewFrameProps) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [mountNode, setMountNode] = useState<HTMLElement | null>(null);
+export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
+  function PreviewFrame({ 
+    websiteId,
+    elements,
+    pageId,
+    previewTheme, 
+    selectedElementId,
+    onElementClick,
+    onReady,
+    className,
+    device = 'desktop',
+  }, ref) {
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+    const rootRef = useRef<Root | null>(null);
+    const [iframeReady, setIframeReady] = useState(false);
 
-  // Handle iframe load event
-  const handleIframeLoad = useCallback(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!iframeDoc) return;
-
-    // Setup the document structure
-    const html = iframeDoc.documentElement;
-    html.setAttribute('lang', 'fr');
-    html.className = previewTheme === 'dark' ? 'dark' : '';
-
-    // Create head content
-    iframeDoc.head.innerHTML = `
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-      <style id="theme-vars">${THEME_STYLES[previewTheme]}</style>
-      <style id="base-styles">${BASE_STYLES}</style>
-      <style id="tailwind-styles"></style>
-    `;
-
-    // Copy Tailwind styles from parent
-    const tailwindStyle = iframeDoc.getElementById('tailwind-styles');
-    if (tailwindStyle) {
-      let combinedCss = '';
-      Array.from(document.styleSheets).forEach(sheet => {
-        try {
-          if (sheet.cssRules) {
-            Array.from(sheet.cssRules).forEach(rule => {
-              combinedCss += rule.cssText + '\n';
-            });
-          }
-        } catch {
-          // Cross-origin stylesheets can't be accessed
+    // Expose methods to parent
+    useImperativeHandle(ref, () => ({
+      getIframeRef: () => iframeRef.current,
+      captureScreenshot: async () => {
+        const iframe = iframeRef.current;
+        if (!iframe?.contentDocument || !iframe?.contentWindow) {
+          throw new Error('Iframe not ready');
         }
-      });
-      tailwindStyle.textContent = combinedCss;
-    }
+        
+        const root = iframe.contentDocument.getElementById('preview-root');
+        if (!root) throw new Error('Preview root not found');
+        
+        // Import html2canvas dynamically
+        const html2canvas = (await import('html2canvas')).default;
+        
+        // Capture with the iframe's window context
+        const canvas = await html2canvas(root, {
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: previewTheme === 'dark' ? '#0a0a0b' : '#ffffff',
+          scale: 1,
+          logging: false,
+          // Use the iframe's window for proper rendering context
+          windowWidth: iframe.contentWindow.innerWidth,
+          windowHeight: iframe.contentWindow.innerHeight,
+          // Ignore cross-origin images that might fail
+          onclone: (clonedDoc) => {
+            // Ensure styles are applied to cloned document
+            const clonedRoot = clonedDoc.getElementById('preview-root');
+            if (clonedRoot) {
+              clonedRoot.style.backgroundColor = previewTheme === 'dark' ? '#0a0a0b' : '#ffffff';
+            }
+          },
+        });
+        
+        return canvas.toDataURL('image/png');
+      },
+    }), [previewTheme]);
 
-    // Create body content with scroll support
-    iframeDoc.body.innerHTML = '<div id="preview-root"></div>';
-    iframeDoc.body.style.cssText = 'margin: 0; padding: 0; min-height: 100%; overflow-y: auto; overflow-x: hidden;';
-    iframeDoc.documentElement.style.cssText = 'height: 100%; overflow-y: auto; overflow-x: hidden;';
+    // Setup iframe document
+    const setupIframeDocument = useCallback(() => {
+      const iframe = iframeRef.current;
+      if (!iframe) return;
 
-    // Set mount node for portal
-    const root = iframeDoc.getElementById('preview-root');
-    setMountNode(root);
-  }, [previewTheme]);
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!iframeDoc) return;
 
-  // Update theme when previewTheme changes
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe || !mountNode) return;
+      // Setup document structure
+      const html = iframeDoc.documentElement;
+      html.setAttribute('lang', 'fr');
+      html.className = previewTheme === 'dark' ? 'dark' : '';
 
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!iframeDoc) return;
+      // Create head content
+      iframeDoc.head.innerHTML = `
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+        <style id="theme-vars">${THEME_STYLES[previewTheme]}</style>
+        <style id="base-styles">${BASE_STYLES}</style>
+        <style id="tailwind-styles"></style>
+      `;
 
-    // Update html class using classList to avoid React tracking issues
-    const html = iframeDoc.documentElement;
-    if (previewTheme === 'dark') {
-      html.classList.add('dark');
-    } else {
-      html.classList.remove('dark');
-    }
+      // Copy Tailwind styles from parent
+      const tailwindStyle = iframeDoc.getElementById('tailwind-styles');
+      if (tailwindStyle) {
+        let combinedCss = '';
+        Array.from(document.styleSheets).forEach(sheet => {
+          try {
+            if (sheet.cssRules) {
+              Array.from(sheet.cssRules).forEach(rule => {
+                combinedCss += rule.cssText + '\n';
+              });
+            }
+          } catch {
+            // Cross-origin stylesheets can't be accessed
+          }
+        });
+        tailwindStyle.textContent = combinedCss;
+      }
 
-    // Update theme variables
-    const themeVars = iframeDoc.getElementById('theme-vars');
-    if (themeVars) {
-      themeVars.textContent = THEME_STYLES[previewTheme];
-    }
-  }, [previewTheme, mountNode]);
+      // Create body content
+      iframeDoc.body.innerHTML = '<div id="preview-root"></div>';
+      iframeDoc.body.style.cssText = 'margin: 0; padding: 0; min-height: 100%; overflow-y: auto; overflow-x: hidden;';
 
-  return (
-    <iframe
-      ref={iframeRef}
-      className={className}
-      onLoad={handleIframeLoad}
-      scrolling="yes"
-      style={{
-        border: 'none',
-        width: '100%',
-        height: '100%',
-        display: 'block',
-        background: previewTheme === 'dark' ? 'hsl(240 10% 3.9%)' : 'white',
-      }}
-      title="Preview"
-    >
-      {mountNode && createPortal(children, mountNode)}
-    </iframe>
-  );
-}
+      setIframeReady(true);
+      onReady?.();
+    }, [previewTheme, onReady]);
+
+    // Handle iframe load
+    const handleIframeLoad = useCallback(() => {
+      setupIframeDocument();
+    }, [setupIframeDocument]);
+
+    // Create/Update React root inside iframe
+    useEffect(() => {
+      if (!iframeReady) return;
+
+      const iframe = iframeRef.current;
+      const iframeDoc = iframe?.contentDocument;
+      if (!iframeDoc) return;
+
+      const mountNode = iframeDoc.getElementById('preview-root');
+      if (!mountNode) return;
+
+      // Create root if not exists
+      if (!rootRef.current) {
+        rootRef.current = createRoot(mountNode);
+      }
+
+      // Sort elements by position
+      const sortedElements = [...elements]
+        .filter(e => e && e.id && e.visible !== false)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+      // Render content
+      rootRef.current.render(
+        <PreviewProvider device={device}>
+          <div className="min-h-screen">
+            {sortedElements.length === 0 ? (
+              <div className="flex items-center justify-center h-screen text-muted-foreground">
+                <p>Aucun élément à afficher</p>
+              </div>
+            ) : (
+              sortedElements.map((element) => (
+                <div
+                  key={element.id}
+                  data-element-id={element.id}
+                  className={selectedElementId === element.id ? 'ring-2 ring-primary ring-offset-2' : ''}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onElementClick?.(element.id);
+                  }}
+                >
+                  <SectionRenderer
+                    element={element}
+                    isSelected={selectedElementId === element.id}
+                    onClick={() => onElementClick?.(element.id)}
+                  />
+                </div>
+              ))
+            )}
+          </div>
+        </PreviewProvider>
+      );
+    }, [iframeReady, elements, selectedElementId, onElementClick, device]);
+
+    // Update theme when it changes
+    useEffect(() => {
+      if (!iframeReady) return;
+
+      const iframe = iframeRef.current;
+      const iframeDoc = iframe?.contentDocument;
+      if (!iframeDoc) return;
+
+      const html = iframeDoc.documentElement;
+      html.className = previewTheme === 'dark' ? 'dark' : '';
+
+      const themeVars = iframeDoc.getElementById('theme-vars');
+      if (themeVars) {
+        themeVars.textContent = THEME_STYLES[previewTheme];
+      }
+    }, [iframeReady, previewTheme]);
+
+    // Cleanup
+    useEffect(() => {
+      return () => {
+        rootRef.current?.unmount();
+        rootRef.current = null;
+      };
+    }, []);
+
+    return (
+      <iframe
+        ref={iframeRef}
+        className={className}
+        onLoad={handleIframeLoad}
+        style={{
+          border: 'none',
+          width: '100%',
+          height: '100%',
+          display: 'block',
+          background: previewTheme === 'dark' ? 'hsl(240 10% 3.9%)' : 'white',
+        }}
+        title="Preview"
+      />
+    );
+  }
+);
 
 export default PreviewFrame;
