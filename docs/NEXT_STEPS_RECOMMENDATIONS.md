@@ -1,14 +1,16 @@
-# Recommandations Stratégiques - ASAP v2
+# Strategic Recommendations - ASAP v2
 
-**Date**: 11 janvier 2026  
-**Last Update**: 11 janvier 2026 (After deep codebase analysis)  
-**Contexte**: Analyse complète de la codebase actuelle et identification des prochaines étapes prioritaires
+**Date**: January 11, 2026  
+**Last Update**: January 12, 2026 (After user feedback - priorities restructured)  
+**Context**: Complete codebase analysis and identification of next priority steps
 
 ---
 
-## 🔍 Major Discovery
+## 🔍 Major Discovery & User Feedback
 
-**CRITICAL UPDATE**: After thorough codebase analysis, the AI integration is **SUBSTANTIALLY IMPLEMENTED** with **9,181 lines of production code**. Initial recommendations were based on outdated documentation.
+**CRITICAL UPDATE #1**: After thorough codebase analysis, the AI integration is **SUBSTANTIALLY IMPLEMENTED** with **9,181 lines of production code**.
+
+**CRITICAL UPDATE #2**: User feedback revealed that **Studio visual editing is NOT operational** - this is the blocking foundation that everything else depends on.
 
 ### Evidence of AI Implementation
 - `core/ai/`: 5,638 lines (providers, streaming, rate limiting, actions, tools, vision)
@@ -16,85 +18,84 @@
 - `apps/web/`: 2,104 lines (ChatPanel, streaming client, vision integration)
 - All AI routes registered and active in production router
 
----
-
-## 📊 État Actuel du Projet (Updated)
-
-### ✅ Complété (Phases 1-5 + AI Foundation)
-- **Backend Core API** (Rust/Axum) - Architecture solide avec auth, multi-tenant, WebSocket
-- **Worker & Extensions** - Event processor avec GitHub Sync, Themes, Analytics
-- **Dashboard Web** - Interface complète avec gestion websites, sections, preview
-- **PWA** - Score 93/100, notifications push, service worker professionnel
-- **AI Integration Foundation** - Multi-provider streaming chat, actions system, vision AI ✨NEW
-- **Architecture** - Core + Extensions pattern, DRY/KISS, packages partagés
-
-### 🔧 Partiellement Complété (Needs Polish)
-- **AI Features**: Core working but TODOs exist (schema loading, quota tracking)
-- **Testing**: 100+ unit tests but ZERO E2E coverage
-- **CI/CD**: Basic setup but no automated staging/production pipeline
-- **Monitoring**: Basic health checks but no error tracking or alerting
-
-### 📋 Planifié mais non commencé
-- **Phase 6**: Extensions Avancées & Marketplace (Analytics dashboard, Custom Domains)
-- **Phase 7**: Monétisation & Enterprise (Plans SaaS, Stripe avancé, White-label)
-- **Phase 8**: Scale & Global (Multi-région, Apps mobiles, Écosystème développeurs)
-
-### 🎯 Documentation disponible
-- docs/ai/ - Comprehensive AI documentation (7 files, architecture, features, API)
-- ROADMAP.md - Vision complète du projet jusqu'en 2027
-- Architecture complète et bien documentée
+### Evidence of Missing Studio Functionality
+- Studio components exist but **not fully operational for visual editing**
+- Missing: Complete properties panel, drag & drop, element selection
+- Onboarding exists (1,733 lines) but lacks intelligent questionnaire
+- Cannot test what doesn't work yet
 
 ---
 
-## 🚀 Les Trois Prochains Prompts Recommandés
+## 📊 Current Project State (Revised)
 
-Basé sur l'analyse du projet, voici les **trois prompts qui feraient avancer le projet de manière la plus significative**, classés par ordre de priorité et d'impact:
+### ✅ Completed (Phases 1-5 + AI Foundation)
+- **Backend Core API** (Rust/Axum) - Solid architecture with auth, multi-tenant, WebSocket
+- **Worker & Extensions** - Event processor with GitHub Sync, Themes, Analytics
+- **Dashboard Web** - Complete interface with website, section, preview management
+- **PWA** - Score 93/100, push notifications, professional service worker
+- **AI Integration Foundation** - Multi-provider streaming chat, actions system, vision AI ✨
+- **Basic Onboarding** - Template selection and steps (1,733 lines)
+
+### ⚠️ Missing / Not Operational
+- **Visual Studio Editor** - Core editing functionality not complete (BLOCKING)
+- **Intelligent Onboarding** - Exists but lacks smart questionnaire
+- **AI ↔ Studio Integration** - AI works but not connected to visual editor
+- **E2E Testing** - Zero coverage despite complex features
 
 ---
 
-## 1️⃣ Prompt #1: End-to-End Tests & CI/CD Pipeline (NOW TOP PRIORITY)
+## 🎯 Restructured Priorities (5 Prompts)
 
-### 📝 Prompt suggéré:
+Based on user feedback: **Studio First → Onboarding → AI Integration → Polish → Tests**
+
+---
+
+## 1️⃣ Prompt #1: Complete Visual Studio Editor (BLOCKING PRIORITY)
+
+### 📝 Suggested Prompt:
 ```
-"Mets en place une suite de tests end-to-end complète couvrant tous les parcours 
-utilisateurs critiques incluant l'utilisation de l'AI (signup → création website → 
-chat AI → édition via actions AI → publication), puis configure une pipeline CI/CD 
-robuste avec GitHub Actions incluant: tests automatiques, linting, build Docker, 
-déploiement staging automatique, monitoring Sentry, et rollback en cas d'échec."
+"Implement a complete visual studio editor for ASAP with: (1) left sidebar listing 
+all website elements with drag & drop to reorder, (2) dynamic properties panel on the 
+right allowing editing of all properties for each element type (text, colors, images, 
+links, etc.), (3) responsive central preview with visual element selection, and (4) 
+quick actions (duplicate, delete, hide). Use existing shadcn/ui components and ensure 
+smooth UX."
 ```
 
-### 🎯 Impact: **CRITIQUE** (🔥🔥🔥)
+### 🎯 Impact: **BLOCKING** (🔥🔥🔥)
 
-### Pourquoi c'est MAINTENANT la priorité #1:
-1. **AI déjà implémenté** - 9,181 lines of production AI code already working but UNTESTED
-2. **Zero E2E coverage** - Currently 100+ unit tests but NO integration testing
-3. **Beta blocker** - Cannot launch beta with complex AI features without E2E tests
-4. **High risk** - AI actions can break things subtly, need comprehensive testing
-5. **Mature project** - With 15,000+ lines of Rust code, automated testing is critical
+### Why this is THE absolute priority:
+1. **Not operational currently** - Studio exists but isn't functional for editing
+2. **Product foundation** - Without visual editor, impossible to create/modify sites
+3. **Prerequisite for everything** - AI, onboarding, tests all depend on this
+4. **Core MVP** - This is THE base functionality users expect
+5. **Duration** - 3-4 weeks
 
-### Ce qui sera livré:
-- ✅ Comprehensive Playwright E2E test suite
-  - User flows: signup → onboarding → first website
-  - AI flows: chat → actions execution → section updates → preview refresh
-  - Publishing flow: validation → publication → public site access
-  - Admin flows: website management, extensions, pages
-- ✅ GitHub Actions CI/CD pipeline
-  - `.github/workflows/ci.yml` - Tests + Linting on every PR
-  - `.github/workflows/build.yml` - Docker multi-stage builds with caching
-  - `.github/workflows/deploy-staging.yml` - Auto-deploy on merge to main
-- ✅ Monitoring & Observability
-  - Sentry integration for error tracking
-  - Health check endpoints (`/health`, `/ready`)
-  - Logging infrastructure (structured logs)
-  - Uptime monitoring setup
-- ✅ Rollback mechanism
-  - Blue-green deployment strategy
-  - Automated rollback on health check failures
+### What will be delivered:
+```
+✅ Left sidebar with element list
+   • Drag & drop to reorder
+   • Icons per element type
+   • Active element indicator
+   • Quick action buttons (👁️ hide, 🗑️ delete, ➕ duplicate)
 
-### Risques à gérer:
-- Flaky E2E tests (mitigation: retry logic, generous timeouts, parallel execution)
-- CI pipeline complexity (mitigation: cache Docker layers, optimize build times)
-- Staging environment costs (mitigation: auto-shutdown during off-hours)
+✅ Right properties panel
+   • Dynamic editors per element type
+   • Text input, color picker, image upload, URL input
+   • Real-time validation
+   • Auto-save on modification
+
+✅ Central responsive preview
+   • Modes: Desktop / Tablet / Mobile
+   • Click element to select
+   • Highlight selected element
+   • Auto-refresh after modification
+
+✅ Toolbar
+   • Buttons: Undo / Redo
+   • Device switcher
+   • "Publish" button with validation
+```
 
 ---
 
@@ -359,3 +360,53 @@ Si vous avez des questions sur ces recommandations ou besoin de précisions sur 
 **Document créé le**: 11 janvier 2026  
 **Prochaine révision**: Après implémentation du Prompt #1  
 **Auteur**: AI Coding Agent - Analyse stratégique du projet ASAP v2
+
+---
+
+## 📊 Priority Comparison
+
+### Original (Based on docs only)
+1. E2E Tests & CI/CD (thought everything was ready to test)
+2. User Onboarding  
+3. AI Polish
+
+### Revised (Based on user feedback)
+1. **Visual Studio Editor** (NOT operational - BLOCKING)
+2. **Intelligent Onboarding** (exists but basic - needs smart questionnaire)
+3. **AI ↔ Studio Integration** (AI exists but not connected)
+4. **UX Polish** (after core features work)
+5. **E2E Tests & CI/CD** (last, when product is complete)
+
+### Key Insight
+**"You can't test what doesn't exist yet"** - The studio editor is the missing foundation. All other features depend on having a functional visual editor first.
+
+---
+
+## 🎯 Recommended Execution Order
+
+**Sequential Approach (10-14 weeks):**
+
+```
+Weeks 1-4   : Prompt #1 (Visual Studio)
+              └─> BLOCKING: Everything depends on this
+
+Weeks 5-6   : Prompt #2 (Intelligent Onboarding)
+              └─> Improves first-time user experience
+
+Weeks 7-9   : Prompt #3 (AI ↔ Studio Integration)
+              └─> Killer differentiating feature
+
+Weeks 10-11 : Prompt #4 (UX Polish)
+              └─> Beta preparation
+
+Weeks 12-14 : Prompt #5 (E2E Tests & CI/CD)
+              └─> Production readiness
+```
+
+**Result**: In 3-4 months, ASAP will be **operational**, **differentiated**, **polished**, and **tested**! 🚀
+
+---
+
+**Document created January 11, 2026**  
+**Restructured January 12, 2026 based on user feedback**  
+**Ready to implement in recommended order!** 🎯
