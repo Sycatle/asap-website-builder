@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { WebsiteElement, UpdateElementRequest } from "@/lib/types/element";
 import { 
   getSectionSchema, 
   getPropertyGroups, 
   getPropertiesByGroup,
   type PropertySchema,
-  type SectionSchema 
+  type SectionSchema,
+  type DataBinding,
 } from "@asap/shared";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -31,6 +31,8 @@ import { IconPicker } from "./icon-picker";
 import { ImageEditor } from "./image-editor";
 import { ColorPicker } from "./color-picker";
 import { SortableArrayEditor } from "./sortable-array-editor";
+import { VariableTextInput } from "./variable-text-input";
+import { CollectionBinding } from "./collection-binding";
 import { usePropertyValidation } from "./property-validation";
 import { cn } from "@/lib/utils";
 
@@ -353,10 +355,28 @@ function TextProperty({ property, value, onChange, isUpdating }: BasePropertyPro
   const [error, setError] = useState<string | null>(null);
   
   // Validate on change
-  const handleChange = (newValue: string) => {
+  const handleChange = useCallback((newValue: string) => {
     setLocalValue(newValue);
     setError(validate(newValue));
-  };
+  }, [setLocalValue, validate]);
+
+  // Check if this field supports variables (text fields that aren't URLs)
+  const supportsVariables = property.type === "text" && !property.key.includes("url");
+
+  if (supportsVariables) {
+    return (
+      <VariableTextInput
+        value={localValue}
+        onChange={handleChange}
+        label={property.label}
+        placeholder={property.placeholder}
+        disabled={isUpdating}
+        error={error}
+        description={property.description}
+        required={property.required}
+      />
+    );
+  }
 
   return (
     <div className="space-y-1.5">
@@ -383,21 +403,18 @@ function TextProperty({ property, value, onChange, isUpdating }: BasePropertyPro
 function TextareaProperty({ property, value, onChange, isUpdating }: BasePropertyProps<string>) {
   const [localValue, setLocalValue] = useDebouncedInput(value, onChange);
 
+  // Textareas always support variables
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor={property.key} className="text-xs">
-        {property.label}
-      </Label>
-      <Textarea
-        id={property.key}
-        value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
-        placeholder={property.placeholder}
-        disabled={isUpdating}
-        rows={3}
-        className="text-sm resize-none"
-      />
-    </div>
+    <VariableTextInput
+      value={localValue}
+      onChange={setLocalValue}
+      label={property.label}
+      placeholder={property.placeholder}
+      disabled={isUpdating}
+      description={property.description}
+      multiline
+      rows={3}
+    />
   );
 }
 
@@ -503,12 +520,35 @@ function ColorProperty({ property, value, onChange, isUpdating }: BasePropertyPr
 }
 
 function ArrayProperty({ property, value, onChange, isUpdating }: BasePropertyProps<unknown[]>) {
+  const [binding, setBinding] = useState<DataBinding | undefined>(undefined);
+  
   return (
-    <SortableArrayEditor
-      property={property}
-      value={value || []}
-      onChange={onChange}
-      isUpdating={isUpdating}
-    />
+    <div className="space-y-3">
+      {/* Collection Binding Option */}
+      <CollectionBinding
+        property={property}
+        binding={binding}
+        onBindingChange={setBinding}
+        disabled={isUpdating}
+      />
+      
+      {/* Manual Editor (shown when not bound to collection) */}
+      {!binding?.collection && (
+        <SortableArrayEditor
+          property={property}
+          value={value || []}
+          onChange={onChange}
+          isUpdating={isUpdating}
+        />
+      )}
+      
+      {/* Bound Preview (shown when bound to collection) */}
+      {binding?.collection && (
+        <div className="text-sm text-muted-foreground p-3 border rounded-md bg-muted/30 text-center">
+          <p>Les données seront automatiquement chargées depuis la collection</p>
+          <p className="text-xs mt-1">La preview se mettra à jour lors de la publication</p>
+        </div>
+      )}
+    </div>
   );
 }
