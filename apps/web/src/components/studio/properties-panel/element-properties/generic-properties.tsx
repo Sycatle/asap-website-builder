@@ -1,6 +1,6 @@
 "use client";
 
-import { WebsiteElement, UpdateElementRequest } from "@asap/shared";
+import { WebsiteElement, UpdateElementRequest } from "@/lib/types";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 

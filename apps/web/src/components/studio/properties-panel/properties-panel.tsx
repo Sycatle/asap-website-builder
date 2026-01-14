@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { WebsiteElement, UpdateElementRequest } from "@asap/shared";
+import { WebsiteElement, UpdateElementRequest } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
