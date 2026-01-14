@@ -404,7 +404,6 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
         ref={iframeRef}
         className={className}
         onLoad={handleIframeLoad}
-        sandbox="allow-same-origin allow-scripts"
         style={{
           border: 'none',
           width: '100%',
