@@ -64,6 +64,11 @@ export function StudioPage({ onBack }: StudioPageProps) {
     return pages.find(p => p.id === selectedPageId) ?? null
   }, [pages, selectedPageId])
 
+  // Get selected element
+  const selectedElement = useMemo(() => {
+    return elements.find(e => e.id === selectedElementId) ?? null
+  }, [elements, selectedElementId])
+
   // Handle element selection (from preview click)
   const handleElementClick = useCallback((element: WebsiteElement) => {
     setSelectedElementId(element.id)
