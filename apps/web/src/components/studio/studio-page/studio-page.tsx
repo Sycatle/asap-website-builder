@@ -11,7 +11,7 @@ import {
 import type { WebsiteElement, CreateElementRequest, UpdateElementRequest } from "@/lib/types"
 import { StudioDataProvider } from "../data-binding"
 import { elementsAPI, websitesAPI } from "@/lib/api"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { useHistory } from "@/hooks/use-history"
 
 import type { DevicePreview, PreviewTheme, StudioPageProps } from "./types"
@@ -35,7 +35,6 @@ import { StudioToolbar } from "../studio-toolbar"
  */
 export function StudioPage({ onBack }: StudioPageProps) {
   const { t } = useTranslation(['common', 'editor'])
-  const { toast } = useToast()
   
   // Data hooks
   const { currentWebsite: website, isLoading: isLoadingWebsite } = useWebsiteContext()
@@ -52,7 +51,7 @@ export function StudioPage({ onBack }: StudioPageProps) {
 
   // History management
   const {
-    state: historyElements,
+    state: _historyElements,
     updateState: updateHistory,
     undo,
     redo,
@@ -136,18 +135,18 @@ export function StudioPage({ onBack }: StudioPageProps) {
     const previousState = undo()
     if (previousState) {
       await refetch()
-      toast({ title: t("Undone") })
+      toast.success(t("Undone"))
     }
-  }, [website?.id, canUndo, undo, refetch, toast, t])
+  }, [website?.id, canUndo, undo, refetch, t])
 
   const handleRedo = useCallback(async () => {
     if (!website?.id || !canRedo) return
     const nextState = redo()
     if (nextState) {
       await refetch()
-      toast({ title: t("Redone") })
+      toast.success(t("Redone"))
     }
-  }, [website?.id, canRedo, redo, refetch, toast, t])
+  }, [website?.id, canRedo, redo, refetch, t])
 
   // Save & Publish
   const handleSave = useCallback(async () => {
@@ -155,26 +154,26 @@ export function StudioPage({ onBack }: StudioPageProps) {
     setIsSaving(true)
     try {
       // Elements are already auto-saved via property panel
-      toast({ title: t("Saved successfully") })
+      toast.success(t("Saved successfully"))
     } catch (error) {
-      toast({ title: t("Save failed"), variant: "destructive" })
+      toast.error(t("Save failed"))
     } finally {
       setIsSaving(false)
     }
-  }, [website?.id, toast, t])
+  }, [website?.id, t])
 
   const handlePublish = useCallback(async () => {
     if (!website?.id) return
     setIsPublishing(true)
     try {
       await websitesAPI.update(website.id, { status: 'published' })
-      toast({ title: t("Published successfully") })
+      toast.success(t("Published successfully"))
     } catch (error) {
-      toast({ title: t("Publish failed"), variant: "destructive" })
+      toast.error(t("Publish failed"))
     } finally {
       setIsPublishing(false)
     }
-  }, [website?.id, toast, t])
+  }, [website?.id, t])
 
   // Quick Actions (Task 1.3.2)
   const handleDuplicate = useCallback(async () => {
@@ -183,18 +182,20 @@ export function StudioPage({ onBack }: StudioPageProps) {
     if (!element) return
 
     const duplicateData: CreateElementRequest = {
-      type: element.type,
+      element_type: element.element_type,
+      slug: `${element.slug}-copy-${Date.now()}`,
       title: `${element.title} (Copy)`,
-      content: element.content,
-      is_visible: element.is_visible,
+      order: elements.length,
+      layout: element.layout,
+      settings: element.settings,
+      visible: element.visible,
     }
 
-    const before = elements
     await elementsAPI.create(website.id, duplicateData)
     await refetch()
     
-    toast({ title: t("Element duplicated") })
-  }, [website?.id, selectedElementId, elements, refetch, toast, t])
+    toast.success(t("Element duplicated"))
+  }, [website?.id, selectedElementId, elements, refetch, t])
 
   const handleDeleteSelected = useCallback(async () => {
     if (!website?.id || !selectedElementId) return
@@ -211,8 +212,8 @@ export function StudioPage({ onBack }: StudioPageProps) {
     const [moved] = newOrder.splice(selectedElementIndex, 1)
     newOrder.splice(selectedElementIndex - 1, 0, moved)
     await handleReorderElements(newOrder.map(e => e.id))
-    toast({ title: t("Moved up") })
-  }, [selectedElementIndex, elements, handleReorderElements, toast, t])
+    toast.success(t("Moved up"))
+  }, [selectedElementIndex, elements, handleReorderElements, t])
 
   const handleMoveDown = useCallback(async () => {
     if (selectedElementIndex < 0 || selectedElementIndex >= elements.length - 1) return
@@ -220,8 +221,8 @@ export function StudioPage({ onBack }: StudioPageProps) {
     const [moved] = newOrder.splice(selectedElementIndex, 1)
     newOrder.splice(selectedElementIndex + 1, 0, moved)
     await handleReorderElements(newOrder.map(e => e.id))
-    toast({ title: t("Moved down") })
-  }, [selectedElementIndex, elements, handleReorderElements, toast, t])
+    toast.success(t("Moved down"))
+  }, [selectedElementIndex, elements, handleReorderElements, t])
 
   // Keyboard Shortcuts (Task 1.3.3)
   useEffect(() => {
