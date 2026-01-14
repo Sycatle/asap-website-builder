@@ -113,6 +113,13 @@ export function StudioPage({ onBack }: StudioPageProps) {
     await refetch()
   }, [website?.id, selectedElementId, refetch])
 
+  const handleToggleVisibility = useCallback(async (elementId: string, visible: boolean) => {
+    if (!website?.id) return
+    await elementsAPI.update(website.id, elementId, { visible })
+    await refetch()
+    toast.success(visible ? t("Element visible") : t("Element hidden"))
+  }, [website?.id, refetch, t])
+
   const handleReorderElements = useCallback(async (elementIds: string[]) => {
     if (!website?.id) return
     const before = elements
@@ -227,6 +234,19 @@ export function StudioPage({ onBack }: StudioPageProps) {
   // Keyboard Shortcuts (Task 1.3.3)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if focus is in an input/textarea
+      const target = e.target as HTMLElement
+      const isInput = target.tagName === 'INPUT' || 
+                      target.tagName === 'TEXTAREA' || 
+                      target.isContentEditable
+      
+      // Escape: Deselect element
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setSelectedElementId(null)
+        return
+      }
+      
       // Ctrl+Z: Undo
       if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
         e.preventDefault()
@@ -247,8 +267,8 @@ export function StudioPage({ onBack }: StudioPageProps) {
         e.preventDefault()
         handleDuplicate()
       }
-      // Delete: Delete selected element
-      else if (e.key === 'Delete' && selectedElementId) {
+      // Delete/Backspace: Delete selected element (only if not in input)
+      else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElementId && !isInput) {
         e.preventDefault()
         handleDeleteSelected()
       }
@@ -262,11 +282,19 @@ export function StudioPage({ onBack }: StudioPageProps) {
         e.preventDefault()
         handleMoveDown()
       }
+      // Ctrl+H: Toggle visibility (if element selected)
+      else if (e.ctrlKey && e.key === 'h' && selectedElementId) {
+        e.preventDefault()
+        const element = elements.find(el => el.id === selectedElementId)
+        if (element) {
+          handleToggleVisibility(selectedElementId, !element.visible)
+        }
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleUndo, handleRedo, handleSave, handleDuplicate, handleDeleteSelected, handleMoveUp, handleMoveDown, selectedElementId])
+  }, [handleUndo, handleRedo, handleSave, handleDuplicate, handleDeleteSelected, handleMoveUp, handleMoveDown, selectedElementId, elements, handleToggleVisibility])
 
   // Loading state
   if (isLoadingWebsite) {

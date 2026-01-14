@@ -18,6 +18,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { KeyboardShortcutsDialog } from "./keyboard-shortcuts-dialog";
 
 interface StudioToolbarProps {
   canUndo: boolean;
@@ -73,7 +74,7 @@ export function StudioToolbar({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Undo (Ctrl+Z)</p>
+                <p>Annuler (Ctrl+Z)</p>
               </TooltipContent>
             </Tooltip>
 
@@ -89,7 +90,7 @@ export function StudioToolbar({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Redo (Ctrl+Y)</p>
+                <p>Refaire (Ctrl+Y)</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -112,7 +113,7 @@ export function StudioToolbar({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Duplicate (Ctrl+D)</p>
+                      <p>Dupliquer (Ctrl+D)</p>
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -129,7 +130,7 @@ export function StudioToolbar({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Delete (Delete)</p>
+                      <p>Supprimer (Del)</p>
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -147,7 +148,7 @@ export function StudioToolbar({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Move Up (Ctrl+↑)</p>
+                      <p>Monter (Ctrl+↑)</p>
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -165,7 +166,7 @@ export function StudioToolbar({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Move Down (Ctrl+↓)</p>
+                      <p>Descendre (Ctrl+↓)</p>
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -177,6 +178,11 @@ export function StudioToolbar({
 
           {/* Save & Publish */}
           <div className="ml-auto flex items-center gap-2">
+            {/* Keyboard shortcuts help */}
+            <KeyboardShortcutsDialog />
+            
+            <Separator orientation="vertical" className="h-6" />
+            
             <Button
               variant="ghost"
               size="sm"
@@ -184,7 +190,7 @@ export function StudioToolbar({
               disabled={isSaving}
             >
               <Save className="mr-2 h-4 w-4" />
-              {isSaving ? "Saving..." : "Save"}
+              {isSaving ? "Sauvegarde..." : "Sauvegarder"}
             </Button>
 
             <Button
@@ -193,7 +199,7 @@ export function StudioToolbar({
               disabled={isPublishing}
             >
               <Upload className="mr-2 h-4 w-4" />
-              {isPublishing ? "Publishing..." : "Publish"}
+              {isPublishing ? "Publication..." : "Publier"}
             </Button>
           </div>
         </div>
