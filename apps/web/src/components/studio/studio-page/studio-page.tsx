@@ -17,7 +17,7 @@ import { SimplePreviewCanvas } from "./components/simple-preview-canvas"
 import { LoadingState, NoWebsiteState } from "./components/studio-states"
 import { StudioLayout } from "./studio-layout"
 import { ElementsSidebar } from "../elements-sidebar/elements-sidebar"
-import { PropertiesPanelPlaceholder } from "../properties-panel/properties-panel-placeholder"
+import { PropertiesPanel } from "../properties-panel/properties-panel"
 
 /**
  * StudioPage - Website visual editor with 3-column layout
@@ -25,7 +25,7 @@ import { PropertiesPanelPlaceholder } from "../properties-panel/properties-panel
  * Layout:
  * - Left: Elements sidebar (Task 1.1.2 complete) ✅
  * - Center: Live website preview
- * - Right: Properties panel (Task 1.2.1 - placeholder)
+ * - Right: Properties panel (Task 1.2.1 complete) ✅
  * 
  * Note: AI Chat panel is managed by AppShell globally
  */
@@ -137,7 +137,12 @@ export function StudioPage({ onBack }: StudioPageProps) {
             onRefresh={refetch}
           />
         }
-        properties={<PropertiesPanelPlaceholder />}
+        properties={
+          <PropertiesPanel
+            element={selectedElement}
+            onUpdate={handleUpdateElement}
+          />
+        }
       />
     </StudioDataProvider>
   )
