@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AboutContent } from "@asap/shared";
+import type { AboutContent } from "@asap/shared/src/types";
 import type { WebsiteElement, UpdateElementRequest } from "@/lib/types/element";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
