@@ -295,6 +295,13 @@ function useDebouncedInput(
   const [localValue, setLocalValue] = useState(initialValue || "");
   const debouncedValue = useDebounce(localValue, delay);
   const isInitialMount = useRef(true);
+  const lastSavedValue = useRef(initialValue || "");
+  const onChangeRef = useRef(onChange);
+  
+  // Keep onChange ref up to date (must be in effect, not during render)
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   // Auto-save when debounced value changes (skip initial mount)
   useEffect(() => {
@@ -302,8 +309,13 @@ function useDebouncedInput(
       isInitialMount.current = false;
       return;
     }
-    onChange(debouncedValue);
-  }, [debouncedValue, onChange]);
+    
+    // Only save if value actually changed from last saved
+    if (debouncedValue !== lastSavedValue.current) {
+      lastSavedValue.current = debouncedValue;
+      onChangeRef.current(debouncedValue);
+    }
+  }, [debouncedValue]);
 
   return [localValue, setLocalValue] as const;
 }
