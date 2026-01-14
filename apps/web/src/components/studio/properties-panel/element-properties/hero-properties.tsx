@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { HeroContent } from "@asap/shared";
-import { WebsiteElement, UpdateElementRequest } from "@/lib/types";
+import type { WebsiteElement, UpdateElementRequest } from "@/lib/types/element";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";

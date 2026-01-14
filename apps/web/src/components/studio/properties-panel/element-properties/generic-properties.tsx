@@ -1,6 +1,6 @@
 "use client";
 
-import { WebsiteElement, UpdateElementRequest } from "@/lib/types";
+import type { WebsiteElement, UpdateElementRequest } from "@/lib/types/element";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 

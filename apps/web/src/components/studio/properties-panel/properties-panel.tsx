@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { WebsiteElement, UpdateElementRequest } from "@/lib/types";
+import type { WebsiteElement } from "@/lib/types/element";
+import type { UpdateElementRequest } from "@/lib/types/element";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";

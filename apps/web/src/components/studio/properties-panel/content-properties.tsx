@@ -1,6 +1,6 @@
 "use client";
 
-import { WebsiteElement, UpdateElementRequest } from "@/lib/types";
+import type { WebsiteElement, UpdateElementRequest } from "@/lib/types/element";
 import { HeroProperties } from "./element-properties/hero-properties";
 import { AboutProperties } from "./element-properties/about-properties";
 import { ContactProperties } from "./element-properties/contact-properties";
