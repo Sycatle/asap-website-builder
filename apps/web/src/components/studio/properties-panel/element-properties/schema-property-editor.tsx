@@ -13,8 +13,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -28,10 +26,13 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useDebounce } from "@/hooks/use-debounce";
-import { ChevronDown, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, AlertCircle } from "lucide-react";
 import { IconPicker } from "./icon-picker";
 import { ImageEditor } from "./image-editor";
 import { ColorPicker } from "./color-picker";
+import { SortableArrayEditor } from "./sortable-array-editor";
+import { usePropertyValidation } from "./property-validation";
+import { cn } from "@/lib/utils";
 
 interface SchemaPropertyEditorProps {
   element: WebsiteElement;
@@ -321,6 +322,21 @@ function useDebouncedInput(
 }
 
 // ============================================
+// Validation Error Component
+// ============================================
+
+function ValidationError({ message }: { message: string | null }) {
+  if (!message) return null;
+  
+  return (
+    <div className="flex items-center gap-1 text-xs text-destructive">
+      <AlertCircle className="h-3 w-3" />
+      <span>{message}</span>
+    </div>
+  );
+}
+
+// ============================================
 // Property Type Components
 // ============================================
 
@@ -333,9 +349,17 @@ interface BasePropertyProps<T> {
 
 function TextProperty({ property, value, onChange, isUpdating }: BasePropertyProps<string>) {
   const [localValue, setLocalValue] = useDebouncedInput(value, onChange);
+  const { validate } = usePropertyValidation(property);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Validate on change
+  const handleChange = (newValue: string) => {
+    setLocalValue(newValue);
+    setError(validate(newValue));
+  };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <Label htmlFor={property.key} className="text-xs">
         {property.label}
         {property.required && <span className="text-destructive ml-1">*</span>}
@@ -343,12 +367,13 @@ function TextProperty({ property, value, onChange, isUpdating }: BasePropertyPro
       <Input
         id={property.key}
         value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
+        onChange={(e) => handleChange(e.target.value)}
         placeholder={property.placeholder}
         disabled={isUpdating}
-        className="h-8 text-sm"
+        className={cn("h-8 text-sm", error && "border-destructive")}
       />
-      {property.description && (
+      <ValidationError message={error} />
+      {!error && property.description && (
         <p className="text-xs text-muted-foreground">{property.description}</p>
       )}
     </div>
@@ -359,7 +384,7 @@ function TextareaProperty({ property, value, onChange, isUpdating }: BasePropert
   const [localValue, setLocalValue] = useDebouncedInput(value, onChange);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <Label htmlFor={property.key} className="text-xs">
         {property.label}
       </Label>
@@ -478,103 +503,12 @@ function ColorProperty({ property, value, onChange, isUpdating }: BasePropertyPr
 }
 
 function ArrayProperty({ property, value, onChange, isUpdating }: BasePropertyProps<unknown[]>) {
-  const items = value || [];
-
-  const handleAddItem = () => {
-    const newItem: Record<string, unknown> = {};
-    property.itemSchema?.forEach((field: PropertySchema) => {
-      newItem[field.key] = field.defaultValue ?? "";
-    });
-    onChange([...items, newItem]);
-  };
-
-  const handleRemoveItem = (index: number) => {
-    const updated = items.filter((_, i) => i !== index);
-    onChange(updated);
-  };
-
-  const handleItemChange = (index: number, key: string, fieldValue: unknown) => {
-    const updated = [...items];
-    updated[index] = { ...(updated[index] as object), [key]: fieldValue };
-    onChange(updated);
-  };
-
-  const canAdd = !property.maxItems || items.length < property.maxItems;
-  const canRemove = !property.minItems || items.length > property.minItems;
-
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <Label className="text-xs">{property.label}</Label>
-        <Badge variant="secondary" className="text-xs">
-          {items.length}{property.maxItems ? `/${property.maxItems}` : ""}
-        </Badge>
-      </div>
-      
-      <div className="space-y-2">
-        {items.map((item, index) => (
-          <div 
-            key={index}
-            className="border rounded-md p-3 space-y-3 bg-muted/30"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">
-                {property.itemLabel || "Élément"} {index + 1}
-              </span>
-              {canRemove && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => handleRemoveItem(index)}
-                  disabled={isUpdating}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
-            
-            {property.itemSchema?.map((field: PropertySchema) => (
-              <div key={field.key} className="space-y-1">
-                <Label className="text-xs text-muted-foreground">
-                  {field.label}
-                </Label>
-                {field.type === "textarea" ? (
-                  <Textarea
-                    value={(item as Record<string, unknown>)[field.key] as string || ""}
-                    onChange={(e) => handleItemChange(index, field.key, e.target.value)}
-                    placeholder={field.placeholder}
-                    disabled={isUpdating}
-                    rows={2}
-                    className="text-sm resize-none"
-                  />
-                ) : (
-                  <Input
-                    value={(item as Record<string, unknown>)[field.key] as string || ""}
-                    onChange={(e) => handleItemChange(index, field.key, e.target.value)}
-                    placeholder={field.placeholder}
-                    disabled={isUpdating}
-                    className="h-7 text-sm"
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-
-      {canAdd && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={handleAddItem}
-          disabled={isUpdating}
-        >
-          <Plus className="h-3 w-3 mr-2" />
-          Ajouter {property.itemLabel?.toLowerCase() || "un élément"}
-        </Button>
-      )}
-    </div>
+    <SortableArrayEditor
+      property={property}
+      value={value || []}
+      onChange={onChange}
+      isUpdating={isUpdating}
+    />
   );
 }
