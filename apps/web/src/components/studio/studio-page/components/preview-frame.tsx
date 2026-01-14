@@ -374,6 +374,25 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
       );
     }, [iframeReady, elements, selectedElementId, onElementClick, device]);
 
+    // Scroll to selected element when selection changes
+    useEffect(() => {
+      if (!iframeReady || !selectedElementId) return;
+
+      const iframe = iframeRef.current;
+      const iframeDoc = iframe?.contentDocument;
+      if (!iframeDoc) return;
+
+      // Find the selected element wrapper
+      const selectedWrapper = iframeDoc.querySelector(`[data-element-id="${selectedElementId}"]`);
+      if (selectedWrapper) {
+        // Scroll with smooth animation
+        selectedWrapper.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+        });
+      }
+    }, [iframeReady, selectedElementId]);
+
     // Update theme when it changes
     useEffect(() => {
       if (!iframeReady) return;
