@@ -109,6 +109,19 @@ function shouldHandle(request) {
     return false;
   }
   
+  // Don't handle development source files (Vite HMR, TypeScript, JSX, etc.)
+  if (url.pathname.startsWith('/src/') || 
+      url.pathname.startsWith('/@') ||
+      url.pathname.startsWith('/node_modules/') ||
+      url.pathname.includes('.tsx') ||
+      url.pathname.includes('.ts') ||
+      url.pathname.includes('.jsx') ||
+      url.search.includes('t=') || // Vite HMR timestamps
+      url.pathname.includes('__vite') ||
+      url.pathname.includes('?v=')) {
+    return false;
+  }
+  
   return true;
 }
 
