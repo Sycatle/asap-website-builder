@@ -30,6 +30,8 @@ import {
 import { useDebounce } from "@/hooks/use-debounce";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { IconPicker } from "./icon-picker";
+import { ImageEditor } from "./image-editor";
+import { ColorPicker } from "./color-picker";
 
 interface SchemaPropertyEditorProps {
   element: WebsiteElement;
@@ -183,9 +185,18 @@ function PropertyField({
   switch (property.type) {
     case "text":
     case "url":
-    case "image":
       return (
         <TextProperty
+          property={property}
+          value={currentValue as string}
+          onChange={handleChange}
+          isUpdating={isUpdating}
+        />
+      );
+    
+    case "image":
+      return (
+        <ImageProperty
           property={property}
           value={currentValue as string}
           onChange={handleChange}
@@ -236,6 +247,16 @@ function PropertyField({
     case "icon":
       return (
         <IconProperty
+          property={property}
+          value={currentValue as string}
+          onChange={handleChange}
+          isUpdating={isUpdating}
+        />
+      );
+    
+    case "color":
+      return (
+        <ColorProperty
           property={property}
           value={currentValue as string}
           onChange={handleChange}
@@ -416,6 +437,29 @@ function IconProperty({ property, value, onChange, isUpdating }: BasePropertyPro
       onChange={onChange}
       label={property.label}
       placeholder={property.placeholder || "Sélectionner une icône"}
+      disabled={isUpdating}
+    />
+  );
+}
+
+function ImageProperty({ property, value, onChange, isUpdating }: BasePropertyProps<string>) {
+  return (
+    <ImageEditor
+      value={value || ""}
+      onChange={onChange}
+      label={property.label}
+      placeholder={property.placeholder || "Sélectionner une image"}
+      disabled={isUpdating}
+    />
+  );
+}
+
+function ColorProperty({ property, value, onChange, isUpdating }: BasePropertyProps<string>) {
+  return (
+    <ColorPicker
+      value={value || ""}
+      onChange={onChange}
+      label={property.label}
       disabled={isUpdating}
     />
   );
