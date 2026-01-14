@@ -14,13 +14,19 @@ import { StudioDataProvider } from "../data-binding"
 import type { DevicePreview, PreviewTheme, StudioPageProps } from "./types"
 import { SimplePreviewCanvas } from "./components/simple-preview-canvas"
 import { LoadingState, NoWebsiteState } from "./components/studio-states"
+import { StudioLayout } from "./studio-layout"
+import { ElementsSidebarPlaceholder } from "../elements-sidebar/elements-sidebar-placeholder"
+import { PropertiesPanelPlaceholder } from "../properties-panel/properties-panel-placeholder"
 
 /**
- * StudioPage - Simplified AI-first website editor
+ * StudioPage - Website visual editor with 3-column layout
  * 
- * Two-column layout:
- * - Left: AI Chat interface for natural language editing
- * - Right: Live website preview with browser chrome
+ * Layout (Task 1.1.1 complete):
+ * - Left: Elements sidebar (Task 1.1.2 - placeholder)
+ * - Center: Live website preview
+ * - Right: Properties panel (Task 1.2.1 - placeholder)
+ * 
+ * Note: AI Chat panel is managed by AppShell globally
  */
 export function StudioPage({ onBack }: StudioPageProps) {
   const { t } = useTranslation(['common', 'editor'])
@@ -74,22 +80,24 @@ export function StudioPage({ onBack }: StudioPageProps) {
 
   return (
     <StudioDataProvider websiteId={website?.id}>
-      {/* 
-        The studio content fills the available space.
-        The AI Chat panel is managed by AppShell, not by studio.
-      */}
-      <SimplePreviewCanvas
-        elements={elements}
-        devicePreview={devicePreview}
-        previewTheme={previewTheme}
-        setDevicePreview={setDevicePreview}
-        setPreviewTheme={setPreviewTheme}
-        selectedElementId={selectedElementId}
-        onElementClick={handleElementClick}
-        websiteSlug={website.slug}
-        currentPageSlug={currentPage?.slug ?? null}
-        isHomepage={currentPage?.is_homepage ?? false}
-        onRefresh={refetch}
+      <StudioLayout
+        sidebar={<ElementsSidebarPlaceholder />}
+        preview={
+          <SimplePreviewCanvas
+            elements={elements}
+            devicePreview={devicePreview}
+            previewTheme={previewTheme}
+            setDevicePreview={setDevicePreview}
+            setPreviewTheme={setPreviewTheme}
+            selectedElementId={selectedElementId}
+            onElementClick={handleElementClick}
+            websiteSlug={website.slug}
+            currentPageSlug={currentPage?.slug ?? null}
+            isHomepage={currentPage?.is_homepage ?? false}
+            onRefresh={refetch}
+          />
+        }
+        properties={<PropertiesPanelPlaceholder />}
       />
     </StudioDataProvider>
   )
