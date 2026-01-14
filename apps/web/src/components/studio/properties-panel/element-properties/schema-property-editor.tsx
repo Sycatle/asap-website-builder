@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/collapsible";
 import { useDebounce } from "@/hooks/use-debounce";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
+import { IconPicker } from "./icon-picker";
 
 interface SchemaPropertyEditorProps {
   element: WebsiteElement;
@@ -409,25 +410,14 @@ function SelectProperty({ property, value, onChange, isUpdating }: BasePropertyP
 }
 
 function IconProperty({ property, value, onChange, isUpdating }: BasePropertyProps<string>) {
-  const [localValue, setLocalValue] = useDebouncedInput(value, onChange);
-
   return (
-    <div className="space-y-2">
-      <Label htmlFor={property.key} className="text-xs">
-        {property.label}
-      </Label>
-      <Input
-        id={property.key}
-        value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
-        placeholder={property.placeholder || "nom-icone"}
-        disabled={isUpdating}
-        className="h-8 text-sm"
-      />
-      <p className="text-xs text-muted-foreground">
-        Ex: arrow-right, sparkles, github, globe...
-      </p>
-    </div>
+    <IconPicker
+      value={value || ""}
+      onChange={onChange}
+      label={property.label}
+      placeholder={property.placeholder || "Sélectionner une icône"}
+      disabled={isUpdating}
+    />
   );
 }
 

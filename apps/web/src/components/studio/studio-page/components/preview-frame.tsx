@@ -385,11 +385,14 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
       // Find the selected element wrapper
       const selectedWrapper = iframeDoc.querySelector(`[data-element-id="${selectedElementId}"]`);
       if (selectedWrapper) {
-        // Scroll with smooth animation
-        selectedWrapper.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center',
-        });
+        // Scroll with smooth animation - use 'start' to show top of element
+        // Add a small delay to ensure the element is rendered
+        setTimeout(() => {
+          selectedWrapper.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+          });
+        }, 100);
       }
     }, [iframeReady, selectedElementId]);
 
