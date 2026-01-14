@@ -76,7 +76,8 @@ export function SchemaPropertyEditor({
     <div className="space-y-4">
       {groups.map((group: string) => (
         <PropertyGroup
-          key={group}
+          key={`${element.id}-${group}`}
+          elementId={element.id}
           group={group}
           schema={schema}
           settings={settings}
@@ -87,6 +88,7 @@ export function SchemaPropertyEditor({
       
       {/* Properties without group */}
       <PropertyGroup
+        elementId={element.id}
         group=""
         schema={schema}
         settings={settings}
@@ -98,6 +100,7 @@ export function SchemaPropertyEditor({
 }
 
 interface PropertyGroupProps {
+  elementId: string;
   group: string;
   schema: SectionSchema;
   settings: Record<string, unknown>;
@@ -106,6 +109,7 @@ interface PropertyGroupProps {
 }
 
 function PropertyGroup({
+  elementId,
   group,
   schema,
   settings,
@@ -130,7 +134,7 @@ function PropertyGroup({
         <div className="p-3 pt-0 space-y-4">
           {properties.map((prop: PropertySchema) => (
             <PropertyField
-              key={prop.key}
+              key={`${elementId}-${prop.key}`}
               property={prop}
               settings={settings}
               onUpdate={onUpdate}
@@ -258,6 +262,31 @@ function PropertyField({
 }
 
 // ============================================
+// Custom hook for debounced text inputs
+// ============================================
+
+function useDebouncedInput(
+  initialValue: string,
+  onChange: (value: string) => Promise<void>,
+  delay = 500
+) {
+  const [localValue, setLocalValue] = useState(initialValue || "");
+  const debouncedValue = useDebounce(localValue, delay);
+  const isInitialMount = useRef(true);
+
+  // Auto-save when debounced value changes (skip initial mount)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    onChange(debouncedValue);
+  }, [debouncedValue, onChange]);
+
+  return [localValue, setLocalValue] as const;
+}
+
+// ============================================
 // Property Type Components
 // ============================================
 
@@ -269,29 +298,7 @@ interface BasePropertyProps<T> {
 }
 
 function TextProperty({ property, value, onChange, isUpdating }: BasePropertyProps<string>) {
-  const [localValue, setLocalValue] = useState(value || "");
-  const debouncedValue = useDebounce(localValue, 500);
-  const isInitialMount = useRef(true);
-  const prevValue = useRef(value);
-
-  // Sync from parent when value prop changes externally
-  useEffect(() => {
-    if (value !== prevValue.current) {
-      setLocalValue(value || "");
-      prevValue.current = value;
-    }
-  }, [value]);
-
-  // Auto-save when debounced value changes (skip initial mount)
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    if (debouncedValue !== value) {
-      onChange(debouncedValue);
-    }
-  }, [debouncedValue, value, onChange]);
+  const [localValue, setLocalValue] = useDebouncedInput(value, onChange);
 
   return (
     <div className="space-y-2">
@@ -315,27 +322,7 @@ function TextProperty({ property, value, onChange, isUpdating }: BasePropertyPro
 }
 
 function TextareaProperty({ property, value, onChange, isUpdating }: BasePropertyProps<string>) {
-  const [localValue, setLocalValue] = useState(value || "");
-  const debouncedValue = useDebounce(localValue, 500);
-  const isInitialMount = useRef(true);
-  const prevValue = useRef(value);
-
-  useEffect(() => {
-    if (value !== prevValue.current) {
-      setLocalValue(value || "");
-      prevValue.current = value;
-    }
-  }, [value]);
-
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    if (debouncedValue !== value) {
-      onChange(debouncedValue);
-    }
-  }, [debouncedValue, value, onChange]);
+  const [localValue, setLocalValue] = useDebouncedInput(value, onChange);
 
   return (
     <div className="space-y-2">
@@ -422,27 +409,7 @@ function SelectProperty({ property, value, onChange, isUpdating }: BasePropertyP
 }
 
 function IconProperty({ property, value, onChange, isUpdating }: BasePropertyProps<string>) {
-  const [localValue, setLocalValue] = useState(value || "");
-  const debouncedValue = useDebounce(localValue, 500);
-  const isInitialMount = useRef(true);
-  const prevValue = useRef(value);
-
-  useEffect(() => {
-    if (value !== prevValue.current) {
-      setLocalValue(value || "");
-      prevValue.current = value;
-    }
-  }, [value]);
-
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    if (debouncedValue !== value) {
-      onChange(debouncedValue);
-    }
-  }, [debouncedValue, value, onChange]);
+  const [localValue, setLocalValue] = useDebouncedInput(value, onChange);
 
   return (
     <div className="space-y-2">
