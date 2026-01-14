@@ -223,7 +223,19 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
       if (!iframe) return;
 
       const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (!iframeDoc) return;
+      if (!iframeDoc) {
+        console.warn('Iframe document not accessible');
+        return;
+      }
+
+      // Ensure document is open for writing
+      if (iframeDoc.readyState === 'loading') {
+        // Wait for document to be ready
+        iframe.contentWindow?.addEventListener('DOMContentLoaded', () => {
+          setupIframeDocument();
+        }, { once: true });
+        return;
+      }
 
       // Setup document structure
       const html = iframeDoc.documentElement;
@@ -248,13 +260,17 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
         let combinedCss = '';
         Array.from(document.styleSheets).forEach(sheet => {
           try {
-            if (sheet.cssRules) {
-              Array.from(sheet.cssRules).forEach(rule => {
-                combinedCss += rule.cssText + '\n';
-              });
+            // Skip external stylesheets (cross-origin) - they can't be accessed
+            if (!sheet.href || sheet.href.startsWith(window.location.origin)) {
+              if (sheet.cssRules) {
+                Array.from(sheet.cssRules).forEach(rule => {
+                  combinedCss += rule.cssText + '\n';
+                });
+              }
             }
-          } catch {
-            // Cross-origin stylesheets can't be accessed
+          } catch (e) {
+            // Cross-origin stylesheets can't be accessed - skip silently
+            console.debug('Skipping stylesheet due to CORS:', sheet.href);
           }
         });
         tailwindStyle.textContent = combinedCss;
@@ -388,6 +404,7 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
         ref={iframeRef}
         className={className}
         onLoad={handleIframeLoad}
+        sandbox="allow-same-origin allow-scripts"
         style={{
           border: 'none',
           width: '100%',
