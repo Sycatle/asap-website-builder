@@ -3,11 +3,9 @@
 import { useState } from "react";
 import type { WebsiteElement } from "@/lib/types/element";
 import type { UpdateElementRequest } from "@/lib/types/element";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
-import { PropertySection } from "./property-section";
 import { GeneralProperties } from "./general-properties";
 import { ContentProperties } from "./content-properties";
 
@@ -50,9 +48,9 @@ export function PropertiesPanel({
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="absolute inset-0 flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b px-4 py-3">
+      <div className="flex-none flex items-center justify-between border-b px-4 py-3">
         <div>
           <h3 className="text-sm font-semibold">Element Properties</h3>
           <p className="text-xs text-muted-foreground">
@@ -72,8 +70,8 @@ export function PropertiesPanel({
       </div>
 
       {/* Tabs Navigation */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden">
-        <div className="border-b px-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+        <div className="flex-none border-b px-4">
           <TabsList className="w-full justify-start">
             <TabsTrigger value="content" className="flex-1">
               Content
@@ -87,48 +85,51 @@ export function PropertiesPanel({
           </TabsList>
         </div>
 
-        {/* Content Tab */}
-        <TabsContent value="content" className="mt-0 flex-1 overflow-hidden">
-          <ScrollArea className="h-full">
-            <div className="space-y-1 p-4">
+        {/* Scrollable content area */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {/* Content Tab */}
+          <TabsContent value="content" className="mt-0 data-[state=inactive]:hidden">
+            <div className="p-4 space-y-4 pb-8">
               {/* General Section */}
-              <PropertySection title="General" defaultOpen>
+              <div className="space-y-3">
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Général</h4>
                 <GeneralProperties
                   element={element}
                   onUpdate={handleUpdate}
                   isUpdating={isUpdating}
                 />
-              </PropertySection>
+              </div>
 
               {/* Content Section - Dynamic based on element type */}
-              <PropertySection title="Content" defaultOpen>
+              <div className="space-y-3">
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Contenu</h4>
                 <ContentProperties
                   element={element}
                   onUpdate={handleUpdate}
                   isUpdating={isUpdating}
                 />
-              </PropertySection>
+              </div>
             </div>
-          </ScrollArea>
-        </TabsContent>
+          </TabsContent>
 
-        {/* Style Tab (Placeholder for future) */}
-        <TabsContent value="style" className="mt-0 flex-1">
-          <div className="flex h-full items-center justify-center p-6">
-            <div className="text-center text-muted-foreground text-sm">
-              Style customization coming soon
+          {/* Style Tab (Placeholder for future) */}
+          <TabsContent value="style" className="mt-0">
+            <div className="flex h-full items-center justify-center p-6">
+              <div className="text-center text-muted-foreground text-sm">
+                Style customization coming soon
+              </div>
             </div>
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        {/* Settings Tab (Placeholder for future) */}
-        <TabsContent value="settings" className="mt-0 flex-1">
-          <div className="flex h-full items-center justify-center p-6">
-            <div className="text-center text-muted-foreground text-sm">
-              Advanced settings coming soon
+          {/* Settings Tab (Placeholder for future) */}
+          <TabsContent value="settings" className="mt-0">
+            <div className="flex h-full items-center justify-center p-6">
+              <div className="text-center text-muted-foreground text-sm">
+                Advanced settings coming soon
+              </div>
             </div>
-          </div>
-        </TabsContent>
+          </TabsContent>
+        </div>
       </Tabs>
     </div>
   );
