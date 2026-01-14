@@ -8,21 +8,22 @@ import {
   usePagesQuery,
   useHomepage,
 } from "@/lib/query"
-import type { WebsiteElement } from "@/lib/types"
+import type { WebsiteElement, CreateElementRequest, UpdateElementRequest } from "@/lib/types"
 import { StudioDataProvider } from "../data-binding"
+import { elementsAPI } from "@/lib/api"
 
 import type { DevicePreview, PreviewTheme, StudioPageProps } from "./types"
 import { SimplePreviewCanvas } from "./components/simple-preview-canvas"
 import { LoadingState, NoWebsiteState } from "./components/studio-states"
 import { StudioLayout } from "./studio-layout"
-import { ElementsSidebarPlaceholder } from "../elements-sidebar/elements-sidebar-placeholder"
+import { ElementsSidebar } from "../elements-sidebar/elements-sidebar"
 import { PropertiesPanelPlaceholder } from "../properties-panel/properties-panel-placeholder"
 
 /**
  * StudioPage - Website visual editor with 3-column layout
  * 
- * Layout (Task 1.1.1 complete):
- * - Left: Elements sidebar (Task 1.1.2 - placeholder)
+ * Layout:
+ * - Left: Elements sidebar (Task 1.1.2 complete) ✅
  * - Center: Live website preview
  * - Right: Properties panel (Task 1.2.1 - placeholder)
  * 
@@ -68,6 +69,35 @@ export function StudioPage({ onBack }: StudioPageProps) {
     setSelectedElementId(element.id)
   }, [])
 
+  // Handle element actions
+  const handleAddElement = useCallback(async (data: CreateElementRequest) => {
+    if (!website?.id) return
+    await elementsAPI.create(website.id, data)
+    await refetch()
+  }, [website?.id, refetch])
+
+  const handleUpdateElement = useCallback(async (elementId: string, data: UpdateElementRequest) => {
+    if (!website?.id) return
+    await elementsAPI.update(website.id, elementId, data)
+    await refetch()
+  }, [website?.id, refetch])
+
+  const handleDeleteElement = useCallback(async (elementId: string) => {
+    if (!website?.id) return
+    await elementsAPI.delete(website.id, elementId)
+    // Deselect if deleted element was selected
+    if (selectedElementId === elementId) {
+      setSelectedElementId(null)
+    }
+    await refetch()
+  }, [website?.id, selectedElementId, refetch])
+
+  const handleReorderElements = useCallback(async (elementIds: string[]) => {
+    if (!website?.id) return
+    await elementsAPI.reorder(website.id, { element_ids: elementIds })
+    await refetch()
+  }, [website?.id, refetch])
+
   // Loading state
   if (isLoadingWebsite) {
     return <LoadingState />
@@ -81,7 +111,17 @@ export function StudioPage({ onBack }: StudioPageProps) {
   return (
     <StudioDataProvider websiteId={website?.id}>
       <StudioLayout
-        sidebar={<ElementsSidebarPlaceholder />}
+        sidebar={
+          <ElementsSidebar
+            elements={elements}
+            selectedElementId={selectedElementId}
+            onSelect={setSelectedElementId}
+            onReorder={handleReorderElements}
+            onAdd={handleAddElement}
+            onUpdate={handleUpdateElement}
+            onDelete={handleDeleteElement}
+          />
+        }
         preview={
           <SimplePreviewCanvas
             elements={elements}
