@@ -59,7 +59,7 @@ export function StudioLayout({
           setSizes(parsed)
         }
       } catch (e) {
-        console.error("Failed to parse saved studio layout sizes:", e)
+        // Silent fail for invalid JSON
       }
     }
   }, [])

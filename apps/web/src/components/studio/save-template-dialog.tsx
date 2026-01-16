@@ -88,7 +88,6 @@ export function SaveTemplateDialog({
       setDescription('');
       setTags([]);
     } catch (error) {
-      console.error('Failed to save template:', error);
       toast.error('Erreur lors de la sauvegarde du template');
     } finally {
       setIsSaving(false);

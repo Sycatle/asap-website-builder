@@ -135,7 +135,6 @@ function FieldRendererWrapper({ field, value, onChange, error, disabled }: Field
   const Renderer = fieldRenderers[field.type];
   
   if (!Renderer) {
-    console.warn(`Unknown field type: ${field.type}`);
     return (
       <div className="text-sm text-muted-foreground p-2 bg-muted rounded">
         Champ non supporté: {field.type}

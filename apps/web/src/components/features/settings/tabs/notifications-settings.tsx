@@ -1,17 +1,14 @@
 "use client"
 
+import { 
+  SectionHeader,
+  SettingsCard,
+  ToggleRow,
+} from "@/components/shared"
 import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 
 // ============================================================================
-// Types
+// Config
 // ============================================================================
 
 interface NotificationOption {
@@ -19,10 +16,6 @@ interface NotificationOption {
   description: string
   defaultChecked: boolean
 }
-
-// ============================================================================
-// Config
-// ============================================================================
 
 const EMAIL_NOTIFICATIONS: NotificationOption[] = [
   { label: 'Mises à jour produit', description: 'Nouvelles fonctionnalités et améliorations', defaultChecked: true },
@@ -38,73 +31,39 @@ const PUSH_NOTIFICATIONS: NotificationOption[] = [
 ]
 
 // ============================================================================
-// Sub-components
-// ============================================================================
-
-interface NotificationToggleProps {
-  option: NotificationOption
-}
-
-function NotificationToggle({ option }: NotificationToggleProps) {
-  return (
-    <div className="flex items-center justify-between">
-      <div className="space-y-0.5">
-        <p className="text-sm font-medium">{option.label}</p>
-        <p className="text-xs text-muted-foreground">{option.description}</p>
-      </div>
-      <Switch defaultChecked={option.defaultChecked} />
-    </div>
-  )
-}
-
-interface NotificationGroupProps {
-  title: string
-  description: string
-  options: NotificationOption[]
-}
-
-function NotificationGroup({ title, description, options }: NotificationGroupProps) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {options.map((option) => (
-          <NotificationToggle key={option.label} option={option} />
-        ))}
-      </CardContent>
-    </Card>
-  )
-}
-
-// ============================================================================
 // Main Component
 // ============================================================================
 
 export function NotificationsSettings() {
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">Notifications</h3>
-        <p className="text-sm text-muted-foreground">
-          Configurez vos préférences de notification.
-        </p>
-      </div>
+      <SectionHeader
+        title="Notifications"
+        description="Configurez vos préférences de notification."
+      />
       <Separator />
 
-      <NotificationGroup
-        title="Email"
-        description="Notifications envoyées par email."
-        options={EMAIL_NOTIFICATIONS}
-      />
+      <SettingsCard title="Email" description="Notifications envoyées par email.">
+        {EMAIL_NOTIFICATIONS.map((opt) => (
+          <ToggleRow
+            key={opt.label}
+            label={opt.label}
+            description={opt.description}
+            checked={opt.defaultChecked}
+          />
+        ))}
+      </SettingsCard>
 
-      <NotificationGroup
-        title="Push"
-        description="Notifications dans le navigateur."
-        options={PUSH_NOTIFICATIONS}
-      />
+      <SettingsCard title="Push" description="Notifications dans le navigateur.">
+        {PUSH_NOTIFICATIONS.map((opt) => (
+          <ToggleRow
+            key={opt.label}
+            label={opt.label}
+            description={opt.description}
+            checked={opt.defaultChecked}
+          />
+        ))}
+      </SettingsCard>
     </div>
   )
 }

@@ -93,7 +93,7 @@ export function AccountSettings({
           }
         }
       } catch (error) {
-        console.error('Failed to load avatar:', error)
+        // Silently fail
       }
     }
     loadAvatar()
@@ -151,7 +151,6 @@ export function AccountSettings({
     try {
       await uploadPromise()
     } catch (error) {
-      console.error('Failed to upload avatar:', error)
       setAvatarError('Erreur lors du téléchargement de l\'avatar')
     } finally {
       setIsUploadingAvatar(false)
@@ -184,7 +183,6 @@ export function AccountSettings({
     try {
       await updatePromise()
     } catch (error) {
-      console.error('Failed to update avatar:', error)
       setAvatarError('Erreur lors de la mise à jour de l\'avatar')
     }
   }

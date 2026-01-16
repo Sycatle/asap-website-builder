@@ -148,7 +148,7 @@ const BASE_STYLES = `
     box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
   }
 
-  /* Quick action bar - uses fixed colors to match main app, not preview theme */
+  /* Quick action bar - follows main app theme via data-app-theme attribute */
   .studio-quick-actions {
     opacity: 0;
     transition: opacity 0.15s ease;
@@ -160,6 +160,7 @@ const BASE_STYLES = `
     pointer-events: auto;
   }
   
+  /* Light mode (default) */
   .studio-quick-actions-bar {
     display: flex;
     align-items: center;
@@ -206,6 +207,29 @@ const BASE_STYLES = `
     background: hsl(240 5.9% 90%);
     margin: 0 0.125rem;
   }
+  
+  /* Dark mode - when app is in dark mode */
+  [data-app-theme="dark"] .studio-quick-actions-bar {
+    background: rgba(30, 30, 35, 0.95);
+    border-color: hsl(240 3.7% 20%);
+  }
+  
+  [data-app-theme="dark"] .studio-quick-action-btn {
+    color: hsl(0 0% 98%);
+  }
+  
+  [data-app-theme="dark"] .studio-quick-action-btn:hover {
+    background: hsl(240 3.7% 15.9%);
+  }
+  
+  [data-app-theme="dark"] .studio-quick-action-btn.delete:hover {
+    background: hsl(0 62.8% 30.6% / 0.2);
+    color: hsl(0 84.2% 60.2%);
+  }
+  
+  [data-app-theme="dark"] .studio-quick-action-separator {
+    background: hsl(240 3.7% 20%);
+  }
 `;
 
 interface PreviewFrameProps {
@@ -213,6 +237,7 @@ interface PreviewFrameProps {
   elements: WebsiteElement[];
   pageId?: string;
   previewTheme: PreviewTheme;
+  appTheme?: 'light' | 'dark';
   selectedElementId?: string | null;
   onElementClick?: (elementId: string) => void;
   onElementDuplicate?: (elementId: string) => void;
@@ -238,10 +263,11 @@ export interface PreviewFrameHandle {
  */
 export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
   function PreviewFrame({ 
-    websiteId,
+    websiteId: _websiteId,
     elements,
-    pageId,
-    previewTheme, 
+    pageId: _pageId,
+    previewTheme,
+    appTheme = 'light',
     selectedElementId,
     onElementClick,
     onElementDuplicate,
@@ -302,7 +328,6 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
 
       const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
       if (!iframeDoc) {
-        console.warn('Iframe document not accessible');
         return;
       }
 
@@ -391,7 +416,7 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
       // Render content
       rootRef.current.render(
         <PreviewProvider device={device}>
-          <div className="min-h-screen">
+          <div className="min-h-screen" data-app-theme={appTheme}>
             {sortedElements.length === 0 ? (
               <div className="flex items-center justify-center h-screen text-muted-foreground">
                 <p>Aucun élément à afficher</p>
@@ -529,7 +554,7 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
           </div>
         </PreviewProvider>
       );
-    }, [iframeReady, elements, selectedElementId, onElementClick, onElementDuplicate, onElementDelete, onElementMoveUp, onElementMoveDown, device]);
+    }, [iframeReady, elements, selectedElementId, onElementClick, onElementDuplicate, onElementDelete, onElementMoveUp, onElementMoveDown, device, appTheme]);
 
     // Scroll to selected element when selection changes
     useEffect(() => {

@@ -198,7 +198,7 @@ export function NotificationsPage({ className }: NotificationsPageProps) {
       }
       setTotal(response.total)
     } catch (error) {
-      console.error('Failed to fetch notifications:', error)
+      // Silently fail
     } finally {
       setIsLoadingMore(false)
     }

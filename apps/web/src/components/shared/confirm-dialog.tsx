@@ -128,7 +128,6 @@ export function ConfirmDialog({
       onOpenChange(false);
     } catch (error) {
       // Error handling should be done in onConfirm
-      console.error('Confirm action failed:', error);
     } finally {
       setIsLoading(false);
     }

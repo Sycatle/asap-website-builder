@@ -139,7 +139,6 @@ export default function AdministratorsPage() {
       );
       setAdministrators(response.administrators);
     } catch (error) {
-      console.error('Failed to fetch administrators:', error);
       toast.error('Erreur lors du chargement des administrateurs');
     } finally {
       setIsLoading(false);

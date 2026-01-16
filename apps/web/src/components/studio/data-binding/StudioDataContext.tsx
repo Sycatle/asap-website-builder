@@ -111,7 +111,6 @@ export function StudioDataProvider({ websiteId, children }: StudioDataProviderPr
       
       return data;
     } catch (err) {
-      console.error(`Failed to fetch collection ${slug}:`, err);
       return null;
     }
   }, [websiteId]);

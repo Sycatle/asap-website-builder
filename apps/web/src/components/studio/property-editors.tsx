@@ -1,38 +1,35 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import React from "react"
 import { useTranslation } from 'react-i18next'
 import type { WebsiteElement, UpdateElementRequest } from "@/lib/api"
 import { getElementLabel } from "@/lib/constants/elements"
 import { ELEMENT_LAYOUTS } from "@asap/shared"
 import type { ElementType } from "@asap/shared"
-import { Input } from "@/components/ui/input"
-import { Field, FieldLabel } from "@/components/ui/field"
-import { Textarea } from "@/components/ui/textarea"
+import { getSectionSchema } from "@asap/shared"
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Spinner } from "@/components/ui/spinner"
-import { 
-  Plus, 
-  Trash2, 
-  GripVertical,
-  Image,
-  Link as LinkIcon,
-  Type,
-  AlignLeft,
-  Palette,
-  Save,
-} from "lucide-react"
-import { toast } from "sonner"
+import { Save } from "lucide-react"
+import { useFormDirty, useElementForm } from "@/hooks/useFormDirty"
+import {
+  TextField,
+  TextareaField,
+  SwitchField,
+  SelectField,
+  ImageUrlField,
+  CtaField,
+  StringList,
+  EditableList,
+  PropertySectionHeader,
+  DeleteButton,
+  EDITOR_STYLES,
+} from "./shared/property-fields"
+import { LandingSaaSPropertyEditor } from "./landing-saas-property-editors"
+
+// ============================================
+// Types
+// ============================================
 
 interface PropertyEditorProps {
   element: WebsiteElement
@@ -40,57 +37,46 @@ interface PropertyEditorProps {
   isUpdating?: boolean
 }
 
-// Type alias for content data
 type ContentData = Record<string, unknown>
 
-// Helper to update nested data
-function updateData(data: ContentData, key: string, value: unknown): ContentData {
-  return { ...data, [key]: value }
-}
-
-// Helper to safely get string value
+// Helper to safely get string/array value
 function getString(data: ContentData, key: string): string {
   const value = data[key]
   return typeof value === 'string' ? value : ''
 }
 
+function getArray<T>(data: ContentData, key: string): T[] {
+  const value = data[key]
+  return Array.isArray(value) ? value : []
+}
+
 // ============================================
 // Base Property Editor - Common fields
 // ============================================
-function BasePropertyEditor({ element, onUpdate, isUpdating, children }: PropertyEditorProps & { children?: React.ReactNode }) {
+
+function BasePropertyEditor({ 
+  element, 
+  onUpdate, 
+  isUpdating, 
+  children 
+}: PropertyEditorProps & { children?: React.ReactNode }) {
   const { t } = useTranslation(['common', 'editor'])
-  const [title, setTitle] = useState(element.title)
-  const [layout, setLayout] = useState(element.layout)
-  const [visible, setVisible] = useState(element.visible)
-  const [isDirty, setIsDirty] = useState(false)
+  
+  const layouts = ELEMENT_LAYOUTS[element.element_type as ElementType] || [
+    { value: 'default', label: t('editor:properties.layout.default') }
+  ]
 
-  const layouts = ELEMENT_LAYOUTS[element.element_type as ElementType] || [{ value: 'default', label: t('editor:properties.layout.default') }]
-
-  const handleSave = useCallback(async () => {
-    if (!isDirty) return
-    try {
-      await onUpdate(element.id, { title, layout, visible })
-      setIsDirty(false)
-      toast.success(t('editor:messages.saved'))
-    } catch {
-      toast.error(t('common:errors.update'))
-    }
-  }, [element.id, title, layout, visible, isDirty, onUpdate, t])
-
-  const handleTitleChange = (value: string) => {
-    setTitle(value)
-    setIsDirty(true)
-  }
-
-  const handleLayoutChange = (value: string) => {
-    setLayout(value)
-    setIsDirty(true)
-  }
-
-  const handleVisibleChange = (value: boolean) => {
-    setVisible(value)
-    setIsDirty(true)
-  }
+  const { values, setValue, isDirty, save, isSaving } = useFormDirty({
+    initialValues: {
+      title: element.title,
+      layout: element.layout,
+      visible: element.visible ?? true,
+    },
+    onSave: async (vals) => {
+      await onUpdate(element.id, vals)
+    },
+    successMessage: 'editor:messages.saved',
+  })
 
   return (
     <div className="space-y-6">
@@ -100,10 +86,10 @@ function BasePropertyEditor({ element, onUpdate, isUpdating, children }: Propert
           <h3 className="font-semibold text-lg">{getElementLabel(element.element_type)}</h3>
           <Button 
             size="sm" 
-            onClick={handleSave}
-            disabled={!isDirty || isUpdating}
+            onClick={save}
+            disabled={!isDirty || isSaving || isUpdating}
           >
-            {isUpdating ? (
+            {isSaving ? (
               <Spinner className="h-4 w-4" />
             ) : (
               <>
@@ -115,48 +101,35 @@ function BasePropertyEditor({ element, onUpdate, isUpdating, children }: Propert
         </div>
         
         <div className="space-y-3">
-          <Field>
-            <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
-              <Type className="h-3 w-3" /> {t('editor:properties.elementTitle')}
-            </FieldLabel>
-            <Input 
-              value={title}
-              onChange={(e) => handleTitleChange(e.target.value)}
-              placeholder={t('editor:properties.elementTitle')}
-              className="h-9"
-            />
-          </Field>
+          <TextField
+            name="title"
+            label={t('editor:properties.elementTitle')}
+            value={values.title}
+            onChange={(v) => setValue('title', v)}
+            placeholder={t('editor:properties.elementTitle')}
+          />
           
           {layouts.length > 1 && (
-            <Field>
-              <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
-                <Palette className="h-3 w-3" /> {t('editor:properties.style.layout')}
-              </FieldLabel>
-              <Select value={layout} onValueChange={handleLayoutChange}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {layouts.map((l) => (
-                    <SelectItem key={l.value} value={l.value}>
-                      {l.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-          </Field>
+            <SelectField
+              name="layout"
+              label={t('editor:properties.style.layout')}
+              value={values.layout}
+              onChange={(v) => setValue('layout', v)}
+              options={layouts}
+            />
           )}
           
-          <Field orientation="horizontal" className="py-2">
-            <FieldLabel className="text-sm">{t('editor:properties.visible')}</FieldLabel>
-            <Switch checked={visible} onCheckedChange={handleVisibleChange} />
-          </Field>
+          <SwitchField
+            name="visible"
+            label={t('editor:properties.visible')}
+            value={values.visible}
+            onChange={(v) => setValue('visible', v)}
+          />
         </div>
       </div>
       
       <Separator />
       
-      {/* Custom fields */}
       {children}
     </div>
   )
@@ -165,106 +138,71 @@ function BasePropertyEditor({ element, onUpdate, isUpdating, children }: Propert
 // ============================================
 // Hero Element Editor
 // ============================================
+
 export function HeroPropertyEditor({ element, onUpdate, isUpdating }: PropertyEditorProps) {
   const { t } = useTranslation(['common', 'editor'])
-  const [data, setData] = useState<ContentData>(element.content || element.data || {})
-  const [isDirty, setIsDirty] = useState(false)
-
-  const updateField = (key: string, value: string) => {
-    setData(prev => updateData(prev, key, value))
-    setIsDirty(true)
-  }
-
-  const handleSaveData = async () => {
-    try {
-      await onUpdate(element.id, { data })
-      setIsDirty(false)
-      toast.success(t('editor:messages.saved'))
-    } catch {
-      toast.error(t('common:errors.update'))
-    }
-  }
+  const initialData = (element.content || element.data || {}) as ContentData
+  
+  const { values, setValue, isDirty, save, isSaving } = useElementForm({
+    elementId: element.id,
+    initialData,
+    onUpdate,
+  })
 
   return (
     <BasePropertyEditor element={element} onUpdate={onUpdate} isUpdating={isUpdating}>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">{t('editor:properties.tabs.content')}</h4>
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={handleSaveData}
-            disabled={!isDirty || isUpdating}
-          >
-            {isUpdating ? <Spinner className="h-3 w-3" /> : t('common:actions.apply')}
-          </Button>
-        </div>
+        <PropertySectionHeader
+          title={t('editor:properties.tabs.content')}
+          isDirty={isDirty}
+          isSaving={isSaving}
+          onSave={save}
+        />
         
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <FieldLabel className="text-xs text-muted-foreground">{t('editor:properties.hero.name')}</FieldLabel>
-            <Input 
-              value={getString(data, 'name')}
-              onChange={(e) => updateField('name', e.target.value)}
-              placeholder={t('editor:properties.hero.namePlaceholder')}
-              className="h-9"
-            />
-          </div>
+          <TextField
+            name="name"
+            label={t('editor:properties.hero.name')}
+            value={getString(values, 'name')}
+            onChange={(v) => setValue('name', v)}
+            placeholder={t('editor:properties.hero.namePlaceholder')}
+          />
           
-          <div className="space-y-1.5">
-            <FieldLabel className="text-xs text-muted-foreground">{t('editor:properties.hero.title')}</FieldLabel>
-            <Input 
-              value={getString(data, 'title')}
-              onChange={(e) => updateField('title', e.target.value)}
-              placeholder={t('editor:properties.hero.titlePlaceholder')}
-              className="h-9"
-            />
-          </div>
+          <TextField
+            name="title"
+            label={t('editor:properties.hero.title')}
+            value={getString(values, 'title')}
+            onChange={(v) => setValue('title', v)}
+            placeholder={t('editor:properties.hero.titlePlaceholder')}
+          />
           
-          <div className="space-y-1.5">
-            <FieldLabel className="text-xs text-muted-foreground">{t('editor:properties.hero.subtitle')}</FieldLabel>
-            <Textarea 
-              value={getString(data, 'subtitle')}
-              onChange={(e) => updateField('subtitle', e.target.value)}
-              placeholder={t('editor:properties.hero.subtitlePlaceholder')}
-              className="resize-none"
-              rows={2}
-            />
-          </div>
+          <TextareaField
+            name="subtitle"
+            label={t('editor:properties.hero.subtitle')}
+            value={getString(values, 'subtitle')}
+            onChange={(v) => setValue('subtitle', v)}
+            placeholder={t('editor:properties.hero.subtitlePlaceholder')}
+            rows={2}
+          />
           
           <Separator />
           
-          <div className="space-y-1.5">
-            <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
-              <LinkIcon className="h-3 w-3" /> {t('editor:properties.hero.ctaButton')}
-            </FieldLabel>
-            <div className="grid grid-cols-2 gap-2">
-              <Input 
-                value={getString(data, 'cta_text')}
-                onChange={(e) => updateField('cta_text', e.target.value)}
-                placeholder={t('editor:properties.hero.ctaTextPlaceholder')}
-                className="h-9"
-              />
-              <Input 
-                value={getString(data, 'cta_link')}
-                onChange={(e) => updateField('cta_link', e.target.value)}
-                placeholder="#section"
-                className="h-9"
-              />
-            </div>
-          </div>
+          <CtaField
+            label={t('editor:properties.hero.ctaButton')}
+            textValue={getString(values, 'cta_text')}
+            linkValue={getString(values, 'cta_link')}
+            onTextChange={(v) => setValue('cta_text', v)}
+            onLinkChange={(v) => setValue('cta_link', v)}
+            textPlaceholder={t('editor:properties.hero.ctaTextPlaceholder')}
+          />
           
-          <div className="space-y-1.5">
-            <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
-              <Image className="h-3 w-3" /> {t('editor:properties.hero.backgroundImage')}
-            </FieldLabel>
-            <Input 
-              value={getString(data, 'background_image')}
-              onChange={(e) => updateField('background_image', e.target.value)}
-              placeholder="https://..."
-              className="h-9"
-            />
-          </div>
+          <ImageUrlField
+            name="background_image"
+            label={t('editor:properties.hero.backgroundImage')}
+            value={getString(values, 'background_image')}
+            onChange={(v) => setValue('background_image', v)}
+            placeholder="https://..."
+          />
         </div>
       </div>
     </BasePropertyEditor>
@@ -274,114 +212,59 @@ export function HeroPropertyEditor({ element, onUpdate, isUpdating }: PropertyEd
 // ============================================
 // About Element Editor
 // ============================================
+
 export function AboutPropertyEditor({ element, onUpdate, isUpdating }: PropertyEditorProps) {
   const { t } = useTranslation(['common', 'editor'])
-  const [data, setData] = useState<ContentData>(element.content || element.data || {})
-  const [isDirty, setIsDirty] = useState(false)
-
-  const updateField = (key: string, value: unknown) => {
-    setData(prev => updateData(prev, key, value))
-    setIsDirty(true)
-  }
-
-  const handleSaveData = async () => {
-    try {
-      await onUpdate(element.id, { data })
-      setIsDirty(false)
-      toast.success(t('editor:messages.saved'))
-    } catch {
-      toast.error(t('common:errors.update'))
-    }
-  }
-
-  const highlights = (data.highlights || []) as string[]
+  const initialData = (element.content || element.data || {}) as ContentData
   
-  const addHighlight = () => {
-    updateField('highlights', [...highlights, ''])
-  }
-  
-  const updateHighlight = (index: number, value: string) => {
-    const updated = [...highlights]
-    updated[index] = value
-    updateField('highlights', updated)
-  }
-  
-  const removeHighlight = (index: number) => {
-    updateField('highlights', highlights.filter((_, i) => i !== index))
-  }
+  const { values, setValue, isDirty, save, isSaving } = useElementForm({
+    elementId: element.id,
+    initialData,
+    onUpdate,
+  })
+
+  const highlights = getArray<string>(values, 'highlights')
 
   return (
     <BasePropertyEditor element={element} onUpdate={onUpdate} isUpdating={isUpdating}>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">{t('editor:properties.tabs.content')}</h4>
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={handleSaveData}
-            disabled={!isDirty || isUpdating}
-          >
-            {isUpdating ? <Spinner className="h-3 w-3" /> : t('common:actions.apply')}
-          </Button>
-        </div>
+        <PropertySectionHeader
+          title={t('editor:properties.tabs.content')}
+          isDirty={isDirty}
+          isSaving={isSaving}
+          onSave={save}
+        />
         
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
-              <AlignLeft className="h-3 w-3" /> {t('editor:properties.about.description')}
-            </FieldLabel>
-            <Textarea 
-              value={getString(data, 'description')}
-              onChange={(e) => updateField('description', e.target.value)}
-              placeholder={t('editor:properties.about.descriptionPlaceholder')}
-              className="resize-none"
-              rows={4}
-            />
-          </div>
+          <TextareaField
+            name="description"
+            label={t('editor:properties.about.description')}
+            value={getString(values, 'description')}
+            onChange={(v) => setValue('description', v)}
+            placeholder={t('editor:properties.about.descriptionPlaceholder')}
+            rows={4}
+          />
           
-          <div className="space-y-1.5">
-            <FieldLabel className="text-xs text-muted-foreground flex items-center gap-1">
-              <Image className="h-3 w-3" /> {t('editor:properties.about.photo')}
-            </FieldLabel>
-            <Input 
-              value={getString(data, 'image')}
-              onChange={(e) => updateField('image', e.target.value)}
-              placeholder="https://..."
-              className="h-9"
-            />
-          </div>
+          <ImageUrlField
+            name="image"
+            label={t('editor:properties.about.photo')}
+            value={getString(values, 'image')}
+            onChange={(v) => setValue('image', v)}
+            placeholder="https://..."
+          />
           
           <Separator />
           
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <FieldLabel className="text-xs text-muted-foreground">{t('editor:properties.about.highlights')}</FieldLabel>
-              <Button size="sm" variant="ghost" onClick={addHighlight} className="h-7 px-2">
-                <Plus className="h-3 w-3 mr-1" /> {t('common:actions.add')}
-              </Button>
-            </div>
-            
-            <div className="space-y-2">
-              {highlights.map((highlight, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                  <Input 
-                    value={highlight}
-                    onChange={(e) => updateHighlight(index, e.target.value)}
-                    placeholder={t('editor:properties.about.highlightPlaceholder', { number: index + 1 })}
-                    className="h-8 flex-1"
-                  />
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={() => removeHighlight(index)}
-                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-            </div>
+            <label className={EDITOR_STYLES.label}>
+              {t('editor:properties.about.highlights')}
+            </label>
+            <StringList
+              items={highlights}
+              onChange={(items) => setValue('highlights', items)}
+              placeholder={t('editor:properties.about.highlightPlaceholder', { number: '' })}
+              addLabel={t('common:actions.add')}
+            />
           </div>
         </div>
       </div>
@@ -392,6 +275,7 @@ export function AboutPropertyEditor({ element, onUpdate, isUpdating }: PropertyE
 // ============================================
 // Skills Element Editor
 // ============================================
+
 interface SkillCategory {
   name: string
   skills: string[]
@@ -399,131 +283,52 @@ interface SkillCategory {
 
 export function SkillsPropertyEditor({ element, onUpdate, isUpdating }: PropertyEditorProps) {
   const { t } = useTranslation(['common', 'editor'])
-  const [data, setData] = useState<ContentData>(element.content || element.data || {})
-  const [isDirty, setIsDirty] = useState(false)
+  const initialData = (element.content || element.data || {}) as ContentData
+  
+  const { values, setValue, isDirty, save, isSaving } = useElementForm({
+    elementId: element.id,
+    initialData,
+    onUpdate,
+  })
 
-  const categories = (data.categories || []) as SkillCategory[]
-
-  const updateCategories = (updated: SkillCategory[]) => {
-    setData(prev => updateData(prev, 'categories', updated))
-    setIsDirty(true)
-  }
-
-  const handleSaveData = async () => {
-    try {
-      await onUpdate(element.id, { data })
-      setIsDirty(false)
-      toast.success(t('editor:messages.saved'))
-    } catch {
-      toast.error(t('common:errors.update'))
-    }
-  }
-
-  const addCategory = () => {
-    updateCategories([...categories, { name: t('editor:properties.skills.newCategory'), skills: [] }])
-  }
-
-  const updateCategory = (index: number, field: 'name' | 'skills', value: string | string[]) => {
-    const updated = [...categories]
-    updated[index] = { ...updated[index], [field]: value }
-    updateCategories(updated)
-  }
-
-  const removeCategory = (index: number) => {
-    updateCategories(categories.filter((_, i) => i !== index))
-  }
-
-  const addSkill = (catIndex: number) => {
-    const updated = [...categories]
-    updated[catIndex].skills = [...updated[catIndex].skills, '']
-    updateCategories(updated)
-  }
-
-  const updateSkill = (catIndex: number, skillIndex: number, value: string) => {
-    const updated = [...categories]
-    updated[catIndex].skills[skillIndex] = value
-    updateCategories(updated)
-  }
-
-  const removeSkill = (catIndex: number, skillIndex: number) => {
-    const updated = [...categories]
-    updated[catIndex].skills = updated[catIndex].skills.filter((_, i) => i !== skillIndex)
-    updateCategories(updated)
-  }
+  const categories = getArray<SkillCategory>(values, 'categories')
 
   return (
     <BasePropertyEditor element={element} onUpdate={onUpdate} isUpdating={isUpdating}>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">{t('editor:properties.skills.categories')}</h4>
-          <div className="flex gap-2">
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={handleSaveData}
-              disabled={!isDirty || isUpdating}
-            >
-              {isUpdating ? <Spinner className="h-3 w-3" /> : t('common:actions.apply')}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={addCategory} className="h-8">
-              <Plus className="h-3 w-3 mr-1" /> {t('editor:properties.skills.category')}
-            </Button>
-          </div>
-        </div>
+        <PropertySectionHeader
+          title={t('editor:properties.skills.categories')}
+          isDirty={isDirty}
+          isSaving={isSaving}
+          onSave={save}
+        />
         
-        <ScrollArea className="h-[400px] pr-4">
-          <div className="space-y-4">
-            {categories.map((category, catIndex) => (
-              <div key={catIndex} className="p-3 rounded-lg border bg-muted/30 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Input 
-                    value={category.name}
-                    onChange={(e) => updateCategory(catIndex, 'name', e.target.value)}
-                    placeholder={t('editor:properties.skills.categoryName')}
-                    className="h-8 font-medium"
-                  />
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={() => removeCategory(catIndex)}
-                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-                
-                <div className="space-y-2 pl-2">
-                  {category.skills.map((skill, skillIndex) => (
-                    <div key={skillIndex} className="flex items-center gap-2">
-                      <Input 
-                        value={skill}
-                        onChange={(e) => updateSkill(catIndex, skillIndex, e.target.value)}
-                        placeholder={t('editor:properties.skills.skill')}
-                        className="h-7 text-sm"
-                      />
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        onClick={() => removeSkill(catIndex, skillIndex)}
-                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={() => addSkill(catIndex)}
-                    className="h-7 text-xs"
-                  >
-                    <Plus className="h-3 w-3 mr-1" /> {t('editor:properties.skills.skill')}
-                  </Button>
-                </div>
+        <EditableList
+          items={categories}
+          onChange={(items) => setValue('categories', items)}
+          createItem={() => ({ name: t('editor:properties.skills.newCategory'), skills: [] })}
+          addLabel={t('editor:properties.skills.category')}
+          renderItem={(category, index, { update, remove }) => (
+            <>
+              <div className="flex items-center gap-2 mb-3">
+                <TextField
+                  name={`category-${index}`}
+                  value={category.name}
+                  onChange={(v) => update('name', v)}
+                  placeholder={t('editor:properties.skills.categoryName')}
+                  className="flex-1"
+                />
+                <DeleteButton onClick={remove} />
               </div>
-            ))}
-          </div>
-        </ScrollArea>
+              <StringList
+                items={category.skills}
+                onChange={(skills) => update('skills', skills)}
+                placeholder={t('editor:properties.skills.skill')}
+                addLabel={t('editor:properties.skills.skill')}
+              />
+            </>
+          )}
+        />
       </div>
     </BasePropertyEditor>
   )
@@ -532,6 +337,7 @@ export function SkillsPropertyEditor({ element, onUpdate, isUpdating }: Property
 // ============================================
 // Services Element Editor
 // ============================================
+
 interface Service {
   title: string
   description: string
@@ -540,91 +346,53 @@ interface Service {
 
 export function ServicesPropertyEditor({ element, onUpdate, isUpdating }: PropertyEditorProps) {
   const { t } = useTranslation(['common', 'editor'])
-  const [data, setData] = useState<ContentData>(element.content || element.data || {})
-  const [isDirty, setIsDirty] = useState(false)
+  const initialData = (element.content || element.data || {}) as ContentData
+  
+  const { values, setValue, isDirty, save, isSaving } = useElementForm({
+    elementId: element.id,
+    initialData,
+    onUpdate,
+  })
 
-  const services = (data.services || []) as Service[]
-
-  const updateServices = (updated: Service[]) => {
-    setData(prev => updateData(prev, 'services', updated))
-    setIsDirty(true)
-  }
-
-  const handleSaveData = async () => {
-    try {
-      await onUpdate(element.id, { data })
-      setIsDirty(false)
-      toast.success(t('editor:messages.saved'))
-    } catch {
-      toast.error(t('common:errors.update'))
-    }
-  }
-
-  const addService = () => {
-    updateServices([...services, { title: t('editor:properties.services.newService'), description: '' }])
-  }
-
-  const updateService = (index: number, field: keyof Service, value: string) => {
-    const updated = [...services]
-    updated[index] = { ...updated[index], [field]: value }
-    updateServices(updated)
-  }
-
-  const removeService = (index: number) => {
-    updateServices(services.filter((_, i) => i !== index))
-  }
+  const services = getArray<Service>(values, 'services')
 
   return (
     <BasePropertyEditor element={element} onUpdate={onUpdate} isUpdating={isUpdating}>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">{t('editor:properties.services.title')}</h4>
-          <div className="flex gap-2">
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={handleSaveData}
-              disabled={!isDirty || isUpdating}
-            >
-              {isUpdating ? <Spinner className="h-3 w-3" /> : t('common:actions.apply')}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={addService} className="h-8">
-              <Plus className="h-3 w-3 mr-1" /> {t('editor:properties.services.service')}
-            </Button>
-          </div>
-        </div>
+        <PropertySectionHeader
+          title={t('editor:properties.services.title')}
+          isDirty={isDirty}
+          isSaving={isSaving}
+          onSave={save}
+        />
         
-        <ScrollArea className="h-[400px] pr-4">
-          <div className="space-y-4">
-            {services.map((service, index) => (
-              <div key={index} className="p-3 rounded-lg border bg-muted/30 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Input 
-                    value={service.title}
-                    onChange={(e) => updateService(index, 'title', e.target.value)}
-                    placeholder={t('editor:properties.services.serviceName')}
-                    className="h-8 font-medium flex-1"
-                  />
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={() => removeService(index)}
-                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-                <Textarea 
-                  value={service.description}
-                  onChange={(e) => updateService(index, 'description', e.target.value)}
-                  placeholder={t('editor:properties.services.serviceDescription')}
-                  className="resize-none text-sm"
-                  rows={2}
+        <EditableList
+          items={services}
+          onChange={(items) => setValue('services', items)}
+          createItem={() => ({ title: t('editor:properties.services.newService'), description: '' })}
+          addLabel={t('editor:properties.services.service')}
+          renderItem={(service, index, { update, remove }) => (
+            <>
+              <div className="flex items-center gap-2 mb-2">
+                <TextField
+                  name={`service-title-${index}`}
+                  value={service.title}
+                  onChange={(v) => update('title', v)}
+                  placeholder={t('editor:properties.services.serviceName')}
+                  className="flex-1"
                 />
+                <DeleteButton onClick={remove} />
               </div>
-            ))}
-          </div>
-        </ScrollArea>
+              <TextareaField
+                name={`service-desc-${index}`}
+                value={service.description}
+                onChange={(v) => update('description', v)}
+                placeholder={t('editor:properties.services.serviceDescription')}
+                rows={2}
+              />
+            </>
+          )}
+        />
       </div>
     </BasePropertyEditor>
   )
@@ -633,133 +401,101 @@ export function ServicesPropertyEditor({ element, onUpdate, isUpdating }: Proper
 // ============================================
 // Contact Element Editor
 // ============================================
+
+interface Social {
+  platform: string
+  url: string
+}
+
+const SOCIAL_PLATFORMS = [
+  { value: 'github', label: 'GitHub' },
+  { value: 'linkedin', label: 'LinkedIn' },
+  { value: 'twitter', label: 'Twitter' },
+  { value: 'website', label: 'Site web' },
+]
+
 export function ContactPropertyEditor({ element, onUpdate, isUpdating }: PropertyEditorProps) {
   const { t } = useTranslation(['common', 'editor'])
-  const [data, setData] = useState<ContentData>(element.content || element.data || {})
-  const [isDirty, setIsDirty] = useState(false)
+  const initialData = (element.content || element.data || {}) as ContentData
+  
+  const { values, setValue, isDirty, save, isSaving } = useElementForm({
+    elementId: element.id,
+    initialData,
+    onUpdate,
+  })
 
-  const updateField = (key: string, value: unknown) => {
-    setData(prev => updateData(prev, key, value))
-    setIsDirty(true)
-  }
-
-  const handleSaveData = async () => {
-    try {
-      await onUpdate(element.id, { data })
-      setIsDirty(false)
-      toast.success(t('editor:messages.saved'))
-    } catch {
-      toast.error(t('common:errors.update'))
-    }
-  }
-
-  const socials = (data.socials || []) as { platform: string; url: string }[]
-
-  const addSocial = () => {
-    updateField('socials', [...socials, { platform: '', url: '' }])
-  }
-
-  const updateSocial = (index: number, field: 'platform' | 'url', value: string) => {
-    const updated = [...socials]
-    updated[index] = { ...updated[index], [field]: value }
-    updateField('socials', updated)
-  }
-
-  const removeSocial = (index: number) => {
-    updateField('socials', socials.filter((_, i) => i !== index))
-  }
+  const socials = getArray<Social>(values, 'socials')
 
   return (
     <BasePropertyEditor element={element} onUpdate={onUpdate} isUpdating={isUpdating}>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">{t('editor:properties.contact.info')}</h4>
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={handleSaveData}
-            disabled={!isDirty || isUpdating}
-          >
-            {isUpdating ? <Spinner className="h-3 w-3" /> : t('common:actions.apply')}
-          </Button>
-        </div>
+        <PropertySectionHeader
+          title={t('editor:properties.contact.info')}
+          isDirty={isDirty}
+          isSaving={isSaving}
+          onSave={save}
+        />
         
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <FieldLabel className="text-xs text-muted-foreground">{t('editor:properties.contact.email')}</FieldLabel>
-            <Input 
-              type="email"
-              value={getString(data, 'email')}
-              onChange={(e) => updateField('email', e.target.value)}
-              placeholder="contact@example.com"
-              className="h-9"
-            />
-          </div>
+          <TextField
+            name="email"
+            label={t('editor:properties.contact.email')}
+            type="email"
+            value={getString(values, 'email')}
+            onChange={(v) => setValue('email', v)}
+            placeholder="contact@example.com"
+          />
           
-          <div className="space-y-1.5">
-            <FieldLabel className="text-xs text-muted-foreground">{t('editor:properties.contact.phone')}</FieldLabel>
-            <Input 
-              value={getString(data, 'phone')}
-              onChange={(e) => updateField('phone', e.target.value)}
-              placeholder="+33 6 12 34 56 78"
-              className="h-9"
-            />
-          </div>
+          <TextField
+            name="phone"
+            label={t('editor:properties.contact.phone')}
+            type="tel"
+            value={getString(values, 'phone')}
+            onChange={(v) => setValue('phone', v)}
+            placeholder="+33 6 12 34 56 78"
+          />
           
-          <div className="space-y-1.5">
-            <FieldLabel className="text-xs text-muted-foreground">{t('editor:properties.contact.location')}</FieldLabel>
-            <Input 
-              value={getString(data, 'location')}
-              onChange={(e) => updateField('location', e.target.value)}
-              placeholder="Paris, France"
-              className="h-9"
-            />
-          </div>
+          <TextField
+            name="location"
+            label={t('editor:properties.contact.location')}
+            value={getString(values, 'location')}
+            onChange={(v) => setValue('location', v)}
+            placeholder="Paris, France"
+          />
           
           <Separator />
           
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <FieldLabel className="text-xs text-muted-foreground">{t('editor:properties.contact.socials')}</FieldLabel>
-              <Button size="sm" variant="ghost" onClick={addSocial} className="h-7 px-2">
-                <Plus className="h-3 w-3 mr-1" /> {t('common:actions.add')}
-              </Button>
-            </div>
-            
-            <div className="space-y-2">
-              {socials.map((social, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Select 
-                    value={social.platform} 
-                    onValueChange={(value) => updateSocial(index, 'platform', value)}
-                  >
-                    <SelectTrigger className="h-8 w-24">
-                      <SelectValue placeholder={t('editor:properties.contact.type')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="github">GitHub</SelectItem>
-                      <SelectItem value="linkedin">LinkedIn</SelectItem>
-                      <SelectItem value="twitter">Twitter</SelectItem>
-                      <SelectItem value="website">{t('editor:properties.contact.website')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input 
-                    value={social.url}
-                    onChange={(e) => updateSocial(index, 'url', e.target.value)}
-                    placeholder="https://..."
-                    className="h-8 flex-1"
+            <label className={EDITOR_STYLES.label}>
+              {t('editor:properties.contact.socials')}
+            </label>
+            <EditableList
+              items={socials}
+              onChange={(items) => setValue('socials', items)}
+              createItem={() => ({ platform: '', url: '' })}
+              addLabel={t('common:actions.add')}
+              maxHeight={200}
+              renderItem={(social, index, { update, remove }) => (
+                <div className="flex items-center gap-2">
+                  <SelectField
+                    name={`social-platform-${index}`}
+                    value={social.platform}
+                    onChange={(v) => update('platform', v)}
+                    options={SOCIAL_PLATFORMS}
+                    placeholder={t('editor:properties.contact.type')}
+                    className="w-24"
                   />
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={() => removeSocial(index)}
-                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  <TextField
+                    name={`social-url-${index}`}
+                    value={social.url}
+                    onChange={(v) => update('url', v)}
+                    placeholder="https://..."
+                    className="flex-1"
+                  />
+                  <DeleteButton onClick={remove} />
                 </div>
-              ))}
-            </div>
+              )}
+            />
           </div>
         </div>
       </div>
@@ -770,6 +506,7 @@ export function ContactPropertyEditor({ element, onUpdate, isUpdating }: Propert
 // ============================================
 // Generic Property Editor for other elements
 // ============================================
+
 export function GenericPropertyEditor({ element, onUpdate, isUpdating }: PropertyEditorProps) {
   const { t } = useTranslation(['common', 'editor'])
   return (
@@ -783,12 +520,9 @@ export function GenericPropertyEditor({ element, onUpdate, isUpdating }: Propert
 }
 
 // ============================================
-// Landing SaaS Property Editor (Schema-based)
+// Landing SaaS Types Detection
 // ============================================
-import { LandingSaaSPropertyEditor } from "./landing-saas-property-editors"
-import { getSectionSchema } from "@asap/shared"
 
-// Landing SaaS element types that use the schema-based editor
 const LANDING_SAAS_TYPES = [
   'navigation',
   'features', 
@@ -799,15 +533,9 @@ const LANDING_SAAS_TYPES = [
   'footer',
 ]
 
-/**
- * Detect if a Hero element is from Landing SaaS context
- * Landing SaaS heroes have specific settings like headline_line1, badge_text, etc.
- */
 function isLandingSaaSHero(element: WebsiteElement): boolean {
   const settings = element.settings as Record<string, unknown> | undefined
   if (!settings) return false
-  
-  // Landing SaaS Hero has these specific keys
   return !!(
     settings.headline_line1 !== undefined ||
     settings.badge_text !== undefined ||
@@ -819,8 +547,9 @@ function isLandingSaaSHero(element: WebsiteElement): boolean {
 // ============================================
 // Property Editor Router
 // ============================================
+
 export function PropertyEditor({ element, onUpdate, isUpdating }: PropertyEditorProps) {
-  // Check if this is a Landing SaaS element type
+  // Landing SaaS types use schema-based editor
   if (LANDING_SAAS_TYPES.includes(element.element_type)) {
     return (
       <LandingSaaSPropertyEditor
@@ -831,9 +560,8 @@ export function PropertyEditor({ element, onUpdate, isUpdating }: PropertyEditor
     )
   }
   
-  // Special case for Hero: detect context (Portfolio vs Landing SaaS)
+  // Special case for Hero: detect context
   if (element.element_type === 'hero' && isLandingSaaSHero(element)) {
-    // Check if schema exists for this type
     const schema = getSectionSchema('hero')
     if (schema) {
       return (

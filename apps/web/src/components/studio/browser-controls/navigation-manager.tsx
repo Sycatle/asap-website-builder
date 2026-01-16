@@ -75,7 +75,6 @@ export function useNavigation({
     
     // Prevent navigation to external URLs
     if (!isInternalUrl(url)) {
-      console.warn('External navigation blocked:', url);
       return;
     }
 
@@ -227,7 +226,6 @@ export function usePreviewLinkInterceptor(
         } else {
           // External link - prevent navigation in preview
           e.preventDefault();
-          console.warn('External link clicked, navigation blocked in preview:', href);
         }
       };
 

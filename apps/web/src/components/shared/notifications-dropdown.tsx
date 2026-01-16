@@ -152,7 +152,7 @@ export function NotificationsDropdown({ className, trigger }: NotificationsDropd
     try {
       await markAsRead(notification.id)
     } catch (error) {
-      console.error('Failed to mark notification as read:', error)
+      // Silently fail
     }
   }
 
@@ -162,7 +162,6 @@ export function NotificationsDropdown({ className, trigger }: NotificationsDropd
       await markAllAsRead()
       toast.success(t('notifications:toast.markedAllRead'))
     } catch (error) {
-      console.error('Failed to mark all as read:', error)
       toast.error(t('notifications:toast.markAllError'))
     }
   }
@@ -173,7 +172,6 @@ export function NotificationsDropdown({ className, trigger }: NotificationsDropd
     try {
       await deleteNotification(notification.id)
     } catch (error) {
-      console.error('Failed to delete notification:', error)
       toast.error(t('notifications:toast.deleteError'))
     }
   }
@@ -185,7 +183,7 @@ export function NotificationsDropdown({ className, trigger }: NotificationsDropd
       try {
         await markAsRead(notification.id)
       } catch (error) {
-        console.error('Failed to mark notification as read:', error)
+        // Silently fail
       }
     }
 

@@ -362,7 +362,6 @@ export function GenericSiteOnboarding({ presetId, onComplete }: GenericSiteOnboa
       toast.success(t('generic.publish.success'));
       onComplete(websiteId);
     } catch (error: any) {
-      console.error('Error creating website:', error);
       // Handle slug taken error
       if (error?.status === 409 || error?.data?.error === 'slug_taken') {
         toast.error(t('toasts.errors.slugTaken'));

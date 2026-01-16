@@ -68,7 +68,6 @@ export function FilePickerDialog({
       
       setFiles(filteredFiles)
     } catch (error) {
-      console.error("Failed to load files:", error)
       setFiles([])
     } finally {
       setIsLoading(false)

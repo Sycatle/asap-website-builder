@@ -215,7 +215,6 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
       goToNextStep();
       toast.success(t('toasts.success.created'));
     } catch (error: any) {
-      console.error('Failed to create website:', error);
       // Check for slug_taken error from backend
       if (error?.status === 409 || error?.data?.error === 'slug_taken') {
         toast.error(t('toasts.errors.slugTaken'));
@@ -290,7 +289,6 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
         },
       });
     } catch (error) {
-      console.error('Failed to save profile:', error);
       throw error;
     }
   };
@@ -330,7 +328,6 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
       toast.success(t('toasts.success.portfolioPublished'));
       onComplete(websiteId);
     } catch (error) {
-      console.error('Failed to publish:', error);
       toast.error(t('toasts.errors.publishError'));
     } finally {
       setIsLoading(false);

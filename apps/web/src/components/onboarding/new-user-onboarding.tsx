@@ -211,7 +211,6 @@ export function NewUserOnboarding({ onComplete }: NewUserOnboardingProps) {
       
       trackEvent('onboarding_presets_loaded', 'new', { count: enabledPresets.length });
     } catch (error) {
-      console.error('Error loading presets:', error);
       toast.error(t('newUser.template.loadError'));
     } finally {
       setIsLoadingPresets(false);

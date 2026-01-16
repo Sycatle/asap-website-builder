@@ -215,7 +215,6 @@ export function SecuritySettings() {
       const response = await authAPI.listSessions()
       setSessions(response.sessions)
     } catch (error) {
-      console.error('Failed to fetch sessions:', error)
       toast.error('Impossible de charger les sessions')
     } finally {
       setIsLoadingSessions(false)
@@ -233,7 +232,6 @@ export function SecuritySettings() {
       toast.success('Session révoquée')
       fetchSessions()
     } catch (error) {
-      console.error('Failed to revoke session:', error)
       toast.error('Impossible de révoquer la session')
     } finally {
       setIsRevokingSession(null)
@@ -297,7 +295,7 @@ export function SecuritySettings() {
     try {
       await changePasswordPromise()
     } catch (error: unknown) {
-      console.error('Failed to change password:', error)
+      // Error already handled via toast
     } finally {
       setIsChangingPassword(false)
     }

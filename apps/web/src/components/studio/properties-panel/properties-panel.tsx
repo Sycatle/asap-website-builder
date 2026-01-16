@@ -168,7 +168,7 @@ export function PropertiesPanel({
     try {
       await onUpdate(element.id, updates as UpdateElementRequest);
     } catch (error) {
-      console.error("Failed to update element:", error);
+      // Silently fail
     } finally {
       setIsUpdating(false);
     }

@@ -35,7 +35,6 @@ export function BrowserPreview({
     initialUrl: initialPage,
     baseUrl: `/${websiteSlug}`,
     onNavigate: (url) => {
-      console.log('Navigating to:', url)
       onPageChange?.(url)
     }
   })

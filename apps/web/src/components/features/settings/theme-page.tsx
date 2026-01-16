@@ -112,7 +112,7 @@ export default function ThemePage() {
         setTheme(mergedTheme);
         setOriginalTheme(mergedTheme);
       } catch (error) {
-        console.error('Failed to load theme:', error);
+        // Silently fail
       } finally {
         setIsLoading(false);
       }
@@ -146,7 +146,6 @@ export default function ThemePage() {
       setOriginalTheme(theme);
       toast.success('Thème enregistré');
     } catch (error) {
-      console.error('Failed to save theme:', error);
       toast.error('Erreur lors de l\'enregistrement');
     } finally {
       setIsSaving(false);

@@ -43,6 +43,7 @@ export interface SimplePreviewCanvasProps {
   elements: WebsiteElement[];
   devicePreview: DevicePreview;
   previewTheme: PreviewTheme;
+  appTheme?: 'light' | 'dark';
   setDevicePreview: (device: DevicePreview) => void;
   setPreviewTheme: (theme: PreviewTheme) => void;
   selectedElementId: string | null;
@@ -68,6 +69,7 @@ export function SimplePreviewCanvas({
   elements,
   devicePreview,
   previewTheme,
+  appTheme = 'light',
   setDevicePreview,
   setPreviewTheme,
   selectedElementId,
@@ -111,16 +113,12 @@ export function SimplePreviewCanvas({
   
   // Handle preview ready
   const handlePreviewReady = useCallback(() => {
-    console.log('[Preview Canvas] Preview is now ready');
     setPreviewReady(true);
   }, []);
   
   // Expose global capture function for AI chat to call directly
   useEffect(() => {
-    console.log('[Preview Canvas] Exposing global capture function');
-    
     window.__capturePreview = async (viewport: Viewport = 'desktop'): Promise<{ imageId: string } | null> => {
-      console.log('[Preview Canvas] __capturePreview called with viewport:', viewport);
       
       // Map viewport to device
       const viewportToDevice: Record<Viewport, DevicePreview> = {
@@ -146,18 +144,13 @@ export function SimplePreviewCanvas({
         
         const frameRef = previewFrameRef.current;
         if (!frameRef) {
-          console.error('[Preview Canvas] previewFrameRef is null');
           throw new Error('Preview frame not available');
         }
-        
-        console.log('[Preview Canvas] Starting screenshot capture...');
         const dataUrl = await frameRef.captureScreenshot();
         
         if (!dataUrl) {
           throw new Error('Failed to capture preview - no data returned');
         }
-        
-        console.log('[Preview Canvas] Screenshot captured, uploading...');
         
         // Convert data URL to blob for upload
         const response = await fetch(dataUrl);
@@ -171,11 +164,9 @@ export function SimplePreviewCanvas({
           viewport
         );
         
-        console.log('[Preview Canvas] Upload successful:', uploadResult.imageId);
         return { imageId: uploadResult.imageId };
         
       } catch (error) {
-        console.error('[Preview Canvas] Capture failed:', error);
         return null;
       } finally {
         setIsCapturing(false);
@@ -183,7 +174,6 @@ export function SimplePreviewCanvas({
     };
     
     return () => {
-      console.log('[Preview Canvas] Removing global capture function');
       delete window.__capturePreview;
     };
   }, [setDevicePreview]);
@@ -272,6 +262,7 @@ export function SimplePreviewCanvas({
             elements={visibleElements}
             pageId={currentPageId}
             previewTheme={previewTheme}
+            appTheme={appTheme}
             selectedElementId={selectedElementId}
             onElementClick={handleElementClick}
             onElementDuplicate={onElementDuplicate}

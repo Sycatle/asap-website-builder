@@ -343,7 +343,6 @@ export function GlobalAIChatPanel({
       await executeAction(action);
       return true;
     } catch (error) {
-      console.error('Action execution failed:', error);
       return false;
     }
   }, [autoExecuteActions, executeAction]);
@@ -547,7 +546,6 @@ export function GlobalAIChatPanel({
         onToolRequest: async (data: ToolRequestData) => {
           // Visual analysis is now handled fully server-side via the screenshot service
           // This callback is kept for backwards compatibility but is a no-op
-          console.log('[AI Chat] Received tool request (handled server-side):', data.request_type);
         },
         onIteration: (data) => {
           // Add iteration step to chain
@@ -644,7 +642,6 @@ export function GlobalAIChatPanel({
           playSound('receive');
         },
         onError: (error: { code: string; message: string }) => {
-          console.error('AI chat error:', error);
           // Mark chain steps as failed
           setMessages(prev => prev.map(m => {
             if (m.id !== assistantMessageId) return m;

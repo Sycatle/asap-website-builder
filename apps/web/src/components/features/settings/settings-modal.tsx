@@ -204,7 +204,7 @@ export function SettingsModal({
       setWebsites(websitesData)
       setExtensions(extensionsData)
     } catch (error) {
-      console.error('Failed to load settings data:', error)
+      // Silently fail
     } finally {
       setIsLoading(false)
     }
@@ -234,7 +234,7 @@ export function SettingsModal({
       await savePromise()
       onOpenChange(false)
     } catch (error) {
-      console.error('Failed to save account data:', error)
+      // Error already shown via toast
     } finally {
       setIsSaving(false)
     }

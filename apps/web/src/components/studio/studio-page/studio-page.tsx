@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from "react"
 import { useTranslation } from 'react-i18next'
+import { useTheme } from 'next-themes'
 import { useWebsiteContext } from "@/contexts/WebsiteContext"
 import { 
   useElementsQuery,
@@ -36,6 +37,7 @@ import { CommandPalette } from "../command-palette"
  */
 export function StudioPage({ onBack }: StudioPageProps) {
   const { t } = useTranslation(['common', 'editor'])
+  const { resolvedTheme } = useTheme()
   
   // Data hooks
   const { currentWebsite: website, isLoading: isLoadingWebsite } = useWebsiteContext()
@@ -396,6 +398,7 @@ export function StudioPage({ onBack }: StudioPageProps) {
               elements={elements}
               devicePreview={devicePreview}
               previewTheme={previewTheme}
+              appTheme={resolvedTheme === 'dark' ? 'dark' : 'light'}
               setDevicePreview={setDevicePreview}
               setPreviewTheme={setPreviewTheme}
               selectedElementId={selectedElementId}

@@ -90,7 +90,6 @@ export function TemplateLibrary({
       });
       setTemplates(data);
     } catch (err) {
-      console.error('Failed to fetch templates:', err);
       setError('Erreur lors du chargement des templates');
     } finally {
       setIsLoading(false);

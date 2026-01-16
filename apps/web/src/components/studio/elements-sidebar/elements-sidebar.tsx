@@ -48,7 +48,6 @@ export function ElementsSidebar({
       toast.success("Elements reordered")
     } catch (error) {
       toast.error("Failed to reorder elements")
-      console.error("Reorder error:", error)
     }
   }
 
@@ -69,7 +68,6 @@ export function ElementsSidebar({
       toast.success("Element duplicated")
     } catch (error) {
       toast.error("Failed to duplicate element")
-      console.error("Duplicate error:", error)
     }
   }
 
@@ -87,7 +85,6 @@ export function ElementsSidebar({
       setDeleteConfirm(null)
     } catch (error) {
       toast.error("Failed to delete element")
-      console.error("Delete error:", error)
     }
   }
 
@@ -98,7 +95,6 @@ export function ElementsSidebar({
       toast.success(visible ? "Element shown" : "Element hidden")
     } catch (error) {
       toast.error("Failed to update element visibility")
-      console.error("Toggle visible error:", error)
     }
   }
 
@@ -117,7 +113,6 @@ export function ElementsSidebar({
       toast.success("Élément déplacé vers le haut")
     } catch (error) {
       toast.error("Échec du déplacement")
-      console.error("Move up error:", error)
     }
   }
 
@@ -136,7 +131,6 @@ export function ElementsSidebar({
       toast.success("Élément déplacé vers le bas")
     } catch (error) {
       toast.error("Échec du déplacement")
-      console.error("Move down error:", error)
     }
   }
 

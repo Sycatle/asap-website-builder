@@ -427,11 +427,10 @@ function DataTab({ websiteId, extensionSlug }: DataTabProps) {
             }));
           setCollections(filtered);
         } catch (err) {
-          console.error('[DataTab] Failed to load collections:', err);
           setCollections([]);
         }
       } catch (error) {
-        console.error('Failed to load data:', error);
+        // Silently fail
       } finally {
         setIsLoading(false);
       }

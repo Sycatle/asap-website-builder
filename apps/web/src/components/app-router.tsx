@@ -323,7 +323,7 @@ export default function AppRouter() {
                 return
               }
             } catch (e) {
-              console.error('[AppRouter] Token refresh failed:', e)
+              // Token refresh failed silently
             }
           }
           
@@ -332,13 +332,11 @@ export default function AppRouter() {
           localStorage.removeItem('refresh_token')
           redirectToLogin()
         } else {
-          // Other errors (network, server) - let user proceed but log warning
-          console.warn('[AppRouter] Auth check failed with status:', response.status)
+          // Other errors (network, server) - let user proceed
           setIsAuthenticated(true)
         }
       } catch (error) {
         // Network error - let user proceed if they have a token
-        console.warn('[AppRouter] Auth check network error:', error)
         setIsAuthenticated(true)
       }
     }
@@ -360,7 +358,7 @@ export default function AppRouter() {
           };
         }
       } catch (e) {
-        console.error('[AppRouter] Failed to parse auth tokens from hash:', e);
+        // Failed to parse auth tokens
       }
       return null;
     }

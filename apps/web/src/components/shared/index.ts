@@ -66,3 +66,33 @@ export { FilePreviewDialog, type FilePreviewDialogProps } from './file-preview-d
 
 // Global AI Chat
 export { GlobalAIChatPanel } from './global-ai-chat-panel';
+
+// Settings primitives
+export {
+  SectionHeader,
+  SettingsSection,
+  SettingsCard,
+  ToggleRow,
+  InfoRow,
+  ActionRow,
+  OptionGrid,
+  ListOptions,
+} from './settings-primitives';
+
+// Skeleton components
+export {
+  TextSkeleton,
+  HeadingSkeleton,
+  AvatarSkeleton,
+  ButtonSkeleton,
+  InputSkeleton,
+  CardSkeleton,
+  IconSkeleton,
+  ListItemSkeleton,
+  CardWithHeaderSkeleton,
+  StatCardSkeleton,
+  FormFieldSkeleton,
+  TableRowSkeleton,
+  PageSkeleton,
+  GridSkeleton,
+} from './skeletons';
