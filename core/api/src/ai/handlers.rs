@@ -28,7 +28,7 @@ use super::helpers::{
     ai_error_to_response, format_action_description, get_account_id, get_plan_daily_limit,
     get_user_plan, verify_website_ownership,
 };
-use super::tools::{capture_screenshot_server_side, execute_data_tools_streaming, PreloadedScreenshot};
+use super::tools::{capture_screenshot_server_side, execute_data_tools_streaming_channel, ToolEvent, PreloadedScreenshot};
 use super::types::*;
 
 // ============================================================================
@@ -370,37 +370,87 @@ pub async fn chat_stream(
             yield Ok(Event::default().data(json));
         }
 
-        // Execute data tools with real-time feedback
+        // Execute data tools with real-time streaming
         let preloaded = preloaded_screenshot_for_stream.lock().await.take();
-        let data_tool_execution = execute_data_tools_streaming(
-            &orchestrator_for_stream,
-            &context_for_stream,
-            &user_message_for_stream,
-            &history_for_stream,
+        let (tool_future, mut tool_rx) = execute_data_tools_streaming_channel(
+            orchestrator_for_stream.clone(),
+            context_for_stream.clone(),
+            user_message_for_stream.clone(),
+            history_for_stream.clone(),
             preloaded,
-        ).await;
+        );
 
-        // Send tool events as they were collected
-        if let Some(ref execution) = data_tool_execution {
-            let mut last_description: Option<String> = None;
-
-            for tool_call in &execution.tool_calls {
-                if last_description.as_ref() == Some(&tool_call.description) {
-                    continue;
+        // Spawn the tool execution task
+        let tool_handle = tokio::spawn(tool_future);
+        
+        // Stream tool events as they happen
+        while let Some(event) = tool_rx.recv().await {
+            match event {
+                ToolEvent::Started { id, tool_name, description } => {
+                    let tool_call_event = SseEventData::ToolCall(ToolCallData {
+                        id,
+                        tool: tool_name,
+                        description,
+                        args: None,
+                        status: "running".to_string(),
+                        ..Default::default()
+                    });
+                    if let Ok(json) = serde_json::to_string(&tool_call_event) {
+                        yield Ok(Event::default().data(json));
+                    }
                 }
-                last_description = Some(tool_call.description.clone());
-
-                let tool_call_event = SseEventData::ToolCall(ToolCallData {
-                    id: tool_call.id.clone(),
-                    tool: tool_call.tool_name.clone(),
-                    description: tool_call.description.clone(),
-                    args: None,
-                    status: "completed".to_string(), ..Default::default() });
-                if let Ok(json) = serde_json::to_string(&tool_call_event) {
-                    yield Ok(Event::default().data(json));
+                ToolEvent::Completed { id, tool_name, success, description, duration_ms, result_preview } => {
+                    let tool_call_event = SseEventData::ToolCall(ToolCallData {
+                        id: id.clone(),
+                        tool: tool_name,
+                        description: description.clone(),
+                        args: None,
+                        status: if success { "completed".to_string() } else { "failed".to_string() },
+                        duration_ms: Some(duration_ms),
+                    });
+                    if let Ok(json) = serde_json::to_string(&tool_call_event) {
+                        yield Ok(Event::default().data(json));
+                    }
+                    
+                    // Also send tool result
+                    let tool_result_event = SseEventData::ToolResult(ToolResultData {
+                        tool_call_id: id,
+                        success,
+                        message: result_preview,
+                        ..Default::default()
+                    });
+                    if let Ok(json) = serde_json::to_string(&tool_result_event) {
+                        yield Ok(Event::default().data(json));
+                    }
+                }
+                ToolEvent::VisualAnalysisRequested { tool_call_id, viewport, focus } => {
+                    let tool_request_event = SseEventData::ToolRequest(ToolRequestData {
+                        request_id: tool_call_id,
+                        request_type: "visual_analysis".to_string(),
+                        params: serde_json::json!({
+                            "viewport": viewport,
+                            "focus": focus,
+                        }),
+                        timeout_seconds: Some(30),
+                    });
+                    if let Ok(json) = serde_json::to_string(&tool_request_event) {
+                        yield Ok(Event::default().data(json));
+                    }
                 }
             }
+        }
+        
+        // Wait for tool execution to complete and get results
+        let data_tool_execution = match tool_handle.await {
+            Ok(result) => result,
+            Err(e) => {
+                tracing::error!("Tool execution task panicked: {}", e);
+                None
+            }
+        };
 
+        // Handle visual analysis request if present
+        if let Some(ref execution) = data_tool_execution {
             if let Some(ref visual_req) = execution.visual_analysis_request {
                 let tool_request_event = SseEventData::ToolRequest(ToolRequestData {
                     request_id: visual_req.tool_call_id.clone(),

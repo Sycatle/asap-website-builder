@@ -4,7 +4,9 @@
 //! for AI responses.
 
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::mpsc;
 
 use asap_core_ai::{
     AIOrchestrator, OpenAIProvider, WebsiteContext,
@@ -33,6 +35,35 @@ pub struct ExecutedToolCall {
     pub tool_name: String,
     pub success: bool,
     pub description: String,
+    /// Duration in milliseconds
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<u64>,
+}
+
+/// Tool event for real-time streaming
+#[derive(Debug, Clone)]
+pub enum ToolEvent {
+    /// Tool call started
+    Started {
+        id: String,
+        tool_name: String,
+        description: String,
+    },
+    /// Tool call completed
+    Completed {
+        id: String,
+        tool_name: String,
+        success: bool,
+        description: String,
+        duration_ms: u64,
+        result_preview: Option<String>,
+    },
+    /// Visual analysis requested
+    VisualAnalysisRequested {
+        tool_call_id: String,
+        viewport: String,
+        focus: String,
+    },
 }
 
 /// Screenshot capture result
@@ -48,6 +79,9 @@ const MAX_TOOL_ITERATIONS: usize = 5;
 
 /// Preloaded screenshot handle type alias for clarity
 pub type PreloadedScreenshot = tokio::task::JoinHandle<Result<ScreenshotData, String>>;
+
+/// Channel sender for tool events
+pub type ToolEventSender = mpsc::UnboundedSender<ToolEvent>;
 
 // ============================================================================
 // Screenshot Capture
@@ -141,12 +175,26 @@ fn truncate_tool_result(content: &str, max_len: usize) -> &str {
 /// Execute data tools in a loop to gather comprehensive context before generating the final response.
 /// Uses chain-of-thought: the AI can request multiple tools across multiple iterations
 /// until it has gathered all the information it needs.
+/// 
+/// If `event_sender` is provided, tool events will be sent in real-time for streaming.
 pub async fn execute_data_tools(
     orchestrator: &AIOrchestrator,
     context: &WebsiteContext,
     user_message: &str,
     history: &[asap_core_ai::Message],
     preloaded_screenshot: Option<PreloadedScreenshot>,
+) -> Option<DataToolExecution> {
+    execute_data_tools_with_events(orchestrator, context, user_message, history, preloaded_screenshot, None).await
+}
+
+/// Execute data tools with optional real-time event streaming
+pub async fn execute_data_tools_with_events(
+    orchestrator: &AIOrchestrator,
+    context: &WebsiteContext,
+    user_message: &str,
+    history: &[asap_core_ai::Message],
+    preloaded_screenshot: Option<PreloadedScreenshot>,
+    event_sender: Option<ToolEventSender>,
 ) -> Option<DataToolExecution> {
     // Store preloaded screenshot in Option so we can take it when needed
     let mut preloaded_screenshot = preloaded_screenshot;
@@ -284,6 +332,16 @@ Gather ALL relevant data to provide expert-level insights. Think like a consulta
         for tool_call in &response.tool_calls {
             let tool_name = &tool_call.function.name;
             let description = get_tool_description(tool_name);
+            let start_time = std::time::Instant::now();
+
+            // Send tool started event
+            if let Some(ref sender) = event_sender {
+                let _ = sender.send(ToolEvent::Started {
+                    id: tool_call.id.clone(),
+                    tool_name: tool_name.clone(),
+                    description: description.to_string(),
+                });
+            }
 
             tracing::debug!(
                 "Executing data tool: {} with args: {}",
@@ -457,12 +515,26 @@ Structure your response:
 
                                 // Mark visual analysis as done to prevent duplicates
                                 visual_analysis_done = true;
+                                let duration_ms = start_time.elapsed().as_millis() as u64;
+
+                                // Send completed event
+                                if let Some(ref sender) = event_sender {
+                                    let _ = sender.send(ToolEvent::Completed {
+                                        id: tool_call.id.clone(),
+                                        tool_name: tool_name.clone(),
+                                        success: true,
+                                        description: description.to_string(),
+                                        duration_ms,
+                                        result_preview: Some("Analyse visuelle terminée".to_string()),
+                                    });
+                                }
 
                                 all_executed_calls.push(ExecutedToolCall {
                                     id: tool_call.id.clone(),
                                     tool_name: tool_name.clone(),
                                     success: true,
                                     description: description.to_string(),
+                                    duration_ms: Some(duration_ms),
                                 });
                             }
                             Err(vision_error) => {
@@ -475,18 +547,33 @@ Structure your response:
                                     screenshot_data.height,
                                     vision_error
                                 ));
+                                let duration_ms = start_time.elapsed().as_millis() as u64;
+
+                                // Send completed event (failed)
+                                if let Some(ref sender) = event_sender {
+                                    let _ = sender.send(ToolEvent::Completed {
+                                        id: tool_call.id.clone(),
+                                        tool_name: tool_name.clone(),
+                                        success: false,
+                                        description: format!("{} (vision failed)", description),
+                                        duration_ms,
+                                        result_preview: None,
+                                    });
+                                }
 
                                 all_executed_calls.push(ExecutedToolCall {
                                     id: tool_call.id.clone(),
                                     tool_name: tool_name.clone(),
                                     success: false,
                                     description: format!("{} (vision failed)", description),
+                                    duration_ms: Some(duration_ms),
                                 });
                             }
                         }
                     }
                     Err(e) => {
                         tracing::warn!("Screenshot capture failed, using structural fallback: {}", e);
+                        let duration_ms = start_time.elapsed().as_millis() as u64;
 
                         // OPTIMIZATION #6: Graceful fallback - provide structural analysis instead
                         let sections_summary = context.sections.iter()
@@ -514,11 +601,24 @@ Structure your response:
                             sections_summary
                         ));
 
+                        // Send completed event (failed)
+                        if let Some(ref sender) = event_sender {
+                            let _ = sender.send(ToolEvent::Completed {
+                                id: tool_call.id.clone(),
+                                tool_name: tool_name.clone(),
+                                success: false,
+                                description: format!("{} (capture failed)", description),
+                                duration_ms,
+                                result_preview: None,
+                            });
+                        }
+
                         all_executed_calls.push(ExecutedToolCall {
                             id: tool_call.id.clone(),
                             tool_name: tool_name.clone(),
                             success: false,
                             description: format!("{} (capture failed)", description),
+                            duration_ms: Some(duration_ms),
                         });
                     }
                 }
@@ -529,12 +629,30 @@ Structure your response:
 
             // Execute the tool (standard flow)
             let tool_result = tool_executor.execute(tool_call, context);
+            let duration_ms = start_time.elapsed().as_millis() as u64;
+
+            // Send tool completed event
+            if let Some(ref sender) = event_sender {
+                let _ = sender.send(ToolEvent::Completed {
+                    id: tool_call.id.clone(),
+                    tool_name: tool_name.clone(),
+                    success: tool_result.success,
+                    description: description.to_string(),
+                    duration_ms,
+                    result_preview: if tool_result.success {
+                        Some(truncate_tool_result(&tool_result.content, 100).to_string())
+                    } else {
+                        None
+                    },
+                });
+            }
 
             all_executed_calls.push(ExecutedToolCall {
                 id: tool_call.id.clone(),
                 tool_name: tool_name.clone(),
                 success: tool_result.success,
                 description: description.to_string(),
+                duration_ms: Some(duration_ms),
             });
 
             // Store result for context
@@ -589,8 +707,35 @@ Structure your response:
     })
 }
 
-/// Alias for execute_data_tools - streaming is handled at the SSE level
-/// Accepts optional preloaded screenshot for optimization
+/// Execute data tools with real-time streaming via channel
+/// Returns a future that executes tools and a receiver for real-time events
+pub fn execute_data_tools_streaming_channel(
+    orchestrator: Arc<AIOrchestrator>,
+    context: WebsiteContext,
+    user_message: String,
+    history: Vec<asap_core_ai::Message>,
+    preloaded_screenshot: Option<PreloadedScreenshot>,
+) -> (
+    std::pin::Pin<Box<dyn std::future::Future<Output = Option<DataToolExecution>> + Send>>,
+    mpsc::UnboundedReceiver<ToolEvent>,
+) {
+    let (tx, rx) = mpsc::unbounded_channel();
+    
+    let future = Box::pin(async move {
+        execute_data_tools_with_events(
+            &orchestrator,
+            &context,
+            &user_message,
+            &history,
+            preloaded_screenshot,
+            Some(tx),
+        ).await
+    });
+    
+    (future, rx)
+}
+
+/// Legacy alias for execute_data_tools - now delegates to the with_events version
 pub async fn execute_data_tools_streaming(
     orchestrator: &AIOrchestrator,
     context: &WebsiteContext,
@@ -598,5 +743,5 @@ pub async fn execute_data_tools_streaming(
     history: &[asap_core_ai::Message],
     preloaded_screenshot: Option<PreloadedScreenshot>,
 ) -> Option<DataToolExecution> {
-    execute_data_tools(orchestrator, context, user_message, history, preloaded_screenshot).await
+    execute_data_tools_with_events(orchestrator, context, user_message, history, preloaded_screenshot, None).await
 }
