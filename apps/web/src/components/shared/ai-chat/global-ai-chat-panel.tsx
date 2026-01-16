@@ -78,6 +78,10 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   
+  // Message update queue to ensure chronological order
+  const updateQueueRef = useRef<Array<() => void>>([]);
+  const isProcessingRef = useRef(false);
+  
   // User info
   const websiteSlug = currentWebsite?.slug ?? null;
   const userName = userData?.name || userData?.email?.split('@')[0] || 'Vous';
@@ -103,6 +107,33 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
       }));
     },
   });
+
+  // Process update queue sequentially
+  const processUpdateQueue = useCallback(() => {
+    if (isProcessingRef.current || updateQueueRef.current.length === 0) return;
+    
+    isProcessingRef.current = true;
+    const update = updateQueueRef.current.shift();
+    
+    if (update) {
+      update();
+    }
+    
+    isProcessingRef.current = false;
+    
+    // Process next update if any
+    if (updateQueueRef.current.length > 0) {
+      requestAnimationFrame(processUpdateQueue);
+    }
+  }, []);
+
+  // Queue an update to be processed in order
+  const queueUpdate = useCallback((updateFn: () => void) => {
+    updateQueueRef.current.push(updateFn);
+    if (!isProcessingRef.current) {
+      requestAnimationFrame(processUpdateQueue);
+    }
+  }, [processUpdateQueue]);
 
   // Scroll handling
   const handleScroll = useCallback(() => {
@@ -176,9 +207,11 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
     const planSteps: ExecutionStep[] = [];
 
     const updateAssistantMessage = (updates: Partial<AssistantMessage>) => {
-      setMessages(prev => prev.map(m => 
-        m.id === assistantMessageId ? { ...m, ...updates } as AssistantMessage : m
-      ));
+      queueUpdate(() => {
+        setMessages(prev => prev.map(m => 
+          m.id === assistantMessageId ? { ...m, ...updates } as AssistantMessage : m
+        ));
+      });
     };
     
     const updateOrAddPlanStep = (data: { 
@@ -191,27 +224,35 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
       producesOutput?: boolean;
       error?: { message: string; cause?: string; recoverable: boolean } 
     }) => {
-      const existingIdx = planSteps.findIndex(s => s.id === data.id);
-      const stepData: ExecutionStep = {
-        id: data.id,
-        index: data.index,
-        title: data.title,
-        description: data.description,
-        status: data.status,
-        specialist: data.specialist as ExecutionStep['specialist'],
-        producesOutput: data.producesOutput,
-        error: data.error,
-      };
-      
-      if (existingIdx >= 0) {
-        planSteps[existingIdx] = { ...planSteps[existingIdx], ...stepData };
-      } else {
-        planSteps.push(stepData);
-      }
-      // Sort by index to maintain order
-      planSteps.sort((a, b) => a.index - b.index);
-      updateAssistantMessage({ 
-        plan: { id: assistantMessage.plan!.id, steps: [...planSteps], currentStep: planSteps.findIndex(s => s.status === 'running') } 
+      queueUpdate(() => {
+        const existingIdx = planSteps.findIndex(s => s.id === data.id);
+        const stepData: ExecutionStep = {
+          id: data.id,
+          index: data.index,
+          title: data.title,
+          description: data.description,
+          status: data.status,
+          specialist: data.specialist as ExecutionStep['specialist'],
+          producesOutput: data.producesOutput,
+          error: data.error,
+        };
+        
+        if (existingIdx >= 0) {
+          planSteps[existingIdx] = { ...planSteps[existingIdx], ...stepData };
+        } else {
+          planSteps.push(stepData);
+        }
+        // Sort by index to maintain order
+        planSteps.sort((a, b) => a.index - b.index);
+        
+        setMessages(prev => prev.map(m => 
+          m.id === assistantMessageId 
+            ? { 
+                ...m, 
+                plan: { id: (m as AssistantMessage).plan!.id, steps: [...planSteps], currentStep: planSteps.findIndex(s => s.status === 'running') } 
+              } as AssistantMessage
+            : m
+        ));
       });
     };
 
@@ -223,15 +264,61 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
       },
       {
         onToken: (token: string) => {
-          setMessages(prev => prev.map(m => {
-            if (m.id !== assistantMessageId) return m;
-            const msg = m as AssistantMessage;
-            return {
-              ...msg,
-              content: { ...msg.content, body: (msg.content.body || '') + token },
-              streamingPhase: 'writing',
-            };
-          }));
+          queueUpdate(() => {
+            setMessages(prev => prev.map(m => {
+              if (m.id !== assistantMessageId) return m;
+              const msg = m as AssistantMessage;
+              return {
+                ...msg,
+                content: { ...msg.content, body: (msg.content.body || '') + token },
+                streamingPhase: 'writing',
+              };
+            }));
+          });
+        },
+        
+        // Handle real-time thinking tokens during reasoning
+        onThinkingToken: (data) => {
+          queueUpdate(() => {
+            setMessages(prev => prev.map(m => {
+              if (m.id !== assistantMessageId) return m;
+              const msg = m as AssistantMessage;
+              // Append thinking token to currentReasoning
+              const currentReasoning = (msg.currentReasoning || '') + data.token;
+              return {
+                ...msg,
+                streamingPhase: 'thinking',
+                currentReasoning,
+                currentThought: data.step ? `Étape ${data.step}` : undefined,
+              };
+            }));
+          });
+        },
+        
+        // Handle real-time insight tokens during step execution
+        onInsightToken: (data) => {
+          queueUpdate(() => {
+            setMessages(prev => prev.map(m => {
+              if (m.id !== assistantMessageId) return m;
+              const msg = m as AssistantMessage;
+              // Update the current step's description with streamed insight
+              if (msg.plan && data.step) {
+                const steps = [...msg.plan.steps];
+                const stepIdx = steps.findIndex(s => s.id === `step_${data.step}`);
+                if (stepIdx >= 0) {
+                  steps[stepIdx] = {
+                    ...steps[stepIdx],
+                    description: (steps[stepIdx].description || '') + data.token,
+                  };
+                  return {
+                    ...msg,
+                    plan: { ...msg.plan, steps },
+                  };
+                }
+              }
+              return msg;
+            }));
+          });
         },
         
         onThinking: (data) => {
@@ -246,47 +333,51 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
         },
         
         onToolCall: (data) => {
-          updateAssistantMessage({ streamingPhase: 'executing' });
-          
-          const toolCall: ToolCall = {
-            id: data.id,
-            tool: data.tool,
-            label: data.description || data.tool,
-            status: data.status as ToolCall['status'],
-            input: data.args as Record<string, unknown>,
-          };
-          
-          setMessages(prev => prev.map(m => {
-            if (m.id !== assistantMessageId) return m;
-            const msg = m as AssistantMessage;
-            const existing = msg.toolCalls || [];
-            const existingIdx = existing.findIndex(t => t.id === data.id);
-            if (existingIdx >= 0) {
-              const updated = [...existing];
-              updated[existingIdx] = { ...updated[existingIdx], status: data.status as ToolCall['status'] };
-              return { ...msg, toolCalls: updated };
-            }
-            return { ...msg, toolCalls: [...existing, toolCall] };
-          }));
+          queueUpdate(() => {
+            updateAssistantMessage({ streamingPhase: 'executing' });
+            
+            const toolCall: ToolCall = {
+              id: data.id,
+              tool: data.tool,
+              label: data.description || data.tool,
+              status: data.status as ToolCall['status'],
+              input: data.args as Record<string, unknown>,
+            };
+            
+            setMessages(prev => prev.map(m => {
+              if (m.id !== assistantMessageId) return m;
+              const msg = m as AssistantMessage;
+              const existing = msg.toolCalls || [];
+              const existingIdx = existing.findIndex(t => t.id === data.id);
+              if (existingIdx >= 0) {
+                const updated = [...existing];
+                updated[existingIdx] = { ...updated[existingIdx], status: data.status as ToolCall['status'] };
+                return { ...msg, toolCalls: updated };
+              }
+              return { ...msg, toolCalls: [...existing, toolCall] };
+            }));
+          });
         },
         
         onToolResult: (data) => {
-          setMessages(prev => prev.map(m => {
-            if (m.id !== assistantMessageId) return m;
-            const msg = m as AssistantMessage;
-            return {
-              ...msg,
-              toolCalls: msg.toolCalls?.map(t => 
-                t.id === data.tool_call_id 
-                  ? { 
-                      ...t, 
-                      status: data.success ? 'done' as const : 'failed' as const,
-                      output: { success: data.success, error: data.message, data: data.data },
-                    }
-                  : t
-              ),
-            };
-          }));
+          queueUpdate(() => {
+            setMessages(prev => prev.map(m => {
+              if (m.id !== assistantMessageId) return m;
+              const msg = m as AssistantMessage;
+              return {
+                ...msg,
+                toolCalls: msg.toolCalls?.map(t => 
+                  t.id === data.tool_call_id 
+                    ? { 
+                        ...t, 
+                        status: data.success ? 'done' as const : 'failed' as const,
+                        output: { success: data.success, error: data.message, data: data.data },
+                      }
+                    : t
+                ),
+              };
+            }));
+          });
         },
         
         onToolRequest: async () => {},
@@ -319,77 +410,87 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
         },
         
         onSummary: (data) => {
-          setMessages(prev => prev.map(m => {
-            if (m.id !== assistantMessageId) return m;
-            const msg = m as AssistantMessage;
-            return {
-              ...msg,
-              content: { ...msg.content, summary: data.text },
-            };
-          }));
+          queueUpdate(() => {
+            setMessages(prev => prev.map(m => {
+              if (m.id !== assistantMessageId) return m;
+              const msg = m as AssistantMessage;
+              return {
+                ...msg,
+                content: { ...msg.content, summary: data.text },
+              };
+            }));
+          });
         },
         
         onArtifact: (data) => {
-          setMessages(prev => prev.map(m => {
-            if (m.id !== assistantMessageId) return m;
-            const msg = m as AssistantMessage;
-            
-            const artifactActions = data.actions?.map((actionLabel, idx) => ({
-              id: `${data.id}-action-${idx}`,
-              label: actionLabel,
-              onClick: () => console.log('Artifact action:', actionLabel),
+          queueUpdate(() => {
+            setMessages(prev => prev.map(m => {
+              if (m.id !== assistantMessageId) return m;
+              const msg = m as AssistantMessage;
+              
+              const artifactActions = data.actions?.map((actionLabel, idx) => ({
+                id: `${data.id}-action-${idx}`,
+                label: actionLabel,
+                onClick: () => console.log('Artifact action:', actionLabel),
+              }));
+              
+              return {
+                ...msg,
+                content: { 
+                  ...msg.content, 
+                  artifacts: [...(msg.content.artifacts || []), {
+                    id: data.id,
+                    type: data.artifact_type,
+                    title: data.title,
+                    content: data.content,
+                    actions: artifactActions,
+                  }],
+                },
+              };
             }));
-            
-            return {
-              ...msg,
-              content: { 
-                ...msg.content, 
-                artifacts: [...(msg.content.artifacts || []), {
-                  id: data.id,
-                  type: data.artifact_type,
-                  title: data.title,
-                  content: data.content,
-                  actions: artifactActions,
-                }],
-              },
-            };
-          }));
+          });
         },
         
         onSource: (data) => {
-          setMessages(prev => prev.map(m => {
-            if (m.id !== assistantMessageId) return m;
-            const msg = m as AssistantMessage;
-            return {
-              ...msg,
-              content: { 
-                ...msg.content, 
-                sources: [...(msg.content.sources || []), data],
-              },
-            };
-          }));
+          queueUpdate(() => {
+            setMessages(prev => prev.map(m => {
+              if (m.id !== assistantMessageId) return m;
+              const msg = m as AssistantMessage;
+              return {
+                ...msg,
+                content: { 
+                  ...msg.content, 
+                  sources: [...(msg.content.sources || []), data],
+                },
+              };
+            }));
+          });
         },
         
         onWarning: (data) => {
-          setMessages(prev => prev.map(m => {
-            if (m.id !== assistantMessageId) return m;
-            const msg = m as AssistantMessage;
-            return {
-              ...msg,
-              content: { 
-                ...msg.content, 
-                warnings: [...(msg.content.warnings || []), data.message],
-              },
-            };
-          }));
+          queueUpdate(() => {
+            setMessages(prev => prev.map(m => {
+              if (m.id !== assistantMessageId) return m;
+              const msg = m as AssistantMessage;
+              return {
+                ...msg,
+                content: { 
+                  ...msg.content, 
+                  warnings: [...(msg.content.warnings || []), data.message],
+                },
+              };
+            }));
+          });
         },
         
         onAction: async (action: AIAction) => {
-          setMessages(prev => prev.map(m => 
-            m.id === assistantMessageId 
-              ? { ...m, actions: [...((m as AssistantMessage).actions || []), action] }
-              : m
-          ));
+          queueUpdate(() => {
+            setMessages(prev => prev.map(m => 
+              m.id === assistantMessageId 
+                ? { ...m, actions: [...((m as AssistantMessage).actions || []), action] }
+                : m
+            ));
+          });
           
           try {
             await executeAction(action);
@@ -407,40 +508,44 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
         },
         
         onDone: () => {
-          planSteps.forEach(step => {
-            if (step.status === 'running' || step.status === 'pending') {
-              step.status = 'done';
-            }
+          queueUpdate(() => {
+            planSteps.forEach(step => {
+              if (step.status === 'running' || step.status === 'pending') {
+                step.status = 'done';
+              }
+            });
+            
+            updateAssistantMessage({ 
+              isStreaming: false,
+              streamingPhase: undefined,
+              plan: { id: assistantMessage.plan!.id, steps: planSteps, currentStep: -1 },
+            });
+            setIsLoading(false);
+            abortControllerRef.current = null;
           });
-          
-          updateAssistantMessage({ 
-            isStreaming: false,
-            streamingPhase: undefined,
-            plan: { id: assistantMessage.plan!.id, steps: planSteps, currentStep: -1 },
-          });
-          setIsLoading(false);
-          abortControllerRef.current = null;
         },
         
         onError: (error: { code: string; message: string; cause?: string; recoverable?: boolean }) => {
-          planSteps.forEach(step => {
-            if (step.status === 'running') {
-              step.status = 'failed';
-              step.error = { message: error.message, cause: error.cause, recoverable: error.recoverable ?? true };
-            }
+          queueUpdate(() => {
+            planSteps.forEach(step => {
+              if (step.status === 'running') {
+                step.status = 'failed';
+                step.error = { message: error.message, cause: error.cause, recoverable: error.recoverable ?? true };
+              }
+            });
+            
+            updateAssistantMessage({
+              content: { 
+                body: error.message,
+                warnings: [error.cause || 'Une erreur est survenue. Vous pouvez réessayer.'],
+              },
+              isStreaming: false,
+              streamingPhase: undefined,
+              plan: { id: assistantMessage.plan!.id, steps: planSteps, currentStep: -1 },
+            });
+            setIsLoading(false);
+            abortControllerRef.current = null;
           });
-          
-          updateAssistantMessage({
-            content: { 
-              body: error.message,
-              warnings: [error.cause || 'Une erreur est survenue. Vous pouvez réessayer.'],
-            },
-            isStreaming: false,
-            streamingPhase: undefined,
-            plan: { id: assistantMessage.plan!.id, steps: planSteps, currentStep: -1 },
-          });
-          setIsLoading(false);
-          abortControllerRef.current = null;
         },
       }
     );
@@ -483,37 +588,42 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
   };
 
   return (
-    <div className="h-full flex flex-col bg-background">
-      {/* Minimal Header - ChatGPT style */}
-      <header className="shrink-0 h-12 px-3 border-b flex items-center justify-between">
-        <div className="flex items-center gap-2">
+    <div className="h-full flex flex-col bg-white dark:bg-zinc-950">
+      {/* Ultra-minimal Header */}
+      <header className="shrink-0 h-14 px-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm">
+        <div className="flex items-center gap-3">
           {showBackButton && (
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           )}
           
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center">
-              <Sparkles className="h-3.5 w-3.5 text-white" />
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-zinc-900 to-zinc-700 dark:from-zinc-100 dark:to-zinc-300 flex items-center justify-center shadow-sm">
+              <Sparkles className="h-3.5 w-3.5 text-white dark:text-zinc-900" />
             </div>
-            <span className="font-semibold text-sm">ASAP AI</span>
-            <Badge variant="secondary" className="h-5 text-[10px]">Beta</Badge>
+            <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">ASAP AI</span>
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-0">Beta</Badge>
           </div>
         </div>
 
         <div className="flex items-center gap-1">
-          {/* Scope toggles */}
+          {/* Minimalist scope toggles */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
                 variant={context.scopes?.tools ? "secondary" : "ghost"} 
                 size="sm" 
-                className="h-7 px-2 text-xs gap-1"
+                className={cn(
+                  "h-8 px-2.5 text-xs gap-1.5 transition-colors",
+                  context.scopes?.tools 
+                    ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100" 
+                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-100"
+                )}
                 onClick={() => toggleScope('tools')}
               >
-                <Wrench className="h-3 w-3" />
-                Outils
+                <Wrench className="h-3.5 w-3.5" />
+                <span>Outils</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>Activer/désactiver les outils</TooltipContent>
@@ -524,11 +634,16 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
               <Button 
                 variant={context.scopes?.web ? "secondary" : "ghost"} 
                 size="sm" 
-                className="h-7 px-2 text-xs gap-1"
+                className={cn(
+                  "h-8 px-2.5 text-xs gap-1.5 transition-colors",
+                  context.scopes?.web 
+                    ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100" 
+                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-100"
+                )}
                 onClick={() => toggleScope('web')}
               >
-                <Globe className="h-3 w-3" />
-                Web
+                <Globe className="h-3.5 w-3.5" />
+                <span>Web</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>Activer/désactiver la recherche web</TooltipContent>
@@ -536,14 +651,14 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-100">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={clearChat} disabled={messages.length === 0}>
                 <Trash2 className="h-4 w-4 mr-2" />
-                Effacer
+                Effacer la conversation
               </DropdownMenuItem>
               <DropdownMenuItem disabled>
                 <Undo2 className="h-4 w-4 mr-2" />
@@ -562,25 +677,25 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
           </DropdownMenu>
           
           {!showBackButton && (
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-100">
               <X className="h-4 w-4" />
             </Button>
           )}
         </div>
       </header>
 
-      {/* Messages Area */}
+      {/* Messages Area - Clean & Spacious */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto"
+        className="flex-1 overflow-y-auto bg-white dark:bg-zinc-950"
         onScroll={handleScroll}
       >
         {messages.length === 0 ? (
-          <div className="h-full flex items-center justify-center p-4">
+          <div className="h-full flex items-center justify-center p-6">
             <EmptyState userName={userName} onPromptSelect={insertPrompt} />
           </div>
         ) : (
-          <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+          <div className="max-w-3xl mx-auto px-6 py-8 space-y-8">
             {messages.map((message) => (
               <MessageBubble
                 key={message.id}
@@ -594,24 +709,24 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
           </div>
         )}
         
-        {/* Scroll to bottom button */}
+        {/* Minimalist scroll button */}
         {showScrollButton && (
-          <div className="sticky bottom-4 flex justify-center">
+          <div className="sticky bottom-6 flex justify-center pointer-events-none">
             <Button
               variant="secondary"
               size="sm"
               onClick={() => scrollToBottom()}
-              className="rounded-full shadow-lg"
+              className="rounded-full shadow-lg pointer-events-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800"
             >
-              <ChevronDown className="h-4 w-4 mr-1" />
-              Nouveaux messages
+              <ChevronDown className="h-3.5 w-3.5 mr-1.5" />
+              <span className="text-xs">Nouveaux messages</span>
             </Button>
           </div>
         )}
       </div>
 
-      {/* Input Area - ChatGPT style */}
-      <div className="shrink-0 border-t bg-gradient-to-t from-background to-transparent pt-2 pb-4 px-4">
+      {/* Input Area - Ultra-clean */}
+      <div className="shrink-0 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 pt-3 pb-6 px-4">
         <div className="max-w-3xl mx-auto">
           <ChatInput
             value={input}
@@ -624,9 +739,9 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
             onControlsChange={(c) => setControls(prev => ({ ...prev, ...c }))}
           />
           
-          {/* Website context indicator */}
+          {/* Subtle context indicator */}
           {websiteSlug && (
-            <p className="text-[10px] text-muted-foreground text-center mt-2">
+            <p className="text-[10px] text-zinc-400 text-center mt-2.5">
               Contexte : {websiteSlug}.asap.cool
             </p>
           )}
