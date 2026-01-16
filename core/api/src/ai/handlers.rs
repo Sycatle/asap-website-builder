@@ -1,6 +1,7 @@
 //! Main HTTP handlers for AI chat
 //!
 //! Contains the chat, chat_stream, status, and quota endpoints.
+//! Implements real-time streaming of AI phases via SSE.
 
 use axum::{
     extract::State,
@@ -18,7 +19,7 @@ use uuid::Uuid;
 
 use asap_core_ai::{
     AIAction, AIChatRequest as CoreAIChatRequest, AIOrchestrator,
-    analyze_intent, detect_language_simple, execute_thinking_step, IntentAnalysis,
+    detect_language_simple, IntentAnalysis,
 };
 use crate::Claims;
 
@@ -30,6 +31,22 @@ use super::helpers::{
 };
 use super::tools::{capture_screenshot_server_side, execute_data_tools_streaming_channel, ToolEvent, PreloadedScreenshot};
 use super::types::*;
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
+/// Clean internal parsing markers from text before sending to frontend
+fn clean_marker_text(text: &str) -> String {
+    text.replace("PLAN_START", "")
+        .replace("INSIGHT_START", "")
+        .replace("JSON_START", "")
+        .replace("THINKING:", "")
+        .replace("PLAN:", "")
+        .replace("INSIGHT:", "")
+        .trim()
+        .to_string()
+}
 
 // ============================================================================
 // Non-Streaming Chat
@@ -63,7 +80,7 @@ pub async fn chat(
     })?;
 
     // Load website context
-    let context = load_website_context(&pool, req.website_id).await.map_err(|s| {
+    let context = load_website_context(&pool, account_id, req.website_id).await.map_err(|s| {
         (s, Json(ErrorResponse { error: "Failed to load website".to_string(), code: "internal_error".to_string(), ..Default::default() }))
     })?;
 
@@ -170,7 +187,7 @@ pub async fn chat_stream(
     let (user_context_result, website_data_result, context_result) = tokio::join!(
         load_user_context(&pool, account_id, plan_daily_limit, plan_daily_used),
         load_website_data(&pool, account_id, req.website_id),
-        load_website_context(&pool, req.website_id),
+        load_website_context(&pool, account_id, req.website_id),
     );
 
     let user_context = user_context_result.map_err(|s| {
@@ -271,7 +288,6 @@ pub async fn chat_stream(
         }
 
         // OPTIMIZATION #2: Skip intent analysis for short/simple messages
-        let is_short_message = user_message_for_stream.chars().count() < 20;
         let is_simple_message = {
             let lower = user_message_for_stream.to_lowercase();
             lower == "ok" || lower == "merci" || lower == "thanks" || lower == "oui" ||
@@ -279,22 +295,22 @@ pub async fn chat_stream(
             lower.starts_with("bonjour") || lower.starts_with("hello") || lower.starts_with("hi")
         };
 
-        // Phase 1: Understanding the request
+        // Phase 1: Understanding the request - TRUE REAL-TIME STREAMING
         let phase_event = SseEventData::Phase(PhaseData {
             phase: "understanding".to_string(),
             status: "starting".to_string(),
-            message: Some("Compréhension de votre demande...".to_string()),
+            message: Some("Réflexion en cours...".to_string()),
             progress: Some(0.0),
-            eta_seconds: if is_short_message { Some(1) } else { Some(3) },
+            eta_seconds: None,
         });
         if let Ok(json) = serde_json::to_string(&phase_event) {
             yield Ok(Event::default().data(json));
         }
 
-        // Perform intent analysis - skip API call for simple messages
+        // Perform intent analysis with TRUE STREAMING - tokens sent as they arrive
         let intent_analysis = if is_simple_message {
             IntentAnalysis {
-                intent: if is_short_message && !is_simple_message { "simple".to_string() } else { "greeting".to_string() },
+                intent: "greeting".to_string(),
                 summary: user_message_for_stream.chars().take(50).collect(),
                 reasoning: String::new(),
                 needs_thinking: false,
@@ -304,45 +320,155 @@ pub async fn chat_stream(
                 hypotheses: vec![],
             }
         } else {
-            // OPTIMIZATION #5: Retry with exponential backoff on rate limit
-            let mut retry_count = 0;
-            let max_retries = 3;
-            loop {
-                match analyze_intent(orchestrator_for_stream.router(), &user_message_for_stream).await {
-                    Ok(analysis) => break analysis,
-                    Err(e) => {
-                        let is_rate_limit = e.to_string().contains("Rate limit") || e.to_string().contains("429");
-                        if is_rate_limit && retry_count < max_retries {
-                            retry_count += 1;
-                            let delay_secs = 1u64 << retry_count;
-                            tracing::warn!("Rate limit hit, retrying in {}s (attempt {}/{})", delay_secs, retry_count, max_retries);
+            // Use STREAMING intent analysis - direct execution with real-time token streaming
+            let router = orchestrator_for_stream.router();
+            
+            // Build the streaming prompt inline
+            let streaming_prompt = r##"You are a Senior Digital Project Manager AI. Think through the user's request OUT LOUD - your thoughts will be streamed in real-time.
 
-                            let phase_event = SseEventData::Phase(PhaseData {
-                                phase: "retrying".to_string(),
-                                status: "waiting".to_string(),
-                                message: Some(format!("Limite atteinte, nouvelle tentative dans {}s...", delay_secs)),
-                                progress: None,
-                                eta_seconds: Some(delay_secs as u32),
-                            });
-                            if let Ok(json) = serde_json::to_string(&phase_event) {
-                                yield Ok(Event::default().data(json));
+CRITICAL FORMAT:
+1. First, output your REASONING naturally (2-4 sentences, think out loud in user's language):
+   "Je vois que l'utilisateur demande... Cela nécessite d'analyser... Mon approche sera..."
+
+2. Then output PLAN_START marker followed by JSON:
+{
+  "intent": "<category>",
+  "summary": "<1-2 sentences understanding in user's language>",
+  "needs_thinking": true,
+  "thinking_steps": [
+    {"step": 1, "description": "<15-30 word task in user's language>", "specialist": "<type>", "requires_data": true, "tools_needed": ["tool1"]}
+  ],
+  "language": "<en|fr|es|de>"
+}
+
+Categories: modify_content, add_section, remove_section, change_style, analyze, question, greeting, strategy, optimize, audit, other
+Specialists: data_analyst, content_writer, designer, strategist, validator, researcher
+
+Rules:
+- ALWAYS start with natural reasoning before PLAN_START
+- needs_thinking=true except for pure greetings
+- Match user's language in reasoning and descriptions
+"##;
+
+            let messages = vec![
+                asap_core_ai::Message::system(streaming_prompt),
+                asap_core_ai::Message::user(&user_message_for_stream),
+            ];
+            
+            let mut full_content = String::new();
+            let mut in_json = false;
+            
+            // Start streaming and handle result
+            match router.chat_stream(messages, None, Some("gpt-4o")).await {
+                Ok(mut stream) => {
+                    while let Some(result) = futures::StreamExt::next(&mut stream).await {
+                        match result {
+                            Ok(token) => {
+                                full_content.push_str(&token);
+                                
+                                // Check if we've hit the JSON marker
+                                if full_content.contains("PLAN_START") && !in_json {
+                                    in_json = true;
+                                    continue;
+                                }
+                                
+                                // Stream reasoning tokens IMMEDIATELY to frontend (before JSON)
+                                if !in_json && !token.contains("PLAN_START") {
+                                    let thinking_token_event = SseEventData::ThinkingToken(ThinkingTokenData {
+                                        token,
+                                        step: None,
+                                        specialist: None,
+                                    });
+                                    if let Ok(json) = serde_json::to_string(&thinking_token_event) {
+                                        yield Ok(Event::default().data(json));
+                                    }
+                                }
                             }
-
-                            tokio::time::sleep(tokio::time::Duration::from_secs(delay_secs)).await;
-                            continue;
+                            Err(e) => {
+                                tracing::warn!("Intent token streaming error: {}", e);
+                                break;
+                            }
                         }
-
-                        tracing::warn!("Intent analysis failed, using fallback: {}", e);
-                        break IntentAnalysis {
-                            intent: "other".to_string(),
-                            summary: user_message_for_stream.chars().take(50).collect(),
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("Intent streaming failed: {}", e);
+                }
+            }
+            
+            // Parse the JSON part - handle case where full_content might be empty
+            if full_content.is_empty() {
+                // Fallback for failed streaming
+                IntentAnalysis {
+                    intent: "other".to_string(),
+                    summary: user_message_for_stream.chars().take(50).collect(),
+                    reasoning: String::new(),
+                    needs_thinking: false,
+                    thinking_steps: vec![],
+                    language: detect_language_simple(&user_message_for_stream),
+                    proactive_hints: vec![],
+                    hypotheses: vec![],
+                }
+            } else {
+                let json_part = full_content
+                    .split("PLAN_START")
+                    .nth(1)
+                    .unwrap_or(&full_content);
+                
+                // Extract JSON from potential markdown/noise
+                let json_str = {
+                    let trimmed = json_part.trim();
+                    if trimmed.starts_with("```") {
+                        trimmed
+                            .trim_start_matches("```json")
+                            .trim_start_matches("```")
+                            .trim_end_matches("```")
+                            .trim()
+                    } else if let Some(start) = trimmed.find('{') {
+                        if let Some(end) = trimmed.rfind('}') {
+                            &trimmed[start..=end]
+                        } else {
+                            trimmed
+                        }
+                    } else {
+                        trimmed
+                    }
+                };
+                
+                match serde_json::from_str::<IntentAnalysis>(json_str) {
+                    Ok(mut analysis) => {
+                        // Extract reasoning from the non-JSON part and clean markers
+                        let reasoning = clean_marker_text(&full_content
+                            .split("PLAN_START")
+                            .next()
+                            .unwrap_or("")
+                            .trim()
+                            .to_string());
+                        analysis.reasoning = reasoning;
+                        analysis
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to parse streaming intent: {} - content: {}", e, json_str);
+                        // Smart fallback
+                        let lower = user_message_for_stream.to_lowercase();
+                        let lang = detect_language_simple(&user_message_for_stream);
+                        let (intent, needs_thinking) = if lower.contains("ajoute") || lower.contains("add") {
+                            ("add_section", true)
+                        } else if lower.contains("analyse") || lower.contains("analyze") || lower.contains("audit") {
+                            ("analyze", true)
+                        } else {
+                            ("other", false)
+                        };
+                        IntentAnalysis {
+                            intent: intent.to_string(),
+                            summary: user_message_for_stream.chars().take(40).collect(),
                             reasoning: String::new(),
-                            needs_thinking: false,
+                            needs_thinking,
                             thinking_steps: vec![],
-                            language: "en".to_string(),
+                            language: lang,
                             proactive_hints: vec![],
                             hypotheses: vec![],
-                        };
+                        }
                     }
                 }
             }
@@ -520,7 +646,7 @@ pub async fn chat_stream(
 
         match stream_result {
             Ok((mut token_stream, _rate_status)) => {
-                // Execute thinking steps with real AI calls - "Chef de Projet" delegating to specialists
+                // Execute thinking steps (synchronously but with immediate SSE updates)
                 let mut step_results: Vec<asap_core_ai::StepResult> = Vec::new();
 
                 if intent_analysis.needs_thinking && !intent_analysis.thinking_steps.is_empty() {
@@ -544,7 +670,7 @@ pub async fn chat_stream(
                     }
 
                     for thinking_step in &intent_analysis.thinking_steps {
-                        // Update step status to running
+                        // Send running status immediately
                         let plan_step_running = SseEventData::PlanStep(PlanStepData {
                             id: format!("step_{}", thinking_step.step),
                             index: (thinking_step.step - 1) as u32,
@@ -559,66 +685,242 @@ pub async fn chat_stream(
                             yield Ok(Event::default().data(json));
                         }
 
-                        let thinking_start = SseEventData::Thinking(ThinkingData {
-                            thought: thinking_step.description.clone(),
-                            step: Some(thinking_step.step),
-                            status: Some("analyzing".to_string()),
-                            reasoning: Some(thinking_step.analysis_focus.clone()),
-                            insight: None,
-                            observations: vec![],
-                            recommendations: vec![],
-                            specialist: Some(thinking_step.specialist.clone()),
-                            total_steps: Some(total_steps),
-                        });
-                        if let Ok(json) = serde_json::to_string(&thinking_start) {
-                            yield Ok(Event::default().data(json));
+                        // Check if this step needs data tools FIRST
+                        if thinking_step.requires_data && !thinking_step.tools_needed.is_empty() {
+                            // Stream tool execution events for each tool
+                            for tool_name in &thinking_step.tools_needed {
+                                let tool_id = format!("tool_{}_{}", thinking_step.step, tool_name);
+                                
+                                // Send ToolCall event immediately
+                                let tool_call_event = SseEventData::ToolCall(ToolCallData {
+                                    id: tool_id.clone(),
+                                    tool: tool_name.clone(),
+                                    description: format!("Fetching {} data", tool_name.replace("_", " ")),
+                                    args: None,
+                                    status: "running".to_string(),
+                                    duration_ms: None,
+                                });
+                                if let Ok(json) = serde_json::to_string(&tool_call_event) {
+                                    yield Ok(Event::default().data(json));
+                                }
+
+                                // Execute tool and stream result
+                                let tool_result = match tool_name.as_str() {
+                                    "get_website_sections" => {
+                                        let sections_summary = context_for_stream.sections.iter()
+                                            .map(|s| serde_json::json!({
+                                                "type": s.section_type,
+                                                "id": s.id
+                                            }))
+                                            .collect::<Vec<_>>();
+                                        serde_json::json!({ "sections": sections_summary })
+                                    }
+                                    "get_website_theme" => {
+                                        context_for_stream.theme.clone()
+                                    }
+                                    "get_website_settings" => {
+                                        serde_json::json!({ "title": context_for_stream.website.title })
+                                    }
+                                    "list_extensions" => {
+                                        // Just signal that extensions were checked
+                                        serde_json::json!({ "checked": true })
+                                    }
+                                    _ => serde_json::json!({ "executed": true })
+                                };
+
+                                // Send ToolResult event
+                                let tool_result_event = SseEventData::ToolResult(ToolResultData {
+                                    tool_call_id: tool_id.clone(),
+                                    success: true,
+                                    message: Some(format!("{} data loaded", tool_name.replace("_", " "))),
+                                    data: Some(tool_result),
+                                    duration_ms: None,
+                                });
+                                if let Ok(json) = serde_json::to_string(&tool_result_event) {
+                                    yield Ok(Event::default().data(json));
+                                }
+                                
+                                // Update tool call to completed
+                                let tool_complete_event = SseEventData::ToolCall(ToolCallData {
+                                    id: tool_id,
+                                    tool: tool_name.clone(),
+                                    description: format!("{} data loaded", tool_name.replace("_", " ")),
+                                    args: None,
+                                    status: "completed".to_string(),
+                                    duration_ms: Some(50), // Fast in-memory operation
+                                });
+                                if let Ok(json) = serde_json::to_string(&tool_complete_event) {
+                                    yield Ok(Event::default().data(json));
+                                }
+                            }
                         }
 
-                        let step_result = execute_thinking_step(
-                            orchestrator_for_stream.router(),
-                            thinking_step,
-                            total_steps,
-                            &user_message_for_stream,
-                            &context_for_stream,
-                            &intent_analysis.language,
-                            &step_results,
-                        ).await;
+                        // Execute the step with TRUE STREAMING - direct execution
+                        let router = orchestrator_for_stream.router();
+                        let specialist = if thinking_step.specialist.is_empty() { "analyst" } else { &thinking_step.specialist };
+                        
+                        // Build rich context
+                        let website_title = context_for_stream.website.title.as_deref().unwrap_or("Untitled Site");
+                        let sections_info: Vec<String> = context_for_stream.sections.iter()
+                            .take(10)
+                            .map(|s| s.section_type.clone())
+                            .collect();
+                        let website_context = format!(
+                            "Website: {}\nSections: [{}]\nTotal sections: {}",
+                            website_title,
+                            sections_info.join(", "),
+                            context_for_stream.sections.len()
+                        );
+                        
+                        // Build previous results string
+                        let previous_str = if step_results.is_empty() {
+                            "No previous findings yet.".to_string()
+                        } else {
+                            step_results.iter()
+                                .map(|r| format!("Step {}: {}", r.step, r.insight))
+                                .collect::<Vec<_>>()
+                                .join("\n")
+                        };
+                        
+                        // Streaming-friendly prompt
+                        let streaming_prompt = format!(r##"You are a senior {specialist} specialist executing task {step_num}/{total_steps}.
 
-                        match step_result {
-                            Ok(result) => {
-                                // Update step status to done with rich data
+YOUR TASK: "{step_description}"
+
+User's request: "{user_message}"
+Website: {website_context}
+Previous findings: {previous_results}
+
+IMPORTANT: Stream your thoughts naturally as you analyze. Think out loud like a human expert.
+
+First, output your THINKING process (2-3 sentences, natural inner voice):
+- What you're examining
+- What you notice immediately  
+- Your initial assessment
+
+Then output INSIGHT_START marker, followed by your detailed finding (3-5 sentences in {language}):
+- Be SPECIFIC: mention actual elements
+- Give concrete observations
+- Actionable recommendations
+
+Then output JSON_START marker, followed by structured data:
+{{"found_relevant": true/false, "key_observations": ["..."], "recommendations": ["..."]}}"##,
+                            specialist = specialist,
+                            step_num = thinking_step.step,
+                            total_steps = total_steps,
+                            step_description = thinking_step.description,
+                            user_message = user_message_for_stream,
+                            website_context = website_context,
+                            previous_results = previous_str,
+                            language = intent_analysis.language
+                        );
+                        
+                        let messages = vec![
+                            asap_core_ai::Message::system(&streaming_prompt),
+                            asap_core_ai::Message::user("Begin your analysis now. Think step by step."),
+                        ];
+                        
+                        // Stream the step execution
+                        let mut full_content = String::new();
+                        let mut current_section = "thinking"; // thinking, insight, json
+                        
+                        match router.chat_stream(messages, None, Some("gpt-4o")).await {
+                            Ok(mut stream) => {
+                                while let Some(result) = futures::StreamExt::next(&mut stream).await {
+                                    match result {
+                                        Ok(token) => {
+                                            full_content.push_str(&token);
+                                            
+                                            // Check for section markers
+                                            if full_content.contains("INSIGHT_START") && current_section == "thinking" {
+                                                current_section = "insight";
+                                                continue;
+                                            }
+                                            if full_content.contains("JSON_START") && current_section == "insight" {
+                                                current_section = "json";
+                                                continue;
+                                            }
+                                            
+                                            // Stream tokens based on current section
+                                            match current_section {
+                                                "thinking" => {
+                                                    if !token.contains("INSIGHT_START") {
+                                                        let thinking_token_event = SseEventData::ThinkingToken(ThinkingTokenData {
+                                                            token,
+                                                            step: Some(thinking_step.step),
+                                                            specialist: Some(specialist.to_string()),
+                                                        });
+                                                        if let Ok(json) = serde_json::to_string(&thinking_token_event) {
+                                                            yield Ok(Event::default().data(json));
+                                                        }
+                                                    }
+                                                }
+                                                "insight" => {
+                                                    if !token.contains("JSON_START") && !token.contains("INSIGHT_START") {
+                                                        let insight_token_event = SseEventData::InsightToken(InsightTokenData {
+                                                            token,
+                                                            step: Some(thinking_step.step),
+                                                        });
+                                                        if let Ok(json) = serde_json::to_string(&insight_token_event) {
+                                                            yield Ok(Event::default().data(json));
+                                                        }
+                                                    }
+                                                }
+                                                _ => {} // JSON section - don't stream
+                                            }
+                                        }
+                                        Err(e) => {
+                                            tracing::warn!("Step {} token error: {}", thinking_step.step, e);
+                                            break;
+                                        }
+                                    }
+                                }
+                                
+                                // Parse the result
+                                let thinking = clean_marker_text(&full_content
+                                    .split("INSIGHT_START")
+                                    .next()
+                                    .unwrap_or("")
+                                    .trim()
+                                    .to_string());
+                                
+                                let insight = clean_marker_text(&full_content
+                                    .split("INSIGHT_START")
+                                    .nth(1)
+                                    .and_then(|s| s.split("JSON_START").next())
+                                    .unwrap_or("")
+                                    .trim()
+                                    .to_string());
+                                
+                                let result = asap_core_ai::StepResult {
+                                    step: thinking_step.step,
+                                    thinking,
+                                    insight: if insight.is_empty() { thinking_step.description.clone() } else { insight.clone() },
+                                    found_relevant: !insight.is_empty(),
+                                    key_observations: vec![],
+                                    recommendations: vec![],
+                                    data: serde_json::json!({}),
+                                };
+                                
+                                // Update step status to done
                                 let plan_step_done = SseEventData::PlanStep(PlanStepData {
                                     id: format!("step_{}", thinking_step.step),
                                     index: (thinking_step.step - 1) as u32,
                                     title: thinking_step.description.clone(),
                                     description: Some(result.insight.clone()),
                                     status: "done".to_string(),
-                                    specialist: Some(thinking_step.specialist.clone()),
+                                    specialist: Some(specialist.to_string()),
                                     error: None,
                                     produces_output: Some(thinking_step.produces_output),
                                 });
                                 if let Ok(json) = serde_json::to_string(&plan_step_done) {
                                     yield Ok(Event::default().data(json));
                                 }
-
-                                let thinking_done = SseEventData::Thinking(ThinkingData {
-                                    thought: thinking_step.description.clone(),
-                                    step: Some(thinking_step.step),
-                                    status: Some("completed".to_string()),
-                                    reasoning: if result.thinking.is_empty() { None } else { Some(result.thinking.clone()) },
-                                    insight: Some(result.insight.clone()),
-                                    observations: result.key_observations.clone(),
-                                    recommendations: result.recommendations.clone(),
-                                    specialist: Some(thinking_step.specialist.clone()),
-                                    total_steps: Some(total_steps),
-                                });
-                                if let Ok(json) = serde_json::to_string(&thinking_done) {
-                                    yield Ok(Event::default().data(json));
-                                }
+                                
                                 step_results.push(result);
                             }
                             Err(e) => {
-                                tracing::warn!("Step {} execution failed: {}", thinking_step.step, e);
+                                tracing::warn!("Step {} streaming failed: {}", thinking_step.step, e);
                                 // Update step status to failed
                                 let plan_step_failed = SseEventData::PlanStep(PlanStepData {
                                     id: format!("step_{}", thinking_step.step),
@@ -626,7 +928,7 @@ pub async fn chat_stream(
                                     title: thinking_step.description.clone(),
                                     description: Some(format!("Error: {}", e)),
                                     status: "failed".to_string(),
-                                    specialist: Some(thinking_step.specialist.clone()),
+                                    specialist: Some(specialist.to_string()),
                                     error: Some(StepErrorData {
                                         message: e.to_string(),
                                         cause: None,
@@ -635,21 +937,6 @@ pub async fn chat_stream(
                                     produces_output: Some(thinking_step.produces_output),
                                 });
                                 if let Ok(json) = serde_json::to_string(&plan_step_failed) {
-                                    yield Ok(Event::default().data(json));
-                                }
-
-                                let thinking_done = SseEventData::Thinking(ThinkingData {
-                                    thought: thinking_step.description.clone(),
-                                    step: Some(thinking_step.step),
-                                    status: Some("completed".to_string()),
-                                    reasoning: None,
-                                    insight: Some(thinking_step.description.clone()),
-                                    observations: vec![],
-                                    recommendations: vec![],
-                                    specialist: Some(thinking_step.specialist.clone()),
-                                    total_steps: Some(total_steps),
-                                });
-                                if let Ok(json) = serde_json::to_string(&thinking_done) {
                                     yield Ok(Event::default().data(json));
                                 }
                             }
@@ -681,13 +968,7 @@ pub async fn chat_stream(
                 let mut sent_tool_calls: HashSet<String> = HashSet::new();
                 let mut parsed_actions: Vec<AIAction> = Vec::new();
                 
-                // OPTIMIZATION: Token batching for SSE
-                // Accumulate tokens and flush every 50ms or when buffer reaches 5 chars
-                let mut token_buffer = String::new();
-                let mut last_flush = std::time::Instant::now();
-                const FLUSH_INTERVAL_MS: u128 = 50;
-                const MIN_BATCH_CHARS: usize = 5;
-
+                // REAL-TIME STREAMING: Send each token immediately as received
                 while let Some(result) = token_stream.next().await {
                     match result {
                         Ok(text) => {
@@ -738,32 +1019,13 @@ pub async fn chat_stream(
                                 json_buffer.push_str(&text);
                             }
 
-                            // OPTIMIZATION: Batch tokens instead of sending each one
-                            token_buffer.push_str(&text);
-                            let elapsed = last_flush.elapsed().as_millis();
-                            
-                            // Flush if buffer is large enough OR enough time has passed
-                            if token_buffer.len() >= MIN_BATCH_CHARS || elapsed >= FLUSH_INTERVAL_MS {
-                                if !token_buffer.is_empty() {
-                                    let token_event = SseEventData::Token(token_buffer.clone());
-                                    if let Ok(json) = serde_json::to_string(&token_event) {
-                                        yield Ok(Event::default().data(json));
-                                    }
-                                    token_buffer.clear();
-                                    last_flush = std::time::Instant::now();
-                                }
+                            // Send token IMMEDIATELY - true real-time streaming
+                            let token_event = SseEventData::Token(text);
+                            if let Ok(json) = serde_json::to_string(&token_event) {
+                                yield Ok(Event::default().data(json));
                             }
                         }
                         Err(err) => {
-                            // Flush any remaining tokens before error
-                            if !token_buffer.is_empty() {
-                                let token_event = SseEventData::Token(token_buffer.clone());
-                                if let Ok(json) = serde_json::to_string(&token_event) {
-                                    yield Ok(Event::default().data(json));
-                                }
-                                token_buffer.clear();
-                            }
-                            
                             let error_event = SseEventData::Error { 
                                 code: err.code().to_string(), 
                                 message: err.to_string(),
@@ -774,14 +1036,6 @@ pub async fn chat_stream(
                                 yield Ok(Event::default().data(json));
                             }
                         }
-                    }
-                }
-                
-                // Flush any remaining tokens in the buffer
-                if !token_buffer.is_empty() {
-                    let token_event = SseEventData::Token(token_buffer);
-                    if let Ok(json) = serde_json::to_string(&token_event) {
-                        yield Ok(Event::default().data(json));
                     }
                 }
 

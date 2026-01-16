@@ -230,11 +230,14 @@ Gather ALL relevant data to provide expert-level insights. Think like a consulta
 - **"How's my site doing?"** → `get_website_sections` + `get_website_theme` + `get_website_settings` + `request_visual_analysis`
 - **"What should I improve?"** → All data tools + `request_visual_analysis`
 
-### Tool iteration
+### Tool iteration - CRITICAL RULES
 1. Start with broad searches to understand scope
 2. Drill down into specific areas based on initial findings
 3. Cross-reference related data for complete picture
-4. NEVER repeat exact same tool call — you already have the result
+4. **NEVER repeat exact same tool call with same arguments** — you already have the result
+5. **If you called a tool and got data, USE IT** — don't call it again
+6. **Progress forward** — each iteration should gather NEW information, not repeat
+7. **STOP when you have enough data** — don't keep calling tools indefinitely
 
 ### Visual Analysis Rules
 - `request_visual_analysis` — **CALL ONLY ONCE** per conversation
@@ -252,6 +255,7 @@ Gather ALL relevant data to provide expert-level insights. Think like a consulta
 | `get_website_settings` | Site config, metadata | Check SEO basics |
 | `list_extensions` | Installed features | Identify unused capabilities |
 | `request_visual_analysis` | Screenshot-based UX audit | **ONE TIME ONLY** |
+| `analyze_trends` | Research market trends | Use ONLY if user explicitly asks about trends/market research |
 
 ## Expert Behaviors
 
@@ -260,11 +264,16 @@ Gather ALL relevant data to provide expert-level insights. Think like a consulta
 3. **Spot opportunities** — Notice what's missing, not just what's there
 4. **Quantify findings** — Count sections, projects, usage patterns
 5. **Prioritize insights** — Lead with the most impactful discoveries
+6. **Be efficient** — Gather data quickly and move to analysis
 
 ## Skip tools ONLY if
 - Pure greeting ("Hi!", "Thanks")
 - Completely off-topic (not about their website)
-- Already have all data from previous tool calls in this conversation"#;
+- Already have all data from previous tool calls in this conversation
+- User is asking about general trends/topics (NOT website-specific) — use analyze_trends tool ONCE if needed
+
+## IMPORTANT: Anti-Loop Protection
+If you find yourself about to call the same tool with the same arguments twice, STOP and use the data you already have instead."#;
 
     let mut messages = vec![asap_core_ai::Message::system(system_prompt)];
 
@@ -280,6 +289,7 @@ Gather ALL relevant data to provide expert-level insights. Think like a consulta
     let mut all_context_parts = Vec::new();
     let mut iteration = 0;
     let mut visual_analysis_done = false; // Track if visual analysis was already performed
+    let mut previous_tool_calls: Vec<String> = Vec::new(); // Track previous tool calls to detect loops
 
     // Tool calling loop - continue until AI stops requesting tools or max iterations
     loop {
@@ -320,6 +330,24 @@ Gather ALL relevant data to provide expert-level insights. Think like a consulta
             response.tool_calls.len(),
             response.tool_calls.iter().map(|t| &t.function.name).collect::<Vec<_>>()
         );
+
+        // Check for duplicate tool calls (AI looping without progress)
+        let current_tool_signature: Vec<String> = response.tool_calls.iter()
+            .map(|t| format!("{}:{}", t.function.name, t.function.arguments))
+            .collect();
+        
+        if iteration > 1 && current_tool_signature == previous_tool_calls {
+            tracing::warn!(
+                "AI is repeating the same tool calls (iteration {}). Stopping to prevent infinite loop.",
+                iteration
+            );
+            // Add a message explaining why we stopped
+            messages.push(asap_core_ai::Message::user(
+                "SYSTEM: You are repeating the same tool call. Please use the data you already gathered to answer the user's question."
+            ));
+            break;
+        }
+        previous_tool_calls = current_tool_signature;
 
         // Add assistant message with tool calls to conversation
         // This maintains the conversation flow for the next iteration
@@ -628,7 +656,7 @@ Structure your response:
             }
 
             // Execute the tool (standard flow)
-            let tool_result = tool_executor.execute(tool_call, context);
+            let tool_result = tool_executor.execute(tool_call, context).await;
             let duration_ms = start_time.elapsed().as_millis() as u64;
 
             // Send tool completed event

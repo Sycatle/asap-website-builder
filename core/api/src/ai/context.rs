@@ -259,8 +259,14 @@ pub async fn load_website_data(
 // ============================================================================
 
 /// Load website context for AI
+/// 
+/// # Arguments
+/// * `pool` - Database connection pool
+/// * `account_id` - Account ID for security context (used for audit logging)
+/// * `website_id` - Website ID to load context for
 pub async fn load_website_context(
     pool: &PgPool,
+    account_id: Uuid,
     website_id: Uuid,
 ) -> Result<WebsiteContext, StatusCode> {
     // Fetch website info
@@ -400,5 +406,6 @@ pub async fn load_website_context(
         user: None, // Will be set by caller
         data: None, // Will be set by caller
         extensions,
+        account_id: Some(account_id),
     })
 }

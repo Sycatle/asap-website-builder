@@ -147,6 +147,12 @@ pub enum SseEventData {
     Typing,
     /// Text token from AI
     Token(String),
+    /// Thinking token - streamed during chain-of-thought (ChatGPT style)
+    #[serde(rename = "thinkingtoken")]
+    ThinkingToken(ThinkingTokenData),
+    /// Insight token - streamed during insight generation
+    #[serde(rename = "insighttoken")]
+    InsightToken(InsightTokenData),
     /// AI is thinking/reasoning
     Thinking(ThinkingData),
     /// AI is calling a tool
@@ -194,6 +200,29 @@ pub enum SseEventData {
         #[serde(skip_serializing_if = "Option::is_none")]
         recoverable: Option<bool>,
     },
+}
+
+/// Thinking token event - streamed during chain-of-thought
+#[derive(Debug, Clone, Serialize)]
+pub struct ThinkingTokenData {
+    /// The token text
+    pub token: String,
+    /// Current step number
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub step: Option<u32>,
+    /// Specialist handling this step
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub specialist: Option<String>,
+}
+
+/// Insight token event - streamed during insight generation
+#[derive(Debug, Clone, Serialize)]
+pub struct InsightTokenData {
+    /// The token text
+    pub token: String,
+    /// Current step number
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub step: Option<u32>,
 }
 
 /// Conversation metadata event
