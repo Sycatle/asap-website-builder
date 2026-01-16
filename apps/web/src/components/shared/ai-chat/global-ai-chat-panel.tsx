@@ -209,10 +209,15 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
       },
       {
         onToken: (token: string) => {
-          updateAssistantMessage({ 
-            content: { body: (messages.find(m => m.id === assistantMessageId) as AssistantMessage)?.content.body + token || token },
-            streamingPhase: 'writing',
-          });
+          setMessages(prev => prev.map(m => {
+            if (m.id !== assistantMessageId) return m;
+            const msg = m as AssistantMessage;
+            return {
+              ...msg,
+              content: { ...msg.content, body: (msg.content.body || '') + token },
+              streamingPhase: 'writing',
+            };
+          }));
         },
         
         onThinking: (data) => {
@@ -258,7 +263,7 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
                   ? { 
                       ...t, 
                       status: data.success ? 'done' as const : 'failed' as const,
-                      output: { success: data.success, error: data.message },
+                      output: { success: data.success, error: data.message, data: data.data },
                     }
                   : t
               ),
@@ -273,6 +278,115 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
           if (data.status === 'complete' || data.status === 'finished') {
             updatePlanStep(stepId, { status: 'done' });
           }
+        },
+        
+        onPhase: (data) => {
+          updateAssistantMessage({ 
+            streamingPhase: data.phase as AssistantMessage['streamingPhase'],
+          });
+        },
+        
+        onPlanStep: (data) => {
+          const existingStep = planSteps.find(s => s.id === data.id);
+          if (existingStep) {
+            updatePlanStep(data.id, { 
+              status: data.status,
+              confidence: data.confidence,
+              error: data.error,
+            });
+          } else {
+            const step: ExecutionStep = {
+              id: data.id,
+              index: data.index,
+              title: data.title,
+              description: data.description,
+              status: data.status,
+              confidence: data.confidence,
+              error: data.error,
+            };
+            planSteps.push(step);
+            updateAssistantMessage({ 
+              plan: { id: assistantMessage.plan!.id, steps: [...planSteps], currentStep: step.index } 
+            });
+          }
+        },
+        
+        onSummary: (data) => {
+          setMessages(prev => prev.map(m => {
+            if (m.id !== assistantMessageId) return m;
+            const msg = m as AssistantMessage;
+            return {
+              ...msg,
+              content: { ...msg.content, summary: data.text },
+            };
+          }));
+        },
+        
+        onArtifact: (data) => {
+          setMessages(prev => prev.map(m => {
+            if (m.id !== assistantMessageId) return m;
+            const msg = m as AssistantMessage;
+            
+            // Convert string actions to ArtifactAction objects
+            const artifactActions = data.actions?.map((actionLabel, idx) => ({
+              id: `${data.id}-action-${idx}`,
+              label: actionLabel,
+              onClick: () => console.log('Artifact action:', actionLabel),
+            }));
+            
+            return {
+              ...msg,
+              content: { 
+                ...msg.content, 
+                artifacts: [...(msg.content.artifacts || []), {
+                  id: data.id,
+                  type: data.artifact_type,
+                  title: data.title,
+                  content: data.content,
+                  actions: artifactActions,
+                }],
+              },
+            };
+          }));
+        },
+        
+        onSource: (data) => {
+          setMessages(prev => prev.map(m => {
+            if (m.id !== assistantMessageId) return m;
+            const msg = m as AssistantMessage;
+            return {
+              ...msg,
+              content: { 
+                ...msg.content, 
+                sources: [...(msg.content.sources || []), data],
+              },
+            };
+          }));
+        },
+        
+        onConfidence: (data) => {
+          setMessages(prev => prev.map(m => {
+            if (m.id !== assistantMessageId) return m;
+            const msg = m as AssistantMessage;
+            return {
+              ...msg,
+              content: { ...msg.content, confidence: data.level },
+            };
+          }));
+        },
+        
+        onWarning: (data) => {
+          setMessages(prev => prev.map(m => {
+            if (m.id !== assistantMessageId) return m;
+            const msg = m as AssistantMessage;
+            return {
+              ...msg,
+              content: { 
+                ...msg.content, 
+                warnings: [...(msg.content.warnings || []), data.message],
+              },
+            };
+          }));
         },
         
         onAction: async (action: AIAction) => {
@@ -315,19 +429,19 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
           abortControllerRef.current = null;
         },
         
-        onError: (error: { code: string; message: string }) => {
+        onError: (error: { code: string; message: string; cause?: string; recoverable?: boolean }) => {
           // Mark running steps as failed
           planSteps.forEach(step => {
             if (step.status === 'running') {
               step.status = 'failed';
-              step.error = { message: error.message, recoverable: true };
+              step.error = { message: error.message, cause: error.cause, recoverable: error.recoverable ?? true };
             }
           });
           
           updateAssistantMessage({
             content: { 
               body: error.message,
-              warnings: ['Une erreur est survenue. Vous pouvez réessayer.'],
+              warnings: [error.cause || 'Une erreur est survenue. Vous pouvez réessayer.'],
             },
             isStreaming: false,
             streamingPhase: undefined,
