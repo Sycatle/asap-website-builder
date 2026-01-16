@@ -89,7 +89,7 @@ function CollectionPicker({
     );
   }
   
-  if (collections.length === 0) {
+  if (!collections?.length) {
     return (
       <div className="text-sm text-muted-foreground p-3 border rounded-md bg-muted/30 text-center">
         <Database className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
@@ -105,7 +105,7 @@ function CollectionPicker({
         <SelectValue placeholder="Choisir une collection" />
       </SelectTrigger>
       <SelectContent>
-        {collections.map((collection) => (
+        {collections?.map((collection) => (
           <SelectItem key={collection.collection_slug} value={collection.collection_slug}>
             <div className="flex items-center gap-2">
               <Database className="h-4 w-4 text-muted-foreground" />
@@ -239,7 +239,7 @@ export function CollectionBinding({
   
   try {
     const ctx = useStudioCollections();
-    collections = ctx.collections;
+    collections = ctx.collections ?? [];
     isLoading = ctx.isLoading;
     fetchCollection = ctx.fetchCollection;
   } catch {
@@ -298,7 +298,7 @@ export function CollectionBinding({
     setIsConfigOpen(false);
   }, [onBindingChange]);
   
-  const selectedCollection = collections.find(c => c.collection_slug === boundCollection);
+  const selectedCollection = collections?.find(c => c.collection_slug === boundCollection);
   
   // No binding - show button to add
   if (!boundCollection) {
@@ -310,7 +310,7 @@ export function CollectionBinding({
               variant="outline"
               size="sm"
               className="w-full gap-2 text-muted-foreground"
-              disabled={disabled || collections.length === 0}
+              disabled={disabled || !collections?.length}
             >
               <Link2 className="h-4 w-4" />
               Lier à une collection
