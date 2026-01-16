@@ -85,7 +85,7 @@ impl AIOrchestrator {
             "Processing chat request"
         );
 
-        // Call AI provider
+        // Call AI provider (no max_tokens limit, use default)
         let completion = self.router.chat(messages, None, None).await?;
 
         // Parse actions from response

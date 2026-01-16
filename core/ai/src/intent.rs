@@ -1,10 +1,7 @@
 //! Intent Analysis Module
 //!
-//! Analyzes user messages to determine:
-//! - User intent category
-//! - Whether chain of thoughts is needed
-//! - Dynamic thinking steps (multilingual)
-//! - Multi-step AI workflow with real-time feedback
+//! Fast intent analysis with minimal latency.
+//! Uses a streamlined prompt for quick classification.
 
 use serde::{Deserialize, Serialize};
 
@@ -61,188 +58,39 @@ pub struct StepResult {
 }
 
 fn default_duration() -> u32 {
-    500
+    300
 }
 
-/// System prompt for intent analysis
-const INTENT_ANALYSIS_PROMPT: &str = r##"You are an expert intent analyzer for a web agency AI assistant.
-You quickly understand what the user wants and prepare intelligent analysis steps.
+/// Compact system prompt for fast intent analysis
+const INTENT_ANALYSIS_PROMPT: &str = r##"Classify user intent for a website builder AI. Output JSON only.
 
-Your job:
-1. Identify the user's intent accurately
-2. Determine if this needs visible "thinking" steps (for complex operations)
-3. Design smart analysis steps that show expertise (when needed)
-
-RESPOND ONLY WITH JSON.
-
-Response format:
 {
-  "intent": "modify_content|add_section|remove_section|change_style|reorganize|analyze|question|greeting|strategy|optimize|create_content|other",
-  "summary": "<brief expert summary, in their language>",
-  "needs_thinking": true/false,
-  "thinking_steps": [
-    {"step": 1, "description": "<expert step description in user's language>", "analysis_focus": "<technical focus>", "duration_hint": 500}
-  ],
-  "language": "<detected language code: en, fr, es, de, etc>",
-  "proactive_hints": ["<1-2 related improvements to suggest after completing the main task>"]
-}
-
-## Intent Categories
-- **modify_content**: Text changes, copy updates
-- **add_section**: Adding new sections
-- **remove_section**: Removing sections
-- **change_style**: Colors, fonts, theme changes
-- **reorganize**: Reordering, restructuring
-- **analyze**: Site review, audit, feedback request
-- **question**: Asking about their site/data
-- **greeting**: Hello, thanks, etc.
-- **strategy**: Business/marketing/conversion advice
-- **optimize**: Performance, SEO, UX improvements
-- **create_content**: Generate copy, headlines, descriptions
-
-## needs_thinking Rules
-- **TRUE**: Adding sections, major edits, reorganizing, style changes, analysis, strategy, content creation, optimization, any request needing expertise
-- **FALSE**: Simple greetings, very simple single-property edits, basic questions
-
-## Thinking Steps Guidelines
-- Write like an expert presenting their process to a client
-- Use 2-4 steps that show professional methodology
-- Make descriptions specific to their request (not generic)
-- Show domain expertise in the step names
-- Match the user's language and formality level
-
-## proactive_hints Guidelines
-- Think: "What would a senior agency expert suggest next?"
-- Related improvements the user hasn't asked for but would benefit from
-- Keep them brief and actionable
-- Empty array for greetings/simple questions
-
-## Examples
-
-User: "Change the hero title to Welcome"
-{
-  "intent": "modify_content",
-  "summary": "Update hero headline",
-  "needs_thinking": false,
-  "thinking_steps": [],
-  "language": "en",
-  "proactive_hints": ["Consider adding a subtitle for more context", "Your CTA button could reinforce this message"]
-}
-
-User: "Ajoute une section FAQ avec des questions sur les prix"
-{
-  "intent": "add_section",
-  "summary": "Créer une FAQ tarifaire stratégique",
-  "needs_thinking": true,
-  "thinking_steps": [
-    {"step": 1, "description": "Analyse de la structure et du parcours utilisateur", "analysis_focus": "user_journey_analysis", "duration_hint": 400},
-    {"step": 2, "description": "Identification du placement optimal pour la conversion", "analysis_focus": "conversion_positioning", "duration_hint": 500},
-    {"step": 3, "description": "Rédaction des questions qui lèvent les objections d'achat", "analysis_focus": "objection_handling_content", "duration_hint": 600}
-  ],
-  "language": "fr",
-  "proactive_hints": ["Une section pricing juste avant la FAQ renforcerait l'impact", "Un CTA après la FAQ peut capturer les utilisateurs convaincus"]
-}
-
-User: "Make my site look more professional"
-{
-  "intent": "change_style",
-  "summary": "Professional design upgrade",
-  "needs_thinking": true,
-  "thinking_steps": [
-    {"step": 1, "description": "Auditing current design against industry standards", "analysis_focus": "design_audit", "duration_hint": 500},
-    {"step": 2, "description": "Identifying credibility gaps and trust signals", "analysis_focus": "trust_signals", "duration_hint": 500},
-    {"step": 3, "description": "Crafting a refined color and typography system", "analysis_focus": "visual_system", "duration_hint": 600}
-  ],
-  "language": "en",
-  "proactive_hints": ["Adding client logos or testimonials boosts credibility", "Consistent photography style elevates perception"]
-}
-
-User: "Fais une analyse complète de mon site"
-{
-  "intent": "analyze",
-  "summary": "Audit complet par un expert",
-  "needs_thinking": true,
-  "thinking_steps": [
-    {"step": 1, "description": "Évaluation de la proposition de valeur et du messaging", "analysis_focus": "value_proposition", "duration_hint": 500},
-    {"step": 2, "description": "Analyse du parcours de conversion", "analysis_focus": "conversion_funnel", "duration_hint": 600},
-    {"step": 3, "description": "Audit UX et points de friction", "analysis_focus": "ux_friction_points", "duration_hint": 500},
-    {"step": 4, "description": "Synthèse et plan d'action priorisé", "analysis_focus": "actionable_roadmap", "duration_hint": 400}
-  ],
-  "language": "fr",
+  "intent": "<category>",
+  "summary": "<10 words max, user's language>",
+  "needs_thinking": <true if complex>,
+  "thinking_steps": [{"step": 1, "description": "<action>", "analysis_focus": "<focus>", "duration_hint": 300}],
+  "language": "<en|fr|es|de>",
   "proactive_hints": []
 }
 
-User: "What colors should I use for a tech startup?"
-{
-  "intent": "strategy",
-  "summary": "Tech startup color strategy",
-  "needs_thinking": true,
-  "thinking_steps": [
-    {"step": 1, "description": "Analyzing tech industry color psychology", "analysis_focus": "industry_psychology", "duration_hint": 400},
-    {"step": 2, "description": "Evaluating your brand personality fit", "analysis_focus": "brand_alignment", "duration_hint": 500},
-    {"step": 3, "description": "Creating a cohesive palette recommendation", "analysis_focus": "palette_creation", "duration_hint": 500}
-  ],
-  "language": "en",
-  "proactive_hints": ["I can apply this palette to your site immediately", "Consider how these colors work in dark mode"]
-}
+Categories: modify_content, add_section, remove_section, change_style, reorganize, analyze, question, greeting, strategy, optimize, create_content, other
 
-User: "Salut!"
-{
-  "intent": "greeting",
-  "summary": "Greeting",
-  "needs_thinking": false,
-  "thinking_steps": [],
-  "language": "fr",
-  "proactive_hints": []
-}
+Rules:
+- needs_thinking=true: add/remove sections, style changes, analysis, strategy, optimization, content creation
+- needs_thinking=false: greetings, simple edits, basic questions
+- 2-4 thinking_steps max for complex tasks
+- Match user's language
 "##;
 
-/// System prompt for executing a thinking step
-const STEP_EXECUTION_PROMPT: &str = r##"You are a senior web agency expert executing step {step_num} of {total_steps} in your analysis workflow.
+/// Compact prompt for step execution - generates insight in one shot
+const STEP_EXECUTION_PROMPT: &str = r##"You are executing step {step_num}/{total_steps}: "{step_description}"
 
-## Current Step
-**"{step_description}"**
+User request: "{user_message}"
+Website: {website_context}
+Previous: {previous_results}
 
-Focus area: {analysis_focus}
-
-## Context
-**User's request:** "{user_message}"
-
-**Website data:**
-{website_context}
-
-**Previous findings:**
-{previous_results}
-
-## Your Task
-Analyze like an expert consultant. Look for:
-- Patterns and opportunities
-- Gaps and improvement areas
-- Industry best practices comparisons
-- Actionable insights
-
-## Response Format
-```json
-{{
-  "step": {step_num},
-  "insight": "<Expert-level insight in {language}. Be specific, confident, and actionable. 1-2 impactful sentences.>",
-  "found_relevant": true/false,
-  "data": {{
-    "key_findings": ["<finding1>", "<finding2>"],
-    "opportunities": ["<opportunity if found>"],
-    "concerns": ["<issue if found>"],
-    "metrics": {{}},
-    "recommendations_preview": ["<brief rec if obvious>"]
-  }}
-}}
-```
-
-## Quality Standards
-- **Be specific**: "Your hero lacks a clear CTA" not "Could improve"
-- **Be confident**: "I recommend..." not "You might consider..."
-- **Be actionable**: Insights should point to next steps
-- **Be professional**: Write like presenting to a client
-- **Match language**: Respond in {language}
+Output JSON only:
+{{"step": {step_num}, "insight": "<1 sentence expert insight in {language}>", "found_relevant": true, "data": {{}}}}
 "##;
 
 /// Analyze user intent with a quick AI call
@@ -256,44 +104,79 @@ pub async fn analyze_intent(
         Message::user(user_message),
     ];
 
-    // Use GPT-4o-mini for intent analysis - faster and cheaper than GPT-4
-    // This is a simple classification task that doesn't need full GPT-4 capabilities
-    let completion = router.chat(messages, None, Some("gpt-4o-mini")).await?;
+    // Use GPT-4o-mini for fast classification
+    let completion = router.chat(messages, Some(150), Some("gpt-4o-mini")).await?;
 
     // Parse JSON response
     let content = completion.content.trim();
     
-    // Handle potential markdown code blocks
-    let json_str = if content.starts_with("```") {
-        content
-            .trim_start_matches("```json")
-            .trim_start_matches("```")
-            .trim_end_matches("```")
-            .trim()
-    } else {
-        content
-    };
+    // Extract JSON from potential markdown/noise
+    let json_str = extract_json(content);
 
     // Try to parse, with fallback for malformed responses
     match serde_json::from_str::<IntentAnalysis>(json_str) {
         Ok(analysis) => Ok(analysis),
         Err(e) => {
-            tracing::warn!("Failed to parse intent analysis: {} - content: {}", e, json_str);
-            // Fallback: simple analysis without thinking steps
-            Ok(IntentAnalysis {
-                intent: "other".to_string(),
-                summary: user_message.chars().take(50).collect(),
-                needs_thinking: false,
-                thinking_steps: vec![],
-                language: detect_language_simple(user_message),
-                proactive_hints: vec![],
-            })
+            tracing::warn!("Failed to parse intent: {} - raw: {}", e, content);
+            // Smart fallback based on message content
+            Ok(smart_fallback_intent(user_message))
         }
     }
 }
 
-/// Execute a single thinking step with a real AI call
-/// Returns the step result with insights
+/// Extract JSON from potentially wrapped content
+fn extract_json(content: &str) -> &str {
+    let trimmed = content.trim();
+    if trimmed.starts_with("```") {
+        trimmed
+            .trim_start_matches("```json")
+            .trim_start_matches("```")
+            .trim_end_matches("```")
+            .trim()
+    } else if let Some(start) = trimmed.find('{') {
+        if let Some(end) = trimmed.rfind('}') {
+            &trimmed[start..=end]
+        } else {
+            trimmed
+        }
+    } else {
+        trimmed
+    }
+}
+
+/// Smart fallback when parsing fails - infer intent from keywords
+fn smart_fallback_intent(message: &str) -> IntentAnalysis {
+    let lower = message.to_lowercase();
+    let lang = detect_language_simple(message);
+    
+    let (intent, needs_thinking) = if lower.contains("ajoute") || lower.contains("add") || lower.contains("créer") || lower.contains("create") {
+        ("add_section", true)
+    } else if lower.contains("supprime") || lower.contains("remove") || lower.contains("delete") {
+        ("remove_section", true)
+    } else if lower.contains("change") || lower.contains("modifie") || lower.contains("update") {
+        ("modify_content", false)
+    } else if lower.contains("couleur") || lower.contains("color") || lower.contains("style") || lower.contains("design") {
+        ("change_style", true)
+    } else if lower.contains("analyse") || lower.contains("analyze") || lower.contains("audit") {
+        ("analyze", true)
+    } else if lower.starts_with("salut") || lower.starts_with("bonjour") || lower.starts_with("hello") || lower.starts_with("hi") {
+        ("greeting", false)
+    } else {
+        ("other", false)
+    };
+    
+    IntentAnalysis {
+        intent: intent.to_string(),
+        summary: message.chars().take(40).collect(),
+        needs_thinking,
+        thinking_steps: vec![],
+        language: lang,
+        proactive_hints: vec![],
+    }
+}
+
+/// Execute a single thinking step with a fast AI call
+/// Uses gpt-4o-mini for speed
 pub async fn execute_thinking_step(
     router: &ModelRouter,
     step: &ThinkingStep,
@@ -303,17 +186,17 @@ pub async fn execute_thinking_step(
     language: &str,
     previous_results: &[StepResult],
 ) -> AIResult<StepResult> {
-    // Build context string
-    let website_context = build_website_context_string(context);
+    // Build compact context
+    let website_context = build_compact_context(context);
     
-    // Build previous results string
+    // Build previous results string (compact)
     let previous_str = if previous_results.is_empty() {
-        "None yet".to_string()
+        "None".to_string()
     } else {
         previous_results.iter()
-            .map(|r| format!("Step {}: {}", r.step, r.insight))
+            .map(|r| r.insight.clone())
             .collect::<Vec<_>>()
-            .join("\n")
+            .join("; ")
     };
     
     // Build the prompt
@@ -321,7 +204,6 @@ pub async fn execute_thinking_step(
         .replace("{step_num}", &step.step.to_string())
         .replace("{total_steps}", &total_steps.to_string())
         .replace("{step_description}", &step.description)
-        .replace("{analysis_focus}", &step.analysis_focus)
         .replace("{user_message}", user_message)
         .replace("{website_context}", &website_context)
         .replace("{previous_results}", &previous_str)
@@ -329,22 +211,15 @@ pub async fn execute_thinking_step(
     
     let messages = vec![
         Message::system(&prompt),
-        Message::user(&format!("Execute step {} now.", step.step)),
+        Message::user("Go"),
     ];
     
-    let completion = router.chat(messages, None, None).await?;
+    // Use gpt-4o-mini with low max_tokens for speed
+    let completion = router.chat(messages, Some(80), Some("gpt-4o-mini")).await?;
     
     // Parse result
     let content = completion.content.trim();
-    let json_str = if content.starts_with("```") {
-        content
-            .trim_start_matches("```json")
-            .trim_start_matches("```")
-            .trim_end_matches("```")
-            .trim()
-    } else {
-        content
-    };
+    let json_str = extract_json(content);
     
     match serde_json::from_str::<StepResult>(json_str) {
         Ok(result) => Ok(result),
@@ -361,40 +236,14 @@ pub async fn execute_thinking_step(
     }
 }
 
-/// Build a concise context string for the AI
-fn build_website_context_string(context: &WebsiteContext) -> String {
-    let mut parts = vec![];
-    
-    // Website info
-    parts.push(format!(
-        "Website: {} ({})",
-        context.website.title.as_deref().unwrap_or("Untitled"),
-        context.website.slug
-    ));
-    
-    // Sections summary
-    if !context.sections.is_empty() {
-        let sections_list: Vec<String> = context.sections.iter()
-            .map(|s| {
-                let variant = s.variant.as_deref().unwrap_or("default");
-                format!("- {} ({})", s.section_type, variant)
-            })
-            .collect();
-        parts.push(format!("Sections ({}):\n{}", context.sections.len(), sections_list.join("\n")));
-    }
-    
-    // Theme summary
-    if let Some(theme) = context.theme.as_object() {
-        let theme_items: Vec<String> = theme.iter()
-            .take(5)  // Limit to avoid too much context
-            .map(|(k, v)| format!("{}: {}", k, v))
-            .collect();
-        if !theme_items.is_empty() {
-            parts.push(format!("Theme: {}", theme_items.join(", ")));
-        }
-    }
-    
-    parts.join("\n\n")
+/// Build ultra-compact context for fast step execution
+fn build_compact_context(context: &WebsiteContext) -> String {
+    let title = context.website.title.as_deref().unwrap_or("Site");
+    let section_types: Vec<&str> = context.sections.iter()
+        .take(5)
+        .map(|s| s.section_type.as_str())
+        .collect();
+    format!("{}: [{}]", title, section_types.join(", "))
 }
 
 /// Simple language detection fallback

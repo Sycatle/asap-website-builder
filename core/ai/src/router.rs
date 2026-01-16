@@ -82,11 +82,11 @@ impl ModelRouter {
     pub async fn chat(
         &self,
         messages: Vec<Message>,
-        preferred_provider: Option<&str>,
+        max_tokens: Option<u32>,
         model: Option<&str>,
     ) -> AIResult<ChatCompletion> {
         // Build the chain of providers to try
-        let mut chain = self.build_provider_chain(preferred_provider);
+        let mut chain = self.build_provider_chain(None);
 
         if chain.is_empty() {
             return Err(AIError::ProviderUnavailable(
@@ -95,6 +95,10 @@ impl ModelRouter {
         }
 
         let mut last_error = None;
+
+        // Note: max_tokens is passed but providers currently ignore it
+        // This is a placeholder for future provider-level max_tokens support
+        let _ = max_tokens;
 
         for provider_id in chain.drain(..) {
             if let Some(provider) = self.providers.get(&provider_id) {
