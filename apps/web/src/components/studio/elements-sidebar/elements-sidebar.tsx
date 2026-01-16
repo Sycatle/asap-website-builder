@@ -59,9 +59,11 @@ export function ElementsSidebar({
     try {
       const duplicateData: CreateElementRequest = {
         element_type: element.element_type,
+        slug: `${element.slug}-copy`,
         title: `${element.title} (Copy)`,
+        order: elements.length,
         layout: element.layout,
-        content: element.content,
+        settings: element.settings,
         visible: element.visible,
       }
       await onAdd(duplicateData)
