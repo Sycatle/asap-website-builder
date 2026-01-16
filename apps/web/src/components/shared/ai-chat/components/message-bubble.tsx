@@ -1,448 +1,449 @@
 "use client"
 
-import React, { useMemo } from 'react';
-import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Sparkles,
-  Loader2,
-  Copy,
-  Check,
-  Zap,
-  RotateCcw,
-  CheckCircle2,
-  AlertCircle,
-  Search,
-  Database,
-} from "lucide-react";
-import { MarkdownContent } from "../../markdown-content";
-import type { Message, ToolCallState } from '../types';
-import { TOOL_CONFIG, AI_DATA_TOOL_CONFIG } from '../constants';
-import { formatActionLabel } from '../utils';
-import { ThinkingIndicator, ChainOfThoughtsDisplay } from './thinking-display';
+import React, { useState, useMemo } from 'react';
+import { cn } from '@/lib/utils';
+import { 
+  ChevronDown, ChevronRight, Copy, Check, AlertTriangle,
+  ExternalLink, Sparkles, Zap, CheckCircle2, RotateCcw
+} from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { MarkdownContent } from '@/components/shared/markdown-content';
+import type { Message, AssistantMessage, UserMessage } from '../types';
+import type { AIAction } from '@/lib/api/ai';
+import { ExecutionPlanView } from './execution-plan';
+import { ToolCardsList } from './tool-cards';
+import { ArtifactCard } from './artifacts';
 
 interface MessageBubbleProps {
   message: Message;
   userAvatar?: string;
   userInitials: string;
   userName: string;
-  onCopy: () => void;
-  isCopied: boolean;
+  onCopy?: (content: string) => void;
   onRetry?: () => void;
-  animationDelay?: number;
+  onActionClick?: (actionId: string) => void;
 }
 
-export const MessageBubble = React.memo(function MessageBubble({ 
-  message, 
-  userAvatar, 
-  userInitials, 
+export function MessageBubble({
+  message,
+  userAvatar,
+  userInitials,
   userName,
   onCopy,
-  isCopied,
   onRetry,
-  animationDelay = 0,
+  onActionClick,
 }: MessageBubbleProps) {
   const isUser = message.role === 'user';
-  const hasError = message.error;
   
-  // Memoize action status calculations
-  const actionStats = useMemo(() => {
-    if (!message.actions?.length) return null;
-    const total = message.actions.length;
-    const executed = message.executedActions?.length || 0;
-    const successful = message.executedActions?.filter(e => e.success).length || 0;
-    const failed = message.executedActions?.filter(e => !e.success).length || 0;
-    return { total, executed, successful, failed };
-  }, [message.actions, message.executedActions]);
+  if (isUser) {
+    return <UserBubble message={message} avatar={userAvatar} initials={userInitials} name={userName} />;
+  }
   
   return (
-    <div 
-      className={cn(
-        "flex items-end gap-2 group animate-in fade-in-0 slide-in-from-bottom-2",
-        isUser ? "flex-row-reverse" : "flex-row"
-      )}
-      style={{ animationDelay: `${animationDelay}ms` }}
-    >
+    <AssistantBubble 
+      message={message} 
+      onCopy={onCopy}
+      onRetry={onRetry}
+      onActionClick={onActionClick}
+    />
+  );
+}
+
+// ============================================================================
+// User Bubble
+// ============================================================================
+
+function UserBubble({ 
+  message, 
+  avatar, 
+  initials, 
+  name 
+}: { 
+  message: UserMessage; 
+  avatar?: string; 
+  initials: string; 
+  name: string;
+}) {
+  return (
+    <div className="flex items-end gap-2 flex-row-reverse">
+      <Avatar className="w-8 h-8 shrink-0 shadow-md ring-2 ring-background">
+        <AvatarImage src={avatar} alt={name} />
+        <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
+          {initials}
+        </AvatarFallback>
+      </Avatar>
+      
+      <div className="max-w-[80%]">
+        <div className="px-4 py-2.5 shadow-sm bg-primary text-primary-foreground rounded-2xl rounded-br-md">
+          <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+        </div>
+        
+        {/* Attachments */}
+        {message.attachments && message.attachments.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1 justify-end">
+            {message.attachments.map((att, i) => (
+              <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                {att.name}
+              </span>
+            ))}
+          </div>
+        )}
+        
+        <p className="text-[10px] text-muted-foreground mt-1 text-right">
+          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Assistant Bubble
+// ============================================================================
+
+function AssistantBubble({ 
+  message, 
+  onCopy,
+  onRetry,
+  onActionClick,
+}: { 
+  message: AssistantMessage;
+  onCopy?: (content: string) => void;
+  onRetry?: () => void;
+  onActionClick?: (actionId: string) => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
+  
+  const hasError = message.toolCalls?.some(t => t.status === 'failed') || 
+                   message.plan?.steps.some(s => s.status === 'failed');
+  
+  const handleCopy = async () => {
+    const text = message.content.summary || message.content.body;
+    await navigator.clipboard.writeText(text);
+    onCopy?.(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  
+  return (
+    <div className="flex items-start gap-2">
       {/* Avatar */}
-      {!isUser && (
-        <Avatar className="h-8 w-8 shrink-0 shadow-md ring-2 ring-background">
-          <AvatarFallback className="bg-gradient-to-br from-primary to-violet-600 text-white">
-            <Sparkles className={cn("h-4 w-4", message.isStreaming && "animate-pulse")} />
-          </AvatarFallback>
-        </Avatar>
-      )}
+      <Avatar className="w-8 h-8 shrink-0 shadow-md ring-2 ring-background">
+        <AvatarFallback className="bg-gradient-to-br from-primary to-violet-600 text-white">
+          <Sparkles className={cn("w-4 h-4", message.isStreaming && "animate-pulse")} />
+        </AvatarFallback>
+      </Avatar>
       
-      {isUser && (
-        <Avatar className="h-8 w-8 shrink-0 shadow-md ring-2 ring-background">
-          <AvatarImage src={userAvatar} alt={userName} />
-          <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
-            {userInitials}
-          </AvatarFallback>
-        </Avatar>
-      )}
-      
-      {/* Bubble */}
-      <div className={cn("flex flex-col gap-1", isUser && "max-w-[80%]", !isUser && "w-full")}>
+      <div className="flex-1 min-w-0 space-y-3">
+        {/* Streaming indicator */}
+        {message.isStreaming && message.streamingPhase && (
+          <StreamingIndicator phase={message.streamingPhase} />
+        )}
+        
+        {/* Execution Plan */}
+        {message.plan && message.plan.steps.length > 0 && (
+          <ExecutionPlanView plan={message.plan} />
+        )}
+        
+        {/* Tool Cards */}
+        {message.toolCalls && message.toolCalls.length > 0 && (
+          <ToolCardsList tools={message.toolCalls} />
+        )}
+        
+        {/* Main Content */}
         <div className={cn(
-          "transition-all",
-          isUser 
-            ? "px-4 py-2.5 shadow-sm bg-primary text-primary-foreground rounded-2xl rounded-br-md" 
-            : "py-1",
-          hasError && !isUser && "px-4 py-2.5 border border-red-500/50 bg-red-50 dark:bg-red-950/30 rounded-2xl",
-          message.isStreaming && !isUser && "border-l-2 border-primary/50 pl-3"
+          "space-y-3",
+          hasError && "border-l-2 border-red-500/50 pl-3"
         )}>
-          {/* Error indicator */}
-          {hasError && !isUser && (
-            <div className="flex items-center gap-2 mb-2 text-red-600 dark:text-red-400">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span className="text-xs font-medium">Failed to generate response</span>
-            </div>
-          )}
-          
-          {/* Iteration indicator */}
-          {!isUser && message.iteration && message.iteration.status !== 'finished' && (
-            <div className="mb-3 px-3 py-2 bg-primary/5 rounded-lg border border-primary/20 animate-in fade-in-0">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-medium text-primary flex items-center gap-1.5">
-                  <RotateCcw className="h-3 w-3 animate-spin" />
-                  Iteration {message.iteration.current}/{message.iteration.max}
-                </span>
-                <span className="text-[10px] text-muted-foreground capitalize">{message.iteration.status}</span>
-              </div>
-              {message.iteration.description && (
-                <p className="text-xs text-muted-foreground">{message.iteration.description}</p>
-              )}
-              <div className="mt-1.5 h-1 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary transition-all duration-300" 
-                  style={{ width: `${(message.iteration.current / message.iteration.max) * 100}%` }}
-                />
+          {/* Summary (if exists) - Always visible, prominent */}
+          {message.content.summary && (
+            <div className="p-3 rounded-xl bg-gradient-to-br from-primary/5 to-violet-500/5 border border-primary/10">
+              <div className="flex items-start gap-2">
+                <Zap className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                <p className="text-sm font-medium leading-relaxed">{message.content.summary}</p>
               </div>
             </div>
           )}
           
-          {/* Chain of Thoughts - Visual step-by-step display */}
-          {!isUser && message.chainSteps && message.chainSteps.length > 0 && (
-            <ChainOfThoughtsDisplay steps={message.chainSteps} isStreaming={message.isStreaming} />
-          )}
-          
-          {/* Simple thinking indicator when no chain steps */}
-          {!isUser && message.thinking && (!message.chainSteps || message.chainSteps.length === 0) && (
-            <ThinkingIndicator thought={message.thinking.thought} step={message.thinking.step} />
-          )}
-          
-          {/* Tool calls display */}
-          {!isUser && message.toolCalls && message.toolCalls.length > 0 && (
-            <ToolCallsDisplay toolCalls={message.toolCalls} />
-          )}
-          
-          {/* Message content with markdown rendering */}
-          {isUser ? (
-            <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
-          ) : (
+          {/* Body content */}
+          {message.content.body && (
             <div className="text-sm leading-relaxed">
-              <MarkdownContent content={message.content} />
+              <MarkdownContent content={message.content.body} />
               {message.isStreaming && (
                 <span className="inline-block w-2 h-4 ml-0.5 bg-primary animate-pulse rounded-sm" />
               )}
             </div>
           )}
           
-          {/* AI Actions indicator */}
-          {!isUser && message.actions && message.actions.length > 0 && (
-            <ActionsDisplay 
-              actions={message.actions} 
-              executedActions={message.executedActions} 
-              actionStats={actionStats} 
-            />
+          {/* Warnings */}
+          {message.content.warnings && message.content.warnings.length > 0 && (
+            <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                {message.content.warnings.map((warning, i) => (
+                  <p key={i} className="text-xs text-amber-700 dark:text-amber-300">{warning}</p>
+                ))}
+              </div>
+            </div>
           )}
           
-          {/* Used tools/sources display */}
-          {!isUser && !message.isStreaming && message.usedTools && message.usedTools.length > 0 && (
-            <UsedToolsDisplay usedTools={message.usedTools} />
+          {/* Details (collapsible) */}
+          {message.content.details && (
+            <div className="border rounded-lg overflow-hidden">
+              <button
+                onClick={() => setDetailsExpanded(!detailsExpanded)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:bg-muted/50 transition-colors"
+              >
+                {detailsExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                Voir les détails
+              </button>
+              {detailsExpanded && (
+                <div className="px-3 pb-3 text-sm text-muted-foreground">
+                  <MarkdownContent content={message.content.details} />
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Confidence indicator */}
+          {message.content.confidence !== undefined && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Confiance :</span>
+              <div className="flex-1 h-1.5 bg-muted rounded-full max-w-24 overflow-hidden">
+                <div 
+                  className={cn(
+                    "h-full transition-all",
+                    message.content.confidence >= 80 ? "bg-emerald-500" :
+                    message.content.confidence >= 50 ? "bg-amber-500" : "bg-red-500"
+                  )}
+                  style={{ width: `${message.content.confidence}%` }}
+                />
+              </div>
+              <span className={cn(
+                "text-xs font-medium",
+                message.content.confidence >= 80 ? "text-emerald-600" :
+                message.content.confidence >= 50 ? "text-amber-600" : "text-red-600"
+              )}>
+                {message.content.confidence}%
+              </span>
+            </div>
           )}
         </div>
         
-        {/* Timestamp, Tokens & Actions */}
-        <MessageFooter 
-          message={message}
-          isUser={isUser}
-          hasError={hasError}
-          onCopy={onCopy}
-          isCopied={isCopied}
-          onRetry={onRetry}
-        />
+        {/* Artifacts */}
+        {message.content.artifacts && message.content.artifacts.length > 0 && (
+          <div className="space-y-2">
+            {message.content.artifacts.map(artifact => (
+              <ArtifactCard key={artifact.id} artifact={artifact} />
+            ))}
+          </div>
+        )}
+        
+        {/* Sources */}
+        {message.content.sources && message.content.sources.length > 0 && (
+          <SourcesList sources={message.content.sources} />
+        )}
+        
+        {/* Actions */}
+        {message.actions && message.actions.length > 0 && (
+          <ActionsList 
+            actions={message.actions} 
+            executedActions={message.executedActions}
+            onActionClick={onActionClick}
+          />
+        )}
+        
+        {/* Footer */}
+        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+          <span>{message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          
+          {message.usage && (
+            <span className="font-mono">{message.usage.total_tokens} tokens</span>
+          )}
+          
+          <div className="flex-1" />
+          
+          {!message.isStreaming && (
+            <>
+              <button
+                onClick={handleCopy}
+                className="p-1 rounded hover:bg-muted transition-colors"
+                title="Copier"
+              >
+                {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+              </button>
+              
+              {hasError && onRetry && (
+                <button
+                  onClick={onRetry}
+                  className="flex items-center gap-1 px-2 py-1 rounded text-red-500 hover:bg-red-500/10 transition-colors"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Réessayer
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
-});
+}
 
-// Sub-components for MessageBubble
+// ============================================================================
+// Sub-components
+// ============================================================================
 
-function ToolCallsDisplay({ toolCalls }: { toolCalls: ToolCallState[] }) {
+function StreamingIndicator({ phase }: { phase: string }) {
+  const phases = {
+    thinking: { label: 'Réflexion en cours...', color: 'text-violet-500' },
+    searching: { label: 'Recherche en cours...', color: 'text-blue-500' },
+    executing: { label: 'Exécution en cours...', color: 'text-amber-500' },
+    writing: { label: 'Rédaction en cours...', color: 'text-emerald-500' },
+  };
+  
+  const config = phases[phase as keyof typeof phases] || phases.thinking;
+  
   return (
-    <div className="mb-3 space-y-2">
-      {toolCalls.map((toolCall) => {
-        const config = TOOL_CONFIG[toolCall.tool] || TOOL_CONFIG['default'];
-        const Icon = config.icon;
-        const isRunning = toolCall.status === 'running' || toolCall.status === 'pending';
-        const isCompleted = toolCall.status === 'completed';
-        const isFailed = toolCall.status === 'failed';
-        
-        return (
-          <div 
-            key={toolCall.id}
-            className={cn(
-              "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs transition-all animate-in fade-in-0 slide-in-from-left-2",
-              isRunning && "bg-primary/5 border-primary/30",
-              isCompleted && "bg-green-500/5 border-green-500/30",
-              isFailed && "bg-red-500/5 border-red-500/30"
-            )}
-          >
-            <div className={cn(
-              "shrink-0 h-6 w-6 rounded-md flex items-center justify-center",
-              isRunning && "bg-primary/10",
-              isCompleted && "bg-green-500/10",
-              isFailed && "bg-red-500/10"
-            )}>
-              {isRunning ? (
-                <Loader2 className={cn("h-3.5 w-3.5 animate-spin", config.color)} />
-              ) : isCompleted ? (
-                <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-              ) : isFailed ? (
-                <AlertCircle className="h-3.5 w-3.5 text-red-500" />
-              ) : (
-                <Icon className={cn("h-3.5 w-3.5", config.color)} />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{toolCall.description}</p>
-              {toolCall.result?.message && (
-                <p className={cn(
-                  "text-[10px] truncate mt-0.5",
-                  toolCall.result.success ? "text-green-600" : "text-red-600"
-                )}>
-                  {toolCall.result.message}
-                </p>
-              )}
-            </div>
-            {isRunning && (
-              <span className="text-[10px] text-muted-foreground">Running...</span>
-            )}
-          </div>
-        );
-      })}
+    <div className="flex items-center gap-2 text-xs">
+      <div className="flex gap-1">
+        <span className={cn("w-1.5 h-1.5 rounded-full animate-bounce", config.color.replace('text-', 'bg-'))} style={{ animationDelay: '0ms' }} />
+        <span className={cn("w-1.5 h-1.5 rounded-full animate-bounce", config.color.replace('text-', 'bg-'))} style={{ animationDelay: '150ms' }} />
+        <span className={cn("w-1.5 h-1.5 rounded-full animate-bounce", config.color.replace('text-', 'bg-'))} style={{ animationDelay: '300ms' }} />
+      </div>
+      <span className={cn("font-medium", config.color)}>{config.label}</span>
     </div>
   );
 }
 
-interface ActionsDisplayProps {
-  actions: Message['actions'];
-  executedActions: Message['executedActions'];
-  actionStats: { total: number; executed: number; successful: number; failed: number } | null;
-}
-
-function ActionsDisplay({ actions, executedActions, actionStats }: ActionsDisplayProps) {
-  if (!actions?.length) return null;
+function SourcesList({ sources }: { sources: { title: string; url?: string; snippet?: string }[] }) {
+  const [expanded, setExpanded] = useState(false);
   
   return (
-    <div className="mt-3 pt-3 border-t border-border/30">
-      {/* Summary bar */}
-      {actionStats && (
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-            <Zap className="h-3 w-3" />
-            {actionStats.total} action{actionStats.total > 1 ? 's' : ''}
-          </span>
-          {actionStats.executed > 0 && (
-            <div className="flex items-center gap-2 text-xs">
-              {actionStats.successful > 0 && (
-                <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {actionStats.successful}
-                </span>
-              )}
-              {actionStats.failed > 0 && (
-                <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
-                  <AlertCircle className="h-3 w-3" />
-                  {actionStats.failed}
-                </span>
+    <div className="border rounded-lg overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted/50 transition-colors"
+      >
+        {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+        <span className="font-medium">{sources.length} source{sources.length > 1 ? 's' : ''} consultée{sources.length > 1 ? 's' : ''}</span>
+      </button>
+      
+      {expanded && (
+        <div className="px-3 pb-3 space-y-2">
+          {sources.map((source, i) => (
+            <div key={i} className="p-2 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium">{source.title}</span>
+                {source.url && (
+                  <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-primary">
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </div>
+              {source.snippet && (
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{source.snippet}</p>
               )}
             </div>
-          )}
+          ))}
         </div>
       )}
+    </div>
+  );
+}
+
+interface ActionsListProps {
+  actions: AIAction[];
+  executedActions?: { action: AIAction; success: boolean; error?: string }[];
+  onActionClick?: (actionId: string) => void;
+}
+
+function ActionsList({ actions, executedActions, onActionClick }: ActionsListProps) {
+  const stats = useMemo(() => {
+    const total = actions.length;
+    const executed = executedActions?.length || 0;
+    const successful = executedActions?.filter(e => e.success).length || 0;
+    return { total, executed, successful, failed: executed - successful };
+  }, [actions, executedActions]);
+  
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2 bg-muted/30">
+        <span className="text-xs font-medium flex items-center gap-1.5">
+          <Zap className="w-3 h-3" />
+          {stats.total} action{stats.total > 1 ? 's' : ''}
+        </span>
+        {stats.executed > 0 && (
+          <div className="flex items-center gap-2 text-xs">
+            {stats.successful > 0 && (
+              <span className="flex items-center gap-1 text-emerald-600">
+                <CheckCircle2 className="w-3 h-3" />
+                {stats.successful}
+              </span>
+            )}
+            {stats.failed > 0 && (
+              <span className="flex items-center gap-1 text-red-600">
+                <AlertTriangle className="w-3 h-3" />
+                {stats.failed}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
       
-      {/* Action list */}
-      <div className="space-y-1.5">
-        {actions.map((action, idx) => {
+      <div className="divide-y">
+        {actions.map((action, i) => {
           const executed = executedActions?.find(e => e.action === action);
           return (
             <div 
-              key={idx} 
+              key={i}
               className={cn(
-                "flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg transition-colors",
-                executed?.success && "bg-green-500/10",
-                executed?.success === false && "bg-red-500/10",
-                !executed && "bg-muted/50"
+                "flex items-center gap-2 px-3 py-2",
+                executed?.success && "bg-emerald-500/5",
+                executed?.success === false && "bg-red-500/5"
               )}
             >
               {executed ? (
                 executed.success ? (
-                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                 ) : (
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <AlertCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-xs">
-                      <p className="text-xs">{executed.error || 'Action failed'}</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
                 )
               ) : (
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary shrink-0" />
+                <div className="w-3.5 h-3.5 rounded-full border-2 border-muted-foreground/30 shrink-0" />
               )}
-              <span className={cn(
-                "truncate flex-1",
-                executed?.success === false && "text-red-600 dark:text-red-400"
-              )}>
+              <span className="text-xs flex-1 truncate">
                 {formatActionLabel(action)}
               </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function UsedToolsDisplay({ usedTools }: { usedTools: Message['usedTools'] }) {
-  if (!usedTools?.length) return null;
-  
-  return (
-    <div className="mt-3 pt-3 border-t border-border/30">
-      <div className="flex items-center gap-1.5 mb-2">
-        <Search className="h-3 w-3 text-muted-foreground" />
-        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-          Sources consultées
-        </span>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {usedTools.map((tool) => {
-          const config = AI_DATA_TOOL_CONFIG[tool.name];
-          const Icon = config?.icon || Database;
-          const label = config?.label || tool.name.replace(/_/g, ' ');
-          
-          return (
-            <Tooltip key={tool.id}>
-              <TooltipTrigger asChild>
-                <div className={cn(
-                  "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors",
-                  tool.success 
-                    ? "bg-muted/50 text-muted-foreground hover:bg-muted" 
-                    : "bg-red-500/10 text-red-600 dark:text-red-400"
-                )}>
-                  <Icon className="h-3 w-3" />
-                  <span>{label}</span>
-                  {tool.success ? (
-                    <CheckCircle2 className="h-2.5 w-2.5 text-green-500" />
-                  ) : (
-                    <AlertCircle className="h-2.5 w-2.5" />
-                  )}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs">
-                <p className="text-xs">{tool.description}</p>
-              </TooltipContent>
-            </Tooltip>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-interface MessageFooterProps {
-  message: Message;
-  isUser: boolean;
-  hasError?: boolean;
-  onCopy: () => void;
-  isCopied: boolean;
-  onRetry?: () => void;
-}
-
-function MessageFooter({ message, isUser, hasError, onCopy, isCopied, onRetry }: MessageFooterProps) {
-  return (
-    <div className={cn(
-      "flex items-center gap-2 px-1",
-      isUser ? "flex-row-reverse" : "flex-row"
-    )}>
-      <span className="text-[10px] text-muted-foreground">
-        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-      </span>
-      
-      {/* Token usage for assistant messages */}
-      {!isUser && message.usage && (
-        <Tooltip>
-          <TooltipTrigger>
-            <span className="text-[10px] text-muted-foreground/60 font-mono">
-              {message.usage.total_tokens} tokens
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <div className="text-xs space-y-0.5">
-              <p>Prompt: {message.usage.prompt_tokens}</p>
-              <p>Completion: {message.usage.completion_tokens}</p>
-              <p className="font-medium">Total: {message.usage.total_tokens}</p>
-            </div>
-          </TooltipContent>
-        </Tooltip>
-      )}
-      
-      {/* Copy button */}
-      {!isUser && !hasError && message.content && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={onCopy}
-              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded"
-            >
-              {isCopied ? (
-                <Check className="h-3 w-3 text-green-500" />
-              ) : (
-                <Copy className="h-3 w-3 text-muted-foreground" />
+              {!executed && onActionClick && (
+                <button
+                  onClick={() => onActionClick(action.type)}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Appliquer
+                </button>
               )}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p className="text-xs">{isCopied ? 'Copied!' : 'Copy message'}</p>
-          </TooltipContent>
-        </Tooltip>
-      )}
-      
-      {/* Retry button for errors */}
-      {hasError && onRetry && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={onRetry}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 rounded-md transition-colors"
-            >
-              <RotateCcw className="h-3 w-3" />
-              Retry
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p className="text-xs">Try again</p>
-          </TooltipContent>
-        </Tooltip>
-      )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
+}
+
+function formatActionLabel(action: AIAction): string {
+  switch (action.type) {
+    case 'update_section':
+    case 'update_property':
+      return `Modifier ${action.property || 'section'}`;
+    case 'add_section':
+      return `Ajouter ${action.section_type || 'section'}`;
+    case 'remove_section':
+      return 'Supprimer section';
+    case 'update_theme':
+      return 'Modifier thème';
+    default:
+      return action.type.replace(/_/g, ' ');
+  }
 }
