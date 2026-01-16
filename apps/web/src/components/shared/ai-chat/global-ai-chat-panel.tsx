@@ -479,7 +479,11 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
   const toggleScope = (scope: 'tools' | 'web') => {
     setContext(prev => ({
       ...prev,
-      scopes: { ...prev.scopes, [scope]: !prev.scopes?.[scope] }
+      scopes: { 
+        tools: prev.scopes?.tools ?? true, 
+        web: prev.scopes?.web ?? false, 
+        [scope]: !(prev.scopes?.[scope] ?? (scope === 'tools')) 
+      }
     }));
   };
 
