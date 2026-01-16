@@ -17,9 +17,7 @@ use chrono::Utc;
 
 use asap_core_shared::Claims;
 use asap_core_domain::{
-    WebsiteCollection, WebsiteVariable, CollectionItem, SyncStatus,
-    VariableSource, VariableType, CollectionQuery, FilterClause, SortClause,
-    VariableComputation, ComputeOperation,
+    CollectionItem, FilterClause, VariableComputation, ComputeOperation,
 };
 
 // ============================================================================
