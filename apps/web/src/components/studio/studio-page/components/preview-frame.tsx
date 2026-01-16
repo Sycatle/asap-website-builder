@@ -148,7 +148,7 @@ const BASE_STYLES = `
     box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
   }
 
-  /* Quick action bar */
+  /* Quick action bar - uses fixed colors to match main app, not preview theme */
   .studio-quick-actions {
     opacity: 0;
     transition: opacity 0.15s ease;
@@ -165,9 +165,9 @@ const BASE_STYLES = `
     align-items: center;
     gap: 0.125rem;
     padding: 0.25rem;
-    background: hsl(var(--background) / 0.95);
+    background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(4px);
-    border: 1px solid hsl(var(--border));
+    border: 1px solid hsl(240 5.9% 90%);
     border-radius: 0.5rem;
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   }
@@ -180,14 +180,14 @@ const BASE_STYLES = `
     height: 1.75rem;
     border: none;
     background: transparent;
-    color: hsl(var(--foreground));
+    color: hsl(240 10% 3.9%);
     border-radius: 0.25rem;
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease;
   }
   
   .studio-quick-action-btn:hover {
-    background: hsl(var(--accent));
+    background: hsl(240 4.8% 95.9%);
   }
   
   .studio-quick-action-btn:disabled {
@@ -196,14 +196,14 @@ const BASE_STYLES = `
   }
   
   .studio-quick-action-btn.delete:hover {
-    background: hsl(var(--destructive) / 0.1);
-    color: hsl(var(--destructive));
+    background: hsl(0 84.2% 60.2% / 0.1);
+    color: hsl(0 84.2% 60.2%);
   }
   
   .studio-quick-action-separator {
     width: 1px;
     height: 1rem;
-    background: hsl(var(--border));
+    background: hsl(240 5.9% 90%);
     margin: 0 0.125rem;
   }
 `;
