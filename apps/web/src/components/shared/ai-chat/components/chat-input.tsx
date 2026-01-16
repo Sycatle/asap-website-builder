@@ -10,20 +10,9 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
   ArrowUp,
-  StopCircle,
+  Square,
   Paperclip,
-  Settings2,
-  FileText,
-  Maximize2,
-  Minimize2,
 } from 'lucide-react';
 import type { ChatControls } from '../types';
 
@@ -47,79 +36,92 @@ export function ChatInput({
   onStop,
   isLoading,
   disabled,
-  placeholder = "Décris ce que tu veux modifier...",
+  placeholder = "Envoie un message...",
   controls,
   onControlsChange,
   onAttach,
 }: ChatInputProps) {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-  const [expanded, setExpanded] = React.useState(false);
   
   // Auto-resize textarea
   React.useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      const maxHeight = expanded ? 200 : 120;
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, maxHeight)}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
     }
-  }, [value, expanded]);
+  }, [value]);
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      onSend();
+      if (value.trim() && !isLoading) {
+        onSend();
+      }
     }
   };
   
   return (
     <div className="space-y-2">
-      {/* Quick constraints */}
+      {/* Controls row */}
       {controls && onControlsChange && (
-        <QuickConstraints controls={controls} onChange={onControlsChange} />
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-lg border bg-muted/50 p-0.5">
+            {(['short', 'medium', 'long'] as const).map(length => (
+              <button
+                key={length}
+                onClick={() => onControlsChange({ constraints: { ...controls.constraints, maxLength: length } })}
+                className={cn(
+                  "px-2.5 py-1 text-xs rounded-md transition-all",
+                  controls.constraints?.maxLength === length
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {length === 'short' ? 'Court' : length === 'medium' ? 'Moyen' : 'Long'}
+              </button>
+            ))}
+          </div>
+          
+          <div className="flex rounded-lg border bg-muted/50 p-0.5">
+            {(['casual', 'professional', 'technical'] as const).map(tone => (
+              <button
+                key={tone}
+                onClick={() => onControlsChange({ constraints: { ...controls.constraints, tone } })}
+                className={cn(
+                  "px-2.5 py-1 text-xs rounded-md transition-all",
+                  controls.constraints?.tone === tone
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {tone === 'casual' ? 'Casual' : tone === 'professional' ? 'Pro' : 'Tech'}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
       
-      {/* Main input */}
+      {/* Main input container - ChatGPT style */}
       <div className={cn(
-        "flex items-end gap-2 rounded-2xl border-2 bg-card p-2 transition-all",
-        "focus-within:border-primary/50 focus-within:shadow-lg focus-within:shadow-primary/10",
-        expanded && "rounded-xl"
+        "relative flex items-end gap-2 rounded-2xl border bg-muted/30 p-3",
+        "focus-within:border-primary/40 focus-within:bg-background transition-all"
       )}>
-        {/* Left actions */}
-        <div className="flex items-center gap-1 shrink-0">
-          {onAttach && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-lg"
-                  onClick={onAttach}
-                >
-                  <Paperclip className="w-4 h-4 text-muted-foreground" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Joindre un fichier</TooltipContent>
-            </Tooltip>
-          )}
-          
+        {/* Attach button */}
+        {onAttach && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-lg"
-                onClick={() => setExpanded(!expanded)}
+                className="h-8 w-8 shrink-0 rounded-lg"
+                onClick={onAttach}
               >
-                {expanded ? (
-                  <Minimize2 className="w-4 h-4 text-muted-foreground" />
-                ) : (
-                  <Maximize2 className="w-4 h-4 text-muted-foreground" />
-                )}
+                <Paperclip className="w-4 h-4 text-muted-foreground" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{expanded ? 'Réduire' : 'Agrandir'}</TooltipContent>
+            <TooltipContent>Joindre un fichier</TooltipContent>
           </Tooltip>
-        </div>
+        )}
         
         {/* Textarea */}
         <Textarea
@@ -129,153 +131,51 @@ export function ChatInput({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className={cn(
-            "flex-1 min-h-[40px] resize-none border-0 bg-transparent focus-visible:ring-0 py-2 px-2 text-sm",
-            expanded && "min-h-[100px]"
+            "flex-1 min-h-[24px] max-h-[200px] resize-none border-0 bg-transparent",
+            "focus-visible:ring-0 p-0 text-sm leading-6"
           )}
           rows={1}
           disabled={disabled}
         />
         
-        {/* Right actions */}
-        <div className="flex items-center gap-1 shrink-0">
-          {controls && onControlsChange && (
-            <ControlsDropdown controls={controls} onChange={onControlsChange} />
-          )}
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              {isLoading ? (
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="h-9 w-9 rounded-xl border-red-500/50 hover:bg-red-500/10 hover:border-red-500"
-                  onClick={onStop}
-                >
-                  <StopCircle className="w-4 h-4 text-red-500" />
-                </Button>
-              ) : (
-                <Button
-                  size="icon"
-                  className={cn(
-                    "h-9 w-9 rounded-xl transition-all",
-                    value.trim()
-                      ? "bg-gradient-to-br from-primary to-violet-600 text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-105"
-                      : "bg-muted text-muted-foreground"
-                  )}
-                  onClick={onSend}
-                  disabled={!value.trim() || isLoading || disabled}
-                >
-                  <ArrowUp className="w-4 h-4" />
-                </Button>
-              )}
-            </TooltipTrigger>
-            <TooltipContent>
-              {isLoading ? 'Stop' : 'Envoyer'}
-              {!isLoading && <kbd className="ml-2 text-[10px] bg-muted px-1.5 py-0.5 rounded">↵</kbd>}
-            </TooltipContent>
-          </Tooltip>
-        </div>
+        {/* Send/Stop button */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {isLoading ? (
+              <Button
+                size="icon"
+                className="h-8 w-8 shrink-0 rounded-lg bg-foreground text-background hover:bg-foreground/90"
+                onClick={onStop}
+              >
+                <Square className="w-3 h-3 fill-current" />
+              </Button>
+            ) : (
+              <Button
+                size="icon"
+                className={cn(
+                  "h-8 w-8 shrink-0 rounded-lg transition-all",
+                  value.trim()
+                    ? "bg-foreground text-background hover:bg-foreground/90"
+                    : "bg-muted text-muted-foreground cursor-not-allowed"
+                )}
+                onClick={onSend}
+                disabled={!value.trim() || isLoading || disabled}
+              >
+                <ArrowUp className="w-4 h-4" />
+              </Button>
+            )}
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            {isLoading ? 'Arrêter' : 'Envoyer'}
+            {!isLoading && <span className="ml-2 text-muted-foreground">⏎</span>}
+          </TooltipContent>
+        </Tooltip>
       </div>
       
       {/* Hint */}
       <p className="text-[10px] text-muted-foreground/60 text-center">
-        Shift+Entrée pour nouvelle ligne • Cmd+K pour focus
+        Shift+Entrée pour nouvelle ligne
       </p>
     </div>
-  );
-}
-
-// Quick constraints bar
-function QuickConstraints({ 
-  controls, 
-  onChange 
-}: { 
-  controls: ChatControls; 
-  onChange: (controls: Partial<ChatControls>) => void;
-}) {
-  return (
-    <div className="flex items-center gap-2 overflow-x-auto pb-1">
-      {/* Length */}
-      <div className="flex items-center rounded-full bg-muted p-0.5 text-xs">
-        {(['short', 'medium', 'long'] as const).map(length => (
-          <button
-            key={length}
-            onClick={() => onChange({ constraints: { ...controls.constraints, maxLength: length } })}
-            className={cn(
-              "px-2 py-1 rounded-full transition-colors",
-              controls.constraints?.maxLength === length
-                ? "bg-background shadow text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {length === 'short' ? 'Court' : length === 'medium' ? 'Moyen' : 'Long'}
-          </button>
-        ))}
-      </div>
-      
-      {/* Tone */}
-      <div className="flex items-center rounded-full bg-muted p-0.5 text-xs">
-        {(['casual', 'professional', 'technical'] as const).map(tone => (
-          <button
-            key={tone}
-            onClick={() => onChange({ constraints: { ...controls.constraints, tone } })}
-            className={cn(
-              "px-2 py-1 rounded-full transition-colors",
-              controls.constraints?.tone === tone
-                ? "bg-background shadow text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {tone === 'casual' ? 'Casual' : tone === 'professional' ? 'Pro' : 'Tech'}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Controls dropdown
-function ControlsDropdown({
-  controls,
-  onChange,
-}: {
-  controls: ChatControls;
-  onChange: (controls: Partial<ChatControls>) => void;
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-          <Settings2 className="w-4 h-4 text-muted-foreground" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Mode</div>
-        {(['chat', 'plan', 'execute', 'report'] as const).map(mode => (
-          <DropdownMenuItem
-            key={mode}
-            onClick={() => onChange({ mode })}
-            className={cn(controls.mode === mode && "bg-muted")}
-          >
-            {mode === 'chat' && '💬 Chat'}
-            {mode === 'plan' && '📋 Plan'}
-            {mode === 'execute' && '⚡ Exécution'}
-            {mode === 'report' && '📊 Rapport'}
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
-        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Format</div>
-        {(['text', 'markdown', 'json'] as const).map(format => (
-          <DropdownMenuItem
-            key={format}
-            onClick={() => onChange({ constraints: { ...controls.constraints, format } })}
-            className={cn(controls.constraints?.format === format && "bg-muted")}
-          >
-            <FileText className="w-4 h-4 mr-2" />
-            {format.toUpperCase()}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }

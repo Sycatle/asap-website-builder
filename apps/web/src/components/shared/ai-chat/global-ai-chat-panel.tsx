@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Tooltip,
   TooltipContent,
@@ -24,8 +25,10 @@ import {
   Trash2,
   ChevronDown,
   Undo2,
-  Eye,
   History,
+  Settings2,
+  Wrench,
+  Globe,
 } from 'lucide-react';
 
 import { useWebsiteContext } from '@/contexts/WebsiteContext';
@@ -38,7 +41,6 @@ import type {
   Message, 
   UserMessage, 
   AssistantMessage,
-  ExecutionPlan,
   ExecutionStep,
   ToolCall,
   ChatContext,
@@ -48,7 +50,6 @@ import type {
 import {
   MessageBubble,
   EmptyState,
-  ContextBar,
   ChatInput,
 } from './components';
 
@@ -327,7 +328,6 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
             if (m.id !== assistantMessageId) return m;
             const msg = m as AssistantMessage;
             
-            // Convert string actions to ArtifactAction objects
             const artifactActions = data.actions?.map((actionLabel, idx) => ({
               id: `${data.id}-action-${idx}`,
               label: actionLabel,
@@ -396,7 +396,6 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
               : m
           ));
           
-          // Auto-execute
           try {
             await executeAction(action);
           } catch {
@@ -413,7 +412,6 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
         },
         
         onDone: () => {
-          // Mark all running steps as done
           planSteps.forEach(step => {
             if (step.status === 'running' || step.status === 'pending') {
               step.status = 'done';
@@ -430,7 +428,6 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
         },
         
         onError: (error: { code: string; message: string; cause?: string; recoverable?: boolean }) => {
-          // Mark running steps as failed
           planSteps.forEach(step => {
             if (step.status === 'running') {
               step.status = 'failed';
@@ -479,63 +476,79 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
     }
   }, [messages, handleSend]);
 
+  const toggleScope = (scope: 'tools' | 'web') => {
+    setContext(prev => ({
+      ...prev,
+      scopes: { ...prev.scopes, [scope]: !prev.scopes?.[scope] }
+    }));
+  };
+
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Header */}
-      <header className="shrink-0 h-14 px-3 sm:px-4 border-b bg-background/80 backdrop-blur-sm flex items-center justify-between z-10">
-        <div className="flex items-center gap-3">
+      {/* Minimal Header - ChatGPT style */}
+      <header className="shrink-0 h-12 px-3 border-b flex items-center justify-between">
+        <div className="flex items-center gap-2">
           {showBackButton && (
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full hover:bg-primary/10">
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           )}
           
-          <div className="relative">
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-violet-600 flex items-center justify-center shadow-lg shadow-primary/25">
-              <Sparkles className="h-5 w-5 text-primary-foreground" />
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center">
+              <Sparkles className="h-3.5 w-3.5 text-white" />
             </div>
-            <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-background" />
-            </span>
-          </div>
-          
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-semibold">ASAP AI</h1>
-              <Badge className="h-5 text-[10px] bg-gradient-to-r from-primary/20 to-violet-500/20 text-primary border-primary/30">
-                Beta
-              </Badge>
-            </div>
-            {websiteSlug && (
-              <p className="text-xs text-muted-foreground">{websiteSlug}.asap.cool</p>
-            )}
+            <span className="font-semibold text-sm">ASAP AI</span>
+            <Badge variant="secondary" className="h-5 text-[10px]">Beta</Badge>
           </div>
         </div>
 
         <div className="flex items-center gap-1">
-          {/* Mode indicator */}
-          <Badge variant="outline" className="text-[10px] h-6">
-            {controls.mode === 'chat' && '💬 Chat'}
-            {controls.mode === 'plan' && '📋 Plan'}
-            {controls.mode === 'execute' && '⚡ Exec'}
-            {controls.mode === 'report' && '📊 Report'}
-          </Badge>
+          {/* Scope toggles */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant={context.scopes?.tools ? "secondary" : "ghost"} 
+                size="sm" 
+                className="h-7 px-2 text-xs gap-1"
+                onClick={() => toggleScope('tools')}
+              >
+                <Wrench className="h-3 w-3" />
+                Outils
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Activer/désactiver les outils</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant={context.scopes?.web ? "secondary" : "ghost"} 
+                size="sm" 
+                className="h-7 px-2 text-xs gap-1"
+                onClick={() => toggleScope('web')}
+              >
+                <Globe className="h-3 w-3" />
+                Web
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Activer/désactiver la recherche web</TooltipContent>
+          </Tooltip>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+              <Button variant="ghost" size="icon" className="h-8 w-8">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={clearChat} disabled={messages.length === 0}>
                 <Trash2 className="h-4 w-4 mr-2" />
-                Effacer le chat
+                Effacer
               </DropdownMenuItem>
               <DropdownMenuItem disabled>
                 <Undo2 className="h-4 w-4 mr-2" />
-                Annuler dernière action
+                Annuler
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled>
@@ -543,84 +556,82 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
                 Historique
               </DropdownMenuItem>
               <DropdownMenuItem disabled>
-                <Eye className="h-4 w-4 mr-2" />
-                Voir les logs
+                <Settings2 className="h-4 w-4 mr-2" />
+                Paramètres
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
           {!showBackButton && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive"
-            >
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
               <X className="h-4 w-4" />
             </Button>
           )}
         </div>
       </header>
 
-      {/* Context bar */}
-      <ContextBar 
-        context={context}
-        onToggleScope={(scope) => setContext(prev => ({
-          ...prev,
-          scopes: { tools: prev.scopes?.tools ?? true, web: prev.scopes?.web ?? false, [scope]: !prev.scopes?.[scope] }
-        }))}
-      />
-
-      {/* Messages */}
+      {/* Messages Area */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-4 scroll-smooth"
+        className="flex-1 overflow-y-auto"
         onScroll={handleScroll}
       >
         {messages.length === 0 ? (
-          <div className="h-full flex items-center justify-center min-h-[300px]">
+          <div className="h-full flex items-center justify-center p-4">
             <EmptyState userName={userName} onPromptSelect={insertPrompt} />
           </div>
         ) : (
-          <div className="flex flex-col min-h-full justify-end">
-            <div className="space-y-4">
-              {messages.map((message) => (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  userAvatar={userAvatar}
-                  userInitials={userInitials}
-                  userName={userName}
-                  onRetry={message.role === 'assistant' ? () => handleRetry(message.id) : undefined}
-                />
-              ))}
-            </div>
+          <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+            {messages.map((message) => (
+              <MessageBubble
+                key={message.id}
+                message={message}
+                userAvatar={userAvatar}
+                userInitials={userInitials}
+                userName={userName}
+                onRetry={message.role === 'assistant' ? () => handleRetry(message.id) : undefined}
+              />
+            ))}
           </div>
         )}
         
+        {/* Scroll to bottom button */}
         {showScrollButton && (
-          <button
-            onClick={() => scrollToBottom()}
-            className="sticky bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/90 border shadow-lg backdrop-blur-sm hover:bg-muted transition-all"
-          >
-            <ChevronDown className="h-4 w-4" />
-            <span className="text-xs font-medium">Nouveaux messages</span>
-          </button>
+          <div className="sticky bottom-4 flex justify-center">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => scrollToBottom()}
+              className="rounded-full shadow-lg"
+            >
+              <ChevronDown className="h-4 w-4 mr-1" />
+              Nouveaux messages
+            </Button>
+          </div>
         )}
       </div>
 
-      {/* Input */}
-      <div className="shrink-0 border-t bg-background/80 backdrop-blur-sm px-3 sm:px-4 py-3 z-10">
-        <ChatInput
-          value={input}
-          onChange={setInput}
-          onSend={handleSend}
-          onStop={handleStop}
-          isLoading={isLoading}
-          disabled={!currentWebsite?.id}
-          controls={controls}
-          onControlsChange={(c) => setControls(prev => ({ ...prev, ...c }))}
-        />
+      {/* Input Area - ChatGPT style */}
+      <div className="shrink-0 border-t bg-gradient-to-t from-background to-transparent pt-2 pb-4 px-4">
+        <div className="max-w-3xl mx-auto">
+          <ChatInput
+            value={input}
+            onChange={setInput}
+            onSend={handleSend}
+            onStop={handleStop}
+            isLoading={isLoading}
+            disabled={!currentWebsite?.id}
+            controls={controls}
+            onControlsChange={(c) => setControls(prev => ({ ...prev, ...c }))}
+          />
+          
+          {/* Website context indicator */}
+          {websiteSlug && (
+            <p className="text-[10px] text-muted-foreground text-center mt-2">
+              Contexte : {websiteSlug}.asap.cool
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
