@@ -47,6 +47,10 @@ export interface SimplePreviewCanvasProps {
   setPreviewTheme: (theme: PreviewTheme) => void;
   selectedElementId: string | null;
   onElementClick: (element: WebsiteElement) => void;
+  onElementDuplicate?: (elementId: string) => void;
+  onElementDelete?: (elementId: string) => void;
+  onElementMoveUp?: (elementId: string) => void;
+  onElementMoveDown?: (elementId: string) => void;
   websiteSlug: string | null;
   currentPageSlug: string | null;
   currentPageId?: string;
@@ -68,6 +72,10 @@ export function SimplePreviewCanvas({
   setPreviewTheme,
   selectedElementId,
   onElementClick,
+  onElementDuplicate,
+  onElementDelete,
+  onElementMoveUp,
+  onElementMoveDown,
   websiteSlug,
   currentPageSlug,
   currentPageId,
@@ -266,6 +274,10 @@ export function SimplePreviewCanvas({
             previewTheme={previewTheme}
             selectedElementId={selectedElementId}
             onElementClick={handleElementClick}
+            onElementDuplicate={onElementDuplicate}
+            onElementDelete={onElementDelete}
+            onElementMoveUp={onElementMoveUp}
+            onElementMoveDown={onElementMoveDown}
             onReady={handlePreviewReady}
             device={devicePreview}
             className={cn(

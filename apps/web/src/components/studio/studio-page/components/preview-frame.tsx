@@ -128,6 +128,70 @@ const BASE_STYLES = `
     font-size: 0.75rem;
     font-weight: 600;
   }
+
+  /* Quick action bar */
+  .studio-quick-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 99999;
+    pointer-events: none;
+  }
+  
+  .studio-element-wrapper.selected .studio-quick-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  
+  .studio-quick-actions-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.25rem;
+    background: hsl(var(--background) / 0.95);
+    backdrop-filter: blur(4px);
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+  
+  .studio-quick-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: none;
+    background: transparent;
+    color: hsl(var(--foreground));
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  
+  .studio-quick-action-btn:hover {
+    background: hsl(var(--accent));
+  }
+  
+  .studio-quick-action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .studio-quick-action-btn.delete:hover {
+    background: hsl(var(--destructive) / 0.1);
+    color: hsl(var(--destructive));
+  }
+  
+  .studio-quick-action-separator {
+    width: 1px;
+    height: 1rem;
+    background: hsl(var(--border));
+    margin: 0 0.125rem;
+  }
 `;
 
 interface PreviewFrameProps {
@@ -137,6 +201,10 @@ interface PreviewFrameProps {
   previewTheme: PreviewTheme;
   selectedElementId?: string | null;
   onElementClick?: (elementId: string) => void;
+  onElementDuplicate?: (elementId: string) => void;
+  onElementDelete?: (elementId: string) => void;
+  onElementMoveUp?: (elementId: string) => void;
+  onElementMoveDown?: (elementId: string) => void;
   onReady?: () => void;
   className?: string;
   device?: DevicePreview;
@@ -162,6 +230,10 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
     previewTheme, 
     selectedElementId,
     onElementClick,
+    onElementDuplicate,
+    onElementDelete,
+    onElementMoveUp,
+    onElementMoveDown,
     onReady,
     className,
     device = 'desktop',
@@ -311,8 +383,10 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
                 <p>Aucun élément à afficher</p>
               </div>
             ) : (
-              sortedElements.map((element) => {
+              sortedElements.map((element, index) => {
                 const isSelected = selectedElementId === element.id;
+                const isFirst = index === 0;
+                const isLast = index === sortedElements.length - 1;
                 const elementTypeLabel = element.element_type
                   .replace(/-/g, ' ')
                   .split(' ')
@@ -329,6 +403,7 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
                       onElementClick?.(element.id);
                     }}
                   >
+                    {/* Element label overlay */}
                     {isSelected && (
                       <div className="studio-element-overlay">
                         <div className="studio-element-label">
@@ -352,6 +427,79 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
                         </div>
                       </div>
                     )}
+                    
+                    {/* Quick action bar */}
+                    {isSelected && (
+                      <div className="studio-quick-actions">
+                        <div className="studio-quick-actions-bar">
+                          {/* Move up */}
+                          <button
+                            className="studio-quick-action-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onElementMoveUp?.(element.id);
+                            }}
+                            disabled={isFirst}
+                            title="Déplacer vers le haut"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="m18 15-6-6-6 6"/>
+                            </svg>
+                          </button>
+                          
+                          {/* Move down */}
+                          <button
+                            className="studio-quick-action-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onElementMoveDown?.(element.id);
+                            }}
+                            disabled={isLast}
+                            title="Déplacer vers le bas"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="m6 9 6 6 6-6"/>
+                            </svg>
+                          </button>
+                          
+                          <div className="studio-quick-action-separator" />
+                          
+                          {/* Duplicate */}
+                          <button
+                            className="studio-quick-action-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onElementDuplicate?.(element.id);
+                            }}
+                            title="Dupliquer"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                            </svg>
+                          </button>
+                          
+                          <div className="studio-quick-action-separator" />
+                          
+                          {/* Delete */}
+                          <button
+                            className="studio-quick-action-btn delete"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onElementDelete?.(element.id);
+                            }}
+                            title="Supprimer"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 6h18"/>
+                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
                     <SectionRenderer
                       element={element}
                       isSelected={isSelected}
@@ -364,7 +512,7 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
           </div>
         </PreviewProvider>
       );
-    }, [iframeReady, elements, selectedElementId, onElementClick, device]);
+    }, [iframeReady, elements, selectedElementId, onElementClick, onElementDuplicate, onElementDelete, onElementMoveUp, onElementMoveDown, device]);
 
     // Scroll to selected element when selection changes
     useEffect(() => {
