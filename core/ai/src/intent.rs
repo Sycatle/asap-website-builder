@@ -2,8 +2,11 @@
 //!
 //! Fast intent analysis with minimal latency.
 //! Uses a streamlined prompt for quick classification.
+//! Supports TRUE real-time streaming of ALL content - thoughts, plans, insights.
 
+use futures::stream::StreamExt;
 use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc;
 
 use crate::error::AIResult;
 use crate::router::ModelRouter;
@@ -96,84 +99,70 @@ fn default_duration() -> u32 {
 }
 
 /// Compact system prompt for fast intent analysis - "Chef de Projet Digital" style
-const INTENT_ANALYSIS_PROMPT: &str = r##"You are a Senior Digital Project Manager AI thinking through a user's request in real-time. Your thoughts will be streamed to the user as you reason.
+const INTENT_ANALYSIS_PROMPT: &str = r##"You are a Senior Digital Project Manager AI thinking through a user's request in real-time.
 
-CRITICAL: Think step-by-step like ChatGPT's extended thinking. Show your reasoning process naturally.
-
-Output JSON only:
+Output JSON only (be fast - under 200 tokens):
 {
   "intent": "<category>",
-  "summary": "<your understanding in 1-2 sentences, in user's language>",
-  "reasoning": "<your thought process: 'I'm looking at this request and I notice... This tells me the user wants... My approach will be...'>",
-  "needs_thinking": <true for any request that needs analysis>,
+  "summary": "<1 sentence understanding in user's language>",
+  "reasoning": "<2 sentences: what you notice and your approach>",
+  "needs_thinking": <true for requests needing analysis/data>,
   "thinking_steps": [
     {
       "step": 1, 
-      "description": "<VERY detailed task: 'Examinons d'abord la structure de votre page d'accueil pour comprendre comment vos services sont présentés aux visiteurs'>",
-      "analysis_focus": "<what to look for>",
-      "specialist": "<agent type>",
-      "duration_hint": 500,
-      "produces_output": true,
-      "questions": ["<internal question to answer>"],
-      "requires_data": <true if needs to fetch website info>,
-      "tools_needed": ["get_website_sections", "get_website_theme"]
+      "description": "<20-word task in user's language>",
+      "specialist": "<analyst|writer|designer|strategist|researcher>",
+      "requires_data": <true if needs website info>,
+      "tools_needed": ["get_website_sections", "search_collections"]
     }
   ],
   "language": "<en|fr|es|de>",
-  "proactive_hints": ["<things the user might not have asked but should know>"],
-  "hypotheses": ["<assumptions: 'Je suppose que vous voulez améliorer les conversions' - verification needed>"]
+  "hypotheses": ["<assumption if any>"]
 }
 
-Categories: modify_content, add_section, remove_section, change_style, reorganize, analyze, question, greeting, strategy, optimize, create_content, audit, troubleshoot, other
+Categories: modify_content, add_section, remove_section, change_style, reorganize, analyze, question, greeting, strategy, optimize, create_content, audit, other
 
-Specialists:
-- "data_analyst" 📊: Collects metrics, analyzes structure
-- "content_writer" ✍️: Evaluates copy, creates text
-- "designer" 🎨: Reviews visual hierarchy, UX
-- "strategist" 🧭: Plans user flow, conversion paths
-- "validator" ✅: Checks SEO, accessibility
-- "researcher" 🔍: Gathers benchmarks, insights
-
-IMPORTANT RULES:
-1. reasoning MUST sound natural like inner thoughts: "Je vois que l'utilisateur veut... Cela me fait penser que... Je vais donc..."
-2. Each thinking_step description must be 15-30 words, specific and actionable
-3. If the request involves analyzing the site, set requires_data=true and list tools_needed
-4. Always needs_thinking=true except for pure greetings
-5. Match user's language exactly in summary, reasoning, and descriptions
+**Key Rules:**
+1. reasoning = natural thoughts: "Je vois que... Cela nécessite... Mon approche..."
+2. thinking_steps = 1-3 steps MAX (be efficient!)
+3. Set requires_data=true + list tools_needed when you need website info
+4. Simple greetings: needs_thinking=false, no steps
+5. Match user's language exactly
 "##;
 
 /// Prompt for step execution - specialist agent executing their task with detailed reasoning
-const STEP_EXECUTION_PROMPT: &str = r##"You are a senior {specialist} specialist executing task {step_num}/{total_steps}.
+const STEP_EXECUTION_PROMPT: &str = r##"You are a {specialist} executing task {step_num}/{total_steps}.
 
-YOUR TASK: "{step_description}"
+TASK: "{step_description}"
 
-User's original request: "{user_message}"
-Website context: {website_context}
-Previous team findings: {previous_results}
+Context:
+- User asked: "{user_message}"
+- Website: {website_context}
+- Previous findings: {previous_results}
 
-Think through this step naturally, as if explaining to a colleague. Stream your thoughts.
-
-Output JSON only:
+Output JSON (be specific and fast - under 250 tokens):
 {{
   "step": {step_num}, 
-  "thinking": "<1-2 sentences of what you're looking at and why - natural inner voice>",
-  "insight": "<3-4 sentence detailed finding in {language}. Be SPECIFIC: mention actual elements, give concrete observations, actionable recommendations. Never vague.>", 
-  "found_relevant": <true if discovered useful information>,
+  "thinking": "<1 sentence: what you're examining>",
+  "insight": "<3 sentences in {language}. Be SPECIFIC with examples, numbers, and actionable advice.>", 
+  "found_relevant": true,
   "key_observations": ["<specific finding 1>", "<specific finding 2>"],
-  "recommendations": ["<actionable recommendation if any>"],
-  "data": {{"elements_analyzed": [], "issues_found": [], "opportunities": []}}
+  "recommendations": ["<actionable rec>"]
 }}
 
 Guidelines:
-- Be SPECIFIC: "The headline 'Welcome' lacks a clear value proposition" NOT "The headline could be improved"
-- Show expertise: reference UX principles, conversion best practices
-- Quantify when possible: "3 CTAs compete for attention" NOT "Too many CTAs"
-- Connect findings to user goals: "This impacts conversion because..."
-- Language must be {language}
+- SPECIFIC: "Header 'Welcome' lacks value prop" NOT "Header could improve"
+- QUANTIFY: "3 CTAs compete" NOT "Too many CTAs"
+- ACTIONABLE: Direct next steps
+- Language: {language}
 "##;
 
 /// Analyze user intent with a quick AI call
 /// Uses GPT-4o-mini for simple requests, GPT-4o for complex analysis requests
+/// 
+/// # Errors
+/// Returns AIError if the AI call fails. Parse errors use a heuristic fallback
+/// with a warning logged, as this should not block the user experience.
 pub async fn analyze_intent(
     router: &ModelRouter,
     user_message: &str,
@@ -183,17 +172,15 @@ pub async fn analyze_intent(
         Message::user(user_message),
     ];
 
-    // Use GPT-4o for complex-looking requests (analyze, audit, optimize keywords)
+    // Use GPT-4o-mini by default for fast intent analysis
+    // Only use GPT-4o for very complex strategic analysis
     let lower = user_message.to_lowercase();
-    let is_complex = lower.contains("analyse") || lower.contains("analyze") 
-        || lower.contains("audit") || lower.contains("optimise") || lower.contains("optimize")
-        || lower.contains("stratégie") || lower.contains("strategy")
-        || lower.contains("améliore") || lower.contains("improve")
-        || lower.contains("review") || lower.contains("évalue") || lower.contains("evaluate")
-        || user_message.len() > 100;
+    let is_very_complex = (lower.contains("stratégie") || lower.contains("strategy") 
+        || lower.contains("audit complet") || lower.contains("full audit"))
+        && user_message.len() > 150;
     
-    let model = if is_complex { Some("gpt-4o") } else { Some("gpt-4o-mini") };
-    let max_tokens = if is_complex { Some(400) } else { Some(200) };
+    let model = if is_very_complex { Some("gpt-4o") } else { Some("gpt-4o-mini") };
+    let max_tokens = Some(300); // Consistent token limit
 
     let completion = router.chat(messages, max_tokens, model).await?;
 
@@ -207,11 +194,163 @@ pub async fn analyze_intent(
     match serde_json::from_str::<IntentAnalysis>(json_str) {
         Ok(analysis) => Ok(analysis),
         Err(e) => {
-            tracing::warn!("Failed to parse intent: {} - raw: {}", e, content);
-            // Smart fallback based on message content
-            Ok(smart_fallback_intent(user_message))
+            // Log the error with full context for debugging
+            tracing::error!(
+                error = %e,
+                raw_content = content,
+                extracted_json = json_str,
+                user_message_len = user_message.len(),
+                model = model.unwrap_or("default"),
+                "INTENT_PARSE_FAILED: AI returned malformed JSON, using heuristic fallback"
+            );
+            
+            // Return a fallback that indicates it was degraded
+            let mut fallback = smart_fallback_intent(user_message);
+            fallback.reasoning = format!(
+                "[Fallback mode - AI response was malformed] {}",
+                fallback.reasoning
+            );
+            
+            Ok(fallback)
         }
     }
+}
+
+/// Streaming prompt for intent analysis - outputs reasoning token by token
+const STREAMING_INTENT_PROMPT: &str = r##"You are a Senior Digital Project Manager AI. Think OUT LOUD in 2-3 sentences.
+
+FORMAT:
+1. Your REASONING (natural, in user's language):
+   "Je vois que... Cela nécessite... Mon approche..."
+
+2. Then PLAN_START followed by JSON:
+{
+  "intent": "<category>",
+  "summary": "<1 sentence in user's language>",
+  "needs_thinking": true,
+  "thinking_steps": [
+    {"step": 1, "description": "<20-word task>", "specialist": "<type>", "requires_data": true, "tools_needed": ["tool1"]}
+  ],
+  "language": "<en|fr|es|de>"
+}
+
+Categories: modify_content, add_section, remove_section, change_style, analyze, question, greeting, strategy, optimize, audit, other
+Specialists: analyst, writer, designer, strategist, researcher
+
+Rules:
+- Start with natural reasoning, then PLAN_START
+- Keep it brief (under 250 tokens total)
+- Match user's language
+- 1-3 thinking_steps MAX
+"##;
+
+/// Analyze intent with REAL-TIME streaming of reasoning tokens
+/// Returns events via channel as tokens are generated
+/// 
+/// # Error Handling
+/// - Stream errors are sent to the channel AND returned as AIError
+/// - Parse errors use heuristic fallback with warning notification
+pub async fn analyze_intent_streaming(
+    router: &ModelRouter,
+    user_message: &str,
+    event_tx: mpsc::Sender<StreamEvent>,
+) -> AIResult<IntentAnalysis> {
+    let messages = vec![
+        Message::system(STREAMING_INTENT_PROMPT),
+        Message::user(user_message),
+    ];
+
+    // Use GPT-4o-mini for fast streaming intent analysis
+    let model = "gpt-4o-mini";
+
+    // Start streaming
+    let mut stream = router.chat_stream(messages, None, Some(model)).await?;
+    
+    let mut full_content = String::new();
+    let mut in_json = false;
+    
+    while let Some(result) = stream.next().await {
+        match result {
+            Ok(token) => {
+                full_content.push_str(&token);
+                
+                // Check if we've hit the JSON marker
+                if full_content.contains("PLAN_START") && !in_json {
+                    in_json = true;
+                    continue;
+                }
+                
+                // Stream reasoning tokens (before JSON)
+                if !in_json && !token.contains("PLAN_START") {
+                    let _ = event_tx.send(StreamEvent::ReasoningToken(token)).await;
+                }
+            }
+            Err(e) => {
+                // Log the error with context
+                tracing::error!(
+                    error = %e,
+                    content_so_far = full_content,
+                    user_message_len = user_message.len(),
+                    "STREAM_ERROR: Intent analysis stream failed"
+                );
+                
+                // Notify the channel about the error
+                let _ = event_tx.send(StreamEvent::Error(format!(
+                    "Stream error during intent analysis: {}",
+                    e
+                ))).await;
+                
+                return Err(e);
+            }
+        }
+    }
+    
+    // Parse the JSON part
+    let json_part = full_content
+        .split("PLAN_START")
+        .nth(1)
+        .unwrap_or(&full_content);
+    let json_str = extract_json(json_part);
+    
+    let analysis = match serde_json::from_str::<IntentAnalysis>(json_str) {
+        Ok(mut analysis) => {
+            // Extract reasoning from the non-JSON part
+            let reasoning = full_content
+                .split("PLAN_START")
+                .next()
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            analysis.reasoning = reasoning;
+            analysis
+        }
+        Err(e) => {
+            // Log detailed error for debugging
+            tracing::error!(
+                error = %e,
+                full_content = full_content,
+                json_part = json_part,
+                extracted_json = json_str,
+                "STREAMING_INTENT_PARSE_FAILED: Using heuristic fallback"
+            );
+            
+            // Notify the channel that we're using fallback
+            let _ = event_tx.send(StreamEvent::Warning(
+                "Intent analysis returned malformed data, using simplified processing".to_string()
+            )).await;
+            
+            let mut fallback = smart_fallback_intent(user_message);
+            fallback.reasoning = format!(
+                "[Fallback mode] {}",
+                full_content.split("PLAN_START").next().unwrap_or("").trim()
+            );
+            fallback
+        }
+    };
+    
+    let _ = event_tx.send(StreamEvent::IntentCompleted(analysis.clone())).await;
+    
+    Ok(analysis)
 }
 
 /// Extract JSON from potentially wrapped content
@@ -321,8 +460,8 @@ pub async fn execute_thinking_step(
         Message::user("Execute your analysis task now. Be thorough and specific."),
     ];
     
-    // Use gpt-4o for better quality insights
-    let completion = router.chat(messages, Some(300), Some("gpt-4o")).await?;
+    // Use gpt-4o-mini for faster insights, still good quality
+    let completion = router.chat(messages, Some(250), Some("gpt-4o-mini")).await?;
     
     // Parse result
     let content = completion.content.trim();
@@ -343,6 +482,229 @@ pub async fn execute_thinking_step(
                 data: serde_json::json!({}),
             })
         }
+    }
+}
+
+/// Event emitted during streaming - covers ALL phases
+#[derive(Debug, Clone)]
+pub enum StreamEvent {
+    // === Intent Analysis Phase ===
+    /// Raw reasoning token during intent analysis
+    ReasoningToken(String),
+    /// Intent analysis completed
+    IntentCompleted(IntentAnalysis),
+    
+    // === Thinking Step Phase ===
+    /// Step started (with description)
+    StepStarted { step: u32, total: u32, description: String, specialist: String },
+    /// Thinking text token during step execution
+    ThinkingToken { step: u32, token: String },
+    /// Insight text token during step execution  
+    InsightToken { step: u32, token: String },
+    /// Step completed with full result
+    StepCompleted(StepResult),
+    
+    // === Status Events ===
+    /// Warning (non-fatal issue, operation continues with degraded quality)
+    Warning(String),
+    /// Error during execution (fatal, operation may abort)
+    Error(String),
+}
+
+/// Legacy alias for backwards compatibility
+pub type ThoughtStreamEvent = StreamEvent;
+
+/// Execute a thinking step with streaming output
+/// Streams tokens as they are generated for ChatGPT-like UX
+pub async fn execute_thinking_step_streaming(
+    router: &ModelRouter,
+    step: &ThinkingStep,
+    total_steps: u32,
+    user_message: &str,
+    context: &WebsiteContext,
+    language: &str,
+    previous_results: &[StepResult],
+    event_tx: mpsc::Sender<ThoughtStreamEvent>,
+) -> AIResult<StepResult> {
+    // Build richer context
+    let website_context = build_rich_context(context);
+    
+    // Build previous results string with key findings
+    let previous_str = if previous_results.is_empty() {
+        "No previous findings yet.".to_string()
+    } else {
+        previous_results.iter()
+            .map(|r| {
+                let observations = if r.key_observations.is_empty() {
+                    String::new()
+                } else {
+                    format!(" Key findings: {}", r.key_observations.join(", "))
+                };
+                format!("Step {}: {}{}", r.step, r.insight, observations)
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    
+    // Get specialist name
+    let specialist = if step.specialist.is_empty() {
+        "analyst"
+    } else {
+        &step.specialist
+    };
+    
+    // Use a fast streaming-friendly prompt
+    let streaming_prompt = format!(r##"You are a {specialist} executing task {step_num}/{total_steps}.
+
+TASK: "{step_description}"
+
+Context:
+- User: "{user_message}"
+- Website: {website_context}
+- Previous: {previous_results}
+
+Stream naturally in {language}:
+1. THINKING (1 sentence): What you're examining
+2. INSIGHT_START then your finding (3 sentences, specific with examples)
+3. JSON_START then: {{"found_relevant": true, "key_observations": ["..."], "recommendations": ["..."]}}
+
+Be SPECIFIC and fast."##,
+        specialist = specialist,
+        step_num = step.step,
+        total_steps = total_steps,
+        step_description = step.description,
+        user_message = user_message,
+        website_context = website_context,
+        previous_results = previous_str,
+        language = language
+    );
+    
+    let messages = vec![
+        Message::system(&streaming_prompt),
+        Message::user("Begin your analysis now. Think step by step."),
+    ];
+    
+    // Send step started event IMMEDIATELY
+    let _ = event_tx.send(StreamEvent::StepStarted {
+        step: step.step,
+        total: total_steps,
+        description: step.description.clone(),
+        specialist: specialist.to_string(),
+    }).await;
+    
+    // Start streaming with faster model
+    let mut stream = router.chat_stream(messages, None, Some("gpt-4o-mini")).await?;
+    
+    let mut full_content = String::new();
+    let mut current_section = "thinking"; // thinking, insight, json
+    
+    while let Some(result) = stream.next().await {
+        match result {
+            Ok(token) => {
+                full_content.push_str(&token);
+                
+                // Check for section markers
+                if full_content.contains("INSIGHT_START") && current_section == "thinking" {
+                    current_section = "insight";
+                    continue;
+                }
+                if full_content.contains("JSON_START") && current_section == "insight" {
+                    current_section = "json";
+                    continue;
+                }
+                
+                // Stream tokens based on current section with step info
+                match current_section {
+                    "thinking" => {
+                        if !token.contains("INSIGHT_START") {
+                            let _ = event_tx.send(StreamEvent::ThinkingToken { 
+                                step: step.step, 
+                                token 
+                            }).await;
+                        }
+                    }
+                    "insight" => {
+                        if !token.contains("JSON_START") && !token.contains("INSIGHT_START") {
+                            let _ = event_tx.send(StreamEvent::InsightToken { 
+                                step: step.step, 
+                                token 
+                            }).await;
+                        }
+                    }
+                    _ => {} // JSON section - don't stream
+                }
+            }
+            Err(e) => {
+                let _ = event_tx.send(StreamEvent::Error(e.to_string())).await;
+                return Err(e);
+            }
+        }
+    }
+    
+    // Parse the final result
+    let result = parse_streaming_result(&full_content, step.step, specialist, &step.description, language);
+    
+    let _ = event_tx.send(StreamEvent::StepCompleted(result.clone())).await;
+    
+    Ok(result)
+}
+
+/// Parse the streaming output into a StepResult
+fn parse_streaming_result(content: &str, step_num: u32, specialist: &str, description: &str, _language: &str) -> StepResult {
+    // Extract sections
+    let thinking = content
+        .split("INSIGHT_START")
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    
+    let insight = content
+        .split("INSIGHT_START")
+        .nth(1)
+        .and_then(|s| s.split("JSON_START").next())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    
+    // Try to parse JSON section
+    let json_section = content
+        .split("JSON_START")
+        .nth(1)
+        .unwrap_or("{}");
+    
+    let json_str = extract_json(json_section);
+    
+    #[derive(Deserialize, Default)]
+    struct JsonData {
+        #[serde(default)]
+        found_relevant: bool,
+        #[serde(default)]
+        key_observations: Vec<String>,
+        #[serde(default)]
+        recommendations: Vec<String>,
+    }
+    
+    let json_data: JsonData = serde_json::from_str(json_str).unwrap_or_default();
+    
+    let has_insight = !insight.is_empty();
+    
+    StepResult {
+        step: step_num,
+        thinking: if thinking.is_empty() {
+            format!("Analyzing based on {} expertise", specialist)
+        } else {
+            thinking
+        },
+        insight: if insight.is_empty() {
+            format!("{} - Analysis completed.", description)
+        } else {
+            insight
+        },
+        found_relevant: json_data.found_relevant || has_insight,
+        key_observations: json_data.key_observations,
+        recommendations: json_data.recommendations,
+        data: serde_json::json!({}),
     }
 }
 

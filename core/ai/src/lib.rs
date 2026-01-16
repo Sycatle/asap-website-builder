@@ -8,6 +8,7 @@
 //! - Action parsing and execution
 //! - Intent analysis for dynamic chain of thoughts
 //! - Function calling (tools) for data retrieval
+//! - TRUE real-time streaming of all AI phases
 
 pub mod config;
 pub mod context;
@@ -26,7 +27,12 @@ pub mod providers;
 pub use config::{AIConfig, OpenAIConfig};
 pub use context::ContextBuilder;
 pub use error::{AIError, AIResult};
-pub use intent::{analyze_intent, execute_thinking_step, detect_language_simple, IntentAnalysis, ThinkingStep, StepResult};
+pub use intent::{
+    analyze_intent, analyze_intent_streaming, 
+    execute_thinking_step, execute_thinking_step_streaming,
+    detect_language_simple, 
+    IntentAnalysis, ThinkingStep, StepResult, StreamEvent
+};
 pub use orchestrator::AIOrchestrator;
 pub use rate_limiter::AIRateLimiter;
 pub use router::ModelRouter;
