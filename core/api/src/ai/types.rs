@@ -25,10 +25,27 @@ pub struct ChatRequest {
     /// Enable streaming response (default: true)
     #[serde(default = "default_stream")]
     pub stream: bool,
+    /// Response format preferences
+    #[serde(default)]
+    pub constraints: Option<ChatConstraints>,
+    /// Mode: chat, plan, execute, report
+    #[serde(default)]
+    pub mode: Option<String>,
 }
 
 fn default_stream() -> bool {
     true
+}
+
+/// Response format constraints from frontend
+#[derive(Debug, Clone, Deserialize)]
+pub struct ChatConstraints {
+    /// Desired response length: short, medium, long
+    pub max_length: Option<String>,
+    /// Tone: casual, professional, technical
+    pub tone: Option<String>,
+    /// Format: text, markdown, json
+    pub format: Option<String>,
 }
 
 /// Response for non-streaming chat
@@ -40,17 +57,72 @@ pub struct ChatResponse {
     pub conversation_id: Uuid,
     /// AI-generated text response
     pub message: String,
+    /// Quick summary (3-second read)
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub summary: Option<String>,
     /// Actions to execute on the website
     pub actions: Vec<AIAction>,
     /// Token usage statistics
     pub usage: TokenUsage,
+    /// Confidence level 0-100
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub confidence: Option<u8>,
+    /// Warnings/caveats
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub warnings: Vec<String>,
+}
+
+impl Default for ChatResponse {
+    fn default() -> Self {
+        Self {
+            id: Uuid::nil(),
+            conversation_id: Uuid::nil(),
+            message: String::new(),
+            summary: None,
+            actions: vec![],
+            usage: TokenUsage::default(),
+            confidence: None,
+            warnings: vec![],
+        }
+    }
 }
 
 /// Error response format
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct ErrorResponse {
     pub error: String,
     pub code: String,
+    /// Probable cause (for user understanding)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cause: Option<String>,
+    /// Is this error recoverable?
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recoverable: Option<bool>,
+    /// Suggested alternatives
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub alternatives: Vec<String>,
+}
+
+impl ErrorResponse {
+    pub fn new(code: impl Into<String>, error: impl Into<String>) -> Self {
+        Self {
+            code: code.into(),
+            error: error.into(),
+            cause: None,
+            recoverable: None,
+            alternatives: vec![],
+        }
+    }
+
+    pub fn with_cause(mut self, cause: impl Into<String>) -> Self {
+        self.cause = Some(cause.into());
+        self
+    }
+
+    pub fn recoverable(mut self) -> Self {
+        self.recoverable = Some(true);
+        self
+    }
 }
 
 /// AI usage quota information
@@ -90,8 +162,21 @@ pub enum SseEventData {
     Iteration(IterationData),
     /// Current processing phase (for UX feedback)
     Phase(PhaseData),
+    /// Execution plan step
+    #[serde(rename = "planstep")]
+    PlanStep(PlanStepData),
     /// Action to execute
     Action(AIAction),
+    /// Summary of the response (quick result)
+    Summary(SummaryData),
+    /// Artifact (rich content: code, table, checklist, etc.)
+    Artifact(ArtifactData),
+    /// Source/citation
+    Source(SourceData),
+    /// Confidence indicator
+    Confidence(ConfidenceData),
+    /// Warning/caveat
+    Warning(WarningData),
     /// Conversation metadata (sent at start)
     #[serde(rename = "conversation")]
     Conversation(ConversationData),
@@ -101,7 +186,14 @@ pub enum SseEventData {
     /// Stream complete
     Done,
     /// Error occurred
-    Error { code: String, message: String },
+    Error { 
+        code: String, 
+        message: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        cause: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        recoverable: Option<bool>,
+    },
 }
 
 /// Conversation metadata event
@@ -119,7 +211,7 @@ pub struct UsageData {
 }
 
 /// Thinking event data
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct ThinkingData {
     pub thought: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -130,10 +222,13 @@ pub struct ThinkingData {
     /// Insight from step execution (only when status is "completed")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub insight: Option<String>,
+    /// Confidence level 0-100 for this step
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub confidence: Option<u8>,
 }
 
 /// Tool call event data
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct ToolCallData {
     pub id: String,
     pub tool: String,
@@ -141,15 +236,24 @@ pub struct ToolCallData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub args: Option<serde_json::Value>,
     pub status: String,
+    /// Duration in milliseconds
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<u64>,
 }
 
 /// Tool result event data
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct ToolResultData {
     pub tool_call_id: String,
     pub success: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
+    /// Result data (for display)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<serde_json::Value>,
+    /// Duration in milliseconds
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<u64>,
 }
 
 /// Tool request event data - asks frontend to perform an action
@@ -189,6 +293,84 @@ pub struct PhaseData {
     /// Estimated time remaining in seconds
     #[serde(skip_serializing_if = "Option::is_none")]
     pub eta_seconds: Option<u32>,
+}
+
+/// Execution plan step event - for pipeline runner UI
+#[derive(Debug, Clone, Serialize)]
+pub struct PlanStepData {
+    pub id: String,
+    pub index: u32,
+    pub title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// pending, running, done, failed, skipped
+    pub status: String,
+    /// Confidence level 0-100
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub confidence: Option<u8>,
+    /// Error info if failed
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<StepErrorData>,
+}
+
+/// Step error details
+#[derive(Debug, Clone, Serialize)]
+pub struct StepErrorData {
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cause: Option<String>,
+    pub recoverable: bool,
+}
+
+/// Summary event - quick result shown at top of response
+#[derive(Debug, Clone, Serialize)]
+pub struct SummaryData {
+    pub text: String,
+    /// Type: success, info, warning, error
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary_type: Option<String>,
+}
+
+/// Artifact event - rich content block
+#[derive(Debug, Clone, Serialize)]
+pub struct ArtifactData {
+    pub id: String,
+    /// code, table, checklist, timeline, image, diff, json, markdown
+    pub artifact_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub content: serde_json::Value,
+    /// Available actions: copy, download, apply, etc.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub actions: Vec<String>,
+}
+
+/// Source/citation event
+#[derive(Debug, Clone, Serialize)]
+pub struct SourceData {
+    pub title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub snippet: Option<String>,
+}
+
+/// Confidence indicator event
+#[derive(Debug, Clone, Serialize)]
+pub struct ConfidenceData {
+    /// Overall confidence 0-100
+    pub level: u8,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub explanation: Option<String>,
+}
+
+/// Warning event
+#[derive(Debug, Clone, Serialize)]
+pub struct WarningData {
+    pub message: String,
+    /// warning, caution, limitation
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub warning_type: Option<String>,
 }
 
 // ============================================================================

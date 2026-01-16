@@ -44,10 +44,7 @@ pub async fn chat(
     Json(req): Json<ChatRequest>,
 ) -> Result<Json<ChatResponse>, (StatusCode, Json<ErrorResponse>)> {
     let account_id = get_account_id(&claims).map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Unauthorized".to_string(),
-            code: "unauthorized".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Unauthorized".to_string(), code: "unauthorized".to_string(), ..Default::default() }))
     })?;
 
     tracing::info!("AI Chat request: account_id={}, website_id={}", account_id, req.website_id);
@@ -57,26 +54,17 @@ pub async fn chat(
         .await
         .map_err(|s| {
             tracing::warn!("Website ownership verification failed: account_id={}, website_id={}", account_id, req.website_id);
-            (s, Json(ErrorResponse {
-                error: "Website not found".to_string(),
-                code: "not_found".to_string(),
-            }))
+            (s, Json(ErrorResponse { error: "Website not found".to_string(), code: "not_found".to_string(), ..Default::default() }))
         })?;
 
     // Get user plan
     let plan = get_user_plan(&pool, account_id).await.map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Failed to get plan".to_string(),
-            code: "internal_error".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Failed to get plan".to_string(), code: "internal_error".to_string(), ..Default::default() }))
     })?;
 
     // Load website context
     let context = load_website_context(&pool, req.website_id).await.map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Failed to load website".to_string(),
-            code: "internal_error".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Failed to load website".to_string(), code: "internal_error".to_string(), ..Default::default() }))
     })?;
 
     // Get or create conversation
@@ -87,18 +75,12 @@ pub async fn chat(
         req.conversation_id,
         &req.message
     ).await.map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Failed to manage conversation".to_string(),
-            code: "internal_error".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Failed to manage conversation".to_string(), code: "internal_error".to_string(), ..Default::default() }))
     })?;
 
     // Load conversation history
     let history = load_conversation_history(&pool, conversation_id, 20).await.map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Failed to load conversation history".to_string(),
-            code: "internal_error".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Failed to load conversation history".to_string(), code: "internal_error".to_string(), ..Default::default() }))
     })?;
 
     // Convert history to AI Message format
@@ -144,8 +126,7 @@ pub async fn chat(
         conversation_id,
         message: response.message,
         actions: response.actions,
-        usage: response.usage,
-    }))
+        usage: response.usage, ..Default::default() }))
 }
 
 // ============================================================================
@@ -161,10 +142,7 @@ pub async fn chat_stream(
     Json(req): Json<ChatRequest>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, (StatusCode, Json<ErrorResponse>)> {
     let account_id = get_account_id(&claims).map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Unauthorized".to_string(),
-            code: "unauthorized".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Unauthorized".to_string(), code: "unauthorized".to_string(), ..Default::default() }))
     })?;
 
     tracing::info!("AI Chat Stream request: account_id={}, website_id={}", account_id, req.website_id);
@@ -174,18 +152,12 @@ pub async fn chat_stream(
         .await
         .map_err(|s| {
             tracing::warn!("Website ownership verification failed: account_id={}, website_id={}", account_id, req.website_id);
-            (s, Json(ErrorResponse {
-                error: "Website not found".to_string(),
-                code: "not_found".to_string(),
-            }))
+            (s, Json(ErrorResponse { error: "Website not found".to_string(), code: "not_found".to_string(), ..Default::default() }))
         })?;
 
     // Get user plan
     let plan = get_user_plan(&pool, account_id).await.map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Failed to get plan".to_string(),
-            code: "internal_error".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Failed to get plan".to_string(), code: "internal_error".to_string(), ..Default::default() }))
     })?;
 
     // Get plan daily limit for quota info
@@ -202,24 +174,15 @@ pub async fn chat_stream(
     );
 
     let user_context = user_context_result.map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Failed to load user context".to_string(),
-            code: "internal_error".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Failed to load user context".to_string(), code: "internal_error".to_string(), ..Default::default() }))
     })?;
 
     let website_data = website_data_result.map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Failed to load website data".to_string(),
-            code: "internal_error".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Failed to load website data".to_string(), code: "internal_error".to_string(), ..Default::default() }))
     })?;
 
     let mut context = context_result.map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Failed to load website".to_string(),
-            code: "internal_error".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Failed to load website".to_string(), code: "internal_error".to_string(), ..Default::default() }))
     })?;
 
     // Inject user and website data into context
@@ -253,18 +216,12 @@ pub async fn chat_stream(
         req.conversation_id,
         &user_message
     ).await.map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Failed to manage conversation".to_string(),
-            code: "internal_error".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Failed to manage conversation".to_string(), code: "internal_error".to_string(), ..Default::default() }))
     })?;
 
     // Load conversation history (last 20 messages for context)
     let history = load_conversation_history(&pool, conversation_id, 20).await.map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Failed to load conversation history".to_string(),
-            code: "internal_error".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Failed to load conversation history".to_string(), code: "internal_error".to_string(), ..Default::default() }))
     })?;
 
     // Convert history to AI Message format
@@ -438,8 +395,7 @@ pub async fn chat_stream(
                     tool: tool_call.tool_name.clone(),
                     description: tool_call.description.clone(),
                     args: None,
-                    status: "completed".to_string(),
-                });
+                    status: "completed".to_string(), ..Default::default() });
                 if let Ok(json) = serde_json::to_string(&tool_call_event) {
                     yield Ok(Event::default().data(json));
                 }
@@ -521,8 +477,7 @@ pub async fn chat_stream(
                             thought: thinking_step.description.clone(),
                             step: Some(thinking_step.step),
                             status: Some("starting".to_string()),
-                            insight: None,
-                        });
+                            insight: None, ..Default::default() });
                         if let Ok(json) = serde_json::to_string(&thinking_start) {
                             yield Ok(Event::default().data(json));
                         }
@@ -543,8 +498,7 @@ pub async fn chat_stream(
                                     thought: thinking_step.description.clone(),
                                     step: Some(thinking_step.step),
                                     status: Some("completed".to_string()),
-                                    insight: Some(result.insight.clone()),
-                                });
+                                    insight: Some(result.insight.clone()), ..Default::default() });
                                 if let Ok(json) = serde_json::to_string(&thinking_done) {
                                     yield Ok(Event::default().data(json));
                                 }
@@ -556,8 +510,7 @@ pub async fn chat_stream(
                                     thought: thinking_step.description.clone(),
                                     step: Some(thinking_step.step),
                                     status: Some("completed".to_string()),
-                                    insight: Some(thinking_step.description.clone()),
-                                });
+                                    insight: Some(thinking_step.description.clone()), ..Default::default() });
                                 if let Ok(json) = serde_json::to_string(&thinking_done) {
                                     yield Ok(Event::default().data(json));
                                 }
@@ -569,8 +522,7 @@ pub async fn chat_stream(
                         thought: intent_analysis.summary.clone(),
                         step: None,
                         status: None,
-                        insight: None,
-                    });
+                        insight: None, ..Default::default() });
                     if let Ok(json) = serde_json::to_string(&thinking) {
                         yield Ok(Event::default().data(json));
                     }
@@ -615,8 +567,7 @@ pub async fn chat_stream(
                                             tool: action.action_type().to_string(),
                                             description: format_action_description(&action),
                                             args: None,
-                                            status: "running".to_string(),
-                                        });
+                                            status: "running".to_string(), ..Default::default() });
                                         if let Ok(json) = serde_json::to_string(&tool_call) {
                                             yield Ok(Event::default().data(json));
                                         }
@@ -627,10 +578,11 @@ pub async fn chat_stream(
                                         yield Ok(Event::default().data(json));
                                     }
 
-                                    let tool_result = SseEventData::ToolResult(ToolResultData {
-                                        tool_call_id: action_id,
-                                        success: true,
+                                    let tool_result = SseEventData::ToolResult(ToolResultData { 
+                                        tool_call_id: action_id, 
+                                        success: true, 
                                         message: Some("Action queued for execution".to_string()),
+                                        ..Default::default() 
                                     });
                                     if let Ok(json) = serde_json::to_string(&tool_result) {
                                         yield Ok(Event::default().data(json));
@@ -667,9 +619,11 @@ pub async fn chat_stream(
                                 token_buffer.clear();
                             }
                             
-                            let error_event = SseEventData::Error {
-                                code: err.code().to_string(),
+                            let error_event = SseEventData::Error { 
+                                code: err.code().to_string(), 
                                 message: err.to_string(),
+                                cause: None, 
+                                recoverable: None 
                             };
                             if let Ok(json) = serde_json::to_string(&error_event) {
                                 yield Ok(Event::default().data(json));
@@ -725,9 +679,11 @@ pub async fn chat_stream(
                 }
             }
             Err(e) => {
-                let error_event = SseEventData::Error {
-                    code: "stream_error".to_string(),
+                let error_event = SseEventData::Error { 
+                    code: "stream_error".to_string(), 
                     message: e.to_string(),
+                    cause: None, 
+                    recoverable: None 
                 };
                 if let Ok(json) = serde_json::to_string(&error_event) {
                     yield Ok(Event::default().data(json));
@@ -756,17 +712,11 @@ pub async fn get_quota(
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<QuotaResponse>, (StatusCode, Json<ErrorResponse>)> {
     let account_id = get_account_id(&claims).map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Unauthorized".to_string(),
-            code: "unauthorized".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Unauthorized".to_string(), code: "unauthorized".to_string(), ..Default::default() }))
     })?;
 
     let plan = get_user_plan(&pool, account_id).await.map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Failed to get plan".to_string(),
-            code: "internal_error".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Failed to get plan".to_string(), code: "internal_error".to_string(), ..Default::default() }))
     })?;
 
     let daily_limit = get_plan_daily_limit(&plan);
@@ -814,26 +764,17 @@ pub async fn list_conversations(
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<ConversationsResponse>, (StatusCode, Json<ErrorResponse>)> {
     let account_id = get_account_id(&claims).map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Unauthorized".to_string(),
-            code: "unauthorized".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Unauthorized".to_string(), code: "unauthorized".to_string(), ..Default::default() }))
     })?;
 
     let website_id = params.get("website_id")
         .and_then(|s| Uuid::parse_str(s).ok())
         .ok_or_else(|| {
-            (StatusCode::BAD_REQUEST, Json(ErrorResponse {
-                error: "website_id is required".to_string(),
-                code: "bad_request".to_string(),
-            }))
+            (StatusCode::BAD_REQUEST, Json(ErrorResponse { error: "website_id is required".to_string(), code: "bad_request".to_string(), ..Default::default() }))
         })?;
 
     verify_website_ownership(&pool, account_id, website_id).await.map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Website not found".to_string(),
-            code: "not_found".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Website not found".to_string(), code: "not_found".to_string(), ..Default::default() }))
     })?;
 
     let rows: Vec<(Uuid, Option<String>, Uuid, i64, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(
@@ -856,10 +797,7 @@ pub async fn list_conversations(
     .await
     .map_err(|e| {
         tracing::error!("Failed to fetch conversations: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse {
-            error: "Failed to fetch conversations".to_string(),
-            code: "internal_error".to_string(),
-        }))
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "Failed to fetch conversations".to_string(), code: "internal_error".to_string(), ..Default::default() }))
     })?;
 
     let conversations = rows.into_iter().map(|(id, title, website_id, message_count, created_at, updated_at)| {
@@ -884,10 +822,7 @@ pub async fn get_conversation(
     axum::extract::Path(conversation_id): axum::extract::Path<Uuid>,
 ) -> Result<Json<ConversationDetail>, (StatusCode, Json<ErrorResponse>)> {
     let account_id = get_account_id(&claims).map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Unauthorized".to_string(),
-            code: "unauthorized".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Unauthorized".to_string(), code: "unauthorized".to_string(), ..Default::default() }))
     })?;
 
     let conv: Option<(Uuid, Option<String>, Uuid, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(
@@ -899,17 +834,11 @@ pub async fn get_conversation(
     .await
     .map_err(|e| {
         tracing::error!("Failed to fetch conversation: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse {
-            error: "Failed to fetch conversation".to_string(),
-            code: "internal_error".to_string(),
-        }))
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "Failed to fetch conversation".to_string(), code: "internal_error".to_string(), ..Default::default() }))
     })?;
 
     let (id, title, website_id, created_at, updated_at) = conv.ok_or_else(|| {
-        (StatusCode::NOT_FOUND, Json(ErrorResponse {
-            error: "Conversation not found".to_string(),
-            code: "not_found".to_string(),
-        }))
+        (StatusCode::NOT_FOUND, Json(ErrorResponse { error: "Conversation not found".to_string(), code: "not_found".to_string(), ..Default::default() }))
     })?;
 
     let message_rows: Vec<(Uuid, String, String, serde_json::Value, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(
@@ -925,10 +854,7 @@ pub async fn get_conversation(
     .await
     .map_err(|e| {
         tracing::error!("Failed to fetch messages: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse {
-            error: "Failed to fetch messages".to_string(),
-            code: "internal_error".to_string(),
-        }))
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "Failed to fetch messages".to_string(), code: "internal_error".to_string(), ..Default::default() }))
     })?;
 
     let messages = message_rows.into_iter().map(|(id, role, content, actions_json, created_at)| {
@@ -960,10 +886,7 @@ pub async fn delete_conversation(
     axum::extract::Path(conversation_id): axum::extract::Path<Uuid>,
 ) -> Result<StatusCode, (StatusCode, Json<ErrorResponse>)> {
     let account_id = get_account_id(&claims).map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Unauthorized".to_string(),
-            code: "unauthorized".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Unauthorized".to_string(), code: "unauthorized".to_string(), ..Default::default() }))
     })?;
 
     let result = sqlx::query("DELETE FROM ai_conversations WHERE id = $1 AND account_id = $2")
@@ -973,17 +896,11 @@ pub async fn delete_conversation(
         .await
         .map_err(|e| {
             tracing::error!("Failed to delete conversation: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse {
-                error: "Failed to delete conversation".to_string(),
-                code: "internal_error".to_string(),
-            }))
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "Failed to delete conversation".to_string(), code: "internal_error".to_string(), ..Default::default() }))
         })?;
 
     if result.rows_affected() == 0 {
-        return Err((StatusCode::NOT_FOUND, Json(ErrorResponse {
-            error: "Conversation not found".to_string(),
-            code: "not_found".to_string(),
-        })));
+        return Err((StatusCode::NOT_FOUND, Json(ErrorResponse { error: "Conversation not found".to_string(), code: "not_found".to_string(), ..Default::default() })));
     }
 
     Ok(StatusCode::NO_CONTENT)

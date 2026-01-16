@@ -70,6 +70,8 @@ export interface SseThinkingEvent {
     status?: 'starting' | 'completed';
     /** Insight from AI execution (only when status is "completed") */
     insight?: string;
+    /** Confidence level 0-100 */
+    confidence?: number;
   };
 }
 
@@ -81,6 +83,8 @@ export interface SseToolCallEvent {
     description: string;
     args?: Record<string, unknown>;
     status: 'pending' | 'running' | 'completed' | 'failed';
+    /** Duration in milliseconds */
+    duration_ms?: number;
   };
 }
 
@@ -91,6 +95,8 @@ export interface SseToolResultEvent {
     success: boolean;
     message?: string;
     data?: unknown;
+    /** Duration in milliseconds */
+    duration_ms?: number;
   };
 }
 
@@ -111,6 +117,78 @@ export interface SseIterationEvent {
     max: number;
     status: 'starting' | 'processing' | 'complete' | 'finished';
     description?: string;
+  };
+}
+
+export interface SsePhaseEvent {
+  type: 'phase';
+  data: {
+    phase: string;
+    status: string;
+    message?: string;
+    progress?: number;
+    eta_seconds?: number;
+  };
+}
+
+export interface SsePlanStepEvent {
+  type: 'planstep';
+  data: {
+    id: string;
+    index: number;
+    title: string;
+    description?: string;
+    status: 'pending' | 'running' | 'done' | 'failed' | 'skipped';
+    confidence?: number;
+    error?: {
+      message: string;
+      cause?: string;
+      recoverable: boolean;
+    };
+  };
+}
+
+export interface SseSummaryEvent {
+  type: 'summary';
+  data: {
+    text: string;
+    summary_type?: 'success' | 'info' | 'warning' | 'error';
+  };
+}
+
+export interface SseArtifactEvent {
+  type: 'artifact';
+  data: {
+    id: string;
+    artifact_type: 'code' | 'table' | 'checklist' | 'timeline' | 'image' | 'diff' | 'json' | 'markdown';
+    title?: string;
+    content: unknown;
+    actions?: string[];
+  };
+}
+
+export interface SseSourceEvent {
+  type: 'source';
+  data: {
+    title: string;
+    url?: string;
+    snippet?: string;
+  };
+}
+
+export interface SseConfidenceEvent {
+  type: 'confidence';
+  data: {
+    level: number;
+    explanation?: string;
+  };
+}
+
+export interface SseWarningEvent {
+  type: 'warning';
+  data: {
+    message: string;
+    warning_type?: 'warning' | 'caution' | 'limitation';
   };
 }
 
@@ -139,6 +217,8 @@ export interface SseErrorEvent {
   type: 'error';
   code: string;
   message: string;
+  cause?: string;
+  recoverable?: boolean;
 }
 
 export type SseEvent = 
@@ -148,6 +228,13 @@ export type SseEvent =
   | SseToolResultEvent
   | SseToolRequestEvent
   | SseIterationEvent
+  | SsePhaseEvent
+  | SsePlanStepEvent
+  | SseSummaryEvent
+  | SseArtifactEvent
+  | SseSourceEvent
+  | SseConfidenceEvent
+  | SseWarningEvent
   | SseActionEvent 
   | SseConversationEvent
   | SseUsageEvent
@@ -217,6 +304,8 @@ export interface ThinkingData {
   status?: 'starting' | 'completed';
   /** Insight from AI execution (only when status is "completed") */
   insight?: string;
+  /** Confidence level 0-100 */
+  confidence?: number;
 }
 
 export interface ToolCallData {
@@ -225,6 +314,8 @@ export interface ToolCallData {
   description: string;
   args?: Record<string, unknown>;
   status: 'pending' | 'running' | 'completed' | 'failed';
+  /** Duration in milliseconds */
+  duration_ms?: number;
 }
 
 export interface ToolResultData {
@@ -232,6 +323,8 @@ export interface ToolResultData {
   success: boolean;
   message?: string;
   data?: unknown;
+  /** Duration in milliseconds */
+  duration_ms?: number;
 }
 
 export interface ToolRequestData {
@@ -248,6 +341,57 @@ export interface IterationData {
   description?: string;
 }
 
+export interface PhaseData {
+  phase: string;
+  status: string;
+  message?: string;
+  progress?: number;
+  eta_seconds?: number;
+}
+
+export interface PlanStepData {
+  id: string;
+  index: number;
+  title: string;
+  description?: string;
+  status: 'pending' | 'running' | 'done' | 'failed' | 'skipped';
+  confidence?: number;
+  error?: {
+    message: string;
+    cause?: string;
+    recoverable: boolean;
+  };
+}
+
+export interface SummaryData {
+  text: string;
+  summary_type?: 'success' | 'info' | 'warning' | 'error';
+}
+
+export interface ArtifactData {
+  id: string;
+  artifact_type: 'code' | 'table' | 'checklist' | 'timeline' | 'image' | 'diff' | 'json' | 'markdown';
+  title?: string;
+  content: unknown;
+  actions?: string[];
+}
+
+export interface SourceData {
+  title: string;
+  url?: string;
+  snippet?: string;
+}
+
+export interface ConfidenceData {
+  level: number;
+  explanation?: string;
+}
+
+export interface WarningData {
+  message: string;
+  warning_type?: 'warning' | 'caution' | 'limitation';
+}
+
 export interface StreamCallbacks {
   onToken?: (token: string) => void;
   onThinking?: (data: ThinkingData) => void;
@@ -255,11 +399,18 @@ export interface StreamCallbacks {
   onToolResult?: (data: ToolResultData) => void;
   onToolRequest?: (data: ToolRequestData) => void;
   onIteration?: (data: IterationData) => void;
+  onPhase?: (data: PhaseData) => void;
+  onPlanStep?: (data: PlanStepData) => void;
+  onSummary?: (data: SummaryData) => void;
+  onArtifact?: (data: ArtifactData) => void;
+  onSource?: (data: SourceData) => void;
+  onConfidence?: (data: ConfidenceData) => void;
+  onWarning?: (data: WarningData) => void;
   onAction?: (action: AIAction) => void;
   onConversation?: (data: { id: string }) => void;
   onUsage?: (data: TokenUsage) => void;
   onDone?: () => void;
-  onError?: (error: { code: string; message: string }) => void;
+  onError?: (error: { code: string; message: string; cause?: string; recoverable?: boolean }) => void;
 }
 
 /**
@@ -409,6 +560,27 @@ export function streamChatMessage(
                 case 'iteration':
                   callbacks.onIteration?.(event.data);
                   break;
+                case 'phase':
+                  callbacks.onPhase?.(event.data);
+                  break;
+                case 'planstep':
+                  callbacks.onPlanStep?.(event.data);
+                  break;
+                case 'summary':
+                  callbacks.onSummary?.(event.data);
+                  break;
+                case 'artifact':
+                  callbacks.onArtifact?.(event.data);
+                  break;
+                case 'source':
+                  callbacks.onSource?.(event.data);
+                  break;
+                case 'confidence':
+                  callbacks.onConfidence?.(event.data);
+                  break;
+                case 'warning':
+                  callbacks.onWarning?.(event.data);
+                  break;
                 case 'action':
                   callbacks.onAction?.(event.data);
                   break;
@@ -425,6 +597,8 @@ export function streamChatMessage(
                   callbacks.onError?.({
                     code: event.code,
                     message: event.message,
+                    cause: event.cause,
+                    recoverable: event.recoverable,
                   });
                   return;
               }

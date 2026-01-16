@@ -141,6 +141,7 @@ pub fn ai_error_to_response(err: asap_core_ai::AIError) -> (StatusCode, Json<Err
         Json(ErrorResponse {
             error: err.to_string(),
             code: code.to_string(),
+            ..Default::default()
         }),
     )
 }

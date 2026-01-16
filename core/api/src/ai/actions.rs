@@ -29,10 +29,7 @@ pub async fn execute_action(
     Json(req): Json<ExecuteActionRequest>,
 ) -> Result<Json<ExecuteActionResponse>, (StatusCode, Json<ErrorResponse>)> {
     let account_id = get_account_id(&claims).map_err(|s| {
-        (s, Json(ErrorResponse {
-            error: "Unauthorized".to_string(),
-            code: "unauthorized".to_string(),
-        }))
+        (s, Json(ErrorResponse { error: "Unauthorized".to_string(), code: "unauthorized".to_string(), ..Default::default() }))
     })?;
 
     // Verify website access
@@ -40,17 +37,11 @@ pub async fn execute_action(
         .await
         .map_err(|e| {
             tracing::error!("Failed to verify website access: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse {
-                error: "Failed to verify access".to_string(),
-                code: "internal_error".to_string(),
-            }))
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "Failed to verify access".to_string(), code: "internal_error".to_string(), ..Default::default() }))
         })?;
 
     if !has_access {
-        return Err((StatusCode::FORBIDDEN, Json(ErrorResponse {
-            error: "Access denied to this website".to_string(),
-            code: "forbidden".to_string(),
-        })));
+        return Err((StatusCode::FORBIDDEN, Json(ErrorResponse { error: "Access denied to this website".to_string(), code: "forbidden".to_string(), ..Default::default() })));
     }
 
     tracing::info!(
