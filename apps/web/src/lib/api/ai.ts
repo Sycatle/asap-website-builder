@@ -83,6 +83,25 @@ export interface SseThinkingEvent {
   };
 }
 
+/** Real-time streaming token during thinking/reasoning */
+export interface SseThinkingTokenEvent {
+  type: 'thinkingtoken';
+  data: {
+    token: string;
+    step?: number;
+    specialist?: string;
+  };
+}
+
+/** Real-time streaming token during insight generation */
+export interface SseInsightTokenEvent {
+  type: 'insighttoken';
+  data: {
+    token: string;
+    step?: number;
+  };
+}
+
 export interface SseToolCallEvent {
   type: 'toolcall';
   data: {
@@ -233,6 +252,8 @@ export interface SseErrorEvent {
 export type SseEvent = 
   | SseTokenEvent 
   | SseThinkingEvent
+  | SseThinkingTokenEvent
+  | SseInsightTokenEvent
   | SseToolCallEvent
   | SseToolResultEvent
   | SseToolRequestEvent
@@ -415,8 +436,25 @@ export interface WarningData {
   warning_type?: 'warning' | 'caution' | 'limitation';
 }
 
+/** Data for real-time thinking token */
+export interface ThinkingTokenData {
+  token: string;
+  step?: number;
+  specialist?: string;
+}
+
+/** Data for real-time insight token */
+export interface InsightTokenData {
+  token: string;
+  step?: number;
+}
+
 export interface StreamCallbacks {
   onToken?: (token: string) => void;
+  /** Real-time thinking token during reasoning */
+  onThinkingToken?: (data: ThinkingTokenData) => void;
+  /** Real-time insight token during insight generation */
+  onInsightToken?: (data: InsightTokenData) => void;
   onThinking?: (data: ThinkingData) => void;
   onToolCall?: (data: ToolCallData) => void;
   onToolResult?: (data: ToolResultData) => void;
@@ -567,6 +605,12 @@ export function streamChatMessage(
               switch (event.type) {
                 case 'token':
                   callbacks.onToken?.(event.data);
+                  break;
+                case 'thinkingtoken':
+                  callbacks.onThinkingToken?.(event.data);
+                  break;
+                case 'insighttoken':
+                  callbacks.onInsightToken?.(event.data);
                   break;
                 case 'thinking':
                   callbacks.onThinking?.(event.data);
