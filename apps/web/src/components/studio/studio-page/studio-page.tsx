@@ -416,6 +416,7 @@ export function StudioPage({ onBack }: StudioPageProps) {
               onUpdate={handleUpdateElement}
             />
           }
+          showProperties={!!selectedElement}
         />
       </div>
 

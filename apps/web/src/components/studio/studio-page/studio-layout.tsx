@@ -31,6 +31,7 @@ export interface StudioLayoutProps {
   sidebar: React.ReactNode
   preview: React.ReactNode
   properties: React.ReactNode
+  showProperties?: boolean
   className?: string
 }
 
@@ -38,6 +39,7 @@ export function StudioLayout({
   sidebar,
   preview,
   properties,
+  showProperties = true,
   className,
 }: StudioLayoutProps) {
   const [isMobile, setIsMobile] = useState(false)
@@ -121,7 +123,7 @@ export function StudioLayout({
 
         {/* Center - Preview Canvas */}
         <Panel
-          defaultSize={sizes[1]}
+          defaultSize={showProperties ? sizes[1] : sizes[1] + sizes[2]}
           minSize={40}
           className="relative"
         >
@@ -130,20 +132,24 @@ export function StudioLayout({
           </div>
         </Panel>
 
-        {/* Resize Handle */}
-        <PanelResizeHandle className="w-1 bg-border hover:bg-primary/20 transition-colors" />
+        {/* Resize Handle - Only show when properties panel is visible */}
+        {showProperties && (
+          <PanelResizeHandle className="w-1 bg-border hover:bg-primary/20 transition-colors" />
+        )}
 
-        {/* Right Sidebar - Properties Panel */}
-        <Panel
-          defaultSize={sizes[2]}
-          minSize={20}
-          maxSize={35}
-          className="relative"
-        >
-          <div className="h-full overflow-hidden border-l bg-background">
-            {properties}
-          </div>
-        </Panel>
+        {/* Right Sidebar - Properties Panel - Only show when element selected */}
+        {showProperties && (
+          <Panel
+            defaultSize={sizes[2]}
+            minSize={20}
+            maxSize={35}
+            className="relative"
+          >
+            <div className="h-full overflow-hidden border-l bg-background">
+              {properties}
+            </div>
+          </Panel>
+        )}
       </PanelGroup>
     </div>
   )
