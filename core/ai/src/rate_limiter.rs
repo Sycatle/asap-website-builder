@@ -1,18 +1,24 @@
 //! Rate Limiter for AI requests
+//!
+//! Provides rate limiting for AI resources including messages, images, and voice.
+//! Supports both simple count-based limits and cost-based token tracking.
 
 use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
-use tracing::{debug, warn};
+use serde::{Deserialize, Serialize};
+use tracing::{debug, info, warn};
 
 use crate::config::AIConfig;
 use crate::error::{AIError, AIResult};
 
 /// Resource types for rate limiting
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RateLimitResource {
     Messages,
     Images,
     VoiceMinutes,
+    /// Token-based limit (tracks actual cost, not just message count)
+    Tokens,
 }
 
 impl RateLimitResource {
@@ -21,6 +27,7 @@ impl RateLimitResource {
             Self::Messages => "messages",
             Self::Images => "images",
             Self::VoiceMinutes => "voice",
+            Self::Tokens => "tokens",
         }
     }
 
@@ -29,6 +36,50 @@ impl RateLimitResource {
             Self::Messages => 86400,       // 24 hours
             Self::Images => 30 * 86400,    // 30 days
             Self::VoiceMinutes => 30 * 86400, // 30 days
+            Self::Tokens => 86400,         // 24 hours (daily token budget)
+        }
+    }
+}
+
+/// Model tier for cost-based rate limiting
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ModelTier {
+    /// Fast, cheap models (gpt-4o-mini, claude-3-haiku)
+    Fast,
+    /// Standard models (gpt-4o, claude-3-sonnet)
+    Standard,
+    /// Premium models (gpt-4-turbo, claude-3-opus)
+    Premium,
+}
+
+impl ModelTier {
+    /// Get tier from model name
+    pub fn from_model(model: &str) -> Self {
+        let model_lower = model.to_lowercase();
+        if model_lower.contains("mini") || model_lower.contains("haiku") || model_lower.contains("flash") {
+            Self::Fast
+        } else if model_lower.contains("opus") || model_lower.contains("turbo") {
+            Self::Premium
+        } else {
+            Self::Standard
+        }
+    }
+
+    /// Cost multiplier for token-based limits
+    /// Fast models count as 1x, Standard as 3x, Premium as 10x
+    pub fn cost_multiplier(&self) -> i64 {
+        match self {
+            Self::Fast => 1,
+            Self::Standard => 3,
+            Self::Premium => 10,
+        }
+    }
+
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::Fast => "fast",
+            Self::Standard => "standard",
+            Self::Premium => "premium",
         }
     }
 }
@@ -61,6 +112,7 @@ impl AIRateLimiter {
             remaining,
             reset_after_secs: ttl.max(0) as u64,
             resource,
+            model_tier: None,
         })
     }
 
@@ -116,7 +168,131 @@ impl AIRateLimiter {
             remaining: (limit - current).max(0),
             reset_after_secs: ttl.max(0) as u64,
             resource,
+            model_tier: None,
         })
+    }
+
+    /// Check and consume with model-aware cost tracking
+    /// 
+    /// This method applies a cost multiplier based on the model tier:
+    /// - Fast (gpt-4o-mini): 1x
+    /// - Standard (gpt-4o): 3x  
+    /// - Premium (gpt-4-turbo): 10x
+    ///
+    /// This ensures fair billing where expensive models consume more of the quota.
+    pub async fn check_and_consume_with_model(
+        &self,
+        account_id: &str,
+        plan: &str,
+        model: &str,
+    ) -> AIResult<RateLimitStatus> {
+        let tier = ModelTier::from_model(model);
+        let cost = tier.cost_multiplier();
+        
+        let key = self.key(account_id, RateLimitResource::Tokens);
+        let limit = self.get_limit(plan, RateLimitResource::Tokens);
+        let window = RateLimitResource::Tokens.window_seconds();
+
+        let mut conn = self.redis.clone();
+
+        // Check current usage first
+        let current: i64 = conn.get(&key).await.unwrap_or(0);
+
+        if current + cost > limit {
+            let ttl: i64 = conn.ttl(&key).await.unwrap_or(window);
+            warn!(
+                account_id = account_id,
+                model = model,
+                tier = tier.as_str(),
+                cost = cost,
+                current = current,
+                limit = limit,
+                "Token rate limit would be exceeded"
+            );
+            return Err(AIError::RateLimitExceeded {
+                retry_after_secs: ttl.max(1) as u64,
+            });
+        }
+
+        // Increment by cost
+        let new_value: i64 = conn.incr(&key, cost).await?;
+
+        // Set expiry on first increment
+        if new_value == cost {
+            let _: () = conn.expire(&key, window).await?;
+        }
+
+        let ttl: i64 = conn.ttl(&key).await.unwrap_or(window);
+
+        info!(
+            account_id = account_id,
+            model = model,
+            tier = tier.as_str(),
+            cost = cost,
+            new_total = new_value,
+            limit = limit,
+            "Token consumption recorded"
+        );
+
+        Ok(RateLimitStatus {
+            limit,
+            remaining: (limit - new_value).max(0),
+            reset_after_secs: ttl.max(0) as u64,
+            resource: RateLimitResource::Tokens,
+            model_tier: Some(tier),
+        })
+    }
+
+    /// Record actual token usage after a request completes
+    /// 
+    /// This is used for post-hoc tracking to get accurate cost data.
+    /// Call this after receiving the response to track actual tokens used.
+    pub async fn record_token_usage(
+        &self,
+        account_id: &str,
+        model: &str,
+        prompt_tokens: u32,
+        completion_tokens: u32,
+    ) -> AIResult<()> {
+        let tier = ModelTier::from_model(model);
+        let total_tokens = prompt_tokens + completion_tokens;
+        
+        // Calculate weighted cost (completion tokens are typically more expensive)
+        let weighted_cost = ((prompt_tokens as i64) + (completion_tokens as i64 * 2)) 
+            * tier.cost_multiplier() / 1000; // Per 1K tokens
+        
+        let key = format!("usage:ai:tokens:{}", account_id);
+        let detail_key = format!("usage:ai:detail:{}:{}", account_id, chrono::Utc::now().format("%Y-%m-%d"));
+        
+        let mut conn = self.redis.clone();
+        
+        // Track total usage
+        let _: () = conn.incr(&key, weighted_cost.max(1)).await?;
+        let _: () = conn.expire(&key, 86400 * 30).await?; // Keep for 30 days
+        
+        // Track detailed usage for analytics
+        let detail = serde_json::json!({
+            "model": model,
+            "tier": tier.as_str(),
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+            "weighted_cost": weighted_cost,
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+        });
+        let _: () = conn.rpush(&detail_key, detail.to_string()).await?;
+        let _: () = conn.expire(&detail_key, 86400 * 7).await?; // Keep details for 7 days
+        
+        debug!(
+            account_id = account_id,
+            model = model,
+            prompt_tokens = prompt_tokens,
+            completion_tokens = completion_tokens,
+            weighted_cost = weighted_cost,
+            "Token usage recorded"
+        );
+
+        Ok(())
     }
 
     /// Consume multiple units (e.g., for voice minutes)
@@ -158,6 +334,7 @@ impl AIRateLimiter {
             remaining: (limit - new_value).max(0),
             reset_after_secs: ttl.max(0) as u64,
             resource,
+            model_tier: None,
         })
     }
 
@@ -173,6 +350,8 @@ impl AIRateLimiter {
             RateLimitResource::Messages => limits.messages_per_day,
             RateLimitResource::Images => limits.images_per_month,
             RateLimitResource::VoiceMinutes => limits.voice_minutes_per_month,
+            // Token limit = messages * 100 (assuming ~100 token cost per message on average)
+            RateLimitResource::Tokens => limits.messages_per_day * 100,
         }
     }
 }
@@ -184,17 +363,25 @@ pub struct RateLimitStatus {
     pub remaining: i64,
     pub reset_after_secs: u64,
     pub resource: RateLimitResource,
+    /// Model tier if this was a model-aware check
+    pub model_tier: Option<ModelTier>,
 }
 
 impl RateLimitStatus {
     /// Get HTTP headers for rate limit
     pub fn headers(&self) -> Vec<(&'static str, String)> {
-        vec![
+        let mut headers = vec![
             ("X-RateLimit-Limit", self.limit.to_string()),
             ("X-RateLimit-Remaining", self.remaining.to_string()),
             ("X-RateLimit-Reset", self.reset_after_secs.to_string()),
             ("X-RateLimit-Resource", format!("ai-{}", self.resource.as_str())),
-        ]
+        ];
+        
+        if let Some(tier) = &self.model_tier {
+            headers.push(("X-RateLimit-Model-Tier", tier.as_str().to_string()));
+        }
+        
+        headers
     }
 }
 
@@ -215,6 +402,7 @@ mod tests {
             remaining: 150,
             reset_after_secs: 3600,
             resource: RateLimitResource::Messages,
+            model_tier: None,
         };
 
         let headers = status.headers();
@@ -224,8 +412,41 @@ mod tests {
     }
 
     #[test]
+    fn test_rate_limit_status_headers_with_tier() {
+        let status = RateLimitStatus {
+            limit: 10000,
+            remaining: 5000,
+            reset_after_secs: 3600,
+            resource: RateLimitResource::Tokens,
+            model_tier: Some(ModelTier::Standard),
+        };
+
+        let headers = status.headers();
+        assert_eq!(headers.len(), 5);
+        assert!(headers.iter().any(|(k, v)| *k == "X-RateLimit-Model-Tier" && v == "standard"));
+    }
+
+    #[test]
     fn test_window_seconds() {
         assert_eq!(RateLimitResource::Messages.window_seconds(), 86400);
         assert_eq!(RateLimitResource::Images.window_seconds(), 30 * 86400);
+        assert_eq!(RateLimitResource::Tokens.window_seconds(), 86400);
+    }
+
+    #[test]
+    fn test_model_tier_from_model() {
+        assert_eq!(ModelTier::from_model("gpt-4o-mini"), ModelTier::Fast);
+        assert_eq!(ModelTier::from_model("gpt-4o"), ModelTier::Standard);
+        assert_eq!(ModelTier::from_model("gpt-4-turbo"), ModelTier::Premium);
+        assert_eq!(ModelTier::from_model("claude-3-haiku"), ModelTier::Fast);
+        assert_eq!(ModelTier::from_model("claude-3-sonnet"), ModelTier::Standard);
+        assert_eq!(ModelTier::from_model("claude-3-opus"), ModelTier::Premium);
+    }
+
+    #[test]
+    fn test_cost_multiplier() {
+        assert_eq!(ModelTier::Fast.cost_multiplier(), 1);
+        assert_eq!(ModelTier::Standard.cost_multiplier(), 3);
+        assert_eq!(ModelTier::Premium.cost_multiplier(), 10);
     }
 }
