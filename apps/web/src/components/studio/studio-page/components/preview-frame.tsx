@@ -101,15 +101,33 @@ const BASE_STYLES = `
     border-color: hsl(var(--primary));
   }
   
-  .studio-element-overlay {
+  /* Sticky toolbar container - positioned at top of viewport within element bounds */
+  .studio-element-sticky-container {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 99999;
+    pointer-events: none;
+    height: 0;
+    overflow: visible;
+  }
+  
+  .studio-element-sticky-inner {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
     padding: 0.5rem;
+    pointer-events: none;
+  }
+  
+  .studio-element-overlay {
     opacity: 0;
     transition: opacity 0.15s ease;
-    z-index: 99999;
     pointer-events: none;
   }
   
@@ -127,17 +145,13 @@ const BASE_STYLES = `
     border-radius: 0.375rem;
     font-size: 0.75rem;
     font-weight: 600;
+    box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
   }
 
   /* Quick action bar */
   .studio-quick-actions {
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 0.5rem;
     opacity: 0;
     transition: opacity 0.15s ease;
-    z-index: 99999;
     pointer-events: none;
   }
   
@@ -403,99 +417,102 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
                       onElementClick?.(element.id);
                     }}
                   >
-                    {/* Element label overlay */}
+                    {/* Sticky toolbar container */}
                     {isSelected && (
-                      <div className="studio-element-overlay">
-                        <div className="studio-element-label">
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                            <line x1="9" y1="3" x2="9" y2="21"></line>
-                            <line x1="15" y1="3" x2="15" y2="21"></line>
-                            <line x1="3" y1="9" x2="21" y2="9"></line>
-                            <line x1="3" y1="15" x2="21" y2="15"></line>
-                          </svg>
-                          <span>{element.title || elementTypeLabel}</span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Quick action bar */}
-                    {isSelected && (
-                      <div className="studio-quick-actions">
-                        <div className="studio-quick-actions-bar">
-                          {/* Move up */}
-                          <button
-                            className="studio-quick-action-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onElementMoveUp?.(element.id);
-                            }}
-                            disabled={isFirst}
-                            title="Déplacer vers le haut"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="m18 15-6-6-6 6"/>
-                            </svg>
-                          </button>
+                      <div className="studio-element-sticky-container">
+                        <div className="studio-element-sticky-inner">
+                          {/* Element label */}
+                          <div className="studio-element-overlay">
+                            <div className="studio-element-label">
+                              <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="9" y1="3" x2="9" y2="21"></line>
+                                <line x1="15" y1="3" x2="15" y2="21"></line>
+                                <line x1="3" y1="9" x2="21" y2="9"></line>
+                                <line x1="3" y1="15" x2="21" y2="15"></line>
+                              </svg>
+                              <span>{element.title || elementTypeLabel}</span>
+                            </div>
+                          </div>
                           
-                          {/* Move down */}
-                          <button
-                            className="studio-quick-action-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onElementMoveDown?.(element.id);
-                            }}
-                            disabled={isLast}
-                            title="Déplacer vers le bas"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="m6 9 6 6 6-6"/>
-                            </svg>
-                          </button>
-                          
-                          <div className="studio-quick-action-separator" />
-                          
-                          {/* Duplicate */}
-                          <button
-                            className="studio-quick-action-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onElementDuplicate?.(element.id);
-                            }}
-                            title="Dupliquer"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-                              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-                            </svg>
-                          </button>
-                          
-                          <div className="studio-quick-action-separator" />
-                          
-                          {/* Delete */}
-                          <button
-                            className="studio-quick-action-btn delete"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onElementDelete?.(element.id);
-                            }}
-                            title="Supprimer"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M3 6h18"/>
-                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                            </svg>
-                          </button>
+                          {/* Quick action bar */}
+                          <div className="studio-quick-actions">
+                            <div className="studio-quick-actions-bar">
+                              {/* Move up */}
+                              <button
+                                className="studio-quick-action-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onElementMoveUp?.(element.id);
+                                }}
+                                disabled={isFirst}
+                                title="Déplacer vers le haut"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="m18 15-6-6-6 6"/>
+                                </svg>
+                              </button>
+                              
+                              {/* Move down */}
+                              <button
+                                className="studio-quick-action-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onElementMoveDown?.(element.id);
+                                }}
+                                disabled={isLast}
+                                title="Déplacer vers le bas"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="m6 9 6 6 6-6"/>
+                                </svg>
+                              </button>
+                              
+                              <div className="studio-quick-action-separator" />
+                              
+                              {/* Duplicate */}
+                              <button
+                                className="studio-quick-action-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onElementDuplicate?.(element.id);
+                                }}
+                                title="Dupliquer"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                                </svg>
+                              </button>
+                              
+                              <div className="studio-quick-action-separator" />
+                              
+                              {/* Delete */}
+                              <button
+                                className="studio-quick-action-btn delete"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onElementDelete?.(element.id);
+                                }}
+                                title="Supprimer"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M3 6h18"/>
+                                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}
