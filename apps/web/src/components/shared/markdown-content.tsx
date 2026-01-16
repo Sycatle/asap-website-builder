@@ -118,14 +118,27 @@ export const MarkdownContent = React.memo(function MarkdownContent({
     let listItems: string[] = [];
     let listType: 'ul' | 'ol' | null = null;
     
+    // Track the starting number for ordered lists to maintain continuity
+    let olStartNumber = 1;
+    
     const flushList = () => {
       if (listItems.length > 0 && listType) {
         const ListTag = listType;
-        elements.push(
-          <ListTag key={`list-${elements.length}`} className={listType === 'ul' ? 'list-disc pl-4 my-2 space-y-1' : 'list-decimal pl-4 my-2 space-y-1'}>
-            {listItems.map((item, i) => <li key={i}>{parseInline(item)}</li>)}
-          </ListTag>
-        );
+        if (listType === 'ol') {
+          elements.push(
+            <ol key={`list-${elements.length}`} start={olStartNumber} className="list-decimal pl-4 my-2 space-y-1">
+              {listItems.map((item, i) => <li key={i}>{parseInline(item)}</li>)}
+            </ol>
+          );
+          // Update start number for next ol segment
+          olStartNumber += listItems.length;
+        } else {
+          elements.push(
+            <ListTag key={`list-${elements.length}`} className="list-disc pl-4 my-2 space-y-1">
+              {listItems.map((item, i) => <li key={i}>{parseInline(item)}</li>)}
+            </ListTag>
+          );
+        }
         listItems = [];
         listType = null;
       }
@@ -165,10 +178,11 @@ export const MarkdownContent = React.memo(function MarkdownContent({
         continue;
       }
       
-      // Headers
+      // Headers - reset ordered list counter as headers start new sections
       const headerMatch = line.match(/^(#{1,6})\s+(.+)$/);
       if (headerMatch) {
         flushList();
+        olStartNumber = 1; // Reset counter for new section
         const level = headerMatch[1].length;
         const sizes = ['text-xl font-bold', 'text-lg font-bold', 'text-base font-semibold', 'text-sm font-semibold', 'text-sm font-medium', 'text-xs font-medium'];
         elements.push(<div key={`h-${elements.length}`} className={`${sizes[level-1]} my-2`}>{parseInline(headerMatch[2])}</div>);
