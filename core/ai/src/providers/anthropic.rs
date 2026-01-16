@@ -1,4 +1,4 @@
-//! Anthropic (Claude) Provider implementation
+    //! Anthropic (Claude) Provider implementation
 
 use async_trait::async_trait;
 use bytes::Bytes;
