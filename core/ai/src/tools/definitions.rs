@@ -16,6 +16,9 @@ pub fn get_tool_definitions() -> Vec<ToolDefinition> {
         list_extensions_tool(),
         get_page_content_tool(),
         request_visual_analysis_tool(),
+        web_search_tool(),
+        browse_url_tool(),
+        analyze_trends_tool(),
     ]
 }
 
@@ -231,6 +234,109 @@ fn request_visual_analysis_tool() -> ToolDefinition {
     }
 }
 
+/// Tool to search the web for information
+fn web_search_tool() -> ToolDefinition {
+    let now = chrono::Utc::now();
+    let current_year = now.format("%Y");
+    
+    ToolDefinition {
+        tool_type: "function".to_string(),
+        function: FunctionDefinition {
+            name: "web_search".to_string(),
+            description: format!("Search the web for current information, trends, news, or research. CRITICAL: The current year is {}. ALWAYS include the current year in your search queries when looking for recent information or trends. Never use outdated years.", current_year),
+            parameters: json!({
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": format!("Search query to find relevant information. IMPORTANT: Include the year {} when searching for recent trends, news, or current events.", current_year)
+                    },
+                    "num_results": {
+                        "type": "integer",
+                        "description": "Number of results to return (default: 5, max: 10)",
+                        "default": 5
+                    },
+                    "time_range": {
+                        "type": "string",
+                        "enum": ["day", "week", "month", "year", "all"],
+                        "description": "Time range for results (default: all)",
+                        "default": "all"
+                    }
+                },
+                "required": ["query"]
+            }),
+        },
+    }
+}
+
+/// Tool to browse and extract content from a URL
+fn browse_url_tool() -> ToolDefinition {
+    ToolDefinition {
+        tool_type: "function".to_string(),
+        function: FunctionDefinition {
+            name: "browse_url".to_string(),
+            description: "Visit a URL and extract its content (text, metadata, structured data). Use this to read articles, documentation, or specific web pages.".to_string(),
+            parameters: json!({
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "URL to visit and extract content from"
+                    },
+                    "extract": {
+                        "type": "string",
+                        "enum": ["full", "summary", "metadata", "specific"],
+                        "description": "What to extract: full text, summary, metadata only, or specific elements",
+                        "default": "summary"
+                    },
+                    "selector": {
+                        "type": "string",
+                        "description": "CSS selector if extract is 'specific' (e.g., '.article-content', 'h1, p')"
+                    }
+                },
+                "required": ["url"]
+            }),
+        },
+    }
+}
+
+/// Tool to analyze trends for target audiences
+fn analyze_trends_tool() -> ToolDefinition {
+    ToolDefinition {
+        tool_type: "function".to_string(),
+        function: FunctionDefinition {
+            name: "analyze_trends".to_string(),
+            description: "Analyze current trends, behaviors, and interests for specific target audiences or industries. Use this for market research, content strategy, or understanding user preferences.".to_string(),
+            parameters: json!({
+                "type": "object",
+                "properties": {
+                    "audience": {
+                        "type": "string",
+                        "description": "Target audience to analyze (e.g., 'developers', 'designers', 'marketers', 'Gen Z', 'B2B SaaS')"
+                    },
+                    "industry": {
+                        "type": "string",
+                        "description": "Industry or domain (e.g., 'tech', 'fashion', 'finance', 'web development')"
+                    },
+                    "focus": {
+                        "type": "string",
+                        "enum": ["content", "design", "technology", "behavior", "platforms", "all"],
+                        "description": "What aspect of trends to focus on",
+                        "default": "all"
+                    },
+                    "time_period": {
+                        "type": "string",
+                        "enum": ["current", "emerging", "future"],
+                        "description": "Time horizon for trends (default: current)",
+                        "default": "current"
+                    }
+                },
+                "required": ["audience"]
+            }),
+        },
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -238,7 +344,7 @@ mod tests {
     #[test]
     fn test_tool_definitions_valid() {
         let tools = get_tool_definitions();
-        assert_eq!(tools.len(), 8);
+        assert_eq!(tools.len(), 11);
         
         for tool in &tools {
             assert_eq!(tool.tool_type, "function");

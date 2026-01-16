@@ -265,6 +265,125 @@ fn default_viewport() -> String {
     "desktop".to_string()
 }
 
+/// Parameters for web_search tool
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebSearchParams {
+    /// Search query
+    pub query: String,
+    /// Number of results to return (default: 5)
+    #[serde(default = "default_search_results")]
+    pub num_results: usize,
+    /// Time range filter
+    #[serde(default = "default_time_range")]
+    pub time_range: String,
+}
+
+fn default_search_results() -> usize {
+    5
+}
+
+fn default_time_range() -> String {
+    "all".to_string()
+}
+
+/// Parameters for browse_url tool
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BrowseUrlParams {
+    /// URL to visit
+    pub url: String,
+    /// What to extract from the page
+    #[serde(default = "default_extract")]
+    pub extract: String,
+    /// CSS selector for specific extraction
+    #[serde(default)]
+    pub selector: Option<String>,
+}
+
+fn default_extract() -> String {
+    "summary".to_string()
+}
+
+/// Parameters for analyze_trends tool
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnalyzeTrendsParams {
+    /// Target audience
+    pub audience: String,
+    /// Industry or domain
+    #[serde(default)]
+    pub industry: Option<String>,
+    /// Focus area
+    #[serde(default = "default_focus")]
+    pub focus: String,
+    /// Time period
+    #[serde(default = "default_time_period")]
+    pub time_period: String,
+}
+
+fn default_focus() -> String {
+    "all".to_string()
+}
+
+fn default_time_period() -> String {
+    "current".to_string()
+}
+
+/// Web search result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebSearchResult {
+    /// Page title
+    pub title: String,
+    /// URL
+    pub url: String,
+    /// Snippet/description
+    pub snippet: String,
+    /// Relevance score (0-1)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub score: Option<f32>,
+}
+
+/// Browsed content result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BrowsedContent {
+    /// URL that was browsed
+    pub url: String,
+    /// Page title
+    pub title: String,
+    /// Extracted content
+    pub content: String,
+    /// Metadata
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// Trend analysis result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrendAnalysis {
+    /// Target audience analyzed
+    pub audience: String,
+    /// Key trends identified
+    pub trends: Vec<TrendItem>,
+    /// Summary insights
+    pub summary: String,
+    /// Sources used for analysis
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sources: Option<Vec<String>>,
+}
+
+/// Individual trend item
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrendItem {
+    /// Trend title/name
+    pub title: String,
+    /// Description
+    pub description: String,
+    /// Relevance score (0-1)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub relevance: Option<f32>,
+    /// Related keywords/tags
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
+}
+
 /// Visual analysis request sent to frontend
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VisualAnalysisRequest {
