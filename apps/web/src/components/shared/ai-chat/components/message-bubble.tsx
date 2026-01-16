@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -14,6 +14,11 @@ import { MarkdownContent } from '@/components/shared/markdown-content';
 import type { Message, AssistantMessage, UserMessage, ToolCall } from '../types';
 import type { AIAction } from '@/lib/api/ai';
 import { ArtifactCard } from './artifacts';
+
+// Direct text display - no artificial delay
+function useTypewriter(text: string, _isActive: boolean, _speed: number = 15) {
+  return text || '';
+}
 
 interface MessageBubbleProps {
   message: Message;
@@ -66,16 +71,18 @@ function UserBubble({
   name: string;
 }) {
   return (
-    <div className="flex gap-3 justify-end">
-      <div className="max-w-[85%] flex flex-col items-end">
-        <div className="px-4 py-3 bg-muted rounded-2xl rounded-br-md">
-          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+    <div className="flex gap-4 justify-end">
+      <div className="max-w-[80%] flex flex-col items-end">
+        <div className="px-4 py-3 bg-zinc-100 dark:bg-zinc-800 rounded-2xl rounded-br-md shadow-sm">
+          <p className="text-sm text-zinc-900 dark:text-zinc-100 whitespace-pre-wrap leading-relaxed">
+            {message.content}
+          </p>
         </div>
       </div>
       
-      <Avatar className="w-8 h-8 shrink-0">
+      <Avatar className="w-7 h-7 shrink-0 ring-1 ring-black/5 dark:ring-white/10">
         <AvatarImage src={avatar} alt={name} />
-        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs font-medium">
           {initials}
         </AvatarFallback>
       </Avatar>
@@ -84,7 +91,7 @@ function UserBubble({
 }
 
 // ============================================================================
-// Assistant Bubble - ChatGPT style (left aligned, full width content)
+// Assistant Bubble - Modern minimalist style (ChatGPT-inspired)
 // ============================================================================
 
 function AssistantBubble({ 
@@ -159,93 +166,46 @@ function AssistantBubble({
   }, [message.plan?.steps]);
   
   return (
-    <div className="flex gap-3">
-      {/* Avatar */}
-      <div className="w-7 h-7 shrink-0 mt-0.5 rounded-full bg-foreground/5 flex items-center justify-center">
-        <Sparkles className={cn("w-3.5 h-3.5 text-foreground/70", message.isStreaming && "animate-pulse")} />
+    <div className="flex gap-4 group">
+      {/* Minimalist Avatar */}
+      <div className="w-6 h-6 shrink-0 mt-1 rounded-full bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-700 flex items-center justify-center ring-1 ring-black/5 dark:ring-white/10">
+        <Sparkles className={cn("w-3 h-3 text-zinc-600 dark:text-zinc-400", message.isStreaming && "animate-pulse")} />
       </div>
       
-      <div className="flex-1 min-w-0 space-y-3">
-        {/* Thinking Section - ChatGPT style collapsible */}
+      <div className="flex-1 min-w-0 space-y-4">
+        {/* Thinking Section - Minimalist with real-time feedback */}
         {(isThinking || (stepsInfo.total > 0 && !hasContent)) && (
           <ThinkingSection
             isThinking={isThinking}
             currentAction={currentAction}
+            currentReasoning={message.currentReasoning}
             stepsInfo={stepsInfo}
             expanded={thinkingExpanded}
             onToggle={() => setThinkingExpanded(!thinkingExpanded)}
           />
         )}
         
-        {/* Collapsible thinking when we have content - Chef de Projet style */}
+        {/* Collapsible plan when content arrives */}
         {hasContent && stepsInfo.total > 0 && (
           <Collapsible open={thinkingExpanded} onOpenChange={setThinkingExpanded}>
-            <CollapsibleTrigger className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors group">
-              <span className="w-3.5 h-3.5 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
-              </span>
-              <span>Plan exécuté</span>
-              <span className="text-[10px]">
-                {stepsInfo.completed}/{stepsInfo.total} étapes
-              </span>
+            <CollapsibleTrigger className="flex items-center gap-2 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="font-medium">Analyse terminée</span>
+              <span className="text-zinc-400">· {stepsInfo.completed} étapes</span>
               <ChevronDown className={cn(
-                "w-3 h-3 ml-auto transition-transform",
+                "w-3.5 h-3.5 ml-auto transition-transform",
                 !thinkingExpanded && "-rotate-90"
               )} />
             </CollapsibleTrigger>
-            <CollapsibleContent className="mt-2">
-              <div className="relative pl-4 space-y-1.5">
-                {/* Vertical line */}
-                <div className="absolute left-[7px] top-1 bottom-1 w-px bg-border" />
-                
-                {stepsInfo.steps.map((step) => (
-                  <div key={step.id} className="relative flex items-start gap-2 py-1 pl-2">
-                    {/* Status indicator */}
-                    <div className={cn(
-                      "absolute left-0 w-3.5 h-3.5 rounded-full flex items-center justify-center -translate-x-[7px] bg-background",
-                      step.status === 'done' && "bg-emerald-500/10",
-                      step.status === 'failed' && "bg-red-500/10",
-                    )}>
-                      {step.status === 'done' && (
-                        <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                      )}
-                      {step.status === 'running' && (
-                        <Loader2 className="w-3 h-3 text-primary animate-spin" />
-                      )}
-                      {step.status === 'failed' && (
-                        <AlertTriangle className="w-3 h-3 text-red-500" />
-                      )}
-                      {(step.status === 'pending' || step.status === 'skipped') && (
-                        <div className="w-2 h-2 rounded-full bg-muted-foreground/20" />
-                      )}
-                    </div>
-                    
+            <CollapsibleContent className="mt-3">
+              <div className="space-y-2 pl-1">
+                {stepsInfo.steps.map((step, idx) => (
+                  <div key={step.id} className="flex items-start gap-2.5 text-sm">
+                    <span className="text-zinc-400 dark:text-zinc-600 mt-0.5">•</span>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        {step.specialist && (
-                          <span className="text-xs">
-                            {step.specialist === 'data_analyst' && '📊'}
-                            {step.specialist === 'content_writer' && '✍️'}
-                            {step.specialist === 'designer' && '🎨'}
-                            {step.specialist === 'strategist' && '🧭'}
-                            {step.specialist === 'validator' && '✅'}
-                            {step.specialist === 'researcher' && '🔍'}
-                            {!['data_analyst', 'content_writer', 'designer', 'strategist', 'validator', 'researcher'].includes(step.specialist) && '🤖'}
-                          </span>
-                        )}
-                        <span className={cn(
-                          "text-xs truncate",
-                          step.status === 'done' && "text-muted-foreground",
-                          step.status === 'failed' && "text-red-500"
-                        )}>
-                          {step.title}
-                        </span>
-                      </div>
-                      {step.description && step.status === 'done' && (
-                        <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">
-                          {step.description}
-                        </p>
-                      )}
+                      <span className="text-zinc-600 dark:text-zinc-400">
+                        {step.description || step.title}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -254,46 +214,48 @@ function AssistantBubble({
           </Collapsible>
         )}
         
-        {/* Main Content */}
-        <div className={cn(hasError && "border-l-2 border-destructive/50 pl-3")}>
-          {/* Summary - prominent */}
+        {/* Main Content - Clean & Spacious */}
+        <div className="space-y-4">
+          {/* Summary - Highlighted */}
           {message.content.summary && (
-            <div className="mb-3 p-3 rounded-lg bg-primary/5 border border-primary/10">
-              <p className="text-sm font-medium">{message.content.summary}</p>
+            <div className="px-4 py-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800">
+              <p className="text-sm leading-relaxed text-zinc-900 dark:text-zinc-100 font-medium">
+                {message.content.summary}
+              </p>
             </div>
           )}
           
-          {/* Body */}
+          {/* Body - Maximum readability */}
           {message.content.body && (
-            <div className="prose prose-sm dark:prose-invert max-w-none">
+            <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none prose-headings:font-semibold prose-p:leading-relaxed prose-pre:bg-zinc-100 dark:prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-200 dark:prose-pre:border-zinc-800">
               <MarkdownContent content={message.content.body} />
               {message.isStreaming && (
-                <span className="inline-block w-0.5 h-4 ml-0.5 bg-foreground/50 animate-pulse" />
+                <span className="inline-block w-0.5 h-4 ml-1 bg-zinc-400 animate-pulse" />
               )}
             </div>
           )}
           
-          {/* Warnings */}
+          {/* Warnings - Subtle but visible */}
           {message.content.warnings && message.content.warnings.length > 0 && (
-            <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              <div className="text-sm space-y-1">
+            <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
+              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+              <div className="text-sm space-y-1 text-amber-900 dark:text-amber-200">
                 {message.content.warnings.map((warning, i) => (
-                  <p key={i}>{warning}</p>
+                  <p key={i} className="leading-relaxed">{warning}</p>
                 ))}
               </div>
             </div>
           )}
           
-          {/* Details (collapsible) */}
+          {/* Details - Collapsed by default */}
           {message.content.details && (
             <Collapsible open={detailsExpanded} onOpenChange={setDetailsExpanded}>
-              <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mt-3">
-                {detailsExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                Voir les détails
+              <CollapsibleTrigger className="flex items-center gap-2 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                <ChevronRight className={cn("w-3.5 h-3.5 transition-transform", detailsExpanded && "rotate-90")} />
+                <span>Voir les détails</span>
               </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="mt-2 p-3 rounded-lg bg-muted/50 text-sm">
+              <CollapsibleContent className="mt-3">
+                <div className="px-4 py-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 text-sm prose prose-sm prose-zinc dark:prose-invert max-w-none">
                   <MarkdownContent content={message.content.details} />
                 </div>
               </CollapsibleContent>
@@ -303,7 +265,7 @@ function AssistantBubble({
         
         {/* Artifacts */}
         {message.content.artifacts && message.content.artifacts.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {message.content.artifacts.map(artifact => (
               <ArtifactCard key={artifact.id} artifact={artifact} />
             ))}
@@ -324,23 +286,31 @@ function AssistantBubble({
           />
         )}
         
-        {/* Footer actions - ChatGPT style */}
+        {/* Footer actions - Minimalist style */}
         {!message.isStreaming && hasContent && (
-          <div className="flex items-center gap-1 pt-1">
+          <div className="flex items-center gap-0.5 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              className="h-7 w-7 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               onClick={handleCopy}
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
             </Button>
             
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
               <ThumbsUp className="w-3.5 h-3.5" />
             </Button>
             
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
               <ThumbsDown className="w-3.5 h-3.5" />
             </Button>
             
@@ -348,16 +318,16 @@ function AssistantBubble({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                className="h-7 px-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
                 onClick={onRetry}
               >
-                <RotateCcw className="w-3 h-3 mr-1" />
+                <RotateCcw className="w-3 h-3 mr-1.5" />
                 Réessayer
               </Button>
             )}
             
             {message.usage && (
-              <span className="ml-auto text-[10px] text-muted-foreground font-mono">
+              <span className="ml-auto text-[10px] text-zinc-400 font-mono">
                 {message.usage.total_tokens} tokens
               </span>
             )}
@@ -375,6 +345,7 @@ function AssistantBubble({
 interface ThinkingSectionProps {
   isThinking: boolean;
   currentAction: string | null;
+  currentReasoning?: string;
   stepsInfo: { 
     completed: number; 
     total: number; 
@@ -430,114 +401,93 @@ function getSpecialistLabel(specialist?: string): string {
   }
 }
 
-function ThinkingSection({ isThinking, currentAction, stepsInfo, expanded, onToggle }: ThinkingSectionProps) {
+function ThinkingSection({ isThinking, currentAction, currentReasoning, stepsInfo, expanded, onToggle }: ThinkingSectionProps) {
   const runningStep = stepsInfo.steps.find(s => s.status === 'running');
-  const completedSteps = stepsInfo.steps.filter(s => s.status === 'done');
   
   return (
-    <div className="space-y-2">
-      {/* Main thinking indicator - ChatGPT style with detailed feedback */}
+    <div className="space-y-3">
+      {/* Main thinking indicator - Modern minimalist */}
       <button 
         onClick={onToggle}
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full text-left group"
+        className="flex items-center gap-2.5 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors w-full text-left"
       >
         {isThinking ? (
           <>
-            {/* Animated shimmer effect like ChatGPT */}
-            <div className="flex items-center gap-1.5">
-              <div className="relative w-4 h-4">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-muted-foreground/20 via-muted-foreground/40 to-muted-foreground/20 animate-pulse" />
-                <Loader2 className="absolute inset-0 w-4 h-4 text-muted-foreground/60 animate-spin" />
-              </div>
+            <div className="relative w-4 h-4 shrink-0">
+              <Loader2 className="w-4 h-4 text-zinc-400 animate-spin" />
             </div>
             <div className="flex-1 min-w-0">
-              <span className="text-xs text-foreground/80 font-medium">
-                {runningStep ? (
-                  <>
-                    <span className="mr-1.5">{getSpecialistIcon(runningStep.specialist)}</span>
-                    {currentAction || runningStep.title}
-                  </>
-                ) : (
-                  currentAction || 'Réflexion en cours...'
-                )}
+              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                {currentAction || 'Analyse en cours...'}
               </span>
             </div>
             {stepsInfo.total > 0 && (
-              <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 bg-muted rounded-full">
+              <span className="text-xs text-zinc-400 shrink-0">
                 {stepsInfo.completed + 1}/{stepsInfo.total}
               </span>
             )}
           </>
         ) : (
           <>
-            <span className="w-4 h-4 rounded-full bg-emerald-500/10 flex items-center justify-center">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-            </span>
-            <span className="text-xs font-medium">
-              Analyse terminée
-            </span>
-            <span className="text-[10px] text-muted-foreground">
-              {stepsInfo.completed} étape{stepsInfo.completed > 1 ? 's' : ''}
-            </span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+            <span className="text-sm font-medium">Analyse terminée</span>
+            <span className="text-xs text-zinc-400">· {stepsInfo.completed} étapes</span>
             <ChevronDown className={cn(
-              "w-3 h-3 ml-auto transition-transform duration-200",
+              "w-4 h-4 ml-auto transition-transform",
               !expanded && "-rotate-90"
             )} />
           </>
         )}
       </button>
       
-      {/* Expanded steps list - ChatGPT style with bullets and detailed insights */}
+      {/* Real-time reasoning - Clean display */}
+      {isThinking && currentReasoning && expanded && (
+        <div className="pl-6 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed animate-in fade-in">
+          <p>{currentReasoning}</p>
+        </div>
+      )}
+      
+      {/* Expanded steps - Minimalist bullet list */}
       {expanded && stepsInfo.steps.length > 0 && (
-        <div className="space-y-3 pl-1">
+        <div className="space-y-2.5 pl-1">
           {stepsInfo.steps.map((step) => (
             <div 
               key={step.id} 
               className={cn(
-                "flex items-start gap-2.5",
+                "flex items-start gap-2.5 text-sm",
                 step.status === 'pending' && "opacity-40"
               )}
             >
-              {/* Bullet point with status */}
-              <div className="mt-1.5 shrink-0">
-                {step.status === 'done' && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-foreground/70" />
-                )}
+              {/* Status bullet */}
+              <span className="text-zinc-400 dark:text-zinc-600 mt-1 shrink-0">
                 {step.status === 'running' && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                )}
+                {step.status === 'done' && (
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-zinc-400" />
                 )}
                 {step.status === 'failed' && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" />
                 )}
                 {(step.status === 'pending' || step.status === 'skipped') && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700" />
                 )}
-              </div>
+              </span>
               
-              <div className="flex-1 min-w-0 space-y-1">
-                {/* Step insight as the main text - ChatGPT style */}
+              {/* Step content */}
+              <div className="flex-1 min-w-0">
                 <p className={cn(
-                  "text-sm leading-relaxed",
-                  step.status === 'done' && "text-foreground/90",
-                  step.status === 'running' && "text-foreground/70 italic",
-                  step.status === 'pending' && "text-muted-foreground/50",
-                  step.status === 'failed' && "text-red-500/80"
+                  "leading-relaxed break-words",
+                  step.status === 'done' && "text-zinc-600 dark:text-zinc-400",
+                  step.status === 'running' && "text-zinc-700 dark:text-zinc-300",
+                  step.status === 'pending' && "text-zinc-400 dark:text-zinc-600",
+                  step.status === 'failed' && "text-red-500"
                 )}>
                   {step.description || step.title}
                   {step.status === 'running' && (
-                    <span className="ml-1 text-muted-foreground">...</span>
+                    <span className="ml-1 animate-pulse">...</span>
                   )}
                 </p>
-                
-                {/* Specialist badge - subtle */}
-                {step.status === 'done' && step.specialist && (
-                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                    <span className="flex items-center gap-0.5">
-                      {getSpecialistIcon(step.specialist)}
-                      <span>{getSpecialistLabel(step.specialist)}</span>
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
           ))}
@@ -551,29 +501,38 @@ function SourcesList({ sources }: { sources: { title: string; url?: string; snip
   const [expanded, setExpanded] = useState(false);
   
   return (
-    <div className="border rounded-lg">
+    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted/50"
+        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors"
       >
-        {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-        <span className="font-medium">{sources.length} source{sources.length > 1 ? 's' : ''}</span>
+        <ChevronRight className={cn("w-3.5 h-3.5 text-zinc-400 transition-transform", expanded && "rotate-90")} />
+        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+          {sources.length} source{sources.length > 1 ? 's' : ''}
+        </span>
       </button>
       
       {expanded && (
-        <div className="px-3 pb-3 space-y-2">
+        <div className="px-4 pb-3 space-y-2 border-t border-zinc-200 dark:border-zinc-800 pt-3">
           {sources.map((source, i) => (
-            <div key={i} className="p-2 rounded bg-muted/50 text-sm">
-              <div className="flex items-center gap-2">
-                <span className="font-medium">{source.title}</span>
+            <div key={i} className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/50">
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 flex-1">{source.title}</span>
                 {source.url && (
-                  <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-primary">
-                    <ExternalLink className="w-3 h-3" />
+                  <a 
+                    href={source.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-blue-500 hover:text-blue-600 shrink-0"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 )}
               </div>
               {source.snippet && (
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{source.snippet}</p>
+                <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1.5 leading-relaxed line-clamp-2">
+                  {source.snippet}
+                </p>
               )}
             </div>
           ))}
@@ -598,23 +557,23 @@ function ActionsList({ actions, executedActions, onActionClick }: ActionsListPro
   }, [actions, executedActions]);
   
   return (
-    <div className="border rounded-lg overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 bg-muted/30">
-        <span className="text-xs font-medium flex items-center gap-1.5">
-          <Zap className="w-3 h-3" />
+    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-zinc-50 dark:bg-zinc-900/30">
+        <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-2">
+          <Zap className="w-3.5 h-3.5" />
           {stats.total} action{stats.total > 1 ? 's' : ''}
         </span>
         {stats.executed > 0 && (
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-2.5 text-xs">
             {stats.successful > 0 && (
-              <span className="flex items-center gap-1 text-emerald-600">
-                <CheckCircle2 className="w-3 h-3" />
+              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-500">
+                <CheckCircle2 className="w-3.5 h-3.5" />
                 {stats.successful}
               </span>
             )}
             {stats.failed > 0 && (
-              <span className="flex items-center gap-1 text-destructive">
-                <AlertTriangle className="w-3 h-3" />
+              <span className="flex items-center gap-1 text-red-500">
+                <AlertTriangle className="w-3.5 h-3.5" />
                 {stats.failed}
               </span>
             )}
@@ -622,35 +581,35 @@ function ActionsList({ actions, executedActions, onActionClick }: ActionsListPro
         )}
       </div>
       
-      <div className="divide-y">
+      <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
         {actions.map((action, i) => {
           const executed = executedActions?.find(e => e.action === action);
           return (
             <div 
               key={i}
               className={cn(
-                "flex items-center gap-2 px-3 py-2",
-                executed?.success && "bg-emerald-500/5",
-                executed?.success === false && "bg-destructive/5"
+                "flex items-center gap-3 px-4 py-2.5 transition-colors",
+                executed?.success && "bg-emerald-50 dark:bg-emerald-500/5",
+                executed?.success === false && "bg-red-50 dark:bg-red-500/5"
               )}
             >
               {executed ? (
                 executed.success ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                 ) : (
-                  <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />
+                  <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
                 )
               ) : (
-                <div className="w-3.5 h-3.5 rounded-full border-2 shrink-0" />
+                <div className="w-4 h-4 rounded-full border-2 border-zinc-300 dark:border-zinc-700 shrink-0" />
               )}
-              <span className="text-xs flex-1 truncate">
+              <span className="text-sm text-zinc-700 dark:text-zinc-300 flex-1 truncate">
                 {formatActionLabel(action)}
               </span>
               {!executed && onActionClick && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 px-2 text-xs"
+                  className="h-7 px-3 text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800"
                   onClick={() => onActionClick(action.type)}
                 >
                   Appliquer
