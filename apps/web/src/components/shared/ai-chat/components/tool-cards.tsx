@@ -40,7 +40,7 @@ export function ToolCard({ tool, onRetry }: ToolCardProps) {
   const [showOutput, setShowOutput] = useState(false);
   
   const Icon = TOOL_ICONS[tool.tool] || TOOL_ICONS['default'];
-  const styles = STATUS_STYLES[tool.status];
+  const styles = STATUS_STYLES[tool.status] || STATUS_STYLES['pending'];
   const isRunning = tool.status === 'running';
   const isDone = tool.status === 'done';
   const isFailed = tool.status === 'failed';
