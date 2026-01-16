@@ -42,6 +42,9 @@ impl ContextBuilder {
     }
 
     /// Build context from raw data (typically from database)
+    /// 
+    /// NOTE: This creates a context without account_id. For secure operations,
+    /// use `build_secure` or set account_id explicitly after building.
     pub fn build(
         &self,
         website_id: Uuid,
@@ -64,6 +67,35 @@ impl ContextBuilder {
             user: None,
             data: None,
             extensions: Vec::new(),
+            account_id: None,
+        }
+    }
+
+    /// Build context with account isolation (recommended for production)
+    pub fn build_secure(
+        &self,
+        account_id: Uuid,
+        website_id: Uuid,
+        slug: &str,
+        title: Option<&str>,
+        preset: Option<&str>,
+        sections: Vec<SectionInfo>,
+        theme: serde_json::Value,
+    ) -> WebsiteContext {
+        WebsiteContext {
+            website: WebsiteInfo {
+                id: website_id,
+                slug: slug.to_string(),
+                title: title.map(|s| s.to_string()),
+                preset: preset.map(|s| s.to_string()),
+            },
+            sections,
+            theme,
+            available_section_types: self.available_section_types.clone(),
+            user: None,
+            data: None,
+            extensions: Vec::new(),
+            account_id: Some(account_id),
         }
     }
 
@@ -92,6 +124,37 @@ impl ContextBuilder {
             user,
             data,
             extensions: Vec::new(),
+            account_id: None,
+        }
+    }
+
+    /// Build context with account isolation and full data (recommended for production)
+    pub fn build_with_data_secure(
+        &self,
+        account_id: Uuid,
+        website_id: Uuid,
+        slug: &str,
+        title: Option<&str>,
+        preset: Option<&str>,
+        sections: Vec<SectionInfo>,
+        theme: serde_json::Value,
+        user: Option<UserContext>,
+        data: Option<WebsiteDataContext>,
+    ) -> WebsiteContext {
+        WebsiteContext {
+            website: WebsiteInfo {
+                id: website_id,
+                slug: slug.to_string(),
+                title: title.map(|s| s.to_string()),
+                preset: preset.map(|s| s.to_string()),
+            },
+            sections,
+            theme,
+            available_section_types: self.available_section_types.clone(),
+            user,
+            data,
+            extensions: Vec::new(),
+            account_id: Some(account_id),
         }
     }
 
@@ -128,8 +191,43 @@ impl ContextBuilder {
             context.website.preset.as_deref().unwrap_or("(none)")
         ));
 
-        // Website Data (Variables and Collections from all extensions)
+        // Website Data Summary (minimal - tools will fetch details on demand)
         if let Some(ref data) = context.data {
+            let mut data_summary = vec![];
+            
+            // Count variables by source (don't include all values - use tools!)
+            if !data.variables.is_empty() {
+                let mut var_counts: Vec<String> = Vec::new();
+                for group in &data.variables {
+                    let count = group.variables.len();
+                    if count > 0 {
+                        var_counts.push(format!("{} ({})", group.source, count));
+                    }
+                }
+                if !var_counts.is_empty() {
+                    data_summary.push(format!("Variables available from: {}", var_counts.join(", ")));
+                    data_summary.push("Use search_variables tool to access specific variables when needed.".to_string());
+                }
+            }
+            
+            // Collections summary (counts only - use tools to search!)
+            if !data.collections.is_empty() {
+                let mut col_summary: Vec<String> = Vec::new();
+                for collection in &data.collections {
+                    col_summary.push(format!("{} ({} items)", collection.slug, collection.count));
+                }
+                data_summary.push(format!("Collections available: {}", col_summary.join(", ")));
+                data_summary.push("Use search_collections tool to query collection data when needed.".to_string());
+            }
+            
+            if !data_summary.is_empty() {
+                parts.push("\n## Website Data Summary".to_string());
+                parts.push(data_summary.join("\n- "));
+            }
+            
+            // OLD CODE - loading ALL data into context (SLOW!)
+            // Now we just show summaries and use tools on demand
+            /*
             // Variables grouped by source
             if !data.variables.is_empty() {
                 parts.push("\n## Website Variables".to_string());
@@ -149,7 +247,7 @@ impl ContextBuilder {
             if !data.collections.is_empty() {
                 parts.push("\n## Available Collections".to_string());
                 for collection in &data.collections {
-                    parts.push(format!(
+                    parts.push(format!( 
                         "\n### {} ({} items, from: {})",
                         collection.slug, collection.count, collection.source
                     ));
@@ -166,6 +264,7 @@ impl ContextBuilder {
                     }
                 }
             }
+            */
         }
 
         // Theme
@@ -303,6 +402,17 @@ pub fn build_system_prompt(context: &WebsiteContext) -> String {
     let context_builder = ContextBuilder::new();
     let context_str = context_builder.to_prompt_context(context);
 
+    // Get current date/time for context
+    let now = chrono::Utc::now();
+    let current_year = now.format("%Y");
+    let current_date = format!("\n\n## Current Date & Time\n- Today is: {} (UTC)\n- Current Year: {}\n- Day: {}\n- Time: {}\n\n**CRITICAL: When searching the web or analyzing trends, ALWAYS use the current year ({}) in your queries. Never use outdated years.**", 
+        now.format("%B %d, %Y"),
+        current_year,
+        now.format("%A"),
+        now.format("%H:%M:%S"),
+        current_year
+    );
+
     // Build personalization hints
     let mut personalization = String::new();
     if let Some(ref user) = context.user {
@@ -326,14 +436,17 @@ pub fn build_system_prompt(context: &WebsiteContext) -> String {
         }
     }
     
-    // Add hints about available data
+    // Add hints about available data and tools
     let mut data_hints = String::new();
     if let Some(ref data) = context.data {
         if !data.variables.is_empty() || !data.collections.is_empty() {
-            data_hints.push_str("\n- Website Variables and Collections are available in the context. Use this data to personalize content suggestions.");
+            data_hints.push_str("\n- Website data (Variables & Collections) available via tools - use search_variables and search_collections to fetch specific data on demand.");
         }
         if data.collections.iter().any(|c| c.slug.starts_with("github")) {
-            data_hints.push_str("\n- GitHub data is synced. Reference user's repos, languages, and profile when suggesting content.");
+            data_hints.push_str("\n- GitHub sync active. Use search_collections(collection='github-repos') to fetch user's repos, languages, etc.");
+        }
+        if data.collections.iter().any(|c| c.slug.contains("linkedin")) {
+            data_hints.push_str("\n- LinkedIn sync active. Query with search_collections to get profile data.");
         }
     }
 
@@ -350,7 +463,9 @@ You are a **senior web agency expert** with 15+ years of experience helping clie
 - **Marketing Strategist** — Conversion funnels, audience targeting, growth tactics
 
 You work for ASAP, a modern website builder platform. Your role is to help users create professional, high-converting websites through natural language.
-{}{}
+{}{}{}
+
+**CRITICAL DATE INSTRUCTION: The current year and date are shown above. When performing web searches or analyzing trends, you MUST use the current year in your queries. NEVER use outdated years in search queries - always reference the current year shown above.**
 
 ## Your Expert Mindset
 
@@ -420,6 +535,25 @@ Quick confirmation + action + ONE proactive tip
 - Always end with specific, actionable next steps
 - Offer to implement recommendations immediately
 
+## Tools Usage (IMPORTANT for Personalization)
+
+**USE TOOLS TO FETCH DATA ON DEMAND** - Don't work with partial information!
+
+Available Tools:
+- `search_collections(collection, query, filters, limit)` - Query user's synced data (GitHub repos, LinkedIn, etc.)
+- `search_variables(pattern, source)` - Get specific website variables
+- `get_website_sections(section_type, include_content)` - Fetch detailed section info
+- `get_website_theme()` - Get complete theme configuration
+- `list_extensions()` - See what integrations are active
+
+**When to use tools:**
+1. User mentions analyzing their site → Use get_website_sections to see current structure
+2. User wants personalized content → Use search_collections to fetch their data (repos, profile, etc.)
+3. User asks about colors/design → Use get_website_theme for full theme details
+4. You need specific variable values → Use search_variables instead of guessing
+
+**Pro tip:** Call multiple tools in parallel when needed! Example: analyze site structure + fetch GitHub data + get theme in one go.
+
 ## Expert Rules
 
 1. **Use exact section IDs** from context — never invent them
@@ -444,7 +578,7 @@ Quick confirmation + action + ONE proactive tip
 
 ---
 
-"##, personalization, data_hints);
+"##, current_date, personalization, data_hints);
 
     format!("{}{}", base_prompt, context_str)
 }

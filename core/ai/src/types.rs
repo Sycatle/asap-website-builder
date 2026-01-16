@@ -482,6 +482,10 @@ pub struct CollectionSummary {
 }
 
 /// Website context for AI
+/// 
+/// IMPORTANT: This context should only contain data that the requesting account
+/// has permission to access. The account_id field is used for audit logging
+/// and should always be set when executing tools or actions.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebsiteContext {
     pub website: WebsiteInfo,
@@ -497,6 +501,24 @@ pub struct WebsiteContext {
     /// Active extensions on this website
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub extensions: Vec<ActiveExtension>,
+    /// Account ID that owns this website (for security validation)
+    /// This should always be set when executing tools or actions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account_id: Option<Uuid>,
+}
+
+impl WebsiteContext {
+    /// Check if account_id is set (required for secure operations)
+    pub fn has_account_id(&self) -> bool {
+        self.account_id.is_some()
+    }
+    
+    /// Get account_id or return error message for logging
+    pub fn account_id_or_unknown(&self) -> String {
+        self.account_id
+            .map(|id| id.to_string())
+            .unwrap_or_else(|| "UNKNOWN".to_string())
+    }
 }
 
 /// Active extension on a website
