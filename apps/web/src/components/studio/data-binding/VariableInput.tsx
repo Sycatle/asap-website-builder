@@ -83,7 +83,7 @@ export function VariableInput({
   className,
 }: VariableInputProps) {
   const [showPreview, setShowPreview] = React.useState(false);
-  const inputRef = React.useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  const inputRef = React.useRef<HTMLInputElement & HTMLTextAreaElement>(null);
 
   // Interpolate variables for preview
   const interpolatedValue = React.useMemo(() => {
@@ -172,7 +172,7 @@ export function VariableInput({
 
       <div className="relative">
         <InputComponent
-          ref={inputRef as any}
+          ref={inputRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}

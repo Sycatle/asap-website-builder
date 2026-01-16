@@ -262,7 +262,7 @@ export function PresenceAvatars({
   className,
   showCurrentUser = false,
 }: PresenceAvatarsProps) {
-  const { user, isAuthenticated } = useAuthStore()
+  const { user, userData, isAuthenticated } = useAuthStore()
   
   // Use custom hook for presence logic
   const { onlineUsers } = useWebsitePresence({
@@ -270,8 +270,8 @@ export function PresenceAvatars({
     user: user ? { 
       id: user.id, 
       email: user.email, 
-      name: (user as any).name, 
-      avatar: (user as any).avatar 
+      name: userData?.name || user.email.split('@')[0], 
+      avatar: userData?.avatar 
     } : null,
     enabled: isAuthenticated,
     currentPage,
