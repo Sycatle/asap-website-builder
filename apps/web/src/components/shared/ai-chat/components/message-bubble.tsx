@@ -105,9 +105,9 @@ function AssistantBubble({
   const hasError = message.toolCalls?.some(t => t.status === 'failed') || 
                    message.plan?.steps.some(s => s.status === 'failed');
   
-  const isThinking = message.isStreaming && message.streamingPhase !== 'writing';
-  const isWriting = message.isStreaming && message.streamingPhase === 'writing';
-  const hasContent = message.content.body && message.content.body.length > 0;
+  const isThinking = Boolean(message.isStreaming && message.streamingPhase !== 'writing');
+  const isWriting = Boolean(message.isStreaming && message.streamingPhase === 'writing');
+  const hasContent = Boolean(message.content.body && message.content.body.length > 0);
   
   // Auto-collapse thinking when writing starts
   useEffect(() => {
@@ -144,9 +144,16 @@ function AssistantBubble({
     return null;
   }, [message.toolCalls, message.plan?.steps, message.currentThought]);
   
-  // Count completed steps
+  // Count completed steps with specialist info
   const stepsInfo = useMemo(() => {
-    const steps = message.plan?.steps || [];
+    const steps = (message.plan?.steps || []).map(s => ({
+      id: s.id,
+      title: s.title,
+      status: s.status,
+      specialist: s.specialist,
+      description: s.description,
+      confidence: s.confidence,
+    }));
     const completed = steps.filter(s => s.status === 'done').length;
     const total = steps.length;
     return { completed, total, steps };
@@ -171,43 +178,81 @@ function AssistantBubble({
           />
         )}
         
-        {/* Collapsible thinking when we have content */}
+        {/* Collapsible thinking when we have content - Chef de Projet style */}
         {hasContent && stepsInfo.total > 0 && (
           <Collapsible open={thinkingExpanded} onOpenChange={setThinkingExpanded}>
-            <CollapsibleTrigger className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
-              {thinkingExpanded ? (
-                <ChevronDown className="w-3 h-3" />
-              ) : (
-                <ChevronRight className="w-3 h-3" />
-              )}
-              <span>
-                {stepsInfo.completed}/{stepsInfo.total} étapes réalisées
+            <CollapsibleTrigger className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors group">
+              <span className="w-3.5 h-3.5 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
               </span>
+              <span>Plan exécuté</span>
+              <span className="text-[10px]">
+                {stepsInfo.completed}/{stepsInfo.total} étapes
+              </span>
+              <ChevronDown className={cn(
+                "w-3 h-3 ml-auto transition-transform",
+                !thinkingExpanded && "-rotate-90"
+              )} />
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2">
-              <div className="space-y-1 pl-1 border-l-2 border-muted ml-1">
-                {stepsInfo.steps.map((step, idx) => (
-                  <div key={step.id} className="flex items-center gap-2 pl-3 py-0.5">
-                    {step.status === 'done' && (
-                      <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    )}
-                    {step.status === 'running' && (
-                      <Loader2 className="w-3 h-3 text-muted-foreground animate-spin" />
-                    )}
-                    {step.status === 'failed' && (
-                      <AlertTriangle className="w-3 h-3 text-red-500" />
-                    )}
-                    {(step.status === 'pending' || step.status === 'skipped') && (
-                      <div className="w-3 h-3 rounded-full border border-muted-foreground/30" />
-                    )}
-                    <span className={cn(
-                      "text-xs",
-                      step.status === 'done' && "text-muted-foreground",
-                      step.status === 'running' && "text-foreground",
-                      step.status === 'pending' && "text-muted-foreground/50"
+              <div className="relative pl-4 space-y-1.5">
+                {/* Vertical line */}
+                <div className="absolute left-[7px] top-1 bottom-1 w-px bg-border" />
+                
+                {stepsInfo.steps.map((step) => (
+                  <div key={step.id} className="relative flex items-start gap-2 py-1 pl-2">
+                    {/* Status indicator */}
+                    <div className={cn(
+                      "absolute left-0 w-3.5 h-3.5 rounded-full flex items-center justify-center -translate-x-[7px] bg-background",
+                      step.status === 'done' && "bg-emerald-500/10",
+                      step.status === 'failed' && "bg-red-500/10",
                     )}>
-                      {step.title}
-                    </span>
+                      {step.status === 'done' && (
+                        <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                      )}
+                      {step.status === 'running' && (
+                        <Loader2 className="w-3 h-3 text-primary animate-spin" />
+                      )}
+                      {step.status === 'failed' && (
+                        <AlertTriangle className="w-3 h-3 text-red-500" />
+                      )}
+                      {(step.status === 'pending' || step.status === 'skipped') && (
+                        <div className="w-2 h-2 rounded-full bg-muted-foreground/20" />
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        {step.specialist && (
+                          <span className="text-xs">
+                            {step.specialist === 'data_analyst' && '📊'}
+                            {step.specialist === 'content_writer' && '✍️'}
+                            {step.specialist === 'designer' && '🎨'}
+                            {step.specialist === 'strategist' && '🧭'}
+                            {step.specialist === 'validator' && '✅'}
+                            {step.specialist === 'researcher' && '🔍'}
+                            {!['data_analyst', 'content_writer', 'designer', 'strategist', 'validator', 'researcher'].includes(step.specialist) && '🤖'}
+                          </span>
+                        )}
+                        <span className={cn(
+                          "text-xs truncate",
+                          step.status === 'done' && "text-muted-foreground",
+                          step.status === 'failed' && "text-red-500"
+                        )}>
+                          {step.title}
+                        </span>
+                        {step.confidence && step.status === 'done' && (
+                          <span className="text-[10px] text-muted-foreground ml-auto">
+                            {step.confidence}%
+                          </span>
+                        )}
+                      </div>
+                      {step.description && step.status === 'done' && (
+                        <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">
+                          {step.description}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -336,69 +381,179 @@ function AssistantBubble({
 interface ThinkingSectionProps {
   isThinking: boolean;
   currentAction: string | null;
-  stepsInfo: { completed: number; total: number; steps: { id: string; title: string; status: string }[] };
+  stepsInfo: { 
+    completed: number; 
+    total: number; 
+    steps: { 
+      id: string; 
+      title: string; 
+      status: string;
+      specialist?: string;
+      description?: string;
+      confidence?: number;
+    }[] 
+  };
   expanded: boolean;
   onToggle: () => void;
 }
 
+/** Get icon for specialist type */
+function getSpecialistIcon(specialist?: string) {
+  switch (specialist) {
+    case 'data_analyst':
+      return '📊';
+    case 'content_writer':
+      return '✍️';
+    case 'designer':
+      return '🎨';
+    case 'strategist':
+      return '🧭';
+    case 'validator':
+      return '✅';
+    case 'researcher':
+      return '🔍';
+    default:
+      return '🤖';
+  }
+}
+
+/** Get label for specialist type */
+function getSpecialistLabel(specialist?: string): string {
+  switch (specialist) {
+    case 'data_analyst':
+      return 'Analyste';
+    case 'content_writer':
+      return 'Rédacteur';
+    case 'designer':
+      return 'Designer';
+    case 'strategist':
+      return 'Stratège';
+    case 'validator':
+      return 'Validateur';
+    case 'researcher':
+      return 'Chercheur';
+    default:
+      return 'Assistant';
+  }
+}
+
 function ThinkingSection({ isThinking, currentAction, stepsInfo, expanded, onToggle }: ThinkingSectionProps) {
+  const runningStep = stepsInfo.steps.find(s => s.status === 'running');
+  
   return (
     <div className="space-y-2">
-      {/* Main thinking indicator - ChatGPT style shimmer */}
+      {/* Main thinking indicator - Modern ChatGPT style */}
       <button 
         onClick={onToggle}
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full text-left"
+        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full text-left group"
       >
         {isThinking ? (
           <>
-            <div className="flex gap-1">
-              <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
-              <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
-              <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
+            {/* Animated dots */}
+            <div className="flex gap-0.5">
+              <span className="w-1 h-1 bg-foreground/40 rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+              <span className="w-1 h-1 bg-foreground/40 rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
+              <span className="w-1 h-1 bg-foreground/40 rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
             </div>
-            <span className="text-xs">
-              {currentAction || 'Réflexion...'}
+            <span className="text-xs text-foreground/70">
+              {runningStep ? (
+                <>
+                  <span className="mr-1">{getSpecialistIcon(runningStep.specialist)}</span>
+                  {currentAction || runningStep.title}
+                </>
+              ) : (
+                currentAction || 'Réflexion en cours...'
+              )}
             </span>
+            {stepsInfo.total > 0 && (
+              <span className="text-[10px] text-muted-foreground ml-auto">
+                {stepsInfo.completed + 1}/{stepsInfo.total}
+              </span>
+            )}
           </>
         ) : (
           <>
-            {expanded ? (
-              <ChevronDown className="w-3 h-3" />
-            ) : (
-              <ChevronRight className="w-3 h-3" />
-            )}
+            <span className="w-3.5 h-3.5 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
+            </span>
             <span className="text-xs">
+              Plan exécuté
+            </span>
+            <span className="text-[10px] text-muted-foreground">
               {stepsInfo.completed}/{stepsInfo.total} étapes
             </span>
+            <ChevronDown className={cn(
+              "w-3 h-3 ml-auto transition-transform",
+              !expanded && "-rotate-90"
+            )} />
           </>
         )}
       </button>
       
-      {/* Expanded steps list */}
+      {/* Expanded steps list - Modern pipeline style */}
       {expanded && stepsInfo.steps.length > 0 && (
-        <div className="space-y-1 pl-1 border-l-2 border-muted ml-1">
-          {stepsInfo.steps.map((step) => (
-            <div key={step.id} className="flex items-center gap-2 pl-3 py-0.5">
-              {step.status === 'done' && (
-                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+        <div className="relative pl-4 space-y-1.5">
+          {/* Vertical line */}
+          <div className="absolute left-[7px] top-1 bottom-1 w-px bg-border" />
+          
+          {stepsInfo.steps.map((step, idx) => (
+            <div 
+              key={step.id} 
+              className={cn(
+                "relative flex items-start gap-2 py-1 pl-2",
+                step.status === 'running' && "bg-muted/30 rounded-md -ml-2 pl-4"
               )}
-              {step.status === 'running' && (
-                <Loader2 className="w-3 h-3 text-muted-foreground animate-spin" />
-              )}
-              {step.status === 'failed' && (
-                <AlertTriangle className="w-3 h-3 text-red-500" />
-              )}
-              {(step.status === 'pending' || step.status === 'skipped') && (
-                <div className="w-3 h-3 rounded-full border border-muted-foreground/30" />
-              )}
-              <span className={cn(
-                "text-xs",
-                step.status === 'done' && "text-muted-foreground",
-                step.status === 'running' && "text-foreground",
-                step.status === 'pending' && "text-muted-foreground/50"
+            >
+              {/* Status indicator */}
+              <div className={cn(
+                "absolute left-0 w-3.5 h-3.5 rounded-full flex items-center justify-center -translate-x-[7px] bg-background",
+                step.status === 'done' && "bg-emerald-500/10",
+                step.status === 'running' && "bg-primary/10",
+                step.status === 'failed' && "bg-red-500/10",
               )}>
-                {step.title}
-              </span>
+                {step.status === 'done' && (
+                  <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                )}
+                {step.status === 'running' && (
+                  <Loader2 className="w-3 h-3 text-primary animate-spin" />
+                )}
+                {step.status === 'failed' && (
+                  <AlertTriangle className="w-3 h-3 text-red-500" />
+                )}
+                {(step.status === 'pending' || step.status === 'skipped') && (
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground/20" />
+                )}
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  {step.specialist && (
+                    <span className="text-xs" title={getSpecialistLabel(step.specialist)}>
+                      {getSpecialistIcon(step.specialist)}
+                    </span>
+                  )}
+                  <span className={cn(
+                    "text-xs truncate",
+                    step.status === 'done' && "text-muted-foreground",
+                    step.status === 'running' && "text-foreground font-medium",
+                    step.status === 'pending' && "text-muted-foreground/50",
+                    step.status === 'failed' && "text-red-500"
+                  )}>
+                    {step.title}
+                  </span>
+                  {step.confidence && step.status === 'done' && (
+                    <span className="text-[10px] text-muted-foreground ml-auto">
+                      {step.confidence}%
+                    </span>
+                  )}
+                </div>
+                {/* Show description/insight for completed or running steps */}
+                {step.description && (step.status === 'done' || step.status === 'running') && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">
+                    {step.description}
+                  </p>
+                )}
+              </div>
             </div>
           ))}
         </div>

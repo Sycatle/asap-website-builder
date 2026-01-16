@@ -306,6 +306,10 @@ export interface ThinkingData {
   insight?: string;
   /** Confidence level 0-100 */
   confidence?: number;
+  /** Specialist/agent handling this task */
+  specialist?: string;
+  /** Total number of steps in the plan */
+  total_steps?: number;
 }
 
 export interface ToolCallData {
@@ -356,6 +360,10 @@ export interface PlanStepData {
   description?: string;
   status: 'pending' | 'running' | 'done' | 'failed' | 'skipped';
   confidence?: number;
+  /** Specialist/agent handling this task */
+  specialist?: string;
+  /** Whether this step produces visible output */
+  produces_output?: boolean;
   error?: {
     message: string;
     cause?: string;

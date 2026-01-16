@@ -1,10 +1,19 @@
 import type { AIAction } from "@/lib/api/ai";
 
 // ============================================================================
-// Execution Plan & Steps
+// Execution Plan & Steps - "Chef de Projet Digital" Architecture
 // ============================================================================
 
 export type StepStatus = 'pending' | 'running' | 'done' | 'failed' | 'skipped';
+
+/** Specialist types that handle tasks */
+export type SpecialistType = 
+  | 'data_analyst'    // Collects and analyzes data
+  | 'content_writer'  // Creates/modifies text
+  | 'designer'        // Handles styling and visuals
+  | 'strategist'      // Plans structure and flow
+  | 'validator'       // Checks quality and consistency
+  | 'researcher';     // Gathers external info
 
 export interface ExecutionStep {
   id: string;
@@ -13,6 +22,8 @@ export interface ExecutionStep {
   description?: string;
   status: StepStatus;
   confidence?: number; // 0-100
+  specialist?: SpecialistType; // Agent handling this task
+  producesOutput?: boolean;
   startedAt?: Date;
   completedAt?: Date;
   error?: {
@@ -28,6 +39,7 @@ export interface ExecutionPlan {
   currentStep: number;
   hypothesis?: string[];
   reasoning?: string;
+  complexity?: 'simple' | 'moderate' | 'complex';
 }
 
 // ============================================================================

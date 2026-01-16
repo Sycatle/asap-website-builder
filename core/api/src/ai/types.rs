@@ -210,7 +210,7 @@ pub struct UsageData {
     pub total_tokens: u32,
 }
 
-/// Thinking event data
+/// Thinking event data - represents a task being executed by a specialist
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct ThinkingData {
     pub thought: String,
@@ -225,6 +225,12 @@ pub struct ThinkingData {
     /// Confidence level 0-100 for this step
     #[serde(skip_serializing_if = "Option::is_none")]
     pub confidence: Option<u8>,
+    /// Specialist/agent handling this task (data_analyst, content_writer, designer, etc.)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub specialist: Option<String>,
+    /// Total number of steps in the plan
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_steps: Option<u32>,
 }
 
 /// Tool call event data
@@ -295,7 +301,7 @@ pub struct PhaseData {
     pub eta_seconds: Option<u32>,
 }
 
-/// Execution plan step event - for pipeline runner UI
+/// Execution plan step event - for pipeline runner UI (Chef de Projet style)
 #[derive(Debug, Clone, Serialize)]
 pub struct PlanStepData {
     pub id: String,
@@ -308,9 +314,15 @@ pub struct PlanStepData {
     /// Confidence level 0-100
     #[serde(skip_serializing_if = "Option::is_none")]
     pub confidence: Option<u8>,
+    /// Specialist/agent handling this task
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub specialist: Option<String>,
     /// Error info if failed
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<StepErrorData>,
+    /// Whether this step produces visible output
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub produces_output: Option<bool>,
 }
 
 /// Step error details

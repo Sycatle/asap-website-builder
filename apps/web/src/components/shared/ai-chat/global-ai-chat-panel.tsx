@@ -181,21 +181,37 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
       ));
     };
     
-    const updateOrAddPlanStep = (data: { id: string; index: number; title: string; description?: string; status: StepStatus; confidence?: number; error?: { message: string; cause?: string; recoverable: boolean } }) => {
+    const updateOrAddPlanStep = (data: { 
+      id: string; 
+      index: number; 
+      title: string; 
+      description?: string; 
+      status: StepStatus; 
+      confidence?: number; 
+      specialist?: string;
+      producesOutput?: boolean;
+      error?: { message: string; cause?: string; recoverable: boolean } 
+    }) => {
       const existingIdx = planSteps.findIndex(s => s.id === data.id);
+      const stepData: ExecutionStep = {
+        id: data.id,
+        index: data.index,
+        title: data.title,
+        description: data.description,
+        status: data.status,
+        confidence: data.confidence,
+        specialist: data.specialist as ExecutionStep['specialist'],
+        producesOutput: data.producesOutput,
+        error: data.error,
+      };
+      
       if (existingIdx >= 0) {
-        planSteps[existingIdx] = { ...planSteps[existingIdx], ...data };
+        planSteps[existingIdx] = { ...planSteps[existingIdx], ...stepData };
       } else {
-        planSteps.push({
-          id: data.id,
-          index: data.index,
-          title: data.title,
-          description: data.description,
-          status: data.status,
-          confidence: data.confidence,
-          error: data.error,
-        });
+        planSteps.push(stepData);
       }
+      // Sort by index to maintain order
+      planSteps.sort((a, b) => a.index - b.index);
       updateAssistantMessage({ 
         plan: { id: assistantMessage.plan!.id, steps: [...planSteps], currentStep: planSteps.findIndex(s => s.status === 'running') } 
       });
@@ -297,6 +313,8 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
             description: data.description,
             status: data.status,
             confidence: data.confidence,
+            specialist: data.specialist,
+            producesOutput: data.produces_output,
             error: data.error,
           });
         },

@@ -9,7 +9,7 @@ use crate::error::AIResult;
 use crate::router::ModelRouter;
 use crate::types::{Message, WebsiteContext};
 
-/// Result of intent analysis
+/// Result of intent analysis - "Chef de Projet Digital" architecture
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IntentAnalysis {
     /// User's detected intent category
@@ -18,7 +18,7 @@ pub struct IntentAnalysis {
     pub summary: String,
     /// Whether this request needs chain of thoughts (complex operation)
     pub needs_thinking: bool,
-    /// Dynamic thinking steps to show (in user's language)
+    /// Dynamic thinking steps to show (in user's language) - each step is a "task" delegated to a specialist
     #[serde(default)]
     pub thinking_steps: Vec<ThinkingStep>,
     /// Detected user language (for response consistency)
@@ -26,9 +26,23 @@ pub struct IntentAnalysis {
     /// Proactive hints for related improvements (expert suggestions)
     #[serde(default)]
     pub proactive_hints: Vec<String>,
+    /// Confidence level of the analysis (0-100)
+    #[serde(default = "default_confidence")]
+    pub confidence: u8,
+    /// Complexity level: simple, moderate, complex
+    #[serde(default = "default_complexity")]
+    pub complexity: String,
 }
 
-/// A thinking step to display and execute
+fn default_confidence() -> u8 {
+    80
+}
+
+fn default_complexity() -> String {
+    "moderate".to_string()
+}
+
+/// A thinking step to display and execute - represents a "task" delegated to a specialist
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThinkingStep {
     /// Step number
@@ -41,6 +55,16 @@ pub struct ThinkingStep {
     /// Duration hint in ms (for UI pacing)
     #[serde(default = "default_duration")]
     pub duration_hint: u32,
+    /// The specialist/agent type handling this task
+    #[serde(default = "default_specialist")]
+    pub specialist: String,
+    /// Whether this step produces visible output
+    #[serde(default)]
+    pub produces_output: bool,
+}
+
+fn default_specialist() -> String {
+    "analyst".to_string()
 }
 
 /// Result of executing a thinking step
@@ -61,36 +85,60 @@ fn default_duration() -> u32 {
     300
 }
 
-/// Compact system prompt for fast intent analysis
-const INTENT_ANALYSIS_PROMPT: &str = r##"Classify user intent for a website builder AI. Output JSON only.
+/// Compact system prompt for fast intent analysis - "Chef de Projet Digital" style
+const INTENT_ANALYSIS_PROMPT: &str = r##"You are a Digital Project Manager AI analyzing user requests. Create a structured execution plan. Output JSON only.
 
 {
   "intent": "<category>",
-  "summary": "<10 words max, user's language>",
-  "needs_thinking": <true if complex>,
-  "thinking_steps": [{"step": 1, "description": "<action>", "analysis_focus": "<focus>", "duration_hint": 300}],
+  "summary": "<concise action plan, max 15 words, user's language>",
+  "needs_thinking": <true if multi-step task>,
+  "thinking_steps": [
+    {"step": 1, "description": "<task description>", "analysis_focus": "<what to analyze>", "specialist": "<agent type>", "duration_hint": 400, "produces_output": <bool>}
+  ],
   "language": "<en|fr|es|de>",
-  "proactive_hints": []
+  "proactive_hints": ["<optional expert suggestion>"],
+  "confidence": <0-100>,
+  "complexity": "<simple|moderate|complex>"
 }
 
 Categories: modify_content, add_section, remove_section, change_style, reorganize, analyze, question, greeting, strategy, optimize, create_content, other
 
+Specialists (agents you can delegate to):
+- "data_analyst": Collects and analyzes website data, metrics, structure
+- "content_writer": Creates/modifies text, titles, descriptions
+- "designer": Handles styling, colors, layout, visual decisions
+- "strategist": Plans structure, user flow, conversion optimization
+- "validator": Checks quality, consistency, SEO, accessibility
+- "researcher": Gathers external info, benchmarks, best practices
+
 Rules:
-- needs_thinking=true: add/remove sections, style changes, analysis, strategy, optimization, content creation
-- needs_thinking=false: greetings, simple edits, basic questions
-- 2-4 thinking_steps max for complex tasks
-- Match user's language
+- Act as a project manager delegating tasks to specialists
+- Each step should have a clear responsible specialist
+- 2-5 thinking_steps for complex tasks (analyze, strategy, optimize, create_content)
+- 1-2 steps for moderate tasks (add/remove section, style changes)
+- No steps needed for greetings, simple edits, basic questions
+- Match user's language exactly
+- Be specific in descriptions: "Analyze hero section structure" not "Analyzing..."
+- confidence reflects how well you understood the request
+- complexity: simple (<3 steps), moderate (3-5 steps), complex (>5 steps)
 "##;
 
-/// Compact prompt for step execution - generates insight in one shot
-const STEP_EXECUTION_PROMPT: &str = r##"You are executing step {step_num}/{total_steps}: "{step_description}"
+/// Prompt for step execution - specialist agent executing their task
+const STEP_EXECUTION_PROMPT: &str = r##"You are a {specialist} specialist executing task {step_num}/{total_steps}: "{step_description}"
 
 User request: "{user_message}"
-Website: {website_context}
-Previous: {previous_results}
+Website context: {website_context}
+Previous findings: {previous_results}
 
-Output JSON only:
-{{"step": {step_num}, "insight": "<1 sentence expert insight in {language}>", "found_relevant": true, "data": {{}}}}
+Execute your task thoroughly and provide a professional insight. Output JSON only:
+{{
+  "step": {step_num}, 
+  "insight": "<2-3 sentence expert insight in {language}, be specific and actionable>", 
+  "found_relevant": <true if discovered useful information>,
+  "data": {{"key_findings": [], "recommendations": []}}
+}}
+
+Be specific and professional. Provide actionable insights, not generic statements.
 "##;
 
 /// Analyze user intent with a quick AI call
@@ -149,20 +197,20 @@ fn smart_fallback_intent(message: &str) -> IntentAnalysis {
     let lower = message.to_lowercase();
     let lang = detect_language_simple(message);
     
-    let (intent, needs_thinking) = if lower.contains("ajoute") || lower.contains("add") || lower.contains("créer") || lower.contains("create") {
-        ("add_section", true)
+    let (intent, needs_thinking, complexity) = if lower.contains("ajoute") || lower.contains("add") || lower.contains("créer") || lower.contains("create") {
+        ("add_section", true, "moderate")
     } else if lower.contains("supprime") || lower.contains("remove") || lower.contains("delete") {
-        ("remove_section", true)
+        ("remove_section", true, "moderate")
     } else if lower.contains("change") || lower.contains("modifie") || lower.contains("update") {
-        ("modify_content", false)
+        ("modify_content", false, "simple")
     } else if lower.contains("couleur") || lower.contains("color") || lower.contains("style") || lower.contains("design") {
-        ("change_style", true)
+        ("change_style", true, "moderate")
     } else if lower.contains("analyse") || lower.contains("analyze") || lower.contains("audit") {
-        ("analyze", true)
+        ("analyze", true, "complex")
     } else if lower.starts_with("salut") || lower.starts_with("bonjour") || lower.starts_with("hello") || lower.starts_with("hi") {
-        ("greeting", false)
+        ("greeting", false, "simple")
     } else {
-        ("other", false)
+        ("other", false, "simple")
     };
     
     IntentAnalysis {
@@ -172,11 +220,13 @@ fn smart_fallback_intent(message: &str) -> IntentAnalysis {
         thinking_steps: vec![],
         language: lang,
         proactive_hints: vec![],
+        confidence: 60,
+        complexity: complexity.to_string(),
     }
 }
 
 /// Execute a single thinking step with a fast AI call
-/// Uses gpt-4o-mini for speed
+/// Uses gpt-4o-mini for speed - specialist agent executes their task
 pub async fn execute_thinking_step(
     router: &ModelRouter,
     step: &ThinkingStep,
@@ -191,12 +241,19 @@ pub async fn execute_thinking_step(
     
     // Build previous results string (compact)
     let previous_str = if previous_results.is_empty() {
-        "None".to_string()
+        "None yet".to_string()
     } else {
         previous_results.iter()
-            .map(|r| r.insight.clone())
+            .map(|r| format!("Step {}: {}", r.step, r.insight))
             .collect::<Vec<_>>()
-            .join("; ")
+            .join(" | ")
+    };
+    
+    // Get specialist name
+    let specialist = if step.specialist.is_empty() {
+        "analyst"
+    } else {
+        &step.specialist
     };
     
     // Build the prompt
@@ -207,15 +264,16 @@ pub async fn execute_thinking_step(
         .replace("{user_message}", user_message)
         .replace("{website_context}", &website_context)
         .replace("{previous_results}", &previous_str)
-        .replace("{language}", language);
+        .replace("{language}", language)
+        .replace("{specialist}", specialist);
     
     let messages = vec![
         Message::system(&prompt),
-        Message::user("Go"),
+        Message::user("Execute your task now."),
     ];
     
-    // Use gpt-4o-mini with low max_tokens for speed
-    let completion = router.chat(messages, Some(80), Some("gpt-4o-mini")).await?;
+    // Use gpt-4o-mini with slightly higher max_tokens for better insights
+    let completion = router.chat(messages, Some(150), Some("gpt-4o-mini")).await?;
     
     // Parse result
     let content = completion.content.trim();
@@ -228,7 +286,7 @@ pub async fn execute_thinking_step(
             // Fallback with a generic insight
             Ok(StepResult {
                 step: step.step,
-                insight: step.description.clone(),
+                insight: format!("{} - Task completed by {} specialist", step.description, specialist),
                 found_relevant: true,
                 data: serde_json::json!({}),
             })
