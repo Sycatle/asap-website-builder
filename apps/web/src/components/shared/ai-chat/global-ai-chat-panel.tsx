@@ -187,7 +187,6 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
       title: string; 
       description?: string; 
       status: StepStatus; 
-      confidence?: number; 
       specialist?: string;
       producesOutput?: boolean;
       error?: { message: string; cause?: string; recoverable: boolean } 
@@ -199,7 +198,6 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
         title: data.title,
         description: data.description,
         status: data.status,
-        confidence: data.confidence,
         specialist: data.specialist as ExecutionStep['specialist'],
         producesOutput: data.producesOutput,
         error: data.error,
@@ -237,11 +235,13 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
         },
         
         onThinking: (data) => {
-          // Just update the streaming phase indicator, don't add to plan
-          // The plan steps come from onPlanStep events
+          // Update with rich thinking data including reasoning, observations, and recommendations
           updateAssistantMessage({ 
             streamingPhase: 'thinking',
             currentThought: data.thought,
+            currentReasoning: data.reasoning,
+            currentObservations: data.observations || [],
+            currentRecommendations: data.recommendations || [],
           });
         },
         
@@ -312,7 +312,6 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
             title: data.title,
             description: data.description,
             status: data.status,
-            confidence: data.confidence,
             specialist: data.specialist,
             producesOutput: data.produces_output,
             error: data.error,
@@ -367,17 +366,6 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
                 ...msg.content, 
                 sources: [...(msg.content.sources || []), data],
               },
-            };
-          }));
-        },
-        
-        onConfidence: (data) => {
-          setMessages(prev => prev.map(m => {
-            if (m.id !== assistantMessageId) return m;
-            const msg = m as AssistantMessage;
-            return {
-              ...msg,
-              content: { ...msg.content, confidence: data.level },
             };
           }));
         },

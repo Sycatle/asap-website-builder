@@ -21,7 +21,6 @@ export interface ExecutionStep {
   title: string;
   description?: string;
   status: StepStatus;
-  confidence?: number; // 0-100
   specialist?: SpecialistType; // Agent handling this task
   producesOutput?: boolean;
   startedAt?: Date;
@@ -39,7 +38,6 @@ export interface ExecutionPlan {
   currentStep: number;
   hypothesis?: string[];
   reasoning?: string;
-  complexity?: 'simple' | 'moderate' | 'complex';
 }
 
 // ============================================================================
@@ -107,7 +105,6 @@ export interface MessageContent {
   artifacts?: Artifact[];
   sources?: MessageSource[];
   warnings?: string[];
-  confidence?: number;
 }
 
 export interface AssistantMessage {
@@ -123,6 +120,9 @@ export interface AssistantMessage {
   isStreaming?: boolean;
   streamingPhase?: 'thinking' | 'searching' | 'executing' | 'writing';
   currentThought?: string;
+  currentReasoning?: string;
+  currentObservations?: string[];
+  currentRecommendations?: string[];
   currentIteration?: { current: number; max: number; description?: string };
 }
 

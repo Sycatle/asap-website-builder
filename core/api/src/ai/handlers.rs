@@ -296,12 +296,12 @@ pub async fn chat_stream(
             IntentAnalysis {
                 intent: if is_short_message && !is_simple_message { "simple".to_string() } else { "greeting".to_string() },
                 summary: user_message_for_stream.chars().take(50).collect(),
+                reasoning: String::new(),
                 needs_thinking: false,
                 thinking_steps: vec![],
                 language: detect_language_simple(&user_message_for_stream),
                 proactive_hints: vec![],
-                confidence: 90,
-                complexity: "simple".to_string(),
+                hypotheses: vec![],
             }
         } else {
             // OPTIMIZATION #5: Retry with exponential backoff on rate limit
@@ -336,12 +336,12 @@ pub async fn chat_stream(
                         break IntentAnalysis {
                             intent: "other".to_string(),
                             summary: user_message_for_stream.chars().take(50).collect(),
+                            reasoning: String::new(),
                             needs_thinking: false,
                             thinking_steps: vec![],
                             language: "en".to_string(),
                             proactive_hints: vec![],
-                            confidence: 50,
-                            complexity: "simple".to_string(),
+                            hypotheses: vec![],
                         };
                     }
                 }
@@ -534,7 +534,6 @@ pub async fn chat_stream(
                             title: thinking_step.description.clone(),
                             description: Some(thinking_step.analysis_focus.clone()),
                             status: "pending".to_string(),
-                            confidence: None,
                             specialist: Some(thinking_step.specialist.clone()),
                             error: None,
                             produces_output: Some(thinking_step.produces_output),
@@ -552,7 +551,6 @@ pub async fn chat_stream(
                             title: thinking_step.description.clone(),
                             description: Some(thinking_step.analysis_focus.clone()),
                             status: "running".to_string(),
-                            confidence: None,
                             specialist: Some(thinking_step.specialist.clone()),
                             error: None,
                             produces_output: Some(thinking_step.produces_output),
@@ -564,11 +562,13 @@ pub async fn chat_stream(
                         let thinking_start = SseEventData::Thinking(ThinkingData {
                             thought: thinking_step.description.clone(),
                             step: Some(thinking_step.step),
-                            status: Some("starting".to_string()),
+                            status: Some("analyzing".to_string()),
+                            reasoning: Some(thinking_step.analysis_focus.clone()),
                             insight: None,
+                            observations: vec![],
+                            recommendations: vec![],
                             specialist: Some(thinking_step.specialist.clone()),
                             total_steps: Some(total_steps),
-                            ..Default::default()
                         });
                         if let Ok(json) = serde_json::to_string(&thinking_start) {
                             yield Ok(Event::default().data(json));
@@ -586,14 +586,13 @@ pub async fn chat_stream(
 
                         match step_result {
                             Ok(result) => {
-                                // Update step status to done
+                                // Update step status to done with rich data
                                 let plan_step_done = SseEventData::PlanStep(PlanStepData {
                                     id: format!("step_{}", thinking_step.step),
                                     index: (thinking_step.step - 1) as u32,
                                     title: thinking_step.description.clone(),
                                     description: Some(result.insight.clone()),
                                     status: "done".to_string(),
-                                    confidence: Some(if result.found_relevant { 85 } else { 60 }),
                                     specialist: Some(thinking_step.specialist.clone()),
                                     error: None,
                                     produces_output: Some(thinking_step.produces_output),
@@ -606,10 +605,12 @@ pub async fn chat_stream(
                                     thought: thinking_step.description.clone(),
                                     step: Some(thinking_step.step),
                                     status: Some("completed".to_string()),
+                                    reasoning: if result.thinking.is_empty() { None } else { Some(result.thinking.clone()) },
                                     insight: Some(result.insight.clone()),
+                                    observations: result.key_observations.clone(),
+                                    recommendations: result.recommendations.clone(),
                                     specialist: Some(thinking_step.specialist.clone()),
                                     total_steps: Some(total_steps),
-                                    ..Default::default()
                                 });
                                 if let Ok(json) = serde_json::to_string(&thinking_done) {
                                     yield Ok(Event::default().data(json));
@@ -625,7 +626,6 @@ pub async fn chat_stream(
                                     title: thinking_step.description.clone(),
                                     description: Some(format!("Error: {}", e)),
                                     status: "failed".to_string(),
-                                    confidence: None,
                                     specialist: Some(thinking_step.specialist.clone()),
                                     error: Some(StepErrorData {
                                         message: e.to_string(),
@@ -642,10 +642,12 @@ pub async fn chat_stream(
                                     thought: thinking_step.description.clone(),
                                     step: Some(thinking_step.step),
                                     status: Some("completed".to_string()),
+                                    reasoning: None,
                                     insight: Some(thinking_step.description.clone()),
+                                    observations: vec![],
+                                    recommendations: vec![],
                                     specialist: Some(thinking_step.specialist.clone()),
                                     total_steps: Some(total_steps),
-                                    ..Default::default()
                                 });
                                 if let Ok(json) = serde_json::to_string(&thinking_done) {
                                     yield Ok(Event::default().data(json));
@@ -654,14 +656,17 @@ pub async fn chat_stream(
                         }
                     }
                 } else if !intent_analysis.summary.is_empty() {
+                    // For simple requests, still show the reasoning if available
                     let thinking = SseEventData::Thinking(ThinkingData {
                         thought: intent_analysis.summary.clone(),
                         step: None,
-                        status: None,
+                        status: Some("completed".to_string()),
+                        reasoning: if intent_analysis.reasoning.is_empty() { None } else { Some(intent_analysis.reasoning.clone()) },
                         insight: None,
+                        observations: vec![],
+                        recommendations: vec![],
                         specialist: None,
                         total_steps: None,
-                        ..Default::default()
                     });
                     if let Ok(json) = serde_json::to_string(&thinking) {
                         yield Ok(Event::default().data(json));

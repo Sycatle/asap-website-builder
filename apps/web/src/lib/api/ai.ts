@@ -67,11 +67,19 @@ export interface SseThinkingEvent {
     thought: string;
     step?: number;
     /** Status: "starting" (AI call in progress), "completed" (AI call done), or absent (legacy/simple) */
-    status?: 'starting' | 'completed';
+    status?: 'starting' | 'analyzing' | 'completed';
+    /** Internal reasoning process */
+    reasoning?: string;
     /** Insight from AI execution (only when status is "completed") */
     insight?: string;
-    /** Confidence level 0-100 */
-    confidence?: number;
+    /** Key observations made during this step */
+    observations?: string[];
+    /** Recommendations from this step */
+    recommendations?: string[];
+    /** Specialist/agent handling this task */
+    specialist?: string;
+    /** Total number of steps in the plan */
+    total_steps?: number;
   };
 }
 
@@ -139,7 +147,8 @@ export interface SsePlanStepEvent {
     title: string;
     description?: string;
     status: 'pending' | 'running' | 'done' | 'failed' | 'skipped';
-    confidence?: number;
+    specialist?: string;
+    produces_output?: boolean;
     error?: {
       message: string;
       cause?: string;
@@ -300,10 +309,16 @@ export async function executeAIAction(request: ExecuteActionRequest): Promise<Ex
 export interface ThinkingData {
   thought: string;
   step?: number;
-  /** Status: "starting" (AI call in progress), "completed" (AI call done), or absent (legacy/simple) */
-  status?: 'starting' | 'completed';
+  /** Status: "starting", "analyzing" (AI call in progress), "completed" (AI call done), or absent (legacy/simple) */
+  status?: 'starting' | 'analyzing' | 'completed';
+  /** Internal reasoning process */
+  reasoning?: string;
   /** Insight from AI execution (only when status is "completed") */
   insight?: string;
+  /** Key observations made during this step */
+  observations?: string[];
+  /** Actionable recommendations from this step */
+  recommendations?: string[];
   /** Confidence level 0-100 */
   confidence?: number;
   /** Specialist/agent handling this task */

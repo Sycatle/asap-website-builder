@@ -210,21 +210,29 @@ pub struct UsageData {
     pub total_tokens: u32,
 }
 
-/// Thinking event data - represents a task being executed by a specialist
+/// Thinking event data - represents detailed reasoning process (ChatGPT style)
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct ThinkingData {
+    /// The main thought or task being processed
     pub thought: String,
+    /// Step number in the execution plan
     #[serde(skip_serializing_if = "Option::is_none")]
     pub step: Option<u32>,
-    /// Status: "starting", "completed", or absent
+    /// Status: "starting", "analyzing", "completed", or absent
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
+    /// Internal reasoning process (shown in collapsible)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reasoning: Option<String>,
     /// Insight from step execution (only when status is "completed")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub insight: Option<String>,
-    /// Confidence level 0-100 for this step
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub confidence: Option<u8>,
+    /// Key observations made during this step
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub observations: Vec<String>,
+    /// Recommendations from this step
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub recommendations: Vec<String>,
     /// Specialist/agent handling this task (data_analyst, content_writer, designer, etc.)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub specialist: Option<String>,
@@ -311,9 +319,6 @@ pub struct PlanStepData {
     pub description: Option<String>,
     /// pending, running, done, failed, skipped
     pub status: String,
-    /// Confidence level 0-100
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub confidence: Option<u8>,
     /// Specialist/agent handling this task
     #[serde(skip_serializing_if = "Option::is_none")]
     pub specialist: Option<String>,

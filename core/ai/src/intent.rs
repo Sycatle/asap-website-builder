@@ -16,6 +16,9 @@ pub struct IntentAnalysis {
     pub intent: String,
     /// Brief summary of what the user wants (in user's language)
     pub summary: String,
+    /// Explanation of the reasoning behind the approach
+    #[serde(default)]
+    pub reasoning: String,
     /// Whether this request needs chain of thoughts (complex operation)
     pub needs_thinking: bool,
     /// Dynamic thinking steps to show (in user's language) - each step is a "task" delegated to a specialist
@@ -26,20 +29,9 @@ pub struct IntentAnalysis {
     /// Proactive hints for related improvements (expert suggestions)
     #[serde(default)]
     pub proactive_hints: Vec<String>,
-    /// Confidence level of the analysis (0-100)
-    #[serde(default = "default_confidence")]
-    pub confidence: u8,
-    /// Complexity level: simple, moderate, complex
-    #[serde(default = "default_complexity")]
-    pub complexity: String,
-}
-
-fn default_confidence() -> u8 {
-    80
-}
-
-fn default_complexity() -> String {
-    "moderate".to_string()
+    /// Hypotheses/assumptions being made
+    #[serde(default)]
+    pub hypotheses: Vec<String>,
 }
 
 /// A thinking step to display and execute - represents a "task" delegated to a specialist
@@ -61,6 +53,15 @@ pub struct ThinkingStep {
     /// Whether this step produces visible output
     #[serde(default)]
     pub produces_output: bool,
+    /// Internal questions this step will answer
+    #[serde(default)]
+    pub questions: Vec<String>,
+    /// Requires website data (triggers tool call)
+    #[serde(default)]
+    pub requires_data: bool,
+    /// Which tools to use if data is needed
+    #[serde(default)]
+    pub tools_needed: Vec<String>,
 }
 
 fn default_specialist() -> String {
@@ -72,10 +73,19 @@ fn default_specialist() -> String {
 pub struct StepResult {
     /// Step number that was executed
     pub step: u32,
+    /// Internal reasoning process
+    #[serde(default)]
+    pub thinking: String,
     /// Brief insight from this step (in user's language)
     pub insight: String,
     /// Whether this step found something relevant
     pub found_relevant: bool,
+    /// Key specific observations
+    #[serde(default)]
+    pub key_observations: Vec<String>,
+    /// Actionable recommendations
+    #[serde(default)]
+    pub recommendations: Vec<String>,
     /// Optional data gathered (for next steps)
     #[serde(default)]
     pub data: serde_json::Value,
@@ -86,63 +96,84 @@ fn default_duration() -> u32 {
 }
 
 /// Compact system prompt for fast intent analysis - "Chef de Projet Digital" style
-const INTENT_ANALYSIS_PROMPT: &str = r##"You are a Digital Project Manager AI analyzing user requests. Create a structured execution plan. Output JSON only.
+const INTENT_ANALYSIS_PROMPT: &str = r##"You are a Senior Digital Project Manager AI thinking through a user's request in real-time. Your thoughts will be streamed to the user as you reason.
 
+CRITICAL: Think step-by-step like ChatGPT's extended thinking. Show your reasoning process naturally.
+
+Output JSON only:
 {
   "intent": "<category>",
-  "summary": "<concise action plan, max 15 words, user's language>",
-  "needs_thinking": <true if multi-step task>,
+  "summary": "<your understanding in 1-2 sentences, in user's language>",
+  "reasoning": "<your thought process: 'I'm looking at this request and I notice... This tells me the user wants... My approach will be...'>",
+  "needs_thinking": <true for any request that needs analysis>,
   "thinking_steps": [
-    {"step": 1, "description": "<task description>", "analysis_focus": "<what to analyze>", "specialist": "<agent type>", "duration_hint": 400, "produces_output": <bool>}
+    {
+      "step": 1, 
+      "description": "<VERY detailed task: 'Examinons d'abord la structure de votre page d'accueil pour comprendre comment vos services sont présentés aux visiteurs'>",
+      "analysis_focus": "<what to look for>",
+      "specialist": "<agent type>",
+      "duration_hint": 500,
+      "produces_output": true,
+      "questions": ["<internal question to answer>"],
+      "requires_data": <true if needs to fetch website info>,
+      "tools_needed": ["get_website_sections", "get_website_theme"]
+    }
   ],
   "language": "<en|fr|es|de>",
-  "proactive_hints": ["<optional expert suggestion>"],
-  "confidence": <0-100>,
-  "complexity": "<simple|moderate|complex>"
+  "proactive_hints": ["<things the user might not have asked but should know>"],
+  "hypotheses": ["<assumptions: 'Je suppose que vous voulez améliorer les conversions' - verification needed>"]
 }
 
-Categories: modify_content, add_section, remove_section, change_style, reorganize, analyze, question, greeting, strategy, optimize, create_content, other
+Categories: modify_content, add_section, remove_section, change_style, reorganize, analyze, question, greeting, strategy, optimize, create_content, audit, troubleshoot, other
 
-Specialists (agents you can delegate to):
-- "data_analyst": Collects and analyzes website data, metrics, structure
-- "content_writer": Creates/modifies text, titles, descriptions
-- "designer": Handles styling, colors, layout, visual decisions
-- "strategist": Plans structure, user flow, conversion optimization
-- "validator": Checks quality, consistency, SEO, accessibility
-- "researcher": Gathers external info, benchmarks, best practices
+Specialists:
+- "data_analyst" 📊: Collects metrics, analyzes structure
+- "content_writer" ✍️: Evaluates copy, creates text
+- "designer" 🎨: Reviews visual hierarchy, UX
+- "strategist" 🧭: Plans user flow, conversion paths
+- "validator" ✅: Checks SEO, accessibility
+- "researcher" 🔍: Gathers benchmarks, insights
 
-Rules:
-- Act as a project manager delegating tasks to specialists
-- Each step should have a clear responsible specialist
-- 2-5 thinking_steps for complex tasks (analyze, strategy, optimize, create_content)
-- 1-2 steps for moderate tasks (add/remove section, style changes)
-- No steps needed for greetings, simple edits, basic questions
-- Match user's language exactly
-- Be specific in descriptions: "Analyze hero section structure" not "Analyzing..."
-- confidence reflects how well you understood the request
-- complexity: simple (<3 steps), moderate (3-5 steps), complex (>5 steps)
+IMPORTANT RULES:
+1. reasoning MUST sound natural like inner thoughts: "Je vois que l'utilisateur veut... Cela me fait penser que... Je vais donc..."
+2. Each thinking_step description must be 15-30 words, specific and actionable
+3. If the request involves analyzing the site, set requires_data=true and list tools_needed
+4. Always needs_thinking=true except for pure greetings
+5. Match user's language exactly in summary, reasoning, and descriptions
 "##;
 
-/// Prompt for step execution - specialist agent executing their task
-const STEP_EXECUTION_PROMPT: &str = r##"You are a {specialist} specialist executing task {step_num}/{total_steps}: "{step_description}"
+/// Prompt for step execution - specialist agent executing their task with detailed reasoning
+const STEP_EXECUTION_PROMPT: &str = r##"You are a senior {specialist} specialist executing task {step_num}/{total_steps}.
 
-User request: "{user_message}"
+YOUR TASK: "{step_description}"
+
+User's original request: "{user_message}"
 Website context: {website_context}
-Previous findings: {previous_results}
+Previous team findings: {previous_results}
 
-Execute your task thoroughly and provide a professional insight. Output JSON only:
+Think through this step naturally, as if explaining to a colleague. Stream your thoughts.
+
+Output JSON only:
 {{
   "step": {step_num}, 
-  "insight": "<2-3 sentence expert insight in {language}, be specific and actionable>", 
+  "thinking": "<1-2 sentences of what you're looking at and why - natural inner voice>",
+  "insight": "<3-4 sentence detailed finding in {language}. Be SPECIFIC: mention actual elements, give concrete observations, actionable recommendations. Never vague.>", 
   "found_relevant": <true if discovered useful information>,
-  "data": {{"key_findings": [], "recommendations": []}}
+  "key_observations": ["<specific finding 1>", "<specific finding 2>"],
+  "recommendations": ["<actionable recommendation if any>"],
+  "data": {{"elements_analyzed": [], "issues_found": [], "opportunities": []}}
 }}
 
-Be specific and professional. Provide actionable insights, not generic statements.
+Guidelines:
+- Be SPECIFIC: "The headline 'Welcome' lacks a clear value proposition" NOT "The headline could be improved"
+- Show expertise: reference UX principles, conversion best practices
+- Quantify when possible: "3 CTAs compete for attention" NOT "Too many CTAs"
+- Connect findings to user goals: "This impacts conversion because..."
+- Language must be {language}
 "##;
 
 /// Analyze user intent with a quick AI call
-/// Uses GPT-4o-mini for faster/cheaper intent analysis
+/// Uses GPT-4o-mini for simple requests, GPT-4o for complex analysis requests
 pub async fn analyze_intent(
     router: &ModelRouter,
     user_message: &str,
@@ -152,8 +183,19 @@ pub async fn analyze_intent(
         Message::user(user_message),
     ];
 
-    // Use GPT-4o-mini for fast classification
-    let completion = router.chat(messages, Some(150), Some("gpt-4o-mini")).await?;
+    // Use GPT-4o for complex-looking requests (analyze, audit, optimize keywords)
+    let lower = user_message.to_lowercase();
+    let is_complex = lower.contains("analyse") || lower.contains("analyze") 
+        || lower.contains("audit") || lower.contains("optimise") || lower.contains("optimize")
+        || lower.contains("stratégie") || lower.contains("strategy")
+        || lower.contains("améliore") || lower.contains("improve")
+        || lower.contains("review") || lower.contains("évalue") || lower.contains("evaluate")
+        || user_message.len() > 100;
+    
+    let model = if is_complex { Some("gpt-4o") } else { Some("gpt-4o-mini") };
+    let max_tokens = if is_complex { Some(400) } else { Some(200) };
+
+    let completion = router.chat(messages, max_tokens, model).await?;
 
     // Parse JSON response
     let content = completion.content.trim();
@@ -197,36 +239,36 @@ fn smart_fallback_intent(message: &str) -> IntentAnalysis {
     let lower = message.to_lowercase();
     let lang = detect_language_simple(message);
     
-    let (intent, needs_thinking, complexity) = if lower.contains("ajoute") || lower.contains("add") || lower.contains("créer") || lower.contains("create") {
-        ("add_section", true, "moderate")
+    let (intent, needs_thinking) = if lower.contains("ajoute") || lower.contains("add") || lower.contains("créer") || lower.contains("create") {
+        ("add_section", true)
     } else if lower.contains("supprime") || lower.contains("remove") || lower.contains("delete") {
-        ("remove_section", true, "moderate")
+        ("remove_section", true)
     } else if lower.contains("change") || lower.contains("modifie") || lower.contains("update") {
-        ("modify_content", false, "simple")
+        ("modify_content", false)
     } else if lower.contains("couleur") || lower.contains("color") || lower.contains("style") || lower.contains("design") {
-        ("change_style", true, "moderate")
+        ("change_style", true)
     } else if lower.contains("analyse") || lower.contains("analyze") || lower.contains("audit") {
-        ("analyze", true, "complex")
+        ("analyze", true)
     } else if lower.starts_with("salut") || lower.starts_with("bonjour") || lower.starts_with("hello") || lower.starts_with("hi") {
-        ("greeting", false, "simple")
+        ("greeting", false)
     } else {
-        ("other", false, "simple")
+        ("other", false)
     };
     
     IntentAnalysis {
         intent: intent.to_string(),
         summary: message.chars().take(40).collect(),
+        reasoning: String::new(),
         needs_thinking,
         thinking_steps: vec![],
         language: lang,
         proactive_hints: vec![],
-        confidence: 60,
-        complexity: complexity.to_string(),
+        hypotheses: vec![],
     }
 }
 
-/// Execute a single thinking step with a fast AI call
-/// Uses gpt-4o-mini for speed - specialist agent executes their task
+/// Execute a single thinking step with a detailed AI call
+/// Uses gpt-4o for complex analysis - specialist agent executes their task with detailed reasoning
 pub async fn execute_thinking_step(
     router: &ModelRouter,
     step: &ThinkingStep,
@@ -236,17 +278,24 @@ pub async fn execute_thinking_step(
     language: &str,
     previous_results: &[StepResult],
 ) -> AIResult<StepResult> {
-    // Build compact context
-    let website_context = build_compact_context(context);
+    // Build richer context
+    let website_context = build_rich_context(context);
     
-    // Build previous results string (compact)
+    // Build previous results string with key findings
     let previous_str = if previous_results.is_empty() {
-        "None yet".to_string()
+        "No previous findings yet - you're the first to analyze.".to_string()
     } else {
         previous_results.iter()
-            .map(|r| format!("Step {}: {}", r.step, r.insight))
+            .map(|r| {
+                let observations = if r.key_observations.is_empty() {
+                    String::new()
+                } else {
+                    format!(" Key findings: {}", r.key_observations.join(", "))
+                };
+                format!("Step {}: {}{}", r.step, r.insight, observations)
+            })
             .collect::<Vec<_>>()
-            .join(" | ")
+            .join("\n")
     };
     
     // Get specialist name
@@ -269,11 +318,11 @@ pub async fn execute_thinking_step(
     
     let messages = vec![
         Message::system(&prompt),
-        Message::user("Execute your task now."),
+        Message::user("Execute your analysis task now. Be thorough and specific."),
     ];
     
-    // Use gpt-4o-mini with slightly higher max_tokens for better insights
-    let completion = router.chat(messages, Some(150), Some("gpt-4o-mini")).await?;
+    // Use gpt-4o for better quality insights
+    let completion = router.chat(messages, Some(300), Some("gpt-4o")).await?;
     
     // Parse result
     let content = completion.content.trim();
@@ -286,22 +335,60 @@ pub async fn execute_thinking_step(
             // Fallback with a generic insight
             Ok(StepResult {
                 step: step.step,
-                insight: format!("{} - Task completed by {} specialist", step.description, specialist),
+                thinking: format!("Analyzing based on {} expertise", specialist),
+                insight: format!("{} - Analysis completed by {} specialist", step.description, specialist),
                 found_relevant: true,
+                key_observations: vec![],
+                recommendations: vec![],
                 data: serde_json::json!({}),
             })
         }
     }
 }
 
-/// Build ultra-compact context for fast step execution
-fn build_compact_context(context: &WebsiteContext) -> String {
-    let title = context.website.title.as_deref().unwrap_or("Site");
-    let section_types: Vec<&str> = context.sections.iter()
-        .take(5)
-        .map(|s| s.section_type.as_str())
+/// Build rich context for detailed step execution
+fn build_rich_context(context: &WebsiteContext) -> String {
+    let title = context.website.title.as_deref().unwrap_or("Untitled Site");
+    
+    // Build sections info with more detail from properties
+    let sections_info: Vec<String> = context.sections.iter()
+        .take(10)
+        .map(|s| {
+            let content_preview = s.properties
+                .as_object()
+                .and_then(|obj| {
+                    obj.get("headline")
+                        .or(obj.get("title"))
+                        .or(obj.get("heading"))
+                        .and_then(|v| v.as_str())
+                })
+                .unwrap_or("");
+            if content_preview.is_empty() {
+                s.section_type.clone()
+            } else {
+                format!("{}(\"{}\")", s.section_type, content_preview.chars().take(30).collect::<String>())
+            }
+        })
         .collect();
-    format!("{}: [{}]", title, section_types.join(", "))
+    
+    // Get theme info from the theme JSON value
+    let theme_info = if context.theme.is_object() {
+        let colors = context.theme.get("colors").and_then(|c| c.as_object());
+        let fonts = context.theme.get("fonts").and_then(|f| f.as_object());
+        let primary = colors.and_then(|c| c.get("primary")).and_then(|v| v.as_str()).unwrap_or("#000");
+        let font = fonts.and_then(|f| f.get("heading")).and_then(|v| v.as_str()).unwrap_or("default");
+        format!(" Theme: primary={}, font={}", primary, font)
+    } else {
+        String::new()
+    };
+    
+    format!(
+        "Website: {}\nSections: [{}]{}\nTotal sections: {}",
+        title,
+        sections_info.join(", "),
+        theme_info,
+        context.sections.len()
+    )
 }
 
 /// Simple language detection fallback
