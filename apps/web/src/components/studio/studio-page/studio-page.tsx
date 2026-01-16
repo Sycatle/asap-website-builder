@@ -21,6 +21,7 @@ import { StudioLayout } from "./studio-layout"
 import { ElementsSidebar } from "../elements-sidebar/elements-sidebar"
 import { PropertiesPanel } from "../properties-panel/properties-panel"
 import { StudioToolbar } from "../studio-toolbar"
+import { CommandPalette } from "../command-palette"
 
 /**
  * StudioPage - Website visual editor with 3-column layout
@@ -66,6 +67,7 @@ export function StudioPage({ onBack }: StudioPageProps) {
   const [previewTheme, setPreviewTheme] = useState<PreviewTheme>('light')
   const [isSaving, setIsSaving] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
 
   // Auto-select homepage on first load
   useEffect(() => {
@@ -231,6 +233,52 @@ export function StudioPage({ onBack }: StudioPageProps) {
     toast.success(t("Moved down"))
   }, [selectedElementIndex, elements, handleReorderElements, t])
 
+  // Actions by ID (for preview quick actions)
+  const handleDuplicateById = useCallback(async (elementId: string) => {
+    if (!website?.id) return
+    const element = elements.find(e => e.id === elementId)
+    if (!element) return
+
+    const duplicateData: CreateElementRequest = {
+      element_type: element.element_type,
+      slug: `${element.slug}-copy-${Date.now()}`,
+      title: `${element.title} (Copy)`,
+      order: elements.length,
+      layout: element.layout,
+      settings: element.settings,
+      visible: element.visible,
+    }
+
+    await elementsAPI.create(website.id, duplicateData)
+    await refetch()
+    toast.success(t("Element duplicated"))
+  }, [website?.id, elements, refetch, t])
+
+  const handleDeleteById = useCallback(async (elementId: string) => {
+    if (!website?.id) return
+    await handleDeleteElement(elementId)
+  }, [website?.id, handleDeleteElement])
+
+  const handleMoveUpById = useCallback(async (elementId: string) => {
+    const index = elements.findIndex(e => e.id === elementId)
+    if (index <= 0) return
+    const newOrder = [...elements]
+    const [moved] = newOrder.splice(index, 1)
+    newOrder.splice(index - 1, 0, moved)
+    await handleReorderElements(newOrder.map(e => e.id))
+    toast.success(t("Moved up"))
+  }, [elements, handleReorderElements, t])
+
+  const handleMoveDownById = useCallback(async (elementId: string) => {
+    const index = elements.findIndex(e => e.id === elementId)
+    if (index < 0 || index >= elements.length - 1) return
+    const newOrder = [...elements]
+    const [moved] = newOrder.splice(index, 1)
+    newOrder.splice(index + 1, 0, moved)
+    await handleReorderElements(newOrder.map(e => e.id))
+    toast.success(t("Moved down"))
+  }, [elements, handleReorderElements, t])
+
   // Keyboard Shortcuts (Task 1.3.3)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -290,6 +338,11 @@ export function StudioPage({ onBack }: StudioPageProps) {
           handleToggleVisibility(selectedElementId, !element.visible)
         }
       }
+      // Ctrl+K or Cmd+K: Open command palette
+      else if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        setCommandPaletteOpen(true)
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -347,6 +400,10 @@ export function StudioPage({ onBack }: StudioPageProps) {
               setPreviewTheme={setPreviewTheme}
               selectedElementId={selectedElementId}
               onElementClick={handleElementClick}
+              onElementDuplicate={handleDuplicateById}
+              onElementDelete={handleDeleteById}
+              onElementMoveUp={handleMoveUpById}
+              onElementMoveDown={handleMoveDownById}
               websiteSlug={website.slug}
               currentPageSlug={currentPage?.slug ?? null}
               isHomepage={currentPage?.is_homepage ?? false}
@@ -361,6 +418,40 @@ export function StudioPage({ onBack }: StudioPageProps) {
           }
         />
       </div>
+
+      {/* Command Palette (Ctrl+K / Cmd+K) */}
+      <CommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        selectedElement={selectedElement}
+        onAddElement={(type) => handleAddElement({
+          element_type: type,
+          slug: `${type}-${Date.now()}`,
+          title: type.charAt(0).toUpperCase() + type.slice(1),
+          order: elements.length,
+          layout: 'default',
+        })}
+        onDeleteElement={handleDeleteSelected}
+        onDuplicateElement={handleDuplicate}
+        onToggleVisibility={() => {
+          if (selectedElement) {
+            handleToggleVisibility(selectedElement.id, !selectedElement.visible)
+          }
+        }}
+        onMoveUp={handleMoveUp}
+        onMoveDown={handleMoveDown}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onSave={handleSave}
+        onPublish={handlePublish}
+        onDeviceChange={setDevicePreview}
+        onThemeChange={setPreviewTheme}
+        pages={pages}
+        onPageSelect={setSelectedPageId}
+        websiteSlug={website.slug}
+      />
     </StudioDataProvider>
   )
 }
