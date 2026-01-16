@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels"
+import React, { useEffect, useState, useRef } from "react"
+import { Panel, PanelGroup, PanelResizeHandle, type ImperativePanelHandle } from "react-resizable-panels"
 import { cn } from "@/lib/utils"
 
 /**
@@ -48,6 +48,8 @@ export function StudioLayout({
     DEFAULT_SIZES.preview,
     DEFAULT_SIZES.properties,
   ])
+  const propertiesPanelRef = useRef<ImperativePanelHandle>(null)
+  const prevShowProperties = useRef(showProperties)
 
   // Load saved sizes from localStorage on mount
   useEffect(() => {
@@ -63,6 +65,23 @@ export function StudioLayout({
       }
     }
   }, [])
+
+  // Animate panel expand/collapse
+  useEffect(() => {
+    if (prevShowProperties.current !== showProperties) {
+      const panel = propertiesPanelRef.current
+      if (panel) {
+        if (showProperties) {
+          // Expand panel
+          panel.expand()
+        } else {
+          // Collapse panel
+          panel.collapse()
+        }
+      }
+      prevShowProperties.current = showProperties
+    }
+  }, [showProperties])
 
   // Handle responsive breakpoint
   useEffect(() => {
@@ -123,33 +142,42 @@ export function StudioLayout({
 
         {/* Center - Preview Canvas */}
         <Panel
-          defaultSize={showProperties ? sizes[1] : sizes[1] + sizes[2]}
+          defaultSize={sizes[1]}
           minSize={40}
-          className="relative"
+          className="relative transition-all duration-300 ease-out"
         >
           <div className="h-full overflow-hidden bg-muted/30">
             {preview}
           </div>
         </Panel>
 
-        {/* Resize Handle - Only show when properties panel is visible */}
-        {showProperties && (
-          <PanelResizeHandle className="w-1 bg-border hover:bg-primary/20 transition-colors" />
-        )}
+        {/* Resize Handle */}
+        <PanelResizeHandle 
+          className={cn(
+            "w-1 bg-border hover:bg-primary/20 transition-all duration-300",
+            !showProperties && "opacity-0"
+          )} 
+        />
 
-        {/* Right Sidebar - Properties Panel - Only show when element selected */}
-        {showProperties && (
-          <Panel
-            defaultSize={sizes[2]}
-            minSize={20}
-            maxSize={35}
-            className="relative"
+        {/* Right Sidebar - Properties Panel */}
+        <Panel
+          ref={propertiesPanelRef}
+          defaultSize={showProperties ? sizes[2] : 0}
+          minSize={0}
+          maxSize={35}
+          collapsible
+          collapsedSize={0}
+          className="relative transition-all duration-300 ease-out"
+        >
+          <div 
+            className={cn(
+              "h-full overflow-hidden border-l bg-background transition-opacity duration-200",
+              !showProperties && "opacity-0"
+            )}
           >
-            <div className="h-full overflow-hidden border-l bg-background">
-              {properties}
-            </div>
-          </Panel>
-        )}
+            {properties}
+          </div>
+        </Panel>
       </PanelGroup>
     </div>
   )

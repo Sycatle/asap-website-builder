@@ -530,6 +530,107 @@
   transition: opacity var(--duration-normal) var(--ease-in-out);
 }
 
+/* ============================================
+   PANEL ANIMATIONS
+   ============================================ */
+
+@keyframes panelSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes panelSlideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes panelFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes panelScaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.panel-enter {
+  animation: panelSlideIn var(--duration-slow) var(--ease-out);
+}
+
+.panel-exit {
+  animation: panelSlideOut var(--duration-normal) var(--ease-in);
+}
+
+.panel-content-enter {
+  animation: panelFadeIn var(--duration-normal) var(--ease-out);
+  animation-delay: 100ms;
+  animation-fill-mode: both;
+}
+
+.panel-scale-enter {
+  animation: panelScaleIn var(--duration-normal) var(--ease-spring);
+}
+
+/* Properties panel specific */
+.properties-panel {
+  transition: transform var(--duration-slow) var(--ease-out),
+              opacity var(--duration-normal) var(--ease-out);
+}
+
+.properties-panel.collapsed {
+  transform: translateX(20px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.properties-panel.expanded {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* Sidebar panel */
+.sidebar-panel {
+  transition: transform var(--duration-slow) var(--ease-out),
+              opacity var(--duration-normal) var(--ease-out);
+}
+
+/* Panel resize handle */
+.panel-resize-handle {
+  transition: background-color var(--duration-fast) var(--ease-in-out),
+              opacity var(--duration-normal) var(--ease-out);
+}
+
+.panel-resize-handle:hover {
+  background-color: hsl(var(--primary) / 0.3);
+}
+
+.panel-resize-handle:active {
+  background-color: hsl(var(--primary) / 0.5);
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   *,

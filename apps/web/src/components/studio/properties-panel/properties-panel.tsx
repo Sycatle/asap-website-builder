@@ -143,6 +143,18 @@ export function PropertiesPanel({
 }: PropertiesPanelProps) {
   const [activeTab, setActiveTab] = useState<string>("content");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Animate in when element is selected
+  React.useEffect(() => {
+    if (element) {
+      // Small delay to ensure DOM is ready for animation
+      const timer = setTimeout(() => setIsVisible(true), 10);
+      return () => clearTimeout(timer);
+    } else {
+      setIsVisible(false);
+    }
+  }, [element?.id]);
 
   if (!element) {
     return <EmptyState />;
@@ -163,12 +175,30 @@ export function PropertiesPanel({
   };
 
   return (
-    <div className="absolute inset-0 flex flex-col">
+    <div 
+      className={cn(
+        "absolute inset-0 flex flex-col transition-all duration-300 ease-out",
+        isVisible 
+          ? "opacity-100 translate-x-0" 
+          : "opacity-0 translate-x-4"
+      )}
+    >
       {/* Header */}
-      <div className="flex-none border-b px-4 py-3">
+      <div 
+        className={cn(
+          "flex-none border-b px-4 py-3 transition-all duration-300 delay-75",
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
+        )}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", elementConfig.color)}>
+            <div 
+              className={cn(
+                "w-8 h-8 rounded-lg flex items-center justify-center transition-transform duration-300 delay-100",
+                elementConfig.color,
+                isVisible ? "scale-100" : "scale-90"
+              )}
+            >
               <ElementIcon className="h-4 w-4" />
             </div>
             <div>
@@ -193,7 +223,12 @@ export function PropertiesPanel({
 
       {/* Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-        <div className="flex-none border-b px-2">
+        <div 
+          className={cn(
+            "flex-none border-b px-2 transition-all duration-300 delay-100",
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
+          )}
+        >
           <TabsList className="w-full h-10 bg-transparent p-0 gap-1">
             <TabsTrigger 
               value="content" 
