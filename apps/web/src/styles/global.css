@@ -245,3 +245,6 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Import Studio animations */
+@import './studio-animations.css';
