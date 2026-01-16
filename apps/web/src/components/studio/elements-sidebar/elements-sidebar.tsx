@@ -102,6 +102,44 @@ export function ElementsSidebar({
     }
   }
 
+  // Handle move up
+  const handleMoveUp = async (elementId: string) => {
+    const currentIndex = elements.findIndex((el) => el.id === elementId)
+    if (currentIndex <= 0) return
+
+    const reorderedElements = [...elements]
+    const [movedElement] = reorderedElements.splice(currentIndex, 1)
+    reorderedElements.splice(currentIndex - 1, 0, movedElement)
+    
+    const elementIds = reorderedElements.map((el) => el.id)
+    try {
+      await onReorder(elementIds)
+      toast.success("Élément déplacé vers le haut")
+    } catch (error) {
+      toast.error("Échec du déplacement")
+      console.error("Move up error:", error)
+    }
+  }
+
+  // Handle move down
+  const handleMoveDown = async (elementId: string) => {
+    const currentIndex = elements.findIndex((el) => el.id === elementId)
+    if (currentIndex < 0 || currentIndex >= elements.length - 1) return
+
+    const reorderedElements = [...elements]
+    const [movedElement] = reorderedElements.splice(currentIndex, 1)
+    reorderedElements.splice(currentIndex + 1, 0, movedElement)
+    
+    const elementIds = reorderedElements.map((el) => el.id)
+    try {
+      await onReorder(elementIds)
+      toast.success("Élément déplacé vers le bas")
+    } catch (error) {
+      toast.error("Échec du déplacement")
+      console.error("Move down error:", error)
+    }
+  }
+
   const elementToDelete = elements.find((el) => el.id === deleteConfirm)
 
   return (
@@ -127,6 +165,8 @@ export function ElementsSidebar({
           onDuplicate={handleDuplicate}
           onDelete={handleDelete}
           onToggleVisible={handleToggleVisible}
+          onMoveUp={handleMoveUp}
+          onMoveDown={handleMoveDown}
         />
       </div>
 

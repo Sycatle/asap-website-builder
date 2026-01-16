@@ -28,6 +28,8 @@ export interface ElementsListProps {
   onDuplicate: (elementId: string) => void
   onDelete: (elementId: string) => void
   onToggleVisible: (elementId: string, visible: boolean) => void
+  onMoveUp?: (elementId: string) => void
+  onMoveDown?: (elementId: string) => void
 }
 
 export function ElementsList({
@@ -38,6 +40,8 @@ export function ElementsList({
   onDuplicate,
   onDelete,
   onToggleVisible,
+  onMoveUp,
+  onMoveDown,
 }: ElementsListProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -85,15 +89,19 @@ export function ElementsList({
             items={elements.map((el) => el.id)}
             strategy={verticalListSortingStrategy}
           >
-            {elements.map((element) => (
+            {elements.map((element, index) => (
               <ElementItem
                 key={element.id}
                 element={element}
                 isSelected={element.id === selectedElementId}
+                isFirst={index === 0}
+                isLast={index === elements.length - 1}
                 onSelect={onSelect}
                 onDuplicate={onDuplicate}
                 onDelete={onDelete}
                 onToggleVisible={onToggleVisible}
+                onMoveUp={onMoveUp}
+                onMoveDown={onMoveDown}
               />
             ))}
           </SortableContext>
