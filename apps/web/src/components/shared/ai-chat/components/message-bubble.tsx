@@ -1,18 +1,18 @@
 "use client"
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   ChevronDown, ChevronRight, Copy, Check, AlertTriangle,
-  ExternalLink, Sparkles, Zap, CheckCircle2, RotateCcw, ThumbsUp, ThumbsDown
+  ExternalLink, Sparkles, Zap, CheckCircle2, RotateCcw, ThumbsUp, ThumbsDown,
+  Loader2, Wrench
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MarkdownContent } from '@/components/shared/markdown-content';
-import type { Message, AssistantMessage, UserMessage } from '../types';
+import type { Message, AssistantMessage, UserMessage, ToolCall } from '../types';
 import type { AIAction } from '@/lib/api/ai';
-import { ExecutionPlanView } from './execution-plan';
-import { ToolCardsList } from './tool-cards';
 import { ArtifactCard } from './artifacts';
 
 interface MessageBubbleProps {
@@ -100,9 +100,28 @@ function AssistantBubble({
 }) {
   const [copied, setCopied] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [thinkingExpanded, setThinkingExpanded] = useState(true);
   
   const hasError = message.toolCalls?.some(t => t.status === 'failed') || 
                    message.plan?.steps.some(s => s.status === 'failed');
+  
+  const isThinking = message.isStreaming && message.streamingPhase !== 'writing';
+  const isWriting = message.isStreaming && message.streamingPhase === 'writing';
+  const hasContent = message.content.body && message.content.body.length > 0;
+  
+  // Auto-collapse thinking when writing starts
+  useEffect(() => {
+    if (isWriting && hasContent) {
+      setThinkingExpanded(false);
+    }
+  }, [isWriting, hasContent]);
+  
+  // Re-expand when new message starts
+  useEffect(() => {
+    if (message.isStreaming && !hasContent) {
+      setThinkingExpanded(true);
+    }
+  }, [message.isStreaming, hasContent]);
   
   const handleCopy = async () => {
     const text = message.content.summary || message.content.body;
@@ -112,27 +131,88 @@ function AssistantBubble({
     setTimeout(() => setCopied(false), 2000);
   };
   
+  // Get current action label for thinking indicator
+  const currentAction = useMemo(() => {
+    const runningTool = message.toolCalls?.find(t => t.status === 'running');
+    if (runningTool) return runningTool.label;
+    
+    const runningStep = message.plan?.steps.find(s => s.status === 'running');
+    if (runningStep) return runningStep.title;
+    
+    if (message.currentThought) return message.currentThought;
+    
+    return null;
+  }, [message.toolCalls, message.plan?.steps, message.currentThought]);
+  
+  // Count completed steps
+  const stepsInfo = useMemo(() => {
+    const steps = message.plan?.steps || [];
+    const completed = steps.filter(s => s.status === 'done').length;
+    const total = steps.length;
+    return { completed, total, steps };
+  }, [message.plan?.steps]);
+  
   return (
     <div className="flex gap-3">
       {/* Avatar */}
-      <div className="w-8 h-8 shrink-0 rounded-lg bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center">
-        <Sparkles className={cn("w-4 h-4 text-white", message.isStreaming && "animate-pulse")} />
+      <div className="w-7 h-7 shrink-0 mt-0.5 rounded-full bg-foreground/5 flex items-center justify-center">
+        <Sparkles className={cn("w-3.5 h-3.5 text-foreground/70", message.isStreaming && "animate-pulse")} />
       </div>
       
       <div className="flex-1 min-w-0 space-y-3">
-        {/* Streaming indicator */}
-        {message.isStreaming && message.streamingPhase && (
-          <StreamingIndicator phase={message.streamingPhase} />
+        {/* Thinking Section - ChatGPT style collapsible */}
+        {(isThinking || (stepsInfo.total > 0 && !hasContent)) && (
+          <ThinkingSection
+            isThinking={isThinking}
+            currentAction={currentAction}
+            stepsInfo={stepsInfo}
+            expanded={thinkingExpanded}
+            onToggle={() => setThinkingExpanded(!thinkingExpanded)}
+          />
         )}
         
-        {/* Execution Plan (compact) */}
-        {message.plan && message.plan.steps.length > 0 && (
-          <ExecutionPlanView plan={message.plan} />
-        )}
-        
-        {/* Tool Cards */}
-        {message.toolCalls && message.toolCalls.length > 0 && (
-          <ToolCardsList tools={message.toolCalls} />
+        {/* Collapsible thinking when we have content */}
+        {hasContent && stepsInfo.total > 0 && (
+          <Collapsible open={thinkingExpanded} onOpenChange={setThinkingExpanded}>
+            <CollapsibleTrigger className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
+              {thinkingExpanded ? (
+                <ChevronDown className="w-3 h-3" />
+              ) : (
+                <ChevronRight className="w-3 h-3" />
+              )}
+              <span>
+                {stepsInfo.completed}/{stepsInfo.total} étapes réalisées
+              </span>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2">
+              <div className="space-y-1 pl-1 border-l-2 border-muted ml-1">
+                {stepsInfo.steps.map((step, idx) => (
+                  <div key={step.id} className="flex items-center gap-2 pl-3 py-0.5">
+                    {step.status === 'done' && (
+                      <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                    )}
+                    {step.status === 'running' && (
+                      <Loader2 className="w-3 h-3 text-muted-foreground animate-spin" />
+                    )}
+                    {step.status === 'failed' && (
+                      <AlertTriangle className="w-3 h-3 text-red-500" />
+                    )}
+                    {(step.status === 'pending' || step.status === 'skipped') && (
+                      <div className="w-3 h-3 rounded-full border border-muted-foreground/30" />
+                    )}
+                    <span className={cn(
+                      "text-xs",
+                      step.status === 'done' && "text-muted-foreground",
+                      step.status === 'running' && "text-foreground",
+                      step.status === 'pending' && "text-muted-foreground/50"
+                    )}>
+                      {step.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         )}
         
         {/* Main Content */}
@@ -149,7 +229,7 @@ function AssistantBubble({
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <MarkdownContent content={message.content.body} />
               {message.isStreaming && (
-                <span className="inline-block w-1.5 h-4 ml-0.5 bg-foreground animate-pulse" />
+                <span className="inline-block w-0.5 h-4 ml-0.5 bg-foreground/50 animate-pulse" />
               )}
             </div>
           )}
@@ -168,20 +248,17 @@ function AssistantBubble({
           
           {/* Details (collapsible) */}
           {message.content.details && (
-            <div className="mt-3">
-              <button
-                onClick={() => setDetailsExpanded(!detailsExpanded)}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-              >
+            <Collapsible open={detailsExpanded} onOpenChange={setDetailsExpanded}>
+              <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mt-3">
                 {detailsExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                 Voir les détails
-              </button>
-              {detailsExpanded && (
+              </CollapsibleTrigger>
+              <CollapsibleContent>
                 <div className="mt-2 p-3 rounded-lg bg-muted/50 text-sm">
                   <MarkdownContent content={message.content.details} />
                 </div>
-              )}
-            </div>
+              </CollapsibleContent>
+            </Collapsible>
           )}
         </div>
         
@@ -209,22 +286,22 @@ function AssistantBubble({
         )}
         
         {/* Footer actions - ChatGPT style */}
-        {!message.isStreaming && (
+        {!message.isStreaming && hasContent && (
           <div className="flex items-center gap-1 pt-1">
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
               onClick={handleCopy}
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
             </Button>
             
-            <Button variant="ghost" size="icon" className="h-7 w-7">
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
               <ThumbsUp className="w-3.5 h-3.5" />
             </Button>
             
-            <Button variant="ghost" size="icon" className="h-7 w-7">
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
               <ThumbsDown className="w-3.5 h-3.5" />
             </Button>
             
@@ -256,28 +333,76 @@ function AssistantBubble({
 // Sub-components
 // ============================================================================
 
-function StreamingIndicator({ phase }: { phase: string }) {
-  const config: Record<string, { label: string; color: string }> = {
-    thinking: { label: 'Réflexion...', color: 'text-violet-500' },
-    searching: { label: 'Recherche...', color: 'text-blue-500' },
-    executing: { label: 'Exécution...', color: 'text-amber-500' },
-    writing: { label: 'Rédaction...', color: 'text-emerald-500' },
-  };
-  
-  const { label, color } = config[phase] || config.thinking;
-  
+interface ThinkingSectionProps {
+  isThinking: boolean;
+  currentAction: string | null;
+  stepsInfo: { completed: number; total: number; steps: { id: string; title: string; status: string }[] };
+  expanded: boolean;
+  onToggle: () => void;
+}
+
+function ThinkingSection({ isThinking, currentAction, stepsInfo, expanded, onToggle }: ThinkingSectionProps) {
   return (
-    <div className={cn("flex items-center gap-2 text-xs", color)}>
-      <div className="flex gap-0.5">
-        {[0, 1, 2].map(i => (
-          <span 
-            key={i}
-            className={cn("w-1 h-1 rounded-full animate-bounce", color.replace('text-', 'bg-'))} 
-            style={{ animationDelay: `${i * 150}ms` }} 
-          />
-        ))}
-      </div>
-      <span className="font-medium">{label}</span>
+    <div className="space-y-2">
+      {/* Main thinking indicator - ChatGPT style shimmer */}
+      <button 
+        onClick={onToggle}
+        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full text-left"
+      >
+        {isThinking ? (
+          <>
+            <div className="flex gap-1">
+              <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+              <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
+              <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
+            </div>
+            <span className="text-xs">
+              {currentAction || 'Réflexion...'}
+            </span>
+          </>
+        ) : (
+          <>
+            {expanded ? (
+              <ChevronDown className="w-3 h-3" />
+            ) : (
+              <ChevronRight className="w-3 h-3" />
+            )}
+            <span className="text-xs">
+              {stepsInfo.completed}/{stepsInfo.total} étapes
+            </span>
+          </>
+        )}
+      </button>
+      
+      {/* Expanded steps list */}
+      {expanded && stepsInfo.steps.length > 0 && (
+        <div className="space-y-1 pl-1 border-l-2 border-muted ml-1">
+          {stepsInfo.steps.map((step) => (
+            <div key={step.id} className="flex items-center gap-2 pl-3 py-0.5">
+              {step.status === 'done' && (
+                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+              )}
+              {step.status === 'running' && (
+                <Loader2 className="w-3 h-3 text-muted-foreground animate-spin" />
+              )}
+              {step.status === 'failed' && (
+                <AlertTriangle className="w-3 h-3 text-red-500" />
+              )}
+              {(step.status === 'pending' || step.status === 'skipped') && (
+                <div className="w-3 h-3 rounded-full border border-muted-foreground/30" />
+              )}
+              <span className={cn(
+                "text-xs",
+                step.status === 'done' && "text-muted-foreground",
+                step.status === 'running' && "text-foreground",
+                step.status === 'pending' && "text-muted-foreground/50"
+              )}>
+                {step.title}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -110,6 +110,8 @@ export interface AssistantMessage {
   timestamp: Date;
   isStreaming?: boolean;
   streamingPhase?: 'thinking' | 'searching' | 'executing' | 'writing';
+  currentThought?: string;
+  currentIteration?: { current: number; max: number; description?: string };
 }
 
 export interface UserMessage {

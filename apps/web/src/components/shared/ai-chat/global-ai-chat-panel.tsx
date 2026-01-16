@@ -45,6 +45,7 @@ import type {
   ToolCall,
   ChatContext,
   ChatControls,
+  StepStatus,
 } from './types';
 
 import {
@@ -171,35 +172,33 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
     };
     setMessages(prev => [...prev, assistantMessage]);
 
-    // Track plan steps
+    // Track plan steps from backend events only
     const planSteps: ExecutionStep[] = [];
-    let stepCounter = 0;
-
-    const addPlanStep = (title: string, description?: string): string => {
-      const step: ExecutionStep = {
-        id: crypto.randomUUID(),
-        index: stepCounter++,
-        title,
-        description,
-        status: 'running',
-      };
-      planSteps.push(step);
-      updateAssistantMessage({ plan: { id: assistantMessage.plan!.id, steps: [...planSteps], currentStep: step.index } });
-      return step.id;
-    };
-
-    const updatePlanStep = (stepId: string, updates: Partial<ExecutionStep>) => {
-      const stepIdx = planSteps.findIndex(s => s.id === stepId);
-      if (stepIdx >= 0) {
-        planSteps[stepIdx] = { ...planSteps[stepIdx], ...updates };
-        updateAssistantMessage({ plan: { id: assistantMessage.plan!.id, steps: [...planSteps], currentStep: planSteps.findIndex(s => s.status === 'running') } });
-      }
-    };
 
     const updateAssistantMessage = (updates: Partial<AssistantMessage>) => {
       setMessages(prev => prev.map(m => 
         m.id === assistantMessageId ? { ...m, ...updates } as AssistantMessage : m
       ));
+    };
+    
+    const updateOrAddPlanStep = (data: { id: string; index: number; title: string; description?: string; status: StepStatus; confidence?: number; error?: { message: string; cause?: string; recoverable: boolean } }) => {
+      const existingIdx = planSteps.findIndex(s => s.id === data.id);
+      if (existingIdx >= 0) {
+        planSteps[existingIdx] = { ...planSteps[existingIdx], ...data };
+      } else {
+        planSteps.push({
+          id: data.id,
+          index: data.index,
+          title: data.title,
+          description: data.description,
+          status: data.status,
+          confidence: data.confidence,
+          error: data.error,
+        });
+      }
+      updateAssistantMessage({ 
+        plan: { id: assistantMessage.plan!.id, steps: [...planSteps], currentStep: planSteps.findIndex(s => s.status === 'running') } 
+      });
     };
 
     abortControllerRef.current = streamChatMessage(
@@ -222,10 +221,12 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
         },
         
         onThinking: (data) => {
-          const stepId = addPlanStep(data.thought, data.insight);
-          if (data.status === 'completed') {
-            updatePlanStep(stepId, { status: 'done', confidence: 85 });
-          }
+          // Just update the streaming phase indicator, don't add to plan
+          // The plan steps come from onPlanStep events
+          updateAssistantMessage({ 
+            streamingPhase: 'thinking',
+            currentThought: data.thought,
+          });
         },
         
         onToolCall: (data) => {
@@ -275,10 +276,11 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
         onToolRequest: async () => {},
         
         onIteration: (data) => {
-          const stepId = addPlanStep(`Itération ${data.current}/${data.max}`, data.description);
-          if (data.status === 'complete' || data.status === 'finished') {
-            updatePlanStep(stepId, { status: 'done' });
-          }
+          // Just update phase, don't duplicate plan steps
+          updateAssistantMessage({ 
+            streamingPhase: 'executing',
+            currentIteration: { current: data.current, max: data.max, description: data.description },
+          });
         },
         
         onPhase: (data) => {
@@ -288,28 +290,15 @@ export function GlobalAIChatPanel({ onClose, showBackButton = false }: AIChatPan
         },
         
         onPlanStep: (data) => {
-          const existingStep = planSteps.find(s => s.id === data.id);
-          if (existingStep) {
-            updatePlanStep(data.id, { 
-              status: data.status,
-              confidence: data.confidence,
-              error: data.error,
-            });
-          } else {
-            const step: ExecutionStep = {
-              id: data.id,
-              index: data.index,
-              title: data.title,
-              description: data.description,
-              status: data.status,
-              confidence: data.confidence,
-              error: data.error,
-            };
-            planSteps.push(step);
-            updateAssistantMessage({ 
-              plan: { id: assistantMessage.plan!.id, steps: [...planSteps], currentStep: step.index } 
-            });
-          }
+          updateOrAddPlanStep({
+            id: data.id,
+            index: data.index,
+            title: data.title,
+            description: data.description,
+            status: data.status,
+            confidence: data.confidence,
+            error: data.error,
+          });
         },
         
         onSummary: (data) => {
