@@ -3,22 +3,15 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Layers, ArrowLeft } from "lucide-react";
+import { Layers, ArrowLeft } from "lucide-react";
+import { StudioLoadingSkeleton } from "./studio-skeletons";
 
 /**
  * LoadingState - Shown while website data is loading
+ * Uses skeleton layout that matches the actual studio structure
  */
 export function LoadingState() {
-  const { t } = useTranslation(['common', 'editor']);
-  return (
-    <div className="h-full flex items-center justify-center" role="status" aria-live="polite">
-      <div className="text-center space-y-4">
-        <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground" aria-hidden="true" />
-        <p className="text-muted-foreground">{t('common:status.loading')}</p>
-        <span className="sr-only">{t('editor:states.loadingSite')}</span>
-      </div>
-    </div>
-  );
+  return <StudioLoadingSkeleton />;
 }
 
 /**

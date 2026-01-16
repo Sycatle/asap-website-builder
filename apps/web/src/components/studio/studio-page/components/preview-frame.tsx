@@ -76,6 +76,66 @@ const BASE_STYLES = `
     color: hsl(var(--foreground));
   }
   #preview-root { min-height: 100%; }
+  
+  /* Studio element selection styles */
+  .studio-element-wrapper {
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .studio-element-wrapper:hover {
+    outline: 2px solid hsl(var(--primary) / 0.4);
+    outline-offset: 2px;
+  }
+  
+  .studio-element-wrapper.selected {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  @keyframes pulse-ring {
+    0%, 100% {
+      outline-color: hsl(var(--primary));
+    }
+    50% {
+      outline-color: hsl(var(--primary) / 0.6);
+    }
+  }
+  
+  .studio-element-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 0.5rem;
+    background: linear-gradient(to bottom, hsl(var(--primary) / 0.9), hsl(var(--primary) / 0));
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: all 0.2s ease-in-out;
+    z-index: 10;
+    pointer-events: none;
+  }
+  
+  .studio-element-wrapper.selected .studio-element-overlay {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .studio-element-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
 `;
 
 interface PreviewFrameProps {
@@ -163,7 +223,19 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
       if (!iframe) return;
 
       const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (!iframeDoc) return;
+      if (!iframeDoc) {
+        console.warn('Iframe document not accessible');
+        return;
+      }
+
+      // Ensure document is open for writing
+      if (iframeDoc.readyState === 'loading') {
+        // Wait for document to be ready
+        iframe.contentWindow?.addEventListener('DOMContentLoaded', () => {
+          setupIframeDocument();
+        }, { once: true });
+        return;
+      }
 
       // Setup document structure
       const html = iframeDoc.documentElement;
@@ -188,13 +260,17 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
         let combinedCss = '';
         Array.from(document.styleSheets).forEach(sheet => {
           try {
-            if (sheet.cssRules) {
-              Array.from(sheet.cssRules).forEach(rule => {
-                combinedCss += rule.cssText + '\n';
-              });
+            // Skip external stylesheets (cross-origin) - they can't be accessed
+            if (!sheet.href || sheet.href.startsWith(window.location.origin)) {
+              if (sheet.cssRules) {
+                Array.from(sheet.cssRules).forEach(rule => {
+                  combinedCss += rule.cssText + '\n';
+                });
+              }
             }
-          } catch {
-            // Cross-origin stylesheets can't be accessed
+          } catch (e) {
+            // Cross-origin stylesheets can't be accessed - skip silently
+            console.debug('Skipping stylesheet due to CORS:', sheet.href);
           }
         });
         tailwindStyle.textContent = combinedCss;
@@ -243,28 +319,82 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
                 <p>Aucun élément à afficher</p>
               </div>
             ) : (
-              sortedElements.map((element) => (
-                <div
-                  key={element.id}
-                  data-element-id={element.id}
-                  className={selectedElementId === element.id ? 'ring-2 ring-primary ring-offset-2' : ''}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onElementClick?.(element.id);
-                  }}
-                >
-                  <SectionRenderer
-                    element={element}
-                    isSelected={selectedElementId === element.id}
-                    onClick={() => onElementClick?.(element.id)}
-                  />
-                </div>
-              ))
+              sortedElements.map((element) => {
+                const isSelected = selectedElementId === element.id;
+                const elementTypeLabel = element.element_type
+                  .replace(/-/g, ' ')
+                  .split(' ')
+                  .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                  .join(' ');
+                
+                return (
+                  <div
+                    key={element.id}
+                    data-element-id={element.id}
+                    className={`studio-element-wrapper ${isSelected ? 'selected' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onElementClick?.(element.id);
+                    }}
+                  >
+                    {isSelected && (
+                      <div className="studio-element-overlay">
+                        <div className="studio-element-label">
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="9" y1="3" x2="9" y2="21"></line>
+                            <line x1="15" y1="3" x2="15" y2="21"></line>
+                            <line x1="3" y1="9" x2="21" y2="9"></line>
+                            <line x1="3" y1="15" x2="21" y2="15"></line>
+                          </svg>
+                          <span>{element.title || elementTypeLabel}</span>
+                        </div>
+                      </div>
+                    )}
+                    <SectionRenderer
+                      element={element}
+                      isSelected={isSelected}
+                      onClick={() => onElementClick?.(element.id)}
+                    />
+                  </div>
+                );
+              })
             )}
           </div>
         </PreviewProvider>
       );
     }, [iframeReady, elements, selectedElementId, onElementClick, device]);
+
+    // Scroll to selected element when selection changes
+    useEffect(() => {
+      if (!iframeReady || !selectedElementId) return;
+
+      const iframe = iframeRef.current;
+      const iframeDoc = iframe?.contentDocument;
+      if (!iframeDoc) return;
+
+      // Find the selected element wrapper
+      const selectedWrapper = iframeDoc.querySelector(`[data-element-id="${selectedElementId}"]`);
+      if (selectedWrapper) {
+        // Scroll with smooth animation - use 'start' to show top of element
+        // Add a small delay to ensure the element is rendered
+        setTimeout(() => {
+          selectedWrapper.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+          });
+        }, 100);
+      }
+    }, [iframeReady, selectedElementId]);
 
     // Update theme when it changes
     useEffect(() => {
