@@ -151,7 +151,6 @@ struct GoogleUserInfo {
 #[derive(Debug, Deserialize)]
 struct GitHubUserInfo {
     id: u64,
-    login: String,
     email: Option<String>,
     name: Option<String>,
     avatar_url: Option<String>,

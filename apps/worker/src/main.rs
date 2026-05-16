@@ -121,9 +121,7 @@ async fn main() -> anyhow::Result<()> {
     // Initialize Web Push sender for PWA notifications
     let web_push_sender = match WebPushSender::load_vapid_keys(&pool).await {
         Ok(vapid_keys) => {
-            let subject = std::env::var("VAPID_SUBJECT")
-                .unwrap_or_else(|_| "mailto:support@asap.cool".to_string());
-            match WebPushSender::new(vapid_keys, subject) {
+            match WebPushSender::new(vapid_keys) {
                 Ok(sender) => {
                     tracing::info!("Web Push sender initialized");
                     Some(Arc::new(sender))

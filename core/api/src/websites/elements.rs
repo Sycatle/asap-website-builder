@@ -56,6 +56,9 @@ pub struct UpdateElementRequest {
 mod double_option {
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+    // Required by the `#[serde(with = "double_option")]` attribute, even though
+    // skip_serializing_if means it never runs in practice.
+    #[allow(dead_code)]
     pub fn serialize<T, S>(value: &Option<Option<T>>, serializer: S) -> Result<S::Ok, S::Error>
     where
         T: Serialize,

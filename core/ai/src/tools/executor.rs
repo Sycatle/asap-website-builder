@@ -775,21 +775,6 @@ fn matches_pattern(key: &str, pattern: &str) -> bool {
     }
 }
 
-/// Format extension ID to human-readable name
-fn format_extension_name(id: &str) -> String {
-    id.replace(['-', '_'], " ")
-        .split_whitespace()
-        .map(|word| {
-            let mut chars: Vec<char> = word.chars().collect();
-            if let Some(first) = chars.first_mut() {
-                *first = first.to_uppercase().next().unwrap_or(*first);
-            }
-            chars.into_iter().collect::<String>()
-        })
-        .collect::<Vec<String>>()
-        .join(" ")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

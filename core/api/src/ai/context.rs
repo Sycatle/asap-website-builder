@@ -17,6 +17,7 @@ use asap_core_ai::{
 // ============================================================================
 
 #[derive(sqlx::FromRow)]
+#[allow(dead_code)] // id is selected but only used by sqlx::FromRow column mapping
 pub struct WebsiteRow {
     pub id: Uuid,
     pub title: Option<String>,
@@ -35,6 +36,7 @@ pub struct ElementRow {
 }
 
 #[derive(sqlx::FromRow)]
+#[allow(dead_code)] // id is selected but only used by sqlx::FromRow column mapping
 pub struct AccountRow {
     pub id: Uuid,
     pub plan: String,

@@ -15,7 +15,6 @@ use std::collections::HashSet;
 use std::convert::Infallible;
 use std::sync::Arc;
 use std::time::Duration;
-use uuid::Uuid;
 
 use crate::Claims;
 use asap_core_ai::{
@@ -695,20 +694,6 @@ Rules:
                         ..Default::default()
                     });
                     if let Ok(json) = serde_json::to_string(&tool_result_event) {
-                        yield Ok(Event::default().data(json));
-                    }
-                }
-                ToolEvent::VisualAnalysisRequested { tool_call_id, viewport, focus } => {
-                    let tool_request_event = SseEventData::ToolRequest(ToolRequestData {
-                        request_id: tool_call_id,
-                        request_type: "visual_analysis".to_string(),
-                        params: serde_json::json!({
-                            "viewport": viewport,
-                            "focus": focus,
-                        }),
-                        timeout_seconds: Some(30),
-                    });
-                    if let Ok(json) = serde_json::to_string(&tool_request_event) {
                         yield Ok(Event::default().data(json));
                     }
                 }

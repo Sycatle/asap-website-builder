@@ -32,9 +32,9 @@ struct AuthPayload {
 
 /// Connected client information
 #[derive(Clone, Debug)]
-struct ClientInfo {
-    account_id: String,
-    client_id: uuid::Uuid,
+pub struct ClientInfo {
+    pub account_id: String,
+    pub client_id: uuid::Uuid,
 }
 
 /// User presence information for a website
@@ -149,7 +149,6 @@ impl WsState {
 
             // Cleanup old entries periodically (if cache > 1000 entries)
             if cache.len() > 1000 {
-                let now = std::time::Instant::now();
                 cache.retain(|_, entry| entry.cached_at.elapsed() < ACCESS_CACHE_TTL);
             }
         }
@@ -358,7 +357,7 @@ impl WsState {
     /// Broadcast presence message to all clients on a website
     fn broadcast_website_presence(
         &self,
-        website_id: &str,
+        _website_id: &str,
         msg_type: &str,
         data: serde_json::Value,
     ) {
@@ -403,64 +402,6 @@ impl WsState {
         }
     }
 
-    /// Send a new notification event to all connected clients
-    pub fn send_notification(&self, notification: serde_json::Value, unread_count: i64) {
-        let msg = WsMessage {
-            msg_type: "notification:new".to_string(),
-            data: serde_json::json!({
-                "notification": notification,
-                "unread_count": unread_count
-            }),
-        };
-        self.broadcast(msg);
-    }
-
-    /// Send notification read event
-    pub fn send_notification_read(&self, notification_id: &str, unread_count: i64) {
-        let msg = WsMessage {
-            msg_type: "notification:read".to_string(),
-            data: serde_json::json!({
-                "notification_id": notification_id,
-                "unread_count": unread_count
-            }),
-        };
-        self.broadcast(msg);
-    }
-
-    /// Send notification deleted event
-    pub fn send_notification_deleted(&self, notification_id: &str, unread_count: i64) {
-        let msg = WsMessage {
-            msg_type: "notification:deleted".to_string(),
-            data: serde_json::json!({
-                "notification_id": notification_id,
-                "unread_count": unread_count
-            }),
-        };
-        self.broadcast(msg);
-    }
-
-    /// Send unread count update
-    pub fn send_unread_count(&self, unread_count: i64) {
-        let msg = WsMessage {
-            msg_type: "notification:count".to_string(),
-            data: serde_json::json!({
-                "unread_count": unread_count
-            }),
-        };
-        self.broadcast(msg);
-    }
-
-    /// Send batch read event
-    pub fn send_batch_read(&self, notification_ids: &[String], unread_count: i64) {
-        let msg = WsMessage {
-            msg_type: "notification:batch-read".to_string(),
-            data: serde_json::json!({
-                "notification_ids": notification_ids,
-                "unread_count": unread_count
-            }),
-        };
-        self.broadcast(msg);
-    }
 }
 
 /// Implement the WsBroadcaster trait for WsState
@@ -585,7 +526,6 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
     // Connection timeout configuration
     const PING_INTERVAL: std::time::Duration = std::time::Duration::from_secs(30);
     const PONG_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
-    const AUTH_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
 
     // Track last pong received
     let last_pong = Arc::new(tokio::sync::RwLock::new(std::time::Instant::now()));
@@ -967,7 +907,6 @@ pub fn spawn_cleanup_task(state: Arc<WsState>) {
             {
                 let mut cache = state.access_cache.write().await;
                 let before = cache.len();
-                let now = std::time::Instant::now();
                 cache.retain(|_, entry| entry.cached_at.elapsed() < ACCESS_CACHE_TTL);
                 let after = cache.len();
                 if before != after {

@@ -11,15 +11,20 @@ use web_push::{
     WebPushMessageBuilder,
 };
 
-/// VAPID keys loaded from database or environment
+/// VAPID keys loaded from database or environment.
+/// `public_key` is round-tripped through DB queries via [`sqlx::FromRow`]; the sender
+/// only uses `private_key` to sign requests.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct VapidKeys {
     pub public_key: String,
     pub private_key: String,
 }
 
-/// Push subscription from database
+/// Push subscription from database. `account_id` is loaded by `query_as!` for the
+/// schema mapping but not read individually since callers already know the account.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct PushSubscription {
     pub id: Uuid,
     pub account_id: Uuid,
@@ -49,18 +54,13 @@ pub struct PushPayload {
 pub struct WebPushSender {
     client: IsahcWebPushClient,
     vapid_keys: VapidKeys,
-    subject: String,
 }
 
 impl WebPushSender {
     /// Create a new WebPushSender
-    pub fn new(vapid_keys: VapidKeys, subject: String) -> Result<Self> {
+    pub fn new(vapid_keys: VapidKeys) -> Result<Self> {
         let client = IsahcWebPushClient::new()?;
-        Ok(Self {
-            client,
-            vapid_keys,
-            subject,
-        })
+        Ok(Self { client, vapid_keys })
     }
 
     /// Load VAPID keys from database or environment
@@ -166,11 +166,7 @@ impl WebPushSender {
 
         if subscriptions.is_empty() {
             tracing::debug!("No push subscriptions for account {}", account_id);
-            return Ok(SendResult {
-                sent: 0,
-                failed: 0,
-                expired: vec![],
-            });
+            return Ok(SendResult { sent: 0 });
         }
 
         let mut sent = 0;
@@ -224,11 +220,16 @@ impl WebPushSender {
             tracing::info!("Removed {} expired push subscriptions", expired.len());
         }
 
-        Ok(SendResult {
-            sent,
-            failed,
-            expired,
-        })
+        if failed > 0 {
+            tracing::warn!(
+                "Push delivery: {} sent, {} failed for account {}",
+                sent,
+                failed,
+                account_id
+            );
+        }
+
+        Ok(SendResult { sent })
     }
 }
 
@@ -236,32 +237,6 @@ impl WebPushSender {
 #[derive(Debug)]
 pub struct SendResult {
     pub sent: usize,
-    pub failed: usize,
-    pub expired: Vec<Uuid>,
-}
-
-/// Convert a notification to a push payload
-pub fn notification_to_push_payload(notification: &serde_json::Value) -> PushPayload {
-    PushPayload {
-        id: notification["id"].as_str().unwrap_or_default().to_string(),
-        title: notification["title"].as_str().unwrap_or("ASAP").to_string(),
-        body: notification["message"].as_str().unwrap_or("").to_string(),
-        icon: notification["icon"].as_str().map(|s| s.to_string()),
-        image: None,
-        tag: format!(
-            "asap-{}",
-            notification["id"].as_str().unwrap_or("notification")
-        ),
-        action_url: notification["action_url"].as_str().map(|s| s.to_string()),
-        category: notification["category"]
-            .as_str()
-            .unwrap_or("system")
-            .to_string(),
-        priority: notification["priority"]
-            .as_str()
-            .unwrap_or("normal")
-            .to_string(),
-    }
 }
 
 /// Check if push notifications are enabled for an account

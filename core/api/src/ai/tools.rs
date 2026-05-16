@@ -19,8 +19,6 @@ use asap_core_ai::{
 /// Result of executing data tools
 #[derive(Debug, Clone)]
 pub struct DataToolExecution {
-    /// Tool calls that were made
-    pub tool_calls: Vec<ExecutedToolCall>,
     /// Combined tool results as context for the final response
     pub context_additions: String,
     /// Visual analysis request if the AI wants to analyze a screenshot
@@ -56,12 +54,6 @@ pub enum ToolEvent {
         description: String,
         duration_ms: u64,
         result_preview: Option<String>,
-    },
-    /// Visual analysis requested
-    VisualAnalysisRequested {
-        tool_call_id: String,
-        viewport: String,
-        focus: String,
     },
 }
 
@@ -170,29 +162,6 @@ fn truncate_tool_result(content: &str, max_len: usize) -> &str {
 // ============================================================================
 // Data Tools Execution
 // ============================================================================
-
-/// Execute data tools in a loop to gather comprehensive context before generating the final response.
-/// Uses chain-of-thought: the AI can request multiple tools across multiple iterations
-/// until it has gathered all the information it needs.
-///
-/// If `event_sender` is provided, tool events will be sent in real-time for streaming.
-pub async fn execute_data_tools(
-    orchestrator: &AIOrchestrator,
-    context: &WebsiteContext,
-    user_message: &str,
-    history: &[asap_core_ai::Message],
-    preloaded_screenshot: Option<PreloadedScreenshot>,
-) -> Option<DataToolExecution> {
-    execute_data_tools_with_events(
-        orchestrator,
-        context,
-        user_message,
-        history,
-        preloaded_screenshot,
-        None,
-    )
-    .await
-}
 
 /// Execute data tools with optional real-time event streaming
 pub async fn execute_data_tools_with_events(
@@ -771,7 +740,6 @@ Structure your response:
     );
 
     Some(DataToolExecution {
-        tool_calls: all_executed_calls,
         context_additions,
         visual_analysis_request: None,
     })
@@ -806,21 +774,3 @@ pub fn execute_data_tools_streaming_channel(
     (future, rx)
 }
 
-/// Legacy alias for execute_data_tools - now delegates to the with_events version
-pub async fn execute_data_tools_streaming(
-    orchestrator: &AIOrchestrator,
-    context: &WebsiteContext,
-    user_message: &str,
-    history: &[asap_core_ai::Message],
-    preloaded_screenshot: Option<PreloadedScreenshot>,
-) -> Option<DataToolExecution> {
-    execute_data_tools_with_events(
-        orchestrator,
-        context,
-        user_message,
-        history,
-        preloaded_screenshot,
-        None,
-    )
-    .await
-}
