@@ -1,155 +1,64 @@
-<!-- translation-pending -->
-> **Note:** this document is a legacy design doc retained in French. A translation pass is planned — see GitHub Issues. Open a PR or an issue if you need it sooner.
+# AI Integration
 
-# ASAP AI Integration Documentation
+Design documentation for the AI panel and orchestrator that ship as part of ASAP.
 
-> **Version**: 2.0  
-> **Date**: Janvier 2026  
-> **Status**: Draft
+## What it does
 
----
+The AI integration lets a user describe what they want in natural language and receive proposed edits to their site. Edits are previewed in the dashboard before they are applied — nothing changes on the published site without an explicit confirmation.
 
-## 📚 Table des Documents
+Key behaviors:
 
-Ce dossier contient la documentation technique complète pour l'intégration AI dans ASAP.
+- **Conversational editing.** Free-form prompts (`"add a pricing section with three tiers"`) produce structured actions over the site model.
+- **Live preview.** Proposed actions render against the current site in real time via SSE streaming.
+- **Multi-provider.** The orchestrator routes to OpenAI or Anthropic based on the task and on per-account budgets.
+- **Bounded cost.** Per-account daily and per-request limits are enforced in `core/ai/`. Image generation is gated separately.
 
-| Document | Description | Audience |
-|----------|-------------|----------|
-| [01-ARCHITECTURE.md](./01-ARCHITECTURE.md) | Architecture technique, providers, infrastructure | Backend Devs |
-| [02-FEATURES.md](./02-FEATURES.md) | Fonctionnalités AI (Tier 1, 2, 3) | Product/Devs |
-| [03-API.md](./03-API.md) | API Design, endpoints, schemas, streaming | Full-stack |
-| [04-SECURITY.md](./04-SECURITY.md) | Sécurité, privacy, rate limiting, pricing | DevOps/Backend |
-| [05-UX.md](./05-UX.md) | Guidelines UX/UI, chat panel, inline AI | Frontend Devs |
-| [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) | **Plan d'implémentation structuré** | Tech Lead |
-
----
-
-## 🎯 Executive Summary
-
-L'intégration d'une IA conversationnelle dans ASAP vise à transformer radicalement l'expérience de création de sites web. Au lieu d'interfaces traditionnelles point-and-click, les utilisateurs pourront :
-
-- **Décrire** ce qu'ils veulent en langage naturel
-- **Voir** les modifications en temps réel sur leur site
-- **Itérer** par conversation jusqu'au résultat souhaité
-- **Apprendre** les bonnes pratiques web via l'assistant
-
-> "Créer un site web devrait être aussi simple qu'avoir une conversation."
-
----
-
-## 🏗️ Architecture Overview
+## Architecture at a glance
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              FRONTEND (React/Astro)                          │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  AI Chat Panel  ◄──────►  Studio Editor  ◄──────►  Live Preview            │
-└────────────────────────────────────┬────────────────────────────────────────┘
-                                     │ SSE / WebSocket
-                    ┌────────────────▼────────────────┐
-                    │           API (Rust/Axum)        │
-                    │  - AI Orchestrator               │
-                    │  - Context Builder               │
-                    │  - Action Executor               │
-                    └────────────────┬────────────────┘
-                                     │
-          ┌──────────────────────────┼──────────────────────────┐
-          │                          │                          │
-          ▼                          ▼                          ▼
-    ┌──────────┐              ┌──────────┐              ┌──────────┐
-    │ OpenAI   │              │ Anthropic│              │ DALL-E 3 │
-    │ GPT-4o   │              │ Claude   │              │ Images   │
-    └──────────┘              └──────────┘              └──────────┘
+┌────────────────────────────────────────────────────────────────┐
+│            Dashboard (apps/web) — AI Chat Panel                │
+└──────────────────────────────┬─────────────────────────────────┘
+                               │ SSE
+┌──────────────────────────────▼─────────────────────────────────┐
+│        Core AI (core/ai/) — orchestrator, tools, rate limit    │
+└──────────────────┬──────────────────────────┬──────────────────┘
+                   │                          │
+            ┌──────▼──────┐            ┌──────▼──────┐
+            │  Anthropic  │            │   OpenAI    │
+            └─────────────┘            └─────────────┘
 ```
 
----
+## Components
 
-## 📊 Décisions Clés
+| Concern | Location |
+|---|---|
+| Orchestrator (provider routing, streaming, intent analysis) | `core/ai/src/orchestrator/` |
+| Tool registry and execution | `core/ai/src/tools/` |
+| Rate limiting (daily token caps, cost-aware throttling) | `core/ai/src/rate_limit/` |
+| Vision / image analysis | `core/ai/src/vision/` |
+| HTTP endpoints (SSE streams, history, settings) | `core/api/src/ai/` |
+| Chat panel UI | `apps/web/src/components/ai/` |
 
-### Approche Hybrid pour les Composants
+## Subdocuments
 
-| Tier | Feature | Timeline |
-|------|---------|----------|
-| **Tier 1: No-Code** | 30+ sections prédéfinies, AI modifie les propriétés | V1 (maintenant) |
-| **Tier 2: Element Library** | Save/reuse des configurations de sections (Pro) | V2 (Q2 2026) |
-| **Tier 3: Code Blocks** | Custom HTML/CSS sandboxé (Business) | V3 (Q4 2026) |
+> The next files are legacy design docs retained in French. A translation pass is open — see [GitHub Issues](https://github.com/Sycatle/asap-website-builder/issues).
 
-### Pourquoi cette approche ?
+| File | Topic |
+|---|---|
+| [`01-ARCHITECTURE.md`](./01-ARCHITECTURE.md) | Provider infrastructure and orchestration |
+| [`02-FEATURES.md`](./02-FEATURES.md) | Capability tiers and user-facing features |
+| [`03-API.md`](./03-API.md) | Endpoint shapes and SSE protocol |
+| [`04-SECURITY.md`](./04-SECURITY.md) | Rate limiting, abuse prevention, billing model |
+| [`05-UX.md`](./05-UX.md) | Chat panel and inline AI affordances |
 
-1. **80/20 Rule** : 95% des utilisateurs n'ont pas besoin de code custom
-2. **AI-First** : Le code custom rend l'AI moins efficace
-3. **Maintenabilité** : Sections standard = bugs prévisibles
-4. **Business Model** : L'Element Library devient un feature Pro
+## Configuration
 
----
-
-## 📈 Objectifs
-
-### Business
-
-| Objectif | Métrique | Target |
-|----------|----------|--------|
-| Réduire le temps de création | Temps moyen de création d'un site | **-60%** |
-| Augmenter la rétention | Taux de rétention J30 | **+25%** |
-| Différenciation marché | NPS score | **> 60** |
-| Monétisation | Conversion Free → Pro via AI | **> 15%** |
-
-### Technique
-
-| Objectif | Target |
-|----------|--------|
-| Latence premier token | < 500ms |
-| Uptime AI | 99.9% |
-| Requêtes simultanées | 10k |
-| Précision des actions | > 90% |
-
----
-
-## 🚀 Phases d'Implémentation
+Set provider keys in `infra/.env.prod`:
 
 ```
-Q1 2026                        Q2 2026                       Q3-Q4 2026
-═══════════════════════        ═══════════════════════       ═══════════════════════
-
-┌─────────────────────┐       ┌─────────────────────┐       ┌─────────────────────┐
-│ Phase 1: Foundation │ ───── │ Phase 2: Sections   │ ───── │ Phase 4: Premium    │
-│ (4 semaines)        │       │ Library (3 sem)     │       │ (Ongoing)           │
-└─────────────────────┘       └─────────────────────┘       └─────────────────────┘
-         │                              │
-         ▼                              ▼
-┌─────────────────────┐       ┌─────────────────────┐
-│ • core/ai module    │       │ Phase 3: Advanced   │
-│ • Streaming SSE     │       │ (4 semaines)        │
-│ • Actions system    │       │ • Image generation  │
-│ • Undo/Redo         │       │ • Inline AI         │
-└─────────────────────┘       └─────────────────────┘
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-**Voir [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) pour le détail complet.**
-
----
-
-## 📖 Lecture Recommandée
-
-1. **Nouveau sur le projet?** → Commencez par ce README puis [02-FEATURES.md](./02-FEATURES.md)
-2. **Backend developer?** → [01-ARCHITECTURE.md](./01-ARCHITECTURE.md) puis [03-API.md](./03-API.md)
-3. **Frontend developer?** → [05-UX.md](./05-UX.md) puis [03-API.md](./03-API.md)
-4. **Tech Lead?** → [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) directement
-
----
-
-## 🔗 Ressources Externes
-
-- [OpenAI API Documentation](https://platform.openai.com/docs)
-- [Anthropic Claude API](https://docs.anthropic.com)
-- [AI UX Best Practices - Google PAIR](https://pair.withgoogle.com)
-- [OWASP AI Security Guidelines](https://owasp.org/www-project-machine-learning-security-top-10/)
-
----
-
-## 📝 Changelog
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 2.0 | Jan 2026 | Split en documents modulaires, ajout plan d'implémentation |
-| 1.0 | Jan 2026 | Document initial monolithique |
+If neither is set, the AI panel is hidden from the UI and the endpoints return `503`.
