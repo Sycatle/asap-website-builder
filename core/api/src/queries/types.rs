@@ -54,6 +54,10 @@ pub struct WebsiteElementRow {
     pub settings: JsonValue,
     pub data: JsonValue,
     pub visible: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub variant_key: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub variant_params: Option<JsonValue>,
 }
 
 /// Preset response
@@ -148,6 +152,8 @@ mod tests {
             settings: serde_json::json!({}),
             data: serde_json::json!({}),
             visible: true,
+            variant_key: None,
+            variant_params: None,
         };
 
         let json = serde_json::to_string(&element).unwrap();

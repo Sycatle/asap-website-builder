@@ -46,6 +46,34 @@ pub struct UpdateElementRequest {
     pub settings: Option<serde_json::Value>,
     pub data: Option<serde_json::Value>,
     pub visible: Option<bool>,
+    /// `Some(Some(...))` to set, `Some(None)` to clear, `None` to leave untouched.
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "double_option")]
+    pub variant_key: Option<Option<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "double_option")]
+    pub variant_params: Option<Option<serde_json::Value>>,
+}
+
+mod double_option {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn serialize<T, S>(value: &Option<Option<T>>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: Serialize,
+        S: Serializer,
+    {
+        match value {
+            Some(inner) => inner.serialize(serializer),
+            None => serializer.serialize_none(),
+        }
+    }
+
+    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
+    where
+        T: Deserialize<'de>,
+        D: Deserializer<'de>,
+    {
+        Option::<T>::deserialize(deserializer).map(Some)
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -293,6 +321,8 @@ pub async fn update_element(
         payload.settings.as_ref(),
         payload.data.as_ref(),
         payload.visible,
+        payload.variant_key.as_ref().map(|v| v.as_deref()),
+        payload.variant_params.as_ref().map(|v| v.as_ref()),
     )
     .await;
 

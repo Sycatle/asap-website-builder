@@ -31,12 +31,15 @@ pub async fn list_website_elements(
             JsonValue,
             JsonValue,
             bool,
+            Option<String>,
+            Option<JsonValue>,
         ),
     >(
         r#"
-        SELECT 
+        SELECT
             id, website_id, extension_id, element_type, slug, title,
-            "order", layout, settings, data, visible
+            "order", layout, settings, data, visible,
+            variant_key, variant_params
         FROM website_elements
         WHERE website_id = $1
         ORDER BY "order"
@@ -61,6 +64,8 @@ pub async fn list_website_elements(
                 settings,
                 data,
                 visible,
+                variant_key,
+                variant_params,
             )| {
                 WebsiteElementRow {
                     id,
@@ -74,6 +79,8 @@ pub async fn list_website_elements(
                     settings,
                     data,
                     visible,
+                    variant_key,
+                    variant_params,
                 }
             },
         )
@@ -123,6 +130,7 @@ pub async fn create_website_element(
 }
 
 /// Update a website element
+#[allow(clippy::too_many_arguments)]
 pub async fn update_website_element(
     pool: &PgPool,
     element_id: Uuid,
@@ -133,6 +141,8 @@ pub async fn update_website_element(
     settings: Option<&JsonValue>,
     data: Option<&JsonValue>,
     visible: Option<bool>,
+    variant_key: Option<Option<&str>>,
+    variant_params: Option<Option<&JsonValue>>,
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
     // Verify website access (owner or active administrator)
     if !super::verify_website_access(pool, website_id, account_id).await? {
@@ -190,6 +200,28 @@ pub async fn update_website_element(
             "UPDATE website_elements SET visible = $1, updated_at = now() WHERE id = $2 AND website_id = $3"
         )
         .bind(v)
+        .bind(element_id)
+        .bind(website_id)
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    if let Some(vk) = variant_key {
+        sqlx::query(
+            "UPDATE website_elements SET variant_key = $1, updated_at = now() WHERE id = $2 AND website_id = $3"
+        )
+        .bind(vk)
+        .bind(element_id)
+        .bind(website_id)
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    if let Some(vp) = variant_params {
+        sqlx::query(
+            "UPDATE website_elements SET variant_params = $1, updated_at = now() WHERE id = $2 AND website_id = $3"
+        )
+        .bind(vp)
         .bind(element_id)
         .bind(website_id)
         .execute(&mut *tx)
@@ -269,12 +301,15 @@ pub async fn list_public_website_elements(
             JsonValue,
             JsonValue,
             bool,
+            Option<String>,
+            Option<JsonValue>,
         ),
     >(
         r#"
-        SELECT 
+        SELECT
             id, website_id, extension_id, element_type, slug, title,
-            "order", layout, settings, data, visible
+            "order", layout, settings, data, visible,
+            variant_key, variant_params
         FROM website_elements
         WHERE website_id = $1 AND visible = true
         ORDER BY "order"
@@ -299,6 +334,8 @@ pub async fn list_public_website_elements(
                 settings,
                 data,
                 visible,
+                variant_key,
+                variant_params,
             )| {
                 WebsiteElementRow {
                     id,
@@ -312,6 +349,8 @@ pub async fn list_public_website_elements(
                     settings,
                     data,
                     visible,
+                    variant_key,
+                    variant_params,
                 }
             },
         )
