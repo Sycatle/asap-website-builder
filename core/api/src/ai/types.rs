@@ -565,6 +565,9 @@ mod tests {
         let err = ErrorResponse {
             error: "Rate limited".to_string(),
             code: "rate_limited".to_string(),
+            cause: None,
+            recoverable: None,
+            alternatives: Vec::new(),
         };
         let json = serde_json::to_string(&err).unwrap();
         assert!(json.contains("rate_limited"));
