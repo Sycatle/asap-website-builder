@@ -19,7 +19,7 @@ export function GeneralProperties({
   isUpdating,
 }: GeneralPropertiesProps) {
   const [title, setTitle] = useState(element.title || "");
-  const [isVisible, setIsVisible] = useState(element.is_visible);
+  const [isVisible, setIsVisible] = useState(element.visible);
 
   const debouncedTitle = useDebounce(title, 500);
 
@@ -37,7 +37,7 @@ export function GeneralProperties({
 
   const handleVisibilityChange = async (checked: boolean) => {
     setIsVisible(checked);
-    await onUpdate({ is_visible: checked });
+    await onUpdate({ visible: checked });
   };
 
   return (

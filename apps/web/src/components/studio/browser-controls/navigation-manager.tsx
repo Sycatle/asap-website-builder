@@ -186,7 +186,7 @@ export function useNavigation({
  * Hook to intercept link clicks in the preview iframe and handle internal navigation
  */
 export function usePreviewLinkInterceptor(
-  iframeRef: React.RefObject<HTMLIFrameElement>,
+  iframeRef: React.RefObject<HTMLIFrameElement | null>,
   onNavigate: (url: string) => void,
   baseUrl: string
 ) {

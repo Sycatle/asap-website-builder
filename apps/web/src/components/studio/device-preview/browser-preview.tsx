@@ -124,10 +124,13 @@ export function BrowserPreview({
               }}
             >
               {/* Clone children and inject iframe ref */}
-              {React.cloneElement(children as React.ReactElement, {
-                ref: iframeRef,
-                key: navigation.currentUrl, // Force re-render on navigation
-              })}
+              {React.cloneElement(
+                children as React.ReactElement<{ ref?: React.Ref<HTMLIFrameElement> }>,
+                {
+                  ref: iframeRef,
+                  key: navigation.currentUrl,
+                },
+              )}
             </div>
           </DeviceFrame>
         </div>
