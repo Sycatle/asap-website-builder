@@ -26,8 +26,10 @@ COPY apps ./apps
 COPY extensions ./extensions
 COPY .sqlx ./.sqlx
 
-# Build the API with SQLx offline mode
-ENV SQLX_OFFLINE=true
+# Build the API. SQLX_OFFLINE defaults to true (uses .sqlx/ cache, no DB connection needed at build).
+# Override with --build-arg SQLX_OFFLINE=false in CI when a live DB is available.
+ARG SQLX_OFFLINE=true
+ENV SQLX_OFFLINE=${SQLX_OFFLINE}
 RUN cargo build --release --bin asap-api
 
 # Runtime stage - Same Debian version for library compatibility
@@ -45,6 +47,12 @@ COPY --from=builder /app/target/release/asap-api /usr/local/bin/asap-api
 
 # Copy extension definitions (needed at runtime for extension catalog)
 COPY --from=builder /app/extensions /app/extensions
+
+# Run as non-root
+RUN groupadd --system --gid 1001 asap \
+ && useradd --system --uid 1001 --gid asap --home-dir /app --shell /usr/sbin/nologin asap \
+ && chown -R asap:asap /app
+USER asap
 
 EXPOSE 3000
 
