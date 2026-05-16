@@ -1,16 +1,16 @@
-use anyhow::{Result};
+use anyhow::Result;
 use bytes::Bytes;
 use flate2::write::GzEncoder;
 use flate2::Compression;
+use hex;
+use sha2::{Digest, Sha256};
 use sqlx::{PgPool, Row};
 use std::io::Write;
-use uuid::Uuid;
-use sha2::{Sha256, Digest};
-use hex;
 use tokio::io::AsyncRead;
+use uuid::Uuid;
 
-use asap_core_domain::{File, AccountStorageQuota};
 use crate::image_converter::{ImageConverter, ImageConverterConfig};
+use asap_core_domain::{AccountStorageQuota, File};
 
 /// FileStorageService handles file uploads, compression, and metadata management
 pub struct FileStorageService {
@@ -22,7 +22,7 @@ pub struct FileStorageService {
 
 impl FileStorageService {
     const DEFAULT_MAX_FILE_SIZE: i64 = 100_000_000; // 100 MB
-    
+
     pub fn new(pool: PgPool) -> Self {
         Self {
             pool,
@@ -31,7 +31,7 @@ impl FileStorageService {
             image_converter: ImageConverter::new(),
         }
     }
-    
+
     /// Create with custom image converter config
     pub fn with_image_config(pool: PgPool, image_config: ImageConverterConfig) -> Self {
         Self {
@@ -64,7 +64,6 @@ impl FileStorageService {
             // Rich Text
             "application/rtf".to_string(),
             "text/richtext".to_string(),
-
             // ===== Images =====
             "image/jpeg".to_string(),
             "image/png".to_string(),
@@ -77,7 +76,6 @@ impl FileStorageService {
             "image/svg+xml".to_string(),
             "image/heic".to_string(),
             "image/heif".to_string(),
-
             // ===== Archives =====
             "application/zip".to_string(),
             "application/x-rar".to_string(),
@@ -86,7 +84,6 @@ impl FileStorageService {
             "application/x-tar".to_string(),
             "application/x-bzip2".to_string(),
             "application/x-xz".to_string(),
-
             // ===== Code/Markup =====
             "text/html".to_string(),
             "text/css".to_string(),
@@ -100,7 +97,6 @@ impl FileStorageService {
             "text/x-python".to_string(),
             "text/x-shellscript".to_string(),
             "text/x-sql".to_string(),
-
             // ===== Audio/Video =====
             "audio/mpeg".to_string(),
             "audio/aac".to_string(),
@@ -113,7 +109,6 @@ impl FileStorageService {
             "video/ogg".to_string(),
             "video/quicktime".to_string(),
             "video/x-msvideo".to_string(),
-
             // ===== Generic/Fallback =====
             "application/octet-stream".to_string(),
         ]
@@ -124,7 +119,7 @@ impl FileStorageService {
         // Remove path components
         let filename = filename.split('/').next_back().unwrap_or(filename);
         let filename = filename.split('\\').next_back().unwrap_or(filename);
-        
+
         // Remove null bytes and limit to safe characters while preserving extension
         filename
             .chars()
@@ -156,12 +151,7 @@ impl FileStorageService {
     }
 
     /// Validate file upload
-    pub fn validate_file(
-        &self,
-        filename: &str,
-        mime_type: &str,
-        file_size: i64,
-    ) -> Result<()> {
+    pub fn validate_file(&self, filename: &str, mime_type: &str, file_size: i64) -> Result<()> {
         if file_size > self.max_file_size {
             return Err(anyhow::anyhow!(
                 "File too large. Maximum size: {} MB",
@@ -171,10 +161,7 @@ impl FileStorageService {
 
         // Check MIME type
         if !self.allowed_mime_types.contains(&mime_type.to_string()) {
-            return Err(anyhow::anyhow!(
-                "File type not allowed: {}",
-                mime_type
-            ));
+            return Err(anyhow::anyhow!("File type not allowed: {}", mime_type));
         }
 
         // Check filename safety
@@ -199,58 +186,63 @@ impl FileStorageService {
 
         // Check magic bytes for common dangerous file types
         let magic = &data[..std::cmp::min(12, data.len())];
-        
+
         // Detect actual file type from magic bytes
         let detected_type = match magic {
             // Executables - ALWAYS block
             [0x4D, 0x5A, ..] => Some("application/x-msdownload"), // PE/EXE
             [0x7F, 0x45, 0x4C, 0x46, ..] => Some("application/x-executable"), // ELF
             [0xCA, 0xFE, 0xBA, 0xBE, ..] => Some("application/x-mach-binary"), // Mach-O
-            [0x23, 0x21, ..] => Some("text/x-shellscript"), // Shebang scripts
-            
+            [0x23, 0x21, ..] => Some("text/x-shellscript"),       // Shebang scripts
+
             // Images
             [0xFF, 0xD8, 0xFF, ..] => Some("image/jpeg"),
             [0x89, 0x50, 0x4E, 0x47, ..] => Some("image/png"),
             [0x47, 0x49, 0x46, 0x38, ..] => Some("image/gif"),
-            [0x52, 0x49, 0x46, 0x46, ..] if data.len() >= 12 && &data[8..12] == b"WEBP" => Some("image/webp"),
-            
+            [0x52, 0x49, 0x46, 0x46, ..] if data.len() >= 12 && &data[8..12] == b"WEBP" => {
+                Some("image/webp")
+            }
+
             // Archives
             [0x50, 0x4B, 0x03, 0x04, ..] => Some("application/zip"),
             [0x1F, 0x8B, ..] => Some("application/gzip"),
             [0x52, 0x61, 0x72, 0x21, ..] => Some("application/x-rar"),
             [0x37, 0x7A, 0xBC, 0xAF, ..] => Some("application/x-7z-compressed"),
-            
+
             // Documents
             [0x25, 0x50, 0x44, 0x46, ..] => Some("application/pdf"),
-            
+
             _ => None,
         };
 
         // Block executables regardless of declared type
         if let Some(detected) = detected_type {
-            if detected == "application/x-msdownload" 
-                || detected == "application/x-executable" 
-                || detected == "application/x-mach-binary" {
+            if detected == "application/x-msdownload"
+                || detected == "application/x-executable"
+                || detected == "application/x-mach-binary"
+            {
                 return Err(anyhow::anyhow!("Executable files are not allowed"));
             }
 
             // For images, verify declared type matches detected type
-            if declared_mime.starts_with("image/") && detected.starts_with("image/")
-                && declared_mime != detected {
-                    tracing::warn!(
-                        "MIME type mismatch: declared={}, detected={}",
-                        declared_mime,
-                        detected
-                    );
-                    // Allow but log - some browsers send wrong MIME
-                }
+            if declared_mime.starts_with("image/")
+                && detected.starts_with("image/")
+                && declared_mime != detected
+            {
+                tracing::warn!(
+                    "MIME type mismatch: declared={}, detected={}",
+                    declared_mime,
+                    detected
+                );
+                // Allow but log - some browsers send wrong MIME
+            }
         }
 
         Ok(())
     }
 
     /// Compress file content (buffered, for small files)
-    /// 
+    ///
     /// For files < 10 MB, uses standard in-memory compression.
     /// For larger files, use `compress_file_streaming()` instead.
     pub fn compress_file(&self, data: &[u8]) -> Result<Bytes> {
@@ -261,14 +253,14 @@ impl FileStorageService {
     }
 
     /// Compress file content using streaming for large files
-    /// 
+    ///
     /// This method progressively compresses data without loading the entire file
     /// into memory at once. Ideal for files > 10 MB.
-    /// 
+    ///
     /// # Arguments
     /// * `reader` - Async reader for the file data (e.g., from multipart stream)
     /// * `max_compressed_size` - Maximum allowed compressed size (safety limit)
-    /// 
+    ///
     /// # Example
     /// ```ignore
     /// let mut reader = ... // AsyncRead source
@@ -281,18 +273,18 @@ impl FileStorageService {
     ) -> Result<Bytes> {
         // Use fast compression for streaming (balance between speed and ratio)
         let mut encoder = GzEncoder::new(Vec::new(), Compression::fast());
-        
+
         let mut buffer = vec![0u8; 1024 * 1024]; // 1 MB buffer for streaming
         let mut total_compressed = 0i64;
-        
+
         loop {
             let n = tokio::io::AsyncReadExt::read(reader, &mut buffer).await?;
             if n == 0 {
                 break; // EOF
             }
-            
+
             encoder.write_all(&buffer[..n])?;
-            
+
             // Check compressed size limit to prevent memory exhaustion
             total_compressed += n as i64;
             if total_compressed > max_compressed_size {
@@ -302,13 +294,13 @@ impl FileStorageService {
                 ));
             }
         }
-        
+
         let compressed = encoder.finish()?;
         Ok(Bytes::from(compressed))
     }
 
     /// Compression ratio helper - check if compression is worthwhile
-    /// 
+    ///
     /// Returns true if compression provides >5% savings
     pub fn is_compression_worthwhile(original_size: usize, compressed_size: usize) -> bool {
         if original_size == 0 {
@@ -371,7 +363,7 @@ impl FileStorageService {
 
         // Save to database
         self.save_file(&file).await?;
-        
+
         // Save file content
         self.save_file_content(file.id, &compressed_data).await?;
 
@@ -403,30 +395,34 @@ impl FileStorageService {
         self.check_user_quota(account_id, data.len() as i64).await?;
 
         // Try to convert image to WebP if applicable
-        let (final_data, final_mime_type, final_filename) = if self.image_converter.is_supported_image(mime_type) {
-            match self.image_converter.process_image(data, mime_type, filename) {
-                Ok(result) => {
-                    if result.was_converted {
-                        tracing::info!(
-                            "Image converted: {} ({}) -> {} ({}) - {:.1}% reduction",
-                            filename,
-                            mime_type,
-                            result.filename,
-                            result.mime_type,
-                            result.size_reduction_percent()
-                        );
+        let (final_data, final_mime_type, final_filename) =
+            if self.image_converter.is_supported_image(mime_type) {
+                match self
+                    .image_converter
+                    .process_image(data, mime_type, filename)
+                {
+                    Ok(result) => {
+                        if result.was_converted {
+                            tracing::info!(
+                                "Image converted: {} ({}) -> {} ({}) - {:.1}% reduction",
+                                filename,
+                                mime_type,
+                                result.filename,
+                                result.mime_type,
+                                result.size_reduction_percent()
+                            );
+                        }
+                        (result.data, result.mime_type, result.filename)
                     }
-                    (result.data, result.mime_type, result.filename)
+                    Err(e) => {
+                        // Log error but continue with original file
+                        tracing::warn!("Image conversion failed, using original: {}", e);
+                        (data.to_vec(), mime_type.to_string(), filename.to_string())
+                    }
                 }
-                Err(e) => {
-                    // Log error but continue with original file
-                    tracing::warn!("Image conversion failed, using original: {}", e);
-                    (data.to_vec(), mime_type.to_string(), filename.to_string())
-                }
-            }
-        } else {
-            (data.to_vec(), mime_type.to_string(), filename.to_string())
-        };
+            } else {
+                (data.to_vec(), mime_type.to_string(), filename.to_string())
+            };
 
         // Calculate hash (deduplicate by content within the same website or personal cloud)
         let file_hash = self.calculate_hash(&final_data);
@@ -456,12 +452,13 @@ impl FileStorageService {
             file_hash,
             storage_key,
         );
-        
+
         // Set optional metadata
         file.website_id = website_id;
         file.folder_id = folder_id;
         if let Some(v) = visibility {
-            file.visibility = v.parse()
+            file.visibility = v
+                .parse()
                 .unwrap_or(asap_core_domain::FileVisibility::Private);
         }
         file.description = description.map(|s| s.to_string());
@@ -469,7 +466,7 @@ impl FileStorageService {
 
         // Save to database with all metadata
         self.save_file_with_metadata(&file).await?;
-        
+
         // Save file content
         self.save_file_content(file.id, &compressed_data).await?;
 
@@ -532,13 +529,11 @@ impl FileStorageService {
 
     /// Save file content (compressed binary data)
     async fn save_file_content(&self, file_id: Uuid, data: &Bytes) -> Result<()> {
-        sqlx::query(
-            "INSERT INTO file_content (file_id, data) VALUES ($1, $2)"
-        )
-        .bind(file_id)
-        .bind(data.as_ref())
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("INSERT INTO file_content (file_id, data) VALUES ($1, $2)")
+            .bind(file_id)
+            .bind(data.as_ref())
+            .execute(&self.pool)
+            .await?;
 
         Ok(())
     }
@@ -549,7 +544,7 @@ impl FileStorageService {
             "SELECT fc.data, f.original_size, f.compressed_size 
              FROM file_content fc 
              JOIN files f ON f.id = fc.file_id 
-             WHERE fc.file_id = $1"
+             WHERE fc.file_id = $1",
         )
         .bind(file_id)
         .fetch_optional(&self.pool)
@@ -560,7 +555,7 @@ impl FileStorageService {
                 let compressed_data: Vec<u8> = r.get(0);
                 let original_size: i64 = r.get(1);
                 let compressed_size: i64 = r.get(2);
-                
+
                 // If sizes are equal, data was not compressed (e.g., images, already compressed formats)
                 if original_size == compressed_size {
                     Ok(compressed_data)
@@ -581,7 +576,7 @@ impl FileStorageService {
         let mut decoder = GzDecoder::new(compressed);
         let mut decompressed = Vec::new();
         decoder.read_to_end(&mut decompressed)?;
-        
+
         Ok(decompressed)
     }
 
@@ -596,23 +591,21 @@ impl FileStorageService {
         .fetch_optional(&self.pool)
         .await?;
 
-        Ok(row.map(|r| {
-            File {
-                id: r.get(0),
-                account_id: r.get(1),
-                filename: r.get(2),
-                mime_type: r.get(3),
-                original_size: r.get(4),
-                compressed_size: r.get(5),
-                file_hash: r.get(6),
-                storage_key: r.get(7),
-                created_at: r.get(8),
-                folder_id: None,
-                visibility: asap_core_domain::FileVisibility::Website,
-                website_id: r.get(9),
-                description: None,
-                tags: vec![],
-            }
+        Ok(row.map(|r| File {
+            id: r.get(0),
+            account_id: r.get(1),
+            filename: r.get(2),
+            mime_type: r.get(3),
+            original_size: r.get(4),
+            compressed_size: r.get(5),
+            file_hash: r.get(6),
+            storage_key: r.get(7),
+            created_at: r.get(8),
+            folder_id: None,
+            visibility: asap_core_domain::FileVisibility::Website,
+            website_id: r.get(9),
+            description: None,
+            tags: vec![],
         }))
     }
 
@@ -634,7 +627,7 @@ impl FileStorageService {
     pub async fn get_account_quota(&self, account_id: Uuid) -> Result<AccountStorageQuota> {
         let row = sqlx::query(
             "SELECT account_id, total_size_used, quota_limit, updated_at
-             FROM account_storage_quota WHERE account_id = $1"
+             FROM account_storage_quota WHERE account_id = $1",
         )
         .bind(account_id)
         .fetch_optional(&self.pool)
@@ -653,7 +646,7 @@ impl FileStorageService {
                 sqlx::query(
                     "INSERT INTO account_storage_quota (account_id, total_size_used, quota_limit)
                      VALUES ($1, $2, $3)
-                     ON CONFLICT (account_id) DO NOTHING"
+                     ON CONFLICT (account_id) DO NOTHING",
                 )
                 .bind(account_id)
                 .bind(0i64)
@@ -671,7 +664,7 @@ impl FileStorageService {
         sqlx::query(
             "UPDATE account_storage_quota
              SET total_size_used = total_size_used + $1
-             WHERE account_id = $2"
+             WHERE account_id = $2",
         )
         .bind(file_size)
         .bind(account_id)
@@ -701,7 +694,7 @@ impl FileStorageService {
         sqlx::query(
             "UPDATE account_storage_quota
              SET total_size_used = (total_size_used - $1)
-             WHERE account_id = $2"
+             WHERE account_id = $2",
         )
         .bind(file.compressed_size)
         .bind(account_id)
@@ -744,11 +737,11 @@ impl FileStorageService {
 
     /// List account files with optional website filter (None = personal cloud)
     pub async fn list_account_files(
-        &self, 
-        account_id: Uuid, 
-        limit: i64, 
-        offset: i64, 
-        folder_id: Option<Uuid>, 
+        &self,
+        account_id: Uuid,
+        limit: i64,
+        offset: i64,
+        folder_id: Option<Uuid>,
         filter_root: bool,
         website_id: Option<Uuid>,
     ) -> Result<Vec<File>> {
@@ -760,7 +753,7 @@ impl FileStorageService {
             FROM files 
             WHERE account_id = $1
         "#;
-        
+
         let rows = match (filter_root, folder_id, website_id) {
             // Root folder + specific website
             (true, _, Some(wid)) => {
@@ -850,7 +843,7 @@ impl FileStorageService {
                     .and_then(|s| s.parse().ok())
                     .unwrap_or(asap_core_domain::FileVisibility::Private);
                 let tags_val: Option<Vec<String>> = r.get(13);
-                
+
                 File {
                     id: r.get(0),
                     account_id: r.get(1),
@@ -905,12 +898,12 @@ mod tests {
         let mut hasher = sha2::Sha256::new();
         hasher.update(data);
         let hash = hex::encode(hasher.finalize());
-        
+
         // Hash should be consistent
         let mut hasher2 = sha2::Sha256::new();
         hasher2.update(data);
         let hash2 = hex::encode(hasher2.finalize());
-        
+
         assert_eq!(hash, hash2);
     }
 
@@ -922,7 +915,7 @@ mod tests {
             let filename = filename.split('\\').next_back().unwrap_or(filename);
             filename.replace('\0', "")
         }
-        
+
         let filename = sanitize_filename("../../../etc/passwd");
         assert!(!filename.contains("/"));
         assert_eq!(filename, "passwd");

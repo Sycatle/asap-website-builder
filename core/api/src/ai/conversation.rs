@@ -48,7 +48,7 @@ pub async fn get_or_create_conversation(
     let new_id = Uuid::new_v4();
 
     sqlx::query(
-        "INSERT INTO ai_conversations (id, account_id, website_id, title) VALUES ($1, $2, $3, $4)"
+        "INSERT INTO ai_conversations (id, account_id, website_id, title) VALUES ($1, $2, $3, $4)",
     )
     .bind(new_id)
     .bind(account_id)
@@ -127,7 +127,7 @@ pub async fn load_conversation_history(
         WHERE conversation_id = $1 
         ORDER BY created_at DESC 
         LIMIT $2
-        "#
+        "#,
     )
     .bind(conversation_id)
     .bind(max_messages)
@@ -139,7 +139,9 @@ pub async fn load_conversation_history(
     })?;
 
     // Reverse to get chronological order
-    Ok(rows.into_iter().rev().map(|(role, content)| {
-        ConversationMessage { role, content }
-    }).collect())
+    Ok(rows
+        .into_iter()
+        .rev()
+        .map(|(role, content)| ConversationMessage { role, content })
+        .collect())
 }

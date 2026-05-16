@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 /// Integration represents an external service connection
 #[derive(Debug, Clone, Serialize, Deserialize)]

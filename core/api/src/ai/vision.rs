@@ -14,13 +14,13 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use asap_core_ai::AIOrchestrator;
 use crate::Claims;
+use asap_core_ai::AIOrchestrator;
 
 use super::conversation::save_message;
 use super::helpers::{get_account_id, verify_website_ownership};
 use super::types::{
-    ErrorResponse, VisualAnalyzeRequest, VisualAnalyzeResponse, VisionUploadResponse,
+    ErrorResponse, VisionUploadResponse, VisualAnalyzeRequest, VisualAnalyzeResponse,
 };
 
 // ============================================================================
@@ -40,7 +40,14 @@ pub async fn upload_vision_screenshot(
     mut multipart: Multipart,
 ) -> Result<Json<VisionUploadResponse>, (StatusCode, Json<ErrorResponse>)> {
     let account_id = get_account_id(&claims).map_err(|s| {
-        (s, Json(ErrorResponse { error: "Unauthorized".to_string(), code: "unauthorized".to_string(), ..Default::default() }))
+        (
+            s,
+            Json(ErrorResponse {
+                error: "Unauthorized".to_string(),
+                code: "unauthorized".to_string(),
+                ..Default::default()
+            }),
+        )
     })?;
 
     // Parse multipart fields
@@ -49,28 +56,30 @@ pub async fn upload_vision_screenshot(
     let mut viewport: String = "desktop".to_string();
     let mut content_type: String = "image/png".to_string();
 
-    while let Some(field) = multipart
-        .next_field()
-        .await
-        .map_err(|e| (StatusCode::BAD_REQUEST, Json(ErrorResponse {
-            error: format!("Multipart error: {}", e),
-            code: "multipart_error".to_string(),
-            ..Default::default()
-        })))?
-    {
+    while let Some(field) = multipart.next_field().await.map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: format!("Multipart error: {}", e),
+                code: "multipart_error".to_string(),
+                ..Default::default()
+            }),
+        )
+    })? {
         let field_name = field.name().map(|s| s.to_string());
 
         match field_name.as_deref() {
             Some("image") => {
-                content_type = field.content_type()
-                    .unwrap_or("image/png")
-                    .to_string();
+                content_type = field.content_type().unwrap_or("image/png").to_string();
                 image_data = Some(field.bytes().await.map_err(|e| {
-                    (StatusCode::BAD_REQUEST, Json(ErrorResponse {
-                        error: format!("Failed to read image: {}", e),
-                        code: "read_error".to_string(),
-                        ..Default::default()
-                    }))
+                    (
+                        StatusCode::BAD_REQUEST,
+                        Json(ErrorResponse {
+                            error: format!("Failed to read image: {}", e),
+                            code: "read_error".to_string(),
+                            ..Default::default()
+                        }),
+                    )
                 })?);
             }
             Some("website_id") => {
@@ -89,28 +98,63 @@ pub async fn upload_vision_screenshot(
 
     // Validate required fields
     let image_bytes = image_data.ok_or_else(|| {
-        (StatusCode::BAD_REQUEST, Json(ErrorResponse { error: "No image provided".to_string(), code: "missing_image".to_string(), ..Default::default() }))
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "No image provided".to_string(),
+                code: "missing_image".to_string(),
+                ..Default::default()
+            }),
+        )
     })?;
 
     let website_id = website_id.ok_or_else(|| {
-        (StatusCode::BAD_REQUEST, Json(ErrorResponse { error: "website_id is required".to_string(), code: "missing_website_id".to_string(), ..Default::default() }))
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "website_id is required".to_string(),
+                code: "missing_website_id".to_string(),
+                ..Default::default()
+            }),
+        )
     })?;
 
     // Verify website access
     verify_website_ownership(&pool, account_id, website_id)
         .await
         .map_err(|s| {
-            (s, Json(ErrorResponse { error: "Website not found or access denied".to_string(), code: "not_found".to_string(), ..Default::default() }))
+            (
+                s,
+                Json(ErrorResponse {
+                    error: "Website not found or access denied".to_string(),
+                    code: "not_found".to_string(),
+                    ..Default::default()
+                }),
+            )
         })?;
 
     // Validate image
     if !content_type.starts_with("image/") {
-        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse { error: "File must be an image".to_string(), code: "invalid_content_type".to_string(), ..Default::default() })));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "File must be an image".to_string(),
+                code: "invalid_content_type".to_string(),
+                ..Default::default()
+            }),
+        ));
     }
 
     // Limit image size (10MB max for screenshots)
     if image_bytes.len() > 10 * 1024 * 1024 {
-        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse { error: "Image too large (max 10MB)".to_string(), code: "image_too_large".to_string(), ..Default::default() })));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "Image too large (max 10MB)".to_string(),
+                code: "image_too_large".to_string(),
+                ..Default::default()
+            }),
+        ));
     }
 
     // Generate unique image ID
@@ -178,7 +222,14 @@ pub async fn get_vision_screenshot(
     axum::extract::Path(image_id): axum::extract::Path<Uuid>,
 ) -> Result<axum::response::Response, (StatusCode, Json<ErrorResponse>)> {
     let account_id = get_account_id(&claims).map_err(|s| {
-        (s, Json(ErrorResponse { error: "Unauthorized".to_string(), code: "unauthorized".to_string(), ..Default::default() }))
+        (
+            s,
+            Json(ErrorResponse {
+                error: "Unauthorized".to_string(),
+                code: "unauthorized".to_string(),
+                ..Default::default()
+            }),
+        )
     })?;
 
     // Fetch screenshot (must belong to user and not expired)
@@ -187,7 +238,7 @@ pub async fn get_vision_screenshot(
         SELECT data, content_type
         FROM ai_screenshots
         WHERE id = $1 AND account_id = $2 AND expires_at > NOW()
-        "#
+        "#,
     )
     .bind(image_id)
     .bind(account_id)
@@ -195,18 +246,29 @@ pub async fn get_vision_screenshot(
     .await
     .map_err(|e| {
         tracing::error!("Failed to fetch screenshot: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "Database error".to_string(), code: "db_error".to_string(), ..Default::default() }))
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+                code: "db_error".to_string(),
+                ..Default::default()
+            }),
+        )
     })?;
 
     let (data, content_type) = row.ok_or_else(|| {
-        (StatusCode::NOT_FOUND, Json(ErrorResponse { error: "Screenshot not found or expired".to_string(), code: "not_found".to_string(), ..Default::default() }))
+        (
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "Screenshot not found or expired".to_string(),
+                code: "not_found".to_string(),
+                ..Default::default()
+            }),
+        )
     })?;
 
     // Return image with proper content type
-    Ok((
-        [(header::CONTENT_TYPE, content_type)],
-        data
-    ).into_response())
+    Ok(([(header::CONTENT_TYPE, content_type)], data).into_response())
 }
 
 // ============================================================================
@@ -222,19 +284,40 @@ pub async fn analyze_vision(
     Json(req): Json<VisualAnalyzeRequest>,
 ) -> Result<Json<VisualAnalyzeResponse>, (StatusCode, Json<ErrorResponse>)> {
     let account_id = get_account_id(&claims).map_err(|s| {
-        (s, Json(ErrorResponse { error: "Unauthorized".to_string(), code: "unauthorized".to_string(), ..Default::default() }))
+        (
+            s,
+            Json(ErrorResponse {
+                error: "Unauthorized".to_string(),
+                code: "unauthorized".to_string(),
+                ..Default::default()
+            }),
+        )
     })?;
 
     // Verify website ownership
     verify_website_ownership(&pool, account_id, req.website_id)
         .await
         .map_err(|s| {
-            (s, Json(ErrorResponse { error: "Website not found or access denied".to_string(), code: "not_found".to_string(), ..Default::default() }))
+            (
+                s,
+                Json(ErrorResponse {
+                    error: "Website not found or access denied".to_string(),
+                    code: "not_found".to_string(),
+                    ..Default::default()
+                }),
+            )
         })?;
 
     // Verify image exists and belongs to user
     let image_id = Uuid::parse_str(&req.image_id).map_err(|_| {
-        (StatusCode::BAD_REQUEST, Json(ErrorResponse { error: "Invalid image_id".to_string(), code: "invalid_image_id".to_string(), ..Default::default() }))
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "Invalid image_id".to_string(),
+                code: "invalid_image_id".to_string(),
+                ..Default::default()
+            }),
+        )
     })?;
 
     let image_exists: bool = sqlx::query_scalar(
@@ -250,22 +333,35 @@ pub async fn analyze_vision(
     })?;
 
     if !image_exists {
-        return Err((StatusCode::NOT_FOUND, Json(ErrorResponse { error: "Screenshot not found or expired".to_string(), code: "image_not_found".to_string(), ..Default::default() })));
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "Screenshot not found or expired".to_string(),
+                code: "image_not_found".to_string(),
+                ..Default::default()
+            }),
+        ));
     }
 
     // Build image URL (internal endpoint)
     // Note: For OpenAI Vision, we need a publicly accessible URL or base64 data
     // Since our screenshots are stored in DB, we'll fetch and convert to base64 data URL
-    let (image_data, content_type): (Vec<u8>, String) = sqlx::query_as(
-        "SELECT data, content_type FROM ai_screenshots WHERE id = $1"
-    )
-    .bind(image_id)
-    .fetch_one(&pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to fetch image data: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "Failed to retrieve image".to_string(), code: "fetch_error".to_string(), ..Default::default() }))
-    })?;
+    let (image_data, content_type): (Vec<u8>, String) =
+        sqlx::query_as("SELECT data, content_type FROM ai_screenshots WHERE id = $1")
+            .bind(image_id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to fetch image data: {}", e);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorResponse {
+                        error: "Failed to retrieve image".to_string(),
+                        code: "fetch_error".to_string(),
+                        ..Default::default()
+                    }),
+                )
+            })?;
 
     // Convert to base64 data URL for OpenAI Vision API
     let base64_image = general_purpose::STANDARD.encode(&image_data);
@@ -303,7 +399,11 @@ Be constructive and suggest improvements with specific recommendations.
 Keep your response focused and organized.
 Respond in the same language as the user's question."#,
         req.original_message,
-        if !specific_question.is_empty() { format!("Specific question: {}", specific_question) } else { String::new() },
+        if !specific_question.is_empty() {
+            format!("Specific question: {}", specific_question)
+        } else {
+            String::new()
+        },
         req.viewport,
         focus_instruction
     );
@@ -329,18 +429,27 @@ Respond in the same language as the user's question."#,
     // Call GPT-4 Vision
     let openai_config = orchestrator.config().openai.clone();
     if openai_config.api_key.is_empty() {
-        return Err((StatusCode::SERVICE_UNAVAILABLE, Json(ErrorResponse { error: "OpenAI not configured".to_string(), code: "provider_unavailable".to_string(), ..Default::default() })));
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(ErrorResponse {
+                error: "OpenAI not configured".to_string(),
+                code: "provider_unavailable".to_string(),
+                ..Default::default()
+            }),
+        ));
     }
 
     let openai = asap_core_ai::OpenAIProvider::new(openai_config);
 
-    let vision_result = openai.chat_with_vision(
-        &vision_prompt,
-        vec![image_url],
-        None, // No additional system prompt
-        Some("gpt-4o"), // Use GPT-4 Vision
-        Some(2000), // Max tokens for detailed analysis
-    ).await;
+    let vision_result = openai
+        .chat_with_vision(
+            &vision_prompt,
+            vec![image_url],
+            None,           // No additional system prompt
+            Some("gpt-4o"), // Use GPT-4 Vision
+            Some(2000),     // Max tokens for detailed analysis
+        )
+        .await;
 
     let analysis = match vision_result {
         Ok(response) => {
@@ -353,19 +462,19 @@ Respond in the same language as the user's question."#,
         }
         Err(e) => {
             tracing::error!("Vision analysis failed: {:?}", e);
-            return Err((StatusCode::BAD_GATEWAY, Json(ErrorResponse { error: "Vision analysis failed".to_string(), code: "vision_error".to_string(), ..Default::default() })));
+            return Err((
+                StatusCode::BAD_GATEWAY,
+                Json(ErrorResponse {
+                    error: "Vision analysis failed".to_string(),
+                    code: "vision_error".to_string(),
+                    ..Default::default()
+                }),
+            ));
         }
     };
 
     // Save the analysis as an AI message in the conversation
-    let _ = save_message(
-        &pool,
-        conversation_id,
-        "assistant",
-        &analysis,
-        None,
-        None,
-    ).await;
+    let _ = save_message(&pool, conversation_id, "assistant", &analysis, None, None).await;
 
     tracing::info!(
         image_id = %image_id,

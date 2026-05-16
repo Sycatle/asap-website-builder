@@ -1,17 +1,17 @@
 //! Website pages management
 
 use axum::{
-    extract::{Path, State, Extension},
-    response::IntoResponse,
+    extract::{Extension, Path, State},
     http::StatusCode,
+    response::IntoResponse,
     Json,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use asap_core_shared::{Claims, SharedWsBroadcaster};
 use crate::queries;
+use asap_core_shared::{Claims, SharedWsBroadcaster};
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct WebsitePage {
@@ -91,18 +91,26 @@ pub async fn list_website_pages(
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -110,15 +118,23 @@ pub async fn list_website_pages(
     match queries::verify_website_access(&pool, website_uuid, account_id).await {
         Ok(true) => {}
         Ok(false) => {
-            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Website not found"
-            }))).into_response();
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "error": "Website not found"
+                })),
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error verifying website access: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     }
 
@@ -128,7 +144,7 @@ pub async fn list_website_pages(
         FROM website_pages
         WHERE website_id = $1
         ORDER BY "order" ASC, created_at ASC
-        "#
+        "#,
     )
     .bind(website_uuid)
     .fetch_all(&pool)
@@ -141,9 +157,13 @@ pub async fn list_website_pages(
         }
         Err(e) => {
             tracing::error!("Database error listing pages: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -157,27 +177,39 @@ pub async fn get_page(
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let page_uuid = match Uuid::parse_str(&page_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid page ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid page ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -185,15 +217,23 @@ pub async fn get_page(
     match queries::verify_website_access(&pool, website_uuid, account_id).await {
         Ok(true) => {}
         Ok(false) => {
-            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Website not found"
-            }))).into_response();
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "error": "Website not found"
+                })),
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error verifying website access: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     }
 
@@ -210,19 +250,23 @@ pub async fn get_page(
     .await;
 
     match result {
-        Ok(Some(page)) => {
-            (StatusCode::OK, Json(WebsitePageResponse::from(page))).into_response()
-        }
-        Ok(None) => {
-            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+        Ok(Some(page)) => (StatusCode::OK, Json(WebsitePageResponse::from(page))).into_response(),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
                 "error": "Page not found"
-            }))).into_response()
-        }
+            })),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Database error fetching page: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -238,18 +282,26 @@ pub async fn create_page(
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -257,15 +309,23 @@ pub async fn create_page(
     match queries::verify_website_access(&pool, website_uuid, account_id).await {
         Ok(true) => {}
         Ok(false) => {
-            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Website not found"
-            }))).into_response();
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "error": "Website not found"
+                })),
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error verifying website access: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     }
 
@@ -274,31 +334,39 @@ pub async fn create_page(
         Ok(tx) => tx,
         Err(e) => {
             tracing::error!("Failed to start transaction: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
     // If this is set as homepage, unset other homepages (within transaction)
     if payload.is_homepage.unwrap_or(false) {
-        if let Err(e) = sqlx::query(
-            "UPDATE website_pages SET is_homepage = false WHERE website_id = $1"
-        )
-        .bind(website_uuid)
-        .execute(&mut *tx)
-        .await {
+        if let Err(e) =
+            sqlx::query("UPDATE website_pages SET is_homepage = false WHERE website_id = $1")
+                .bind(website_uuid)
+                .execute(&mut *tx)
+                .await
+        {
             tracing::error!("Failed to unset homepages: {}", e);
             let _ = tx.rollback().await;
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     }
 
     // Get next order value
     let next_order = sqlx::query_scalar::<_, i32>(
-        r#"SELECT COALESCE(MAX("order"), 0) + 1 FROM website_pages WHERE website_id = $1"#
+        r#"SELECT COALESCE(MAX("order"), 0) + 1 FROM website_pages WHERE website_id = $1"#,
     )
     .bind(website_uuid)
     .fetch_one(&mut *tx)
@@ -329,9 +397,13 @@ pub async fn create_page(
             // Commit the transaction before any other operations
             if let Err(e) = tx.commit().await {
                 tracing::error!("Failed to commit transaction: {}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                    "error": "Internal server error"
-                }))).into_response();
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({
+                        "error": "Internal server error"
+                    })),
+                )
+                    .into_response();
             }
 
             // Create event
@@ -374,21 +446,33 @@ pub async fn create_page(
                 }
             }
 
-            (StatusCode::CREATED, Json(serde_json::json!({
-                "id": page_id.to_string(),
-                "message": "Page created successfully"
-            }))).into_response()
+            (
+                StatusCode::CREATED,
+                Json(serde_json::json!({
+                    "id": page_id.to_string(),
+                    "message": "Page created successfully"
+                })),
+            )
+                .into_response()
         }
         Err(e) => {
             if e.to_string().contains("unique constraint") {
-                return (StatusCode::CONFLICT, Json(serde_json::json!({
-                    "error": "A page with this slug already exists"
-                }))).into_response();
+                return (
+                    StatusCode::CONFLICT,
+                    Json(serde_json::json!({
+                        "error": "A page with this slug already exists"
+                    })),
+                )
+                    .into_response();
             }
             tracing::error!("Database error creating page: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -404,27 +488,39 @@ pub async fn update_page(
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let page_uuid = match Uuid::parse_str(&page_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid page ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid page ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -432,21 +528,29 @@ pub async fn update_page(
     match queries::verify_website_access(&pool, website_uuid, account_id).await {
         Ok(true) => {}
         Ok(false) => {
-            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Website not found"
-            }))).into_response();
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "error": "Website not found"
+                })),
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error verifying website access: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     }
 
     // Verify page exists for this website
     let page_exists = sqlx::query_scalar::<_, bool>(
-        r#"SELECT EXISTS(SELECT 1 FROM website_pages WHERE id = $1 AND website_id = $2)"#
+        r#"SELECT EXISTS(SELECT 1 FROM website_pages WHERE id = $1 AND website_id = $2)"#,
     )
     .bind(page_uuid)
     .bind(website_uuid)
@@ -455,15 +559,23 @@ pub async fn update_page(
 
     match page_exists {
         Ok(false) => {
-            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Page not found"
-            }))).into_response();
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "error": "Page not found"
+                })),
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error verifying page: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
         _ => {}
     }
@@ -473,26 +585,35 @@ pub async fn update_page(
         Ok(tx) => tx,
         Err(e) => {
             tracing::error!("Failed to start transaction: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
     // If setting as homepage, unset others (within transaction)
     if payload.is_homepage.unwrap_or(false) {
         if let Err(e) = sqlx::query(
-            "UPDATE website_pages SET is_homepage = false WHERE website_id = $1 AND id != $2"
+            "UPDATE website_pages SET is_homepage = false WHERE website_id = $1 AND id != $2",
         )
         .bind(website_uuid)
         .bind(page_uuid)
         .execute(&mut *tx)
-        .await {
+        .await
+        {
             tracing::error!("Failed to unset homepages: {}", e);
             let _ = tx.rollback().await;
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     }
 
@@ -531,17 +652,25 @@ pub async fn update_page(
     }
 
     if params.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "No fields to update"
-        }))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "No fields to update"
+            })),
+        )
+            .into_response();
     }
 
     query.push_str(&params.join(", "));
-    query.push_str(&format!(" WHERE id = ${} AND website_id = ${}", param_count, param_count + 1));
+    query.push_str(&format!(
+        " WHERE id = ${} AND website_id = ${}",
+        param_count,
+        param_count + 1
+    ));
 
     // Execute with sqlx raw query
     let mut q = sqlx::query(&query);
-    
+
     if let Some(ref slug) = payload.slug {
         q = q.bind(slug);
     }
@@ -563,7 +692,7 @@ pub async fn update_page(
     if let Some(ref metadata) = payload.metadata {
         q = q.bind(metadata);
     }
-    
+
     q = q.bind(page_uuid).bind(website_uuid);
 
     match q.execute(&mut *tx).await {
@@ -571,9 +700,13 @@ pub async fn update_page(
             // Commit transaction
             if let Err(e) = tx.commit().await {
                 tracing::error!("Failed to commit transaction: {}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                    "error": "Internal server error"
-                }))).into_response();
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({
+                        "error": "Internal server error"
+                    })),
+                )
+                    .into_response();
             }
 
             let update_data = serde_json::json!({
@@ -599,21 +732,33 @@ pub async fn update_page(
                 }
             }
 
-            (StatusCode::OK, Json(serde_json::json!({
-                "message": "Page updated successfully"
-            }))).into_response()
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "message": "Page updated successfully"
+                })),
+            )
+                .into_response()
         }
         Err(e) => {
             let _ = tx.rollback().await;
             if e.to_string().contains("unique constraint") {
-                return (StatusCode::CONFLICT, Json(serde_json::json!({
-                    "error": "A page with this slug already exists"
-                }))).into_response();
+                return (
+                    StatusCode::CONFLICT,
+                    Json(serde_json::json!({
+                        "error": "A page with this slug already exists"
+                    })),
+                )
+                    .into_response();
             }
             tracing::error!("Database error updating page: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -628,27 +773,39 @@ pub async fn delete_page(
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let page_uuid = match Uuid::parse_str(&page_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid page ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid page ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -656,25 +813,31 @@ pub async fn delete_page(
     match queries::verify_website_access(&pool, website_uuid, account_id).await {
         Ok(true) => {}
         Ok(false) => {
-            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Website not found"
-            }))).into_response();
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "error": "Website not found"
+                })),
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error verifying website access: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     }
 
-    let result = sqlx::query(
-        r#"DELETE FROM website_pages WHERE id = $1 AND website_id = $2"#
-    )
-    .bind(page_uuid)
-    .bind(website_uuid)
-    .execute(&pool)
-    .await;
+    let result = sqlx::query(r#"DELETE FROM website_pages WHERE id = $1 AND website_id = $2"#)
+        .bind(page_uuid)
+        .bind(website_uuid)
+        .execute(&pool)
+        .await;
 
     match result {
         Ok(r) if r.rows_affected() > 0 => {
@@ -696,28 +859,34 @@ pub async fn delete_page(
             let website_uuid = Uuid::parse_str(&website_id).unwrap();
             if let Ok(account_ids) = queries::get_website_account_ids(&pool, website_uuid).await {
                 for acc_id in account_ids {
-                    (*ws_broadcaster).sync_page_deleted(
-                        &acc_id.to_string(),
-                        &website_id,
-                        &page_id,
-                    );
+                    (*ws_broadcaster).sync_page_deleted(&acc_id.to_string(), &website_id, &page_id);
                 }
             }
 
-            (StatusCode::OK, Json(serde_json::json!({
-                "message": "Page deleted successfully"
-            }))).into_response()
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "message": "Page deleted successfully"
+                })),
+            )
+                .into_response()
         }
-        Ok(_) => {
-            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+        Ok(_) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
                 "error": "Page not found"
-            }))).into_response()
-        }
+            })),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Database error deleting page: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -733,18 +902,26 @@ pub async fn reorder_pages(
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -752,15 +929,23 @@ pub async fn reorder_pages(
     match queries::verify_website_access(&pool, website_uuid, account_id).await {
         Ok(true) => {}
         Ok(false) => {
-            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Website not found"
-            }))).into_response();
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "error": "Website not found"
+                })),
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error verifying website access: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     }
 
@@ -769,9 +954,13 @@ pub async fn reorder_pages(
         Ok(tx) => tx,
         Err(e) => {
             tracing::error!("Failed to start transaction: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -781,34 +970,47 @@ pub async fn reorder_pages(
             Ok(id) => id,
             Err(_) => {
                 let _ = tx.rollback().await;
-                return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                    "error": format!("Invalid page ID: {}", page_id)
-                }))).into_response();
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({
+                        "error": format!("Invalid page ID: {}", page_id)
+                    })),
+                )
+                    .into_response();
             }
         };
 
         if let Err(e) = sqlx::query(
-            r#"UPDATE website_pages SET "order" = $1 WHERE id = $2 AND website_id = $3"#
+            r#"UPDATE website_pages SET "order" = $1 WHERE id = $2 AND website_id = $3"#,
         )
         .bind(index as i32)
         .bind(page_uuid)
         .bind(website_uuid)
         .execute(&mut *tx)
-        .await {
+        .await
+        {
             tracing::error!("Failed to update page order: {}", e);
             let _ = tx.rollback().await;
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Failed to reorder pages"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to reorder pages"
+                })),
+            )
+                .into_response();
         }
     }
 
     // Commit transaction
     if let Err(e) = tx.commit().await {
         tracing::error!("Failed to commit transaction: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Internal server error"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Internal server error"
+            })),
+        )
+            .into_response();
     }
 
     // Broadcast to all users with access (owner + active administrators)
@@ -822,9 +1024,13 @@ pub async fn reorder_pages(
         }
     }
 
-    (StatusCode::OK, Json(serde_json::json!({
-        "message": "Pages reordered successfully"
-    }))).into_response()
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "message": "Pages reordered successfully"
+        })),
+    )
+        .into_response()
 }
 
 /// Get public pages for a published website (no auth required)
@@ -833,25 +1039,33 @@ pub async fn get_public_website_pages(
     Path(slug): Path<String>,
 ) -> impl IntoResponse {
     use crate::queries;
-    
+
     // First get the website by slug to verify it's published
     let website_result = queries::get_public_website(&pool, &slug).await;
-    
+
     let website = match website_result {
         Ok(Some(w)) => w,
         Ok(None) => {
-            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Website not found or not published"
-            }))).into_response();
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "error": "Website not found or not published"
+                })),
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error fetching website: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
-    
+
     // Get pages for this website (public - only visible ones)
     let result = sqlx::query_as::<_, WebsitePage>(
         r#"
@@ -859,7 +1073,7 @@ pub async fn get_public_website_pages(
         FROM website_pages
         WHERE website_id = $1 AND visible = true
         ORDER BY "order" ASC
-        "#
+        "#,
     )
     .bind(website.id)
     .fetch_all(&pool)
@@ -872,9 +1086,13 @@ pub async fn get_public_website_pages(
         }
         Err(e) => {
             tracing::error!("Database error fetching public pages: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }

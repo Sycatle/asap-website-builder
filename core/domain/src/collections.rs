@@ -180,7 +180,9 @@ pub enum CollectionFieldType {
     Json,
     Array,
     /// Reference to another collection
-    Reference { collection: String },
+    Reference {
+        collection: String,
+    },
 }
 
 // ============================================================================
@@ -193,23 +195,23 @@ pub struct WebsiteCollection {
     pub id: Uuid,
     pub website_id: Uuid,
     pub collection_slug: String,
-    
+
     /// The actual items in the collection
     pub items: Vec<CollectionItem>,
-    
+
     /// Metadata about the collection
     pub source_extension: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_version: Option<String>,
     pub total_count: i32,
-    
+
     /// Sync status
     pub sync_status: SyncStatus,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sync_error: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub synced_at: Option<DateTime<Utc>>,
-    
+
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -236,7 +238,7 @@ impl std::fmt::Display for SyncStatus {
 
 impl std::str::FromStr for SyncStatus {
     type Err = String;
-    
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "idle" => Ok(SyncStatus::Idle),
@@ -277,7 +279,7 @@ impl CollectionItem {
             source_id: None,
         }
     }
-    
+
     /// Create with source ID tracking
     pub fn with_source_id(mut self, source_id: impl Into<String>) -> Self {
         self.source_id = Some(source_id.into());
@@ -311,7 +313,7 @@ impl VariableDefinition {
             source: VariableSourceDef::Manual,
         }
     }
-    
+
     /// Create a variable synced from extension settings
     pub fn synced(key: &str, name: &str, value_type: VariableType, setting_key: &str) -> Self {
         Self {
@@ -324,9 +326,14 @@ impl VariableDefinition {
             },
         }
     }
-    
+
     /// Create a computed variable
-    pub fn computed(key: &str, name: &str, value_type: VariableType, computation: VariableComputation) -> Self {
+    pub fn computed(
+        key: &str,
+        name: &str,
+        value_type: VariableType,
+        computation: VariableComputation,
+    ) -> Self {
         Self {
             key: key.to_string(),
             name: name.to_string(),
@@ -335,7 +342,7 @@ impl VariableDefinition {
             source: VariableSourceDef::Computed { computation },
         }
     }
-    
+
     /// Builder: add description
     pub fn with_description(mut self, desc: &str) -> Self {
         self.description = Some(desc.to_string());
@@ -379,7 +386,7 @@ impl VariableComputation {
             sort: None,
         }
     }
-    
+
     /// Sum a numeric field
     pub fn sum(collection: &str, field: &str) -> Self {
         Self {
@@ -390,7 +397,7 @@ impl VariableComputation {
             sort: None,
         }
     }
-    
+
     /// Average a numeric field
     pub fn avg(collection: &str, field: &str) -> Self {
         Self {
@@ -401,7 +408,7 @@ impl VariableComputation {
             sort: None,
         }
     }
-    
+
     /// Get minimum value
     pub fn min(collection: &str, field: &str) -> Self {
         Self {
@@ -412,7 +419,7 @@ impl VariableComputation {
             sort: None,
         }
     }
-    
+
     /// Get maximum value
     pub fn max(collection: &str, field: &str) -> Self {
         Self {
@@ -423,7 +430,7 @@ impl VariableComputation {
             sort: None,
         }
     }
-    
+
     /// Get first item's field value (requires sort)
     pub fn first(collection: &str, field: &str, sort_field: &str, order: SortOrder) -> Self {
         Self {
@@ -437,7 +444,7 @@ impl VariableComputation {
             }),
         }
     }
-    
+
     /// Get most common value
     pub fn mode(collection: &str, field: &str) -> Self {
         Self {
@@ -448,7 +455,7 @@ impl VariableComputation {
             sort: None,
         }
     }
-    
+
     /// Add filter to computation
     pub fn with_filter(mut self, filter: Vec<FilterClause>) -> Self {
         self.filter = Some(filter);
@@ -536,7 +543,7 @@ impl std::fmt::Display for VariableSource {
 
 impl std::str::FromStr for VariableSource {
     type Err = String;
-    
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "manual" => Ok(VariableSource::Manual),
@@ -595,27 +602,27 @@ impl FilterClause {
             value: value.into(),
         }
     }
-    
+
     pub fn eq(field: &str, value: impl Into<serde_json::Value>) -> Self {
         Self::new(field, FilterOperator::Eq, value)
     }
-    
+
     pub fn neq(field: &str, value: impl Into<serde_json::Value>) -> Self {
         Self::new(field, FilterOperator::Neq, value)
     }
-    
+
     pub fn gt(field: &str, value: impl Into<serde_json::Value>) -> Self {
         Self::new(field, FilterOperator::Gt, value)
     }
-    
+
     pub fn gte(field: &str, value: impl Into<serde_json::Value>) -> Self {
         Self::new(field, FilterOperator::Gte, value)
     }
-    
+
     pub fn lt(field: &str, value: impl Into<serde_json::Value>) -> Self {
         Self::new(field, FilterOperator::Lt, value)
     }
-    
+
     pub fn lte(field: &str, value: impl Into<serde_json::Value>) -> Self {
         Self::new(field, FilterOperator::Lte, value)
     }
@@ -654,7 +661,7 @@ impl SortClause {
             order: SortOrder::Asc,
         }
     }
-    
+
     pub fn desc(field: &str) -> Self {
         Self {
             field: field.to_string(),
@@ -746,20 +753,24 @@ pub fn field(key: &str, field_type: CollectionFieldType, label: &str) -> Collect
 mod tests {
     use super::*;
     use serde_json::json;
-    
+
     #[test]
     fn test_collection_item_creation() {
-        let item = CollectionItem::new("repo-123", json!({
-            "name": "asap",
-            "stars": 847,
-            "language": "TypeScript"
-        })).with_source_id("gh-123456");
-        
+        let item = CollectionItem::new(
+            "repo-123",
+            json!({
+                "name": "asap",
+                "stars": 847,
+                "language": "TypeScript"
+            }),
+        )
+        .with_source_id("gh-123456");
+
         assert_eq!(item.id, "repo-123");
         assert_eq!(item.source_id, Some("gh-123456".to_string()));
         assert_eq!(item.data["stars"], 847);
     }
-    
+
     #[test]
     fn test_field_builder() {
         let field = CollectionFieldDef::new("stars", CollectionFieldType::Number, "GitHub Stars")
@@ -768,25 +779,28 @@ mod tests {
             .filterable()
             .with_description("Number of GitHub stars")
             .with_icon("star");
-        
+
         assert!(field.required);
         assert!(field.sortable);
         assert!(field.filterable);
         assert!(!field.searchable);
-        assert_eq!(field.description, Some("Number of GitHub stars".to_string()));
+        assert_eq!(
+            field.description,
+            Some("Number of GitHub stars".to_string())
+        );
     }
-    
+
     #[test]
     fn test_variable_computation() {
         let comp = VariableComputation::sum("github_repos", "stars")
             .with_filter(vec![FilterClause::eq("language", "TypeScript")]);
-        
+
         assert_eq!(comp.operation, ComputeOperation::Sum);
         assert_eq!(comp.collection, "github_repos");
         assert_eq!(comp.field, Some("stars".to_string()));
         assert!(comp.filter.is_some());
     }
-    
+
     #[test]
     fn test_filter_clause_helpers() {
         let filter = FilterClause::gte("stars", 100);
@@ -794,14 +808,14 @@ mod tests {
         assert_eq!(filter.operator, FilterOperator::Gte);
         assert_eq!(filter.value, json!(100));
     }
-    
+
     #[test]
     fn test_sync_status_serialization() {
         assert_eq!(SyncStatus::Idle.to_string(), "idle");
         assert_eq!(SyncStatus::Syncing.to_string(), "syncing");
         assert_eq!("error".parse::<SyncStatus>().unwrap(), SyncStatus::Error);
     }
-    
+
     #[test]
     fn test_variable_type_serialization() {
         assert_eq!(VariableType::Number.to_string(), "number");

@@ -5,21 +5,21 @@ mod db;
 mod event_processor;
 mod extension_executor;
 mod file_cleanup;
-mod parallel_processor;
-mod registry;
-mod payment_reconciliation;
 mod notification_publisher;
+mod parallel_processor;
+mod payment_reconciliation;
+mod registry;
 mod web_push;
 
 use config::Config;
 use event_processor::EventProcessor;
-use registry::{ModuleRegistryConfig, register_all_modules};
 use file_cleanup::FileCleanupTask;
-use parallel_processor::{ParallelProcessorConfig, process_events_parallel};
-use payment_reconciliation::PaymentReconciliation;
 use notification_publisher::WorkerNotificationPublisher;
-use web_push::WebPushSender;
+use parallel_processor::{process_events_parallel, ParallelProcessorConfig};
+use payment_reconciliation::PaymentReconciliation;
+use registry::{register_all_modules, ModuleRegistryConfig};
 use std::sync::Arc;
+use web_push::WebPushSender;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -59,10 +59,7 @@ async fn main() -> anyhow::Result<()> {
     let event_processor = Arc::new(EventProcessor::new(pool.clone()));
 
     // Create module executor registry using centralized registration
-    let registry_config = ModuleRegistryConfig::new(
-        pool.clone(),
-        config.core_api_url.clone(),
-    );
+    let registry_config = ModuleRegistryConfig::new(pool.clone(), config.core_api_url.clone());
     let registry = Arc::new(register_all_modules(registry_config)?);
 
     // Create file cleanup task
@@ -86,7 +83,10 @@ async fn main() -> anyhow::Result<()> {
             Some(recon_arc)
         }
         Err(e) => {
-            tracing::warn!("Failed to initialize payment reconciliation: {}. Continuing without it.", e);
+            tracing::warn!(
+                "Failed to initialize payment reconciliation: {}. Continuing without it.",
+                e
+            );
             None
         }
     };
@@ -135,7 +135,10 @@ async fn main() -> anyhow::Result<()> {
             }
         }
         Err(e) => {
-            tracing::warn!("VAPID keys not available: {}. PWA push notifications disabled.", e);
+            tracing::warn!(
+                "VAPID keys not available: {}. PWA push notifications disabled.",
+                e
+            );
             None
         }
     };
@@ -147,10 +150,10 @@ async fn main() -> anyhow::Result<()> {
 
     // Main event loop
     let polling_interval = std::time::Duration::from_secs(config.polling_interval_secs);
-    
+
     loop {
         tracing::debug!("Polling for unprocessed events...");
-        
+
         match process_events_parallel_wrapper(&event_processor, &registry, &parallel_config).await {
             Ok(stats) => {
                 if stats.total_events > 0 {
@@ -171,10 +174,10 @@ async fn main() -> anyhow::Result<()> {
         // Process notification queue periodically
         if last_notification_queue_process.elapsed() >= notification_queue_interval {
             tracing::debug!("Processing notification queue...");
-            
+
             // Remember when we started processing
             let process_start = chrono::Utc::now();
-            
+
             match process_notification_queue_task(&pool).await {
                 Ok((processed, created)) => {
                     if created > 0 {
@@ -183,46 +186,68 @@ async fn main() -> anyhow::Result<()> {
                             processed,
                             created
                         );
-                        
+
                         // Get new notifications for both Redis pub/sub and Web Push
-                        match notification_publisher::get_notifications_created_since(&pool, last_notification_check).await {
+                        match notification_publisher::get_notifications_created_since(
+                            &pool,
+                            last_notification_check,
+                        )
+                        .await
+                        {
                             Ok(new_notifications) => {
                                 if !new_notifications.is_empty() {
                                     // Publish to Redis for WebSocket (real-time in-app)
                                     if let Some(ref publisher) = notification_publisher {
-                                        match notification_publisher::publish_new_notifications(publisher, &pool, new_notifications.clone()).await {
+                                        match notification_publisher::publish_new_notifications(
+                                            publisher,
+                                            &pool,
+                                            new_notifications.clone(),
+                                        )
+                                        .await
+                                        {
                                             Ok(published) => {
-                                                tracing::info!("Published {} notifications to Redis", published);
+                                                tracing::info!(
+                                                    "Published {} notifications to Redis",
+                                                    published
+                                                );
                                             }
                                             Err(e) => {
-                                                tracing::error!("Failed to publish notifications to Redis: {}", e);
+                                                tracing::error!(
+                                                    "Failed to publish notifications to Redis: {}",
+                                                    e
+                                                );
                                             }
                                         }
                                     }
-                                    
+
                                     // Send Web Push notifications (for PWA background/closed)
                                     if let Some(ref push_sender) = web_push_sender {
                                         for notification in &new_notifications {
                                             // Check if push is enabled for this account
-                                            let push_enabled = web_push::is_push_enabled(&pool, notification.account_id)
-                                                .await
-                                                .unwrap_or(true);
-                                            
+                                            let push_enabled = web_push::is_push_enabled(
+                                                &pool,
+                                                notification.account_id,
+                                            )
+                                            .await
+                                            .unwrap_or(true);
+
                                             if !push_enabled {
                                                 continue;
                                             }
-                                            
+
                                             // Check if category is enabled
                                             let category_enabled = web_push::is_category_enabled(
-                                                &pool, 
-                                                notification.account_id, 
-                                                &notification.category
-                                            ).await.unwrap_or(true);
-                                            
+                                                &pool,
+                                                notification.account_id,
+                                                &notification.category,
+                                            )
+                                            .await
+                                            .unwrap_or(true);
+
                                             if !category_enabled {
                                                 continue;
                                             }
-                                            
+
                                             // Build push payload
                                             let payload = web_push::PushPayload {
                                                 id: notification.id.to_string(),
@@ -235,9 +260,16 @@ async fn main() -> anyhow::Result<()> {
                                                 category: notification.category.clone(),
                                                 priority: notification.priority.clone(),
                                             };
-                                            
+
                                             // Send to all devices for this account
-                                            match push_sender.send_to_account(&pool, notification.account_id, &payload).await {
+                                            match push_sender
+                                                .send_to_account(
+                                                    &pool,
+                                                    notification.account_id,
+                                                    &payload,
+                                                )
+                                                .await
+                                            {
                                                 Ok(result) => {
                                                     if result.sent > 0 {
                                                         tracing::debug!(
@@ -270,7 +302,7 @@ async fn main() -> anyhow::Result<()> {
                     tracing::error!("Error processing notification queue: {}", e);
                 }
             }
-            
+
             last_notification_queue_process = std::time::Instant::now();
             last_notification_check = process_start;
         }
@@ -286,7 +318,7 @@ async fn process_events_parallel_wrapper(
 ) -> anyhow::Result<parallel_processor::ProcessingStats> {
     // Fetch unprocessed events
     let events = event_processor.fetch_unprocessed_events().await?;
-    
+
     if events.is_empty() {
         return Ok(parallel_processor::ProcessingStats::default());
     }
@@ -307,21 +339,21 @@ async fn run_payment_reconciliation() -> anyhow::Result<()> {
 
     // Load configuration
     let config = Config::from_env()?;
-    
+
     // Create database pool
     let pool = db::create_pool(&config.database_url).await?;
-    
+
     // Create reconciliation service
     let reconciliation = PaymentReconciliation::new(pool)?;
-    
+
     // Run reconciliation
     let stats = reconciliation.reconcile_all().await?;
-    
+
     println!("Payment reconciliation completed:");
     println!("  Total accounts: {}", stats.total_accounts);
     println!("  Successful: {}", stats.successful);
     println!("  Failed: {}", stats.failed);
-    
+
     Ok(())
 }
 
@@ -329,17 +361,16 @@ async fn run_payment_reconciliation() -> anyhow::Result<()> {
 async fn process_notification_queue_task(pool: &sqlx::PgPool) -> anyhow::Result<(i32, i32)> {
     // Consolidation window: 30 seconds
     let consolidation_window_seconds: i32 = 30;
-    
+
     // Use query_as with a tuple instead of query! to avoid compile-time checking
-    let result: (Option<i32>, Option<i32>) = sqlx::query_as(
-        "SELECT processed_count, created_count FROM process_notification_queue($1)"
-    )
-    .bind(consolidation_window_seconds)
-    .fetch_one(pool)
-    .await?;
-    
+    let result: (Option<i32>, Option<i32>) =
+        sqlx::query_as("SELECT processed_count, created_count FROM process_notification_queue($1)")
+            .bind(consolidation_window_seconds)
+            .fetch_one(pool)
+            .await?;
+
     let processed = result.0.unwrap_or(0);
     let created = result.1.unwrap_or(0);
-    
+
     Ok((processed, created))
 }

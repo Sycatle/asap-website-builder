@@ -28,21 +28,18 @@ pub use config::{AIConfig, OpenAIConfig};
 pub use context::ContextBuilder;
 pub use error::{AIError, AIResult};
 pub use intent::{
-    analyze_intent, analyze_intent_streaming, 
-    execute_thinking_step, execute_thinking_step_streaming,
-    detect_language_simple, 
-    IntentAnalysis, ThinkingStep, StepResult, StreamEvent
+    analyze_intent, analyze_intent_streaming, detect_language_simple, execute_thinking_step,
+    execute_thinking_step_streaming, IntentAnalysis, StepResult, StreamEvent, ThinkingStep,
 };
 pub use orchestrator::AIOrchestrator;
+pub use providers::{
+    ChatCompletionWithTools, ImageUrlContent, MessageContent, OpenAIMessage, OpenAIMessageVision,
+    OpenAIProvider, VisionContentPart,
+};
 pub use rate_limiter::AIRateLimiter;
 pub use router::ModelRouter;
 pub use tools::{
-    get_tool_definitions, ToolExecutor, ToolCall, ToolResult, ToolDefinition,
-    VisualAnalysisParams, VisualAnalysisRequest, VisualAnalysisResult,
-};
-pub use providers::{
-    OpenAIProvider, OpenAIMessage, ChatCompletionWithTools,
-    VisionContentPart, ImageUrlContent, MessageContent, OpenAIMessageVision,
+    get_tool_definitions, ToolCall, ToolDefinition, ToolExecutor, ToolResult, VisualAnalysisParams,
+    VisualAnalysisRequest, VisualAnalysisResult,
 };
 pub use types::*;
-

@@ -31,7 +31,7 @@ pub enum NotificationPubSubEvent {
         notification: serde_json::Value,
         unread_count: i64,
     },
-    
+
     /// Notification marked as read
     #[serde(rename = "notification:read")]
     Read {
@@ -39,7 +39,7 @@ pub enum NotificationPubSubEvent {
         notification_id: String,
         unread_count: i64,
     },
-    
+
     /// Notification deleted
     #[serde(rename = "notification:deleted")]
     Deleted {
@@ -47,14 +47,14 @@ pub enum NotificationPubSubEvent {
         notification_id: String,
         unread_count: i64,
     },
-    
+
     /// Unread count update
     #[serde(rename = "notification:count")]
     Count {
         account_id: String,
         unread_count: i64,
     },
-    
+
     /// Batch read
     #[serde(rename = "notification:batch-read")]
     BatchRead {
@@ -75,11 +75,15 @@ impl NotificationPubSubEvent {
             Self::BatchRead { account_id, .. } => account_id,
         }
     }
-    
+
     /// Convert to WebSocket message format
     pub fn to_ws_message(&self) -> serde_json::Value {
         match self {
-            Self::New { notification, unread_count, .. } => {
+            Self::New {
+                notification,
+                unread_count,
+                ..
+            } => {
                 serde_json::json!({
                     "type": "notification:new",
                     "data": {
@@ -88,7 +92,11 @@ impl NotificationPubSubEvent {
                     }
                 })
             }
-            Self::Read { notification_id, unread_count, .. } => {
+            Self::Read {
+                notification_id,
+                unread_count,
+                ..
+            } => {
                 serde_json::json!({
                     "type": "notification:read",
                     "data": {
@@ -97,7 +105,11 @@ impl NotificationPubSubEvent {
                     }
                 })
             }
-            Self::Deleted { notification_id, unread_count, .. } => {
+            Self::Deleted {
+                notification_id,
+                unread_count,
+                ..
+            } => {
                 serde_json::json!({
                     "type": "notification:deleted",
                     "data": {
@@ -114,7 +126,11 @@ impl NotificationPubSubEvent {
                     }
                 })
             }
-            Self::BatchRead { notification_ids, unread_count, .. } => {
+            Self::BatchRead {
+                notification_ids,
+                unread_count,
+                ..
+            } => {
                 serde_json::json!({
                     "type": "notification:batch-read",
                     "data": {
@@ -136,7 +152,7 @@ impl NotificationPubSubEvent {
 pub trait NotificationPublisher: Send + Sync {
     /// Publish a notification event
     async fn publish(&self, event: NotificationPubSubEvent) -> anyhow::Result<()>;
-    
+
     /// Publish new notification
     async fn publish_new(
         &self,
@@ -148,9 +164,10 @@ pub trait NotificationPublisher: Send + Sync {
             account_id: account_id.to_string(),
             notification,
             unread_count,
-        }).await
+        })
+        .await
     }
-    
+
     /// Publish notification read
     async fn publish_read(
         &self,
@@ -162,9 +179,10 @@ pub trait NotificationPublisher: Send + Sync {
             account_id: account_id.to_string(),
             notification_id: notification_id.to_string(),
             unread_count,
-        }).await
+        })
+        .await
     }
-    
+
     /// Publish notification deleted
     async fn publish_deleted(
         &self,
@@ -176,21 +194,19 @@ pub trait NotificationPublisher: Send + Sync {
             account_id: account_id.to_string(),
             notification_id: notification_id.to_string(),
             unread_count,
-        }).await
+        })
+        .await
     }
-    
+
     /// Publish unread count update
-    async fn publish_count(
-        &self,
-        account_id: &str,
-        unread_count: i64,
-    ) -> anyhow::Result<()> {
+    async fn publish_count(&self, account_id: &str, unread_count: i64) -> anyhow::Result<()> {
         self.publish(NotificationPubSubEvent::Count {
             account_id: account_id.to_string(),
             unread_count,
-        }).await
+        })
+        .await
     }
-    
+
     /// Publish batch read
     async fn publish_batch_read(
         &self,
@@ -202,7 +218,8 @@ pub trait NotificationPublisher: Send + Sync {
             account_id: account_id.to_string(),
             notification_ids,
             unread_count,
-        }).await
+        })
+        .await
     }
 }
 
@@ -247,14 +264,14 @@ pub enum SyncPubSubEvent {
         website: serde_json::Value,
         user_name: Option<String>,
     },
-    
+
     #[serde(rename = "sync:website:deleted")]
     WebsiteDeleted {
         account_id: String,
         website_id: String,
         user_name: Option<String>,
     },
-    
+
     #[serde(rename = "sync:website:published")]
     WebsitePublished {
         account_id: String,
@@ -262,14 +279,14 @@ pub enum SyncPubSubEvent {
         public_url: String,
         user_name: Option<String>,
     },
-    
+
     #[serde(rename = "sync:website:unpublished")]
     WebsiteUnpublished {
         account_id: String,
         website_id: String,
         user_name: Option<String>,
     },
-    
+
     // Module Events
     #[serde(rename = "sync:extension:activated")]
     ExtensionActivated {
@@ -278,7 +295,7 @@ pub enum SyncPubSubEvent {
         extension_slug: String,
         user_name: Option<String>,
     },
-    
+
     #[serde(rename = "sync:extension:deactivated")]
     ExtensionDeactivated {
         account_id: String,
@@ -286,7 +303,7 @@ pub enum SyncPubSubEvent {
         extension_slug: String,
         user_name: Option<String>,
     },
-    
+
     #[serde(rename = "sync:extension:configured")]
     ExtensionConfigured {
         account_id: String,
@@ -295,13 +312,13 @@ pub enum SyncPubSubEvent {
         config: serde_json::Value,
         user_name: Option<String>,
     },
-    
+
     #[serde(rename = "sync:extension:catalog:updated")]
     ExtensionCatalogUpdated {
         account_id: String,
         extensions_count: usize,
     },
-    
+
     // File Events
     #[serde(rename = "sync:file:uploaded")]
     FileUploaded {
@@ -312,7 +329,7 @@ pub enum SyncPubSubEvent {
         file_size: u64,
         user_name: Option<String>,
     },
-    
+
     #[serde(rename = "sync:file:deleted")]
     FileDeleted {
         account_id: String,
@@ -320,7 +337,7 @@ pub enum SyncPubSubEvent {
         file_id: String,
         user_name: Option<String>,
     },
-    
+
     #[serde(rename = "sync:upload:progress")]
     UploadProgress {
         account_id: String,
@@ -330,7 +347,7 @@ pub enum SyncPubSubEvent {
         bytes_uploaded: u64,
         total_bytes: u64,
     },
-    
+
     #[serde(rename = "sync:upload:complete")]
     UploadComplete {
         account_id: String,
@@ -339,7 +356,7 @@ pub enum SyncPubSubEvent {
         file_id: String,
         file_url: String,
     },
-    
+
     #[serde(rename = "sync:upload:failed")]
     UploadFailed {
         account_id: String,
@@ -347,7 +364,7 @@ pub enum SyncPubSubEvent {
         upload_id: String,
         error: String,
     },
-    
+
     // Presence Events
     #[serde(rename = "presence:user:online")]
     UserOnline {
@@ -356,13 +373,10 @@ pub enum SyncPubSubEvent {
         user_name: String,
         user_avatar: Option<String>,
     },
-    
+
     #[serde(rename = "presence:user:offline")]
-    UserOffline {
-        account_id: String,
-        user_id: String,
-    },
-    
+    UserOffline { account_id: String, user_id: String },
+
     #[serde(rename = "presence:user:editing")]
     UserStartedEditing {
         account_id: String,
@@ -371,7 +385,7 @@ pub enum SyncPubSubEvent {
         resource_type: String,
         resource_id: String,
     },
-    
+
     #[serde(rename = "presence:user:stopped-editing")]
     UserStoppedEditing {
         account_id: String,
@@ -379,7 +393,7 @@ pub enum SyncPubSubEvent {
         resource_type: String,
         resource_id: String,
     },
-    
+
     #[serde(rename = "presence:users:list")]
     OnlineUsersList {
         account_id: String,
@@ -411,34 +425,34 @@ impl SyncPubSubEvent {
             Self::OnlineUsersList { account_id, .. } => account_id,
         }
     }
-    
+
     /// Get the channel this event should be published to
     pub fn channel(&self) -> &'static str {
         match self {
-            Self::WebsiteUpdated { .. } | 
-            Self::WebsiteDeleted { .. } | 
-            Self::WebsitePublished { .. } | 
-            Self::WebsiteUnpublished { .. } => CHANNEL_SYNC_WEBSITE,
-            
-            Self::ExtensionActivated { .. } | 
-            Self::ExtensionDeactivated { .. } | 
-            Self::ExtensionConfigured { .. } | 
-            Self::ExtensionCatalogUpdated { .. } => CHANNEL_SYNC_EXTENSION,
-            
-            Self::FileUploaded { .. } | 
-            Self::FileDeleted { .. } | 
-            Self::UploadProgress { .. } | 
-            Self::UploadComplete { .. } | 
-            Self::UploadFailed { .. } => CHANNEL_SYNC_FILE,
-            
-            Self::UserOnline { .. } | 
-            Self::UserOffline { .. } | 
-            Self::UserStartedEditing { .. } | 
-            Self::UserStoppedEditing { .. } | 
-            Self::OnlineUsersList { .. } => CHANNEL_PRESENCE,
+            Self::WebsiteUpdated { .. }
+            | Self::WebsiteDeleted { .. }
+            | Self::WebsitePublished { .. }
+            | Self::WebsiteUnpublished { .. } => CHANNEL_SYNC_WEBSITE,
+
+            Self::ExtensionActivated { .. }
+            | Self::ExtensionDeactivated { .. }
+            | Self::ExtensionConfigured { .. }
+            | Self::ExtensionCatalogUpdated { .. } => CHANNEL_SYNC_EXTENSION,
+
+            Self::FileUploaded { .. }
+            | Self::FileDeleted { .. }
+            | Self::UploadProgress { .. }
+            | Self::UploadComplete { .. }
+            | Self::UploadFailed { .. } => CHANNEL_SYNC_FILE,
+
+            Self::UserOnline { .. }
+            | Self::UserOffline { .. }
+            | Self::UserStartedEditing { .. }
+            | Self::UserStoppedEditing { .. }
+            | Self::OnlineUsersList { .. } => CHANNEL_PRESENCE,
         }
     }
-    
+
     /// Convert to WebSocket message format
     pub fn to_ws_message(&self) -> serde_json::Value {
         serde_json::to_value(self).unwrap_or_else(|_| serde_json::json!({}))
@@ -454,7 +468,7 @@ impl SyncPubSubEvent {
 pub trait SyncPublisher: Send + Sync {
     /// Publish a sync event
     async fn publish(&self, event: SyncPubSubEvent) -> anyhow::Result<()>;
-    
+
     /// Publish website updated event
     async fn publish_website_updated(
         &self,
@@ -468,9 +482,10 @@ pub trait SyncPublisher: Send + Sync {
             website_id: website_id.to_string(),
             website,
             user_name,
-        }).await
+        })
+        .await
     }
-    
+
     /// Publish website deleted event
     async fn publish_website_deleted(
         &self,
@@ -482,9 +497,10 @@ pub trait SyncPublisher: Send + Sync {
             account_id: account_id.to_string(),
             website_id: website_id.to_string(),
             user_name,
-        }).await
+        })
+        .await
     }
-    
+
     /// Publish module activated event
     async fn publish_module_activated(
         &self,
@@ -498,9 +514,10 @@ pub trait SyncPublisher: Send + Sync {
             website_id: website_id.to_string(),
             extension_slug: extension_slug.to_string(),
             user_name,
-        }).await
+        })
+        .await
     }
-    
+
     /// Publish file uploaded event
     async fn publish_file_uploaded(
         &self,
@@ -518,9 +535,10 @@ pub trait SyncPublisher: Send + Sync {
             file_name,
             file_size,
             user_name,
-        }).await
+        })
+        .await
     }
-    
+
     /// Publish user online event
     async fn publish_user_online(
         &self,
@@ -534,7 +552,8 @@ pub trait SyncPublisher: Send + Sync {
             user_id: user_id.to_string(),
             user_name,
             user_avatar,
-        }).await
+        })
+        .await
     }
 }
 

@@ -99,7 +99,9 @@ pub mod tests {
             _model: Option<&str>,
         ) -> AIResult<ChatCompletion> {
             let mut responses = self.responses.lock().await;
-            let content = responses.pop().unwrap_or_else(|| "Mock response".to_string());
+            let content = responses
+                .pop()
+                .unwrap_or_else(|| "Mock response".to_string());
             Ok(ChatCompletion {
                 content,
                 usage: TokenUsage::default(),
@@ -113,15 +115,18 @@ pub mod tests {
             _model: Option<&str>,
         ) -> AIResult<TokenStream> {
             let responses = self.responses.lock().await;
-            let content = responses.last().cloned().unwrap_or_else(|| "Mock".to_string());
-            
+            let content = responses
+                .last()
+                .cloned()
+                .unwrap_or_else(|| "Mock".to_string());
+
             let stream = futures::stream::iter(
                 content
                     .chars()
                     .map(|c| Ok(c.to_string()))
                     .collect::<Vec<_>>(),
             );
-            
+
             Ok(Box::pin(stream))
         }
     }

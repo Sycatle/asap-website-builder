@@ -8,8 +8,8 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use asap_core_ai::{
-    ActiveExtension, CollectionSummary, SectionInfo, UserContext, UserQuota,
-    VariableGroup, WebsiteContext, WebsiteDataContext, WebsiteInfo,
+    ActiveExtension, CollectionSummary, SectionInfo, UserContext, UserQuota, VariableGroup,
+    WebsiteContext, WebsiteDataContext, WebsiteInfo,
 };
 
 // ============================================================================
@@ -57,28 +57,25 @@ pub async fn load_user_context(
     plan_daily_used: u32,
 ) -> Result<UserContext, StatusCode> {
     // Fetch account info (plan)
-    let account: AccountRow = sqlx::query_as(
-        "SELECT id, plan FROM accounts WHERE id = $1"
-    )
-    .bind(account_id)
-    .fetch_one(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to load account: {}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    let account: AccountRow = sqlx::query_as("SELECT id, plan FROM accounts WHERE id = $1")
+        .bind(account_id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to load account: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     // Fetch account_data for name, preferences and integrations
-    let account_data: Option<AccountDataRow> = sqlx::query_as(
-        "SELECT data FROM account_data WHERE account_id = $1"
-    )
-    .bind(account_id)
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to load account_data: {}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    let account_data: Option<AccountDataRow> =
+        sqlx::query_as("SELECT data FROM account_data WHERE account_id = $1")
+            .bind(account_id)
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to load account_data: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
 
     // Extract user info from account_data
     let mut name: Option<String> = None;
@@ -98,7 +95,12 @@ pub async fn load_user_context(
             integrations.push("github".to_string());
         }
         // Check for Google OAuth (indicates google integration)
-        if data_row.data.get("oauth").and_then(|o| o.get("google")).is_some() {
+        if data_row
+            .data
+            .get("oauth")
+            .and_then(|o| o.get("google"))
+            .is_some()
+        {
             integrations.push("google".to_string());
         }
         // Check for language preference
@@ -138,7 +140,7 @@ pub async fn load_website_data(
         FROM website_variables 
         WHERE website_id = $1
         ORDER BY effective_source, key
-        "#
+        "#,
     )
     .bind(website_id)
     .fetch_all(pool)
@@ -155,7 +157,7 @@ pub async fn load_website_data(
         FROM website_collections
         WHERE website_id = $1
         ORDER BY source_extension, collection_slug
-        "#
+        "#,
     )
     .bind(website_id)
     .fetch_all(pool)
@@ -171,8 +173,10 @@ pub async fn load_website_data(
     }
 
     // Group variables by source
-    let mut variables_by_source: std::collections::HashMap<String, Vec<(String, serde_json::Value)>> =
-        std::collections::HashMap::new();
+    let mut variables_by_source: std::collections::HashMap<
+        String,
+        Vec<(String, serde_json::Value)>,
+    > = std::collections::HashMap::new();
 
     for (source, key, value) in all_vars {
         variables_by_source
@@ -196,7 +200,11 @@ pub async fn load_website_data(
         .map(|(slug, source, total_count, items)| {
             let items_array = items.as_array().cloned().unwrap_or_default();
             // Use total_count from DB if available, otherwise count items array
-            let count = if total_count > 0 { total_count } else { items_array.len() as i32 };
+            let count = if total_count > 0 {
+                total_count
+            } else {
+                items_array.len() as i32
+            };
 
             // Extract preview fields from first few items (up to 5)
             let preview: Vec<serde_json::Value> = items_array
@@ -207,7 +215,16 @@ pub async fn load_website_data(
                     let mut preview_obj = serde_json::Map::new();
 
                     // Extract common identifying fields for preview
-                    for key in &["name", "title", "id", "slug", "description", "language", "stars", "url"] {
+                    for key in &[
+                        "name",
+                        "title",
+                        "id",
+                        "slug",
+                        "description",
+                        "language",
+                        "stars",
+                        "url",
+                    ] {
                         if let Some(val) = data.get(*key) {
                             // Truncate long strings for preview
                             let truncated = if let Some(s) = val.as_str() {
@@ -223,7 +240,11 @@ pub async fn load_website_data(
                         }
                     }
 
-                    if preview_obj.is_empty() { None } else { Some(serde_json::Value::Object(preview_obj)) }
+                    if preview_obj.is_empty() {
+                        None
+                    } else {
+                        Some(serde_json::Value::Object(preview_obj))
+                    }
                 })
                 .collect();
 
@@ -242,7 +263,11 @@ pub async fn load_website_data(
     };
 
     // Log summary for debugging
-    let var_count: usize = data_context.variables.iter().map(|g| g.variables.len()).sum();
+    let var_count: usize = data_context
+        .variables
+        .iter()
+        .map(|g| g.variables.len())
+        .sum();
     let col_count = data_context.collections.len();
     tracing::debug!(
         "Website data loaded: {} variables in {} groups, {} collections",
@@ -259,7 +284,7 @@ pub async fn load_website_data(
 // ============================================================================
 
 /// Load website context for AI
-/// 
+///
 /// # Arguments
 /// * `pool` - Database connection pool
 /// * `account_id` - Account ID for security context (used for audit logging)
@@ -278,7 +303,7 @@ pub async fn load_website_context(
         FROM websites w
         LEFT JOIN website_data wd ON wd.website_id = w.id
         WHERE w.id = $1
-        "#
+        "#,
     )
     .bind(website_id)
     .fetch_one(pool)
@@ -297,7 +322,7 @@ pub async fn load_website_context(
         FROM website_elements
         WHERE website_id = $1
         ORDER BY "order"
-        "#
+        "#,
     )
     .bind(website_id)
     .fetch_all(pool)
@@ -321,7 +346,11 @@ pub async fn load_website_context(
             SectionInfo {
                 id: e.id,
                 section_type: e.element_type.clone(),
-                variant: e.settings.get("variant").and_then(|v| v.as_str()).map(String::from),
+                variant: e
+                    .settings
+                    .get("variant")
+                    .and_then(|v| v.as_str())
+                    .map(String::from),
                 position: e.order,
                 properties,
                 schema: None, // TODO: Load schema from section registry
@@ -330,7 +359,8 @@ pub async fn load_website_context(
         .collect();
 
     // Extract theme from website data
-    let theme = website_row.data
+    let theme = website_row
+        .data
         .as_ref()
         .and_then(|d| d.get("theme"))
         .cloned()
@@ -347,7 +377,7 @@ pub async fn load_website_context(
         JOIN account_extensions ae ON ae.id = we.account_extension_id
         WHERE we.website_id = $1
         ORDER BY ae.extension_slug
-        "#
+        "#,
     )
     .bind(website_id)
     .fetch_all(pool)
@@ -356,7 +386,8 @@ pub async fn load_website_context(
         rows.into_iter()
             .map(|(slug, enabled, settings)| {
                 // Format extension name from slug (e.g., "github-sync" -> "GitHub Sync")
-                let name = slug.split('-')
+                let name = slug
+                    .split('-')
                     .map(|word| {
                         let mut chars: Vec<char> = word.chars().collect();
                         if let Some(first) = chars.first_mut() {

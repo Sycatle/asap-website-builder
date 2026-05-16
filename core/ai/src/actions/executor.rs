@@ -47,7 +47,7 @@ impl ActionResult {
 }
 
 /// Trait for action execution backends
-/// 
+///
 /// Implement this trait in apps/api to provide real database operations.
 /// The AI orchestrator uses this trait to execute actions without knowing
 /// about the database implementation.
@@ -168,7 +168,7 @@ impl ActionExecutor {
         if self.strict_mode {
             error!("Action execution failed: no backend configured (strict mode)");
             return Err(AIError::ConfigError(
-                "Action backend not configured. Actions cannot be persisted.".to_string()
+                "Action backend not configured. Actions cannot be persisted.".to_string(),
             ));
         }
 
@@ -185,20 +185,35 @@ impl ActionExecutor {
     /// Simulate action execution for dry-run/testing
     fn dry_run_execute(&self, action: &AIAction) -> ActionResult {
         let (action_type, message, section_id) = match action {
-            AIAction::UpdateSectionProperty { section_id, property, .. } => {
+            AIAction::UpdateSectionProperty {
+                section_id,
+                property,
+                ..
+            } => {
                 debug!(section_id = %section_id, property = property, "DRY-RUN: Update property");
                 (
                     action.action_type(),
-                    format!("[DRY-RUN] Would update {} on section {}", property, section_id),
+                    format!(
+                        "[DRY-RUN] Would update {} on section {}",
+                        property, section_id
+                    ),
                     Some(*section_id),
                 )
             }
-            AIAction::AddSection { section_type, position, variant, .. } => {
+            AIAction::AddSection {
+                section_type,
+                position,
+                variant,
+                ..
+            } => {
                 let fake_id = Uuid::new_v4();
                 debug!(section_type = section_type, position = ?position, variant = ?variant, "DRY-RUN: Add section");
                 (
                     action.action_type(),
-                    format!("[DRY-RUN] Would add {} section at position {:?}", section_type, position),
+                    format!(
+                        "[DRY-RUN] Would add {} section at position {:?}",
+                        section_type, position
+                    ),
                     Some(fake_id),
                 )
             }
@@ -218,11 +233,17 @@ impl ActionExecutor {
                     None,
                 )
             }
-            AIAction::ChangeVariant { section_id, variant } => {
+            AIAction::ChangeVariant {
+                section_id,
+                variant,
+            } => {
                 debug!(section_id = %section_id, variant = variant, "DRY-RUN: Change variant");
                 (
                     action.action_type(),
-                    format!("[DRY-RUN] Would change variant to {} on section {}", variant, section_id),
+                    format!(
+                        "[DRY-RUN] Would change variant to {} on section {}",
+                        variant, section_id
+                    ),
                     Some(*section_id),
                 )
             }
@@ -242,7 +263,11 @@ impl ActionExecutor {
                     None,
                 )
             }
-            AIAction::GenerateImage { prompt, target_section_id, target_property } => {
+            AIAction::GenerateImage {
+                prompt,
+                target_section_id,
+                target_property,
+            } => {
                 debug!(
                     prompt = prompt,
                     target_section_id = ?target_section_id,
@@ -277,13 +302,13 @@ impl ActionExecutor {
 
         for action in actions {
             let result = self.execute(action, website_id, account_id).await;
-            
+
             // In strict mode, stop on first error
             if self.strict_mode && result.is_err() {
                 results.push(result);
                 break;
             }
-            
+
             results.push(result);
         }
 

@@ -11,7 +11,9 @@ use tracing::{debug, error, instrument};
 use crate::config::OpenAIConfig;
 use crate::error::{AIError, AIResult};
 use crate::tools::{ToolCall, ToolDefinition};
-use crate::types::{GeneratedImage, ImageGenRequest, ImageSize, ImageStyle, Message, Role, TokenUsage};
+use crate::types::{
+    GeneratedImage, ImageGenRequest, ImageSize, ImageStyle, Message, Role, TokenUsage,
+};
 
 use super::traits::{AIProvider, ChatCompletion, TokenStream};
 
@@ -31,7 +33,7 @@ impl OpenAIProvider {
 
         Self { client, config }
     }
-    
+
     /// Get config
     pub fn config(&self) -> &OpenAIConfig {
         &self.config
@@ -53,7 +55,7 @@ impl OpenAIProvider {
             })
             .collect()
     }
-    
+
     /// Send a chat completion request with tools support
     #[instrument(skip(self, messages, tools), fields(provider = "openai"))]
     pub async fn chat_with_tools(
@@ -66,7 +68,7 @@ impl OpenAIProvider {
     ) -> AIResult<ChatCompletionWithTools> {
         let model = model.unwrap_or(&self.config.response_model);
         let url = format!("{}/chat/completions", self.config.base_url);
-        
+
         let max_tokens = max_tokens.unwrap_or(self.config.max_response_tokens);
         let temperature = temperature.unwrap_or(self.config.response_temperature);
 
@@ -77,11 +79,18 @@ impl OpenAIProvider {
             temperature: Some(temperature),
             max_tokens: Some(max_tokens),
             tools: tools.map(|t| t.to_vec()),
-            tool_choice: if tools.is_some() { Some("auto".to_string()) } else { None },
+            tool_choice: if tools.is_some() {
+                Some("auto".to_string())
+            } else {
+                None
+            },
         };
 
-        debug!("Sending chat request with tools to OpenAI: model={}, tools={}", 
-            model, tools.map(|t| t.len()).unwrap_or(0));
+        debug!(
+            "Sending chat request with tools to OpenAI: model={}, tools={}",
+            model,
+            tools.map(|t| t.len()).unwrap_or(0)
+        );
 
         let response = self
             .client
@@ -111,24 +120,33 @@ impl OpenAIProvider {
 
         let response: OpenAIChatResponseWithTools = response.json().await?;
 
-        let choice = response.choices.first().ok_or_else(|| AIError::ProviderError {
-            provider: "openai".to_string(),
-            message: "No choices in response".to_string(),
-        })?;
+        let choice = response
+            .choices
+            .first()
+            .ok_or_else(|| AIError::ProviderError {
+                provider: "openai".to_string(),
+                message: "No choices in response".to_string(),
+            })?;
 
         let content = choice.message.content.clone();
-        
+
         // Parse tool calls if present
-        let tool_calls: Vec<ToolCall> = choice.message.tool_calls.as_ref()
+        let tool_calls: Vec<ToolCall> = choice
+            .message
+            .tool_calls
+            .as_ref()
             .map(|calls| {
-                calls.iter().map(|tc| ToolCall {
-                    id: tc.id.clone(),
-                    tool_type: tc.tool_type.clone(),
-                    function: crate::tools::FunctionCall {
-                        name: tc.function.name.clone(),
-                        arguments: tc.function.arguments.clone(),
-                    },
-                }).collect()
+                calls
+                    .iter()
+                    .map(|tc| ToolCall {
+                        id: tc.id.clone(),
+                        tool_type: tc.tool_type.clone(),
+                        function: crate::tools::FunctionCall {
+                            name: tc.function.name.clone(),
+                            arguments: tc.function.arguments.clone(),
+                        },
+                    })
+                    .collect()
             })
             .unwrap_or_default();
 
@@ -150,7 +168,7 @@ impl OpenAIProvider {
             finish_reason: choice.finish_reason.clone(),
         })
     }
-    
+
     /// Continue conversation after tool results
     #[instrument(skip(self, messages, tool_results), fields(provider = "openai"))]
     pub async fn continue_with_tool_results(
@@ -164,16 +182,16 @@ impl OpenAIProvider {
     ) -> AIResult<ChatCompletion> {
         let model = model.unwrap_or(&self.config.response_model);
         let url = format!("{}/chat/completions", self.config.base_url);
-        
+
         let max_tokens = max_tokens.unwrap_or(self.config.max_response_tokens);
         let temperature = temperature.unwrap_or(self.config.response_temperature);
-        
+
         // Build messages including the assistant's tool call and tool results
         let mut api_messages = self.build_messages(&messages);
-        
+
         // Add assistant message with tool calls
         api_messages.push(assistant_message.clone());
-        
+
         // Add tool results
         for result in tool_results {
             api_messages.push(OpenAIMessage {
@@ -194,7 +212,10 @@ impl OpenAIProvider {
             tool_choice: None,
         };
 
-        debug!("Continuing conversation after tool results: model={}", model);
+        debug!(
+            "Continuing conversation after tool results: model={}",
+            model
+        );
 
         let response = self
             .client
@@ -238,10 +259,13 @@ impl OpenAIProvider {
         Ok(ChatCompletion {
             content,
             usage,
-            finish_reason: response.choices.first().and_then(|c| c.finish_reason.clone()),
+            finish_reason: response
+                .choices
+                .first()
+                .and_then(|c| c.finish_reason.clone()),
         })
     }
-    
+
     /// Send a chat completion request with Vision support (images)
     /// Uses GPT-4 Vision to analyze images alongside text
     #[instrument(skip(self, text, image_urls), fields(provider = "openai"))]
@@ -257,12 +281,12 @@ impl OpenAIProvider {
         let model = model.unwrap_or("gpt-4o");
         let url = format!("{}/chat/completions", self.config.base_url);
         let max_tokens = max_tokens.unwrap_or(2048);
-        
+
         // Build content parts
-        let mut content_parts = vec![
-            VisionContentPart::Text { text: text.to_string() }
-        ];
-        
+        let mut content_parts = vec![VisionContentPart::Text {
+            text: text.to_string(),
+        }];
+
         // Add images
         for img_url in &image_urls {
             content_parts.push(VisionContentPart::ImageUrl {
@@ -272,10 +296,10 @@ impl OpenAIProvider {
                 },
             });
         }
-        
+
         // Build messages
         let mut messages = Vec::new();
-        
+
         // Add system prompt if provided
         if let Some(sys) = system_prompt {
             messages.push(OpenAIMessageVision {
@@ -283,13 +307,13 @@ impl OpenAIProvider {
                 content: MessageContent::Text(sys.to_string()),
             });
         }
-        
+
         // Add user message with vision content
         messages.push(OpenAIMessageVision {
             role: "user".to_string(),
             content: MessageContent::Parts(content_parts),
         });
-        
+
         let request = serde_json::json!({
             "model": model,
             "messages": messages,
@@ -298,8 +322,9 @@ impl OpenAIProvider {
         });
 
         debug!(
-            "Sending vision request to OpenAI: model={}, images={}", 
-            model, image_urls.len()
+            "Sending vision request to OpenAI: model={}, images={}",
+            model,
+            image_urls.len()
         );
 
         let response = self
@@ -356,7 +381,10 @@ impl OpenAIProvider {
         Ok(ChatCompletion {
             content,
             usage,
-            finish_reason: response.choices.first().and_then(|c| c.finish_reason.clone()),
+            finish_reason: response
+                .choices
+                .first()
+                .and_then(|c| c.finish_reason.clone()),
         })
     }
 }
@@ -438,7 +466,10 @@ impl AIProvider for OpenAIProvider {
         Ok(ChatCompletion {
             content,
             usage,
-            finish_reason: response.choices.first().and_then(|c| c.finish_reason.clone()),
+            finish_reason: response
+                .choices
+                .first()
+                .and_then(|c| c.finish_reason.clone()),
         })
     }
 
@@ -559,27 +590,27 @@ fn parse_sse_stream(
     stream: impl Stream<Item = Result<Bytes, reqwest::Error>> + Send + 'static,
 ) -> impl Stream<Item = AIResult<String>> + Send {
     use futures::stream::StreamExt;
-    
+
     // Use flat_map to emit multiple tokens from a single chunk
     stream
         .scan(String::new(), |buffer, result| {
             let output = match result {
                 Ok(bytes) => {
                     buffer.push_str(&String::from_utf8_lossy(&bytes));
-                    
+
                     let mut tokens = Vec::new();
-                    
+
                     // Process complete lines
                     while let Some(pos) = buffer.find("\n\n") {
                         let event = buffer.drain(..pos + 2).collect::<String>();
-                        
+
                         for line in event.lines() {
                             if let Some(data) = line.strip_prefix("data: ") {
                                 // Check for stream end
                                 if data == "[DONE]" {
                                     continue;
                                 }
-                                
+
                                 // Parse JSON chunk
                                 if let Ok(chunk) = serde_json::from_str::<OpenAIStreamChunk>(data) {
                                     if let Some(choice) = chunk.choices.first() {
@@ -593,12 +624,12 @@ fn parse_sse_stream(
                             }
                         }
                     }
-                    
+
                     tokens
                 }
                 Err(e) => vec![Err(AIError::HttpError(e))],
             };
-            
+
             async move { Some(output) }
         })
         .flat_map(futures::stream::iter)
@@ -832,10 +863,7 @@ mod tests {
         };
         let provider = OpenAIProvider::new(config);
 
-        let messages = vec![
-            Message::system("You are helpful"),
-            Message::user("Hello"),
-        ];
+        let messages = vec![Message::system("You are helpful"), Message::user("Hello")];
 
         let openai_messages = provider.build_messages(&messages);
         assert_eq!(openai_messages.len(), 2);

@@ -1,9 +1,9 @@
 //! Preset templates management
 
 use axum::{
-    extract::{State, Extension},
-    response::IntoResponse,
+    extract::{Extension, State},
     http::StatusCode,
+    response::IntoResponse,
     Json,
 };
 use serde::{Deserialize, Serialize};
@@ -31,21 +31,21 @@ pub struct CreateFromPresetRequest {
     pub tagline: Option<String>,
 }
 
-pub async fn list_presets(
-    State(pool): State<PgPool>,
-) -> impl IntoResponse {
+pub async fn list_presets(State(pool): State<PgPool>) -> impl IntoResponse {
     use crate::queries;
     let result = queries::list_presets(&pool).await;
 
     match result {
-        Ok(presets) => {
-            (StatusCode::OK, Json(presets)).into_response()
-        }
+        Ok(presets) => (StatusCode::OK, Json(presets)).into_response(),
         Err(e) => {
             tracing::error!("Database error listing presets: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -58,18 +58,26 @@ pub async fn create_website_from_preset(
     let preset_uuid = match Uuid::parse_str(&payload.preset_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid preset ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid preset ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -81,7 +89,8 @@ pub async fn create_website_from_preset(
         &payload.slug,
         &payload.title,
         payload.tagline.as_deref().unwrap_or(""),
-    ).await;
+    )
+    .await;
 
     match result {
         Ok(website_id) => {
@@ -98,33 +107,45 @@ pub async fn create_website_from_preset(
             .execute(&pool)
             .await;
 
-            (StatusCode::CREATED, Json(serde_json::json!({
-                "website": {
-                    "id": website_id.to_string(),
-                    "slug": payload.slug,
-                    "title": payload.title,
-                    "status": "draft",
-                    "preset_id": payload.preset_id
-                },
-                "message": "Website created from preset successfully"
-            }))).into_response()
+            (
+                StatusCode::CREATED,
+                Json(serde_json::json!({
+                    "website": {
+                        "id": website_id.to_string(),
+                        "slug": payload.slug,
+                        "title": payload.title,
+                        "status": "draft",
+                        "preset_id": payload.preset_id
+                    },
+                    "message": "Website created from preset successfully"
+                })),
+            )
+                .into_response()
         }
         Err(e) => {
             let error_str = e.to_string();
-            
+
             // Check for duplicate slug error
             if error_str.contains("duplicate key") && error_str.contains("slug") {
                 tracing::warn!("Duplicate slug attempted: {}", payload.slug);
-                return (StatusCode::CONFLICT, Json(serde_json::json!({
-                    "error": "slug_taken",
-                    "message": "Cette adresse est déjà utilisée. Veuillez en choisir une autre."
-                }))).into_response();
+                return (
+                    StatusCode::CONFLICT,
+                    Json(serde_json::json!({
+                        "error": "slug_taken",
+                        "message": "Cette adresse est déjà utilisée. Veuillez en choisir une autre."
+                    })),
+                )
+                    .into_response();
             }
-            
+
             tracing::error!("Database error creating website from preset: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }

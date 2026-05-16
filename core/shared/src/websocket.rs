@@ -4,7 +4,7 @@
 //! allowing core/api to emit events without depending on apps/api implementation.
 //!
 //! ## Event Types
-//! 
+//!
 //! ### Notification Events
 //! - `notification:new` - New notification received
 //! - `notification:read` - Notification marked as read
@@ -43,15 +43,20 @@ pub struct WsBroadcastMessage {
 }
 
 /// Trait for broadcasting WebSocket messages
-/// 
+///
 /// Implementations should handle broadcasting to connected clients,
 /// potentially filtering by user/account ID.
 pub trait WsBroadcaster: Send + Sync {
     /// Broadcast a notification to a specific user
     fn broadcast_to_user(&self, account_id: &str, msg: WsBroadcastMessage);
-    
+
     /// Broadcast a new notification event
-    fn notify_new_notification(&self, account_id: &str, notification: serde_json::Value, unread_count: i64) {
+    fn notify_new_notification(
+        &self,
+        account_id: &str,
+        notification: serde_json::Value,
+        unread_count: i64,
+    ) {
         let msg = WsBroadcastMessage {
             msg_type: "notification:new".to_string(),
             data: serde_json::json!({
@@ -75,7 +80,12 @@ pub trait WsBroadcaster: Send + Sync {
     }
 
     /// Broadcast notification deleted event
-    fn notify_notification_deleted(&self, account_id: &str, notification_id: &str, unread_count: i64) {
+    fn notify_notification_deleted(
+        &self,
+        account_id: &str,
+        notification_id: &str,
+        unread_count: i64,
+    ) {
         let msg = WsBroadcastMessage {
             msg_type: "notification:deleted".to_string(),
             data: serde_json::json!({
@@ -160,7 +170,12 @@ pub trait WsBroadcaster: Send + Sync {
     }
 
     /// Broadcast website data updated event
-    fn sync_website_data_updated(&self, account_id: &str, website_id: &str, data: serde_json::Value) {
+    fn sync_website_data_updated(
+        &self,
+        account_id: &str,
+        website_id: &str,
+        data: serde_json::Value,
+    ) {
         let msg = WsBroadcastMessage {
             msg_type: "sync:website:data-updated".to_string(),
             data: serde_json::json!({
@@ -188,7 +203,13 @@ pub trait WsBroadcaster: Send + Sync {
     }
 
     /// Broadcast page updated event
-    fn sync_page_updated(&self, account_id: &str, website_id: &str, page_id: &str, page: serde_json::Value) {
+    fn sync_page_updated(
+        &self,
+        account_id: &str,
+        website_id: &str,
+        page_id: &str,
+        page: serde_json::Value,
+    ) {
         let msg = WsBroadcastMessage {
             msg_type: "sync:page:updated".to_string(),
             data: serde_json::json!({
@@ -241,7 +262,13 @@ pub trait WsBroadcaster: Send + Sync {
     }
 
     /// Broadcast element updated event
-    fn sync_element_updated(&self, account_id: &str, website_id: &str, element_id: &str, element: serde_json::Value) {
+    fn sync_element_updated(
+        &self,
+        account_id: &str,
+        website_id: &str,
+        element_id: &str,
+        element: serde_json::Value,
+    ) {
         let msg = WsBroadcastMessage {
             msg_type: "sync:element:updated".to_string(),
             data: serde_json::json!({
@@ -282,7 +309,13 @@ pub trait WsBroadcaster: Send + Sync {
     // ========================================
 
     /// Broadcast extension activated event
-    fn sync_extension_activated(&self, account_id: &str, website_id: &str, extension_slug: &str, extension: serde_json::Value) {
+    fn sync_extension_activated(
+        &self,
+        account_id: &str,
+        website_id: &str,
+        extension_slug: &str,
+        extension: serde_json::Value,
+    ) {
         let msg = WsBroadcastMessage {
             msg_type: "sync:extension:activated".to_string(),
             data: serde_json::json!({
@@ -307,7 +340,13 @@ pub trait WsBroadcaster: Send + Sync {
     }
 
     /// Broadcast extension configured event
-    fn sync_extension_configured(&self, account_id: &str, website_id: &str, extension_slug: &str, config: serde_json::Value) {
+    fn sync_extension_configured(
+        &self,
+        account_id: &str,
+        website_id: &str,
+        extension_slug: &str,
+        config: serde_json::Value,
+    ) {
         let msg = WsBroadcastMessage {
             msg_type: "sync:extension:configured".to_string(),
             data: serde_json::json!({
@@ -324,7 +363,12 @@ pub trait WsBroadcaster: Send + Sync {
     // ========================================
 
     /// Broadcast file uploaded event
-    fn sync_file_uploaded(&self, account_id: &str, website_id: Option<&str>, file: serde_json::Value) {
+    fn sync_file_uploaded(
+        &self,
+        account_id: &str,
+        website_id: Option<&str>,
+        file: serde_json::Value,
+    ) {
         let msg = WsBroadcastMessage {
             msg_type: "sync:file:uploaded".to_string(),
             data: serde_json::json!({

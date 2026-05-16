@@ -159,14 +159,11 @@ Guidelines:
 
 /// Analyze user intent with a quick AI call
 /// Uses GPT-4o-mini for simple requests, GPT-4o for complex analysis requests
-/// 
+///
 /// # Errors
 /// Returns AIError if the AI call fails. Parse errors use a heuristic fallback
 /// with a warning logged, as this should not block the user experience.
-pub async fn analyze_intent(
-    router: &ModelRouter,
-    user_message: &str,
-) -> AIResult<IntentAnalysis> {
+pub async fn analyze_intent(router: &ModelRouter, user_message: &str) -> AIResult<IntentAnalysis> {
     let messages = vec![
         Message::system(INTENT_ANALYSIS_PROMPT),
         Message::user(user_message),
@@ -175,18 +172,24 @@ pub async fn analyze_intent(
     // Use GPT-4o-mini by default for fast intent analysis
     // Only use GPT-4o for very complex strategic analysis
     let lower = user_message.to_lowercase();
-    let is_very_complex = (lower.contains("stratégie") || lower.contains("strategy") 
-        || lower.contains("audit complet") || lower.contains("full audit"))
+    let is_very_complex = (lower.contains("stratégie")
+        || lower.contains("strategy")
+        || lower.contains("audit complet")
+        || lower.contains("full audit"))
         && user_message.len() > 150;
-    
-    let model = if is_very_complex { Some("gpt-4o") } else { Some("gpt-4o-mini") };
+
+    let model = if is_very_complex {
+        Some("gpt-4o")
+    } else {
+        Some("gpt-4o-mini")
+    };
     let max_tokens = Some(300); // Consistent token limit
 
     let completion = router.chat(messages, max_tokens, model).await?;
 
     // Parse JSON response
     let content = completion.content.trim();
-    
+
     // Extract JSON from potential markdown/noise
     let json_str = extract_json(content);
 
@@ -203,14 +206,14 @@ pub async fn analyze_intent(
                 model = model.unwrap_or("default"),
                 "INTENT_PARSE_FAILED: AI returned malformed JSON, using heuristic fallback"
             );
-            
+
             // Return a fallback that indicates it was degraded
             let mut fallback = smart_fallback_intent(user_message);
             fallback.reasoning = format!(
                 "[Fallback mode - AI response was malformed] {}",
                 fallback.reasoning
             );
-            
+
             Ok(fallback)
         }
     }
@@ -246,7 +249,7 @@ Rules:
 
 /// Analyze intent with REAL-TIME streaming of reasoning tokens
 /// Returns events via channel as tokens are generated
-/// 
+///
 /// # Error Handling
 /// - Stream errors are sent to the channel AND returned as AIError
 /// - Parse errors use heuristic fallback with warning notification
@@ -265,21 +268,21 @@ pub async fn analyze_intent_streaming(
 
     // Start streaming
     let mut stream = router.chat_stream(messages, None, Some(model)).await?;
-    
+
     let mut full_content = String::new();
     let mut in_json = false;
-    
+
     while let Some(result) = stream.next().await {
         match result {
             Ok(token) => {
                 full_content.push_str(&token);
-                
+
                 // Check if we've hit the JSON marker
                 if full_content.contains("PLAN_START") && !in_json {
                     in_json = true;
                     continue;
                 }
-                
+
                 // Stream reasoning tokens (before JSON)
                 if !in_json && !token.contains("PLAN_START") {
                     let _ = event_tx.send(StreamEvent::ReasoningToken(token)).await;
@@ -293,25 +296,27 @@ pub async fn analyze_intent_streaming(
                     user_message_len = user_message.len(),
                     "STREAM_ERROR: Intent analysis stream failed"
                 );
-                
+
                 // Notify the channel about the error
-                let _ = event_tx.send(StreamEvent::Error(format!(
-                    "Stream error during intent analysis: {}",
-                    e
-                ))).await;
-                
+                let _ = event_tx
+                    .send(StreamEvent::Error(format!(
+                        "Stream error during intent analysis: {}",
+                        e
+                    )))
+                    .await;
+
                 return Err(e);
             }
         }
     }
-    
+
     // Parse the JSON part
     let json_part = full_content
         .split("PLAN_START")
         .nth(1)
         .unwrap_or(&full_content);
     let json_str = extract_json(json_part);
-    
+
     let analysis = match serde_json::from_str::<IntentAnalysis>(json_str) {
         Ok(mut analysis) => {
             // Extract reasoning from the non-JSON part
@@ -333,12 +338,15 @@ pub async fn analyze_intent_streaming(
                 extracted_json = json_str,
                 "STREAMING_INTENT_PARSE_FAILED: Using heuristic fallback"
             );
-            
+
             // Notify the channel that we're using fallback
-            let _ = event_tx.send(StreamEvent::Warning(
-                "Intent analysis returned malformed data, using simplified processing".to_string()
-            )).await;
-            
+            let _ = event_tx
+                .send(StreamEvent::Warning(
+                    "Intent analysis returned malformed data, using simplified processing"
+                        .to_string(),
+                ))
+                .await;
+
             let mut fallback = smart_fallback_intent(user_message);
             fallback.reasoning = format!(
                 "[Fallback mode] {}",
@@ -347,9 +355,11 @@ pub async fn analyze_intent_streaming(
             fallback
         }
     };
-    
-    let _ = event_tx.send(StreamEvent::IntentCompleted(analysis.clone())).await;
-    
+
+    let _ = event_tx
+        .send(StreamEvent::IntentCompleted(analysis.clone()))
+        .await;
+
     Ok(analysis)
 }
 
@@ -377,23 +387,35 @@ fn extract_json(content: &str) -> &str {
 fn smart_fallback_intent(message: &str) -> IntentAnalysis {
     let lower = message.to_lowercase();
     let lang = detect_language_simple(message);
-    
-    let (intent, needs_thinking) = if lower.contains("ajoute") || lower.contains("add") || lower.contains("créer") || lower.contains("create") {
+
+    let (intent, needs_thinking) = if lower.contains("ajoute")
+        || lower.contains("add")
+        || lower.contains("créer")
+        || lower.contains("create")
+    {
         ("add_section", true)
     } else if lower.contains("supprime") || lower.contains("remove") || lower.contains("delete") {
         ("remove_section", true)
     } else if lower.contains("change") || lower.contains("modifie") || lower.contains("update") {
         ("modify_content", false)
-    } else if lower.contains("couleur") || lower.contains("color") || lower.contains("style") || lower.contains("design") {
+    } else if lower.contains("couleur")
+        || lower.contains("color")
+        || lower.contains("style")
+        || lower.contains("design")
+    {
         ("change_style", true)
     } else if lower.contains("analyse") || lower.contains("analyze") || lower.contains("audit") {
         ("analyze", true)
-    } else if lower.starts_with("salut") || lower.starts_with("bonjour") || lower.starts_with("hello") || lower.starts_with("hi") {
+    } else if lower.starts_with("salut")
+        || lower.starts_with("bonjour")
+        || lower.starts_with("hello")
+        || lower.starts_with("hi")
+    {
         ("greeting", false)
     } else {
         ("other", false)
     };
-    
+
     IntentAnalysis {
         intent: intent.to_string(),
         summary: message.chars().take(40).collect(),
@@ -419,12 +441,13 @@ pub async fn execute_thinking_step(
 ) -> AIResult<StepResult> {
     // Build richer context
     let website_context = build_rich_context(context);
-    
+
     // Build previous results string with key findings
     let previous_str = if previous_results.is_empty() {
         "No previous findings yet - you're the first to analyze.".to_string()
     } else {
-        previous_results.iter()
+        previous_results
+            .iter()
             .map(|r| {
                 let observations = if r.key_observations.is_empty() {
                     String::new()
@@ -436,14 +459,14 @@ pub async fn execute_thinking_step(
             .collect::<Vec<_>>()
             .join("\n")
     };
-    
+
     // Get specialist name
     let specialist = if step.specialist.is_empty() {
         "analyst"
     } else {
         &step.specialist
     };
-    
+
     // Build the prompt
     let prompt = STEP_EXECUTION_PROMPT
         .replace("{step_num}", &step.step.to_string())
@@ -454,19 +477,21 @@ pub async fn execute_thinking_step(
         .replace("{previous_results}", &previous_str)
         .replace("{language}", language)
         .replace("{specialist}", specialist);
-    
+
     let messages = vec![
         Message::system(&prompt),
         Message::user("Execute your analysis task now. Be thorough and specific."),
     ];
-    
+
     // Use gpt-4o-mini for faster insights, still good quality
-    let completion = router.chat(messages, Some(250), Some("gpt-4o-mini")).await?;
-    
+    let completion = router
+        .chat(messages, Some(250), Some("gpt-4o-mini"))
+        .await?;
+
     // Parse result
     let content = completion.content.trim();
     let json_str = extract_json(content);
-    
+
     match serde_json::from_str::<StepResult>(json_str) {
         Ok(result) => Ok(result),
         Err(e) => {
@@ -475,7 +500,10 @@ pub async fn execute_thinking_step(
             Ok(StepResult {
                 step: step.step,
                 thinking: format!("Analyzing based on {} expertise", specialist),
-                insight: format!("{} - Analysis completed by {} specialist", step.description, specialist),
+                insight: format!(
+                    "{} - Analysis completed by {} specialist",
+                    step.description, specialist
+                ),
                 found_relevant: true,
                 key_observations: vec![],
                 recommendations: vec![],
@@ -493,17 +521,22 @@ pub enum StreamEvent {
     ReasoningToken(String),
     /// Intent analysis completed
     IntentCompleted(IntentAnalysis),
-    
+
     // === Thinking Step Phase ===
     /// Step started (with description)
-    StepStarted { step: u32, total: u32, description: String, specialist: String },
+    StepStarted {
+        step: u32,
+        total: u32,
+        description: String,
+        specialist: String,
+    },
     /// Thinking text token during step execution
     ThinkingToken { step: u32, token: String },
     /// Insight text token during step execution  
     InsightToken { step: u32, token: String },
     /// Step completed with full result
     StepCompleted(StepResult),
-    
+
     // === Status Events ===
     /// Warning (non-fatal issue, operation continues with degraded quality)
     Warning(String),
@@ -528,12 +561,13 @@ pub async fn execute_thinking_step_streaming(
 ) -> AIResult<StepResult> {
     // Build richer context
     let website_context = build_rich_context(context);
-    
+
     // Build previous results string with key findings
     let previous_str = if previous_results.is_empty() {
         "No previous findings yet.".to_string()
     } else {
-        previous_results.iter()
+        previous_results
+            .iter()
             .map(|r| {
                 let observations = if r.key_observations.is_empty() {
                     String::new()
@@ -545,16 +579,17 @@ pub async fn execute_thinking_step_streaming(
             .collect::<Vec<_>>()
             .join("\n")
     };
-    
+
     // Get specialist name
     let specialist = if step.specialist.is_empty() {
         "analyst"
     } else {
         &step.specialist
     };
-    
+
     // Use a fast streaming-friendly prompt
-    let streaming_prompt = format!(r##"You are a {specialist} executing task {step_num}/{total_steps}.
+    let streaming_prompt = format!(
+        r##"You are a {specialist} executing task {step_num}/{total_steps}.
 
 TASK: "{step_description}"
 
@@ -578,31 +613,35 @@ Be SPECIFIC and fast."##,
         previous_results = previous_str,
         language = language
     );
-    
+
     let messages = vec![
         Message::system(&streaming_prompt),
         Message::user("Begin your analysis now. Think step by step."),
     ];
-    
+
     // Send step started event IMMEDIATELY
-    let _ = event_tx.send(StreamEvent::StepStarted {
-        step: step.step,
-        total: total_steps,
-        description: step.description.clone(),
-        specialist: specialist.to_string(),
-    }).await;
-    
+    let _ = event_tx
+        .send(StreamEvent::StepStarted {
+            step: step.step,
+            total: total_steps,
+            description: step.description.clone(),
+            specialist: specialist.to_string(),
+        })
+        .await;
+
     // Start streaming with faster model
-    let mut stream = router.chat_stream(messages, None, Some("gpt-4o-mini")).await?;
-    
+    let mut stream = router
+        .chat_stream(messages, None, Some("gpt-4o-mini"))
+        .await?;
+
     let mut full_content = String::new();
     let mut current_section = "thinking"; // thinking, insight, json
-    
+
     while let Some(result) = stream.next().await {
         match result {
             Ok(token) => {
                 full_content.push_str(&token);
-                
+
                 // Check for section markers
                 if full_content.contains("INSIGHT_START") && current_section == "thinking" {
                     current_section = "insight";
@@ -612,23 +651,27 @@ Be SPECIFIC and fast."##,
                     current_section = "json";
                     continue;
                 }
-                
+
                 // Stream tokens based on current section with step info
                 match current_section {
                     "thinking" => {
                         if !token.contains("INSIGHT_START") {
-                            let _ = event_tx.send(StreamEvent::ThinkingToken { 
-                                step: step.step, 
-                                token 
-                            }).await;
+                            let _ = event_tx
+                                .send(StreamEvent::ThinkingToken {
+                                    step: step.step,
+                                    token,
+                                })
+                                .await;
                         }
                     }
                     "insight" => {
                         if !token.contains("JSON_START") && !token.contains("INSIGHT_START") {
-                            let _ = event_tx.send(StreamEvent::InsightToken { 
-                                step: step.step, 
-                                token 
-                            }).await;
+                            let _ = event_tx
+                                .send(StreamEvent::InsightToken {
+                                    step: step.step,
+                                    token,
+                                })
+                                .await;
                         }
                     }
                     _ => {} // JSON section - don't stream
@@ -640,17 +683,31 @@ Be SPECIFIC and fast."##,
             }
         }
     }
-    
+
     // Parse the final result
-    let result = parse_streaming_result(&full_content, step.step, specialist, &step.description, language);
-    
-    let _ = event_tx.send(StreamEvent::StepCompleted(result.clone())).await;
-    
+    let result = parse_streaming_result(
+        &full_content,
+        step.step,
+        specialist,
+        &step.description,
+        language,
+    );
+
+    let _ = event_tx
+        .send(StreamEvent::StepCompleted(result.clone()))
+        .await;
+
     Ok(result)
 }
 
 /// Parse the streaming output into a StepResult
-fn parse_streaming_result(content: &str, step_num: u32, specialist: &str, description: &str, _language: &str) -> StepResult {
+fn parse_streaming_result(
+    content: &str,
+    step_num: u32,
+    specialist: &str,
+    description: &str,
+    _language: &str,
+) -> StepResult {
     // Extract sections
     let thinking = content
         .split("INSIGHT_START")
@@ -658,7 +715,7 @@ fn parse_streaming_result(content: &str, step_num: u32, specialist: &str, descri
         .unwrap_or("")
         .trim()
         .to_string();
-    
+
     let insight = content
         .split("INSIGHT_START")
         .nth(1)
@@ -666,15 +723,12 @@ fn parse_streaming_result(content: &str, step_num: u32, specialist: &str, descri
         .unwrap_or("")
         .trim()
         .to_string();
-    
+
     // Try to parse JSON section
-    let json_section = content
-        .split("JSON_START")
-        .nth(1)
-        .unwrap_or("{}");
-    
+    let json_section = content.split("JSON_START").nth(1).unwrap_or("{}");
+
     let json_str = extract_json(json_section);
-    
+
     #[derive(Deserialize, Default)]
     struct JsonData {
         #[serde(default)]
@@ -684,11 +738,11 @@ fn parse_streaming_result(content: &str, step_num: u32, specialist: &str, descri
         #[serde(default)]
         recommendations: Vec<String>,
     }
-    
+
     let json_data: JsonData = serde_json::from_str(json_str).unwrap_or_default();
-    
+
     let has_insight = !insight.is_empty();
-    
+
     StepResult {
         step: step_num,
         thinking: if thinking.is_empty() {
@@ -711,12 +765,15 @@ fn parse_streaming_result(content: &str, step_num: u32, specialist: &str, descri
 /// Build rich context for detailed step execution
 fn build_rich_context(context: &WebsiteContext) -> String {
     let title = context.website.title.as_deref().unwrap_or("Untitled Site");
-    
+
     // Build sections info with more detail from properties
-    let sections_info: Vec<String> = context.sections.iter()
+    let sections_info: Vec<String> = context
+        .sections
+        .iter()
         .take(10)
         .map(|s| {
-            let content_preview = s.properties
+            let content_preview = s
+                .properties
                 .as_object()
                 .and_then(|obj| {
                     obj.get("headline")
@@ -728,22 +785,32 @@ fn build_rich_context(context: &WebsiteContext) -> String {
             if content_preview.is_empty() {
                 s.section_type.clone()
             } else {
-                format!("{}(\"{}\")", s.section_type, content_preview.chars().take(30).collect::<String>())
+                format!(
+                    "{}(\"{}\")",
+                    s.section_type,
+                    content_preview.chars().take(30).collect::<String>()
+                )
             }
         })
         .collect();
-    
+
     // Get theme info from the theme JSON value
     let theme_info = if context.theme.is_object() {
         let colors = context.theme.get("colors").and_then(|c| c.as_object());
         let fonts = context.theme.get("fonts").and_then(|f| f.as_object());
-        let primary = colors.and_then(|c| c.get("primary")).and_then(|v| v.as_str()).unwrap_or("#000");
-        let font = fonts.and_then(|f| f.get("heading")).and_then(|v| v.as_str()).unwrap_or("default");
+        let primary = colors
+            .and_then(|c| c.get("primary"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("#000");
+        let font = fonts
+            .and_then(|f| f.get("heading"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("default");
         format!(" Theme: primary={}, font={}", primary, font)
     } else {
         String::new()
     };
-    
+
     format!(
         "Website: {}\nSections: [{}]{}\nTotal sections: {}",
         title,
@@ -756,23 +823,28 @@ fn build_rich_context(context: &WebsiteContext) -> String {
 /// Simple language detection fallback
 pub fn detect_language_simple(text: &str) -> String {
     let lower = text.to_lowercase();
-    
+
     // French indicators
-    if lower.contains("bonjour") || lower.contains("merci") || lower.contains("s'il") 
-        || lower.contains("ajoute") || lower.contains("modifie") || lower.contains("supprime") {
+    if lower.contains("bonjour")
+        || lower.contains("merci")
+        || lower.contains("s'il")
+        || lower.contains("ajoute")
+        || lower.contains("modifie")
+        || lower.contains("supprime")
+    {
         return "fr".to_string();
     }
-    
+
     // Spanish indicators
     if lower.contains("hola") || lower.contains("gracias") || lower.contains("añade") {
         return "es".to_string();
     }
-    
+
     // German indicators
     if lower.contains("hallo") || lower.contains("danke") || lower.contains("bitte") {
         return "de".to_string();
     }
-    
+
     // Default to English
     "en".to_string()
 }

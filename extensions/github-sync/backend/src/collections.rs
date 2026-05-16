@@ -1,7 +1,7 @@
 // GitHub Sync Collection Integration
 // Converts GitHub data to collection items for the Collections system
 
-use asap_core_domain::collections::{CollectionItem, WebsiteCollection, SyncStatus};
+use asap_core_domain::collections::{CollectionItem, SyncStatus, WebsiteCollection};
 use chrono::Utc;
 use serde_json::{json, Value};
 use uuid::Uuid;
@@ -13,7 +13,7 @@ pub fn repos_to_collection_items(repos: &[Value]) -> Vec<CollectionItem> {
         .map(|repo| {
             let id = repo["id"].as_u64().unwrap_or(0).to_string();
             let now = Utc::now();
-            
+
             CollectionItem {
                 id: id.clone(),
                 data: json!({
@@ -51,7 +51,7 @@ pub fn create_github_repos_collection(
     let items = repos_to_collection_items(repos);
     let total_count = items.len() as i32;
     let now = Utc::now();
-    
+
     WebsiteCollection {
         id: Uuid::new_v4(),
         website_id,
@@ -81,16 +81,16 @@ pub struct LanguageStats {
 /// Compute detailed language statistics from repositories
 pub fn compute_language_stats(repos: &[Value]) -> Vec<LanguageStats> {
     use std::collections::HashMap;
-    
+
     let mut lang_data: HashMap<String, (usize, u64, u64)> = HashMap::new();
     let total_repos = repos.len();
-    
+
     for repo in repos {
         if let Some(lang) = repo["language"].as_str() {
             if !lang.is_empty() {
                 let stars = repo["stargazers_count"].as_u64().unwrap_or(0);
                 let forks = repo["forks_count"].as_u64().unwrap_or(0);
-                
+
                 let entry = lang_data.entry(lang.to_string()).or_insert((0, 0, 0));
                 entry.0 += 1; // repo count
                 entry.1 += stars;
@@ -98,7 +98,7 @@ pub fn compute_language_stats(repos: &[Value]) -> Vec<LanguageStats> {
             }
         }
     }
-    
+
     let mut stats: Vec<LanguageStats> = lang_data
         .into_iter()
         .map(|(name, (repo_count, total_stars, total_forks))| {
@@ -116,20 +116,17 @@ pub fn compute_language_stats(repos: &[Value]) -> Vec<LanguageStats> {
             }
         })
         .collect();
-    
+
     // Sort by repo count descending
     stats.sort_by(|a, b| b.repo_count.cmp(&a.repo_count));
     stats
 }
 
 /// Create a collection of language statistics
-pub fn create_github_languages_collection(
-    website_id: Uuid,
-    repos: &[Value],
-) -> WebsiteCollection {
+pub fn create_github_languages_collection(website_id: Uuid, repos: &[Value]) -> WebsiteCollection {
     let stats = compute_language_stats(repos);
     let now = Utc::now();
-    
+
     let items: Vec<CollectionItem> = stats
         .iter()
         .enumerate()
@@ -151,9 +148,9 @@ pub fn create_github_languages_collection(
             }
         })
         .collect();
-    
+
     let total_count = items.len() as i32;
-    
+
     WebsiteCollection {
         id: Uuid::new_v4(),
         website_id,
@@ -189,21 +186,26 @@ pub fn compute_github_variables(repos: &[Value]) -> Vec<(String, Value)> {
         .iter()
         .map(|r| r["watchers_count"].as_u64().unwrap_or(0))
         .sum();
-    
+
     // Compute language statistics
     let lang_stats = compute_language_stats(repos);
-    let top_language = lang_stats.first().map(|s| s.name.clone()).unwrap_or_default();
+    let top_language = lang_stats
+        .first()
+        .map(|s| s.name.clone())
+        .unwrap_or_default();
     let languages_count = lang_stats.len();
-    
+
     // Top 5 languages as JSON array
     let top_languages: Vec<Value> = lang_stats
         .iter()
         .take(5)
-        .map(|s| json!({
-            "name": s.name,
-            "count": s.repo_count,
-            "percentage": (s.percentage * 10.0).round() / 10.0,
-        }))
+        .map(|s| {
+            json!({
+                "name": s.name,
+                "count": s.repo_count,
+                "percentage": (s.percentage * 10.0).round() / 10.0,
+            })
+        })
         .collect();
 
     vec![
@@ -221,22 +223,70 @@ pub fn compute_github_variables(repos: &[Value]) -> Vec<(String, Value)> {
 /// Compute extended profile variables from user data
 pub fn compute_profile_variables(user: &Value) -> Vec<(String, Value)> {
     vec![
-        ("github_username".to_string(), json!(user["login"].as_str().unwrap_or(""))),
-        ("github_name".to_string(), json!(user["name"].as_str().unwrap_or(""))),
-        ("github_bio".to_string(), json!(user["bio"].as_str().unwrap_or(""))),
-        ("github_company".to_string(), json!(user["company"].as_str().unwrap_or(""))),
-        ("github_location".to_string(), json!(user["location"].as_str().unwrap_or(""))),
-        ("github_blog".to_string(), json!(user["blog"].as_str().unwrap_or(""))),
-        ("github_twitter".to_string(), json!(user["twitter_username"].as_str().unwrap_or(""))),
-        ("github_avatar_url".to_string(), json!(user["avatar_url"].as_str().unwrap_or(""))),
-        ("github_profile_url".to_string(), json!(user["html_url"].as_str().unwrap_or(""))),
-        ("github_followers".to_string(), json!(user["followers"].as_u64().unwrap_or(0))),
-        ("github_following".to_string(), json!(user["following"].as_u64().unwrap_or(0))),
-        ("github_public_repos".to_string(), json!(user["public_repos"].as_u64().unwrap_or(0))),
-        ("github_public_gists".to_string(), json!(user["public_gists"].as_u64().unwrap_or(0))),
-        ("github_created_at".to_string(), json!(user["created_at"].as_str().unwrap_or(""))),
-        ("github_hireable".to_string(), json!(user["hireable"].as_bool().unwrap_or(false))),
-        ("github_email".to_string(), json!(user["email"].as_str().unwrap_or(""))),
+        (
+            "github_username".to_string(),
+            json!(user["login"].as_str().unwrap_or("")),
+        ),
+        (
+            "github_name".to_string(),
+            json!(user["name"].as_str().unwrap_or("")),
+        ),
+        (
+            "github_bio".to_string(),
+            json!(user["bio"].as_str().unwrap_or("")),
+        ),
+        (
+            "github_company".to_string(),
+            json!(user["company"].as_str().unwrap_or("")),
+        ),
+        (
+            "github_location".to_string(),
+            json!(user["location"].as_str().unwrap_or("")),
+        ),
+        (
+            "github_blog".to_string(),
+            json!(user["blog"].as_str().unwrap_or("")),
+        ),
+        (
+            "github_twitter".to_string(),
+            json!(user["twitter_username"].as_str().unwrap_or("")),
+        ),
+        (
+            "github_avatar_url".to_string(),
+            json!(user["avatar_url"].as_str().unwrap_or("")),
+        ),
+        (
+            "github_profile_url".to_string(),
+            json!(user["html_url"].as_str().unwrap_or("")),
+        ),
+        (
+            "github_followers".to_string(),
+            json!(user["followers"].as_u64().unwrap_or(0)),
+        ),
+        (
+            "github_following".to_string(),
+            json!(user["following"].as_u64().unwrap_or(0)),
+        ),
+        (
+            "github_public_repos".to_string(),
+            json!(user["public_repos"].as_u64().unwrap_or(0)),
+        ),
+        (
+            "github_public_gists".to_string(),
+            json!(user["public_gists"].as_u64().unwrap_or(0)),
+        ),
+        (
+            "github_created_at".to_string(),
+            json!(user["created_at"].as_str().unwrap_or("")),
+        ),
+        (
+            "github_hireable".to_string(),
+            json!(user["hireable"].as_bool().unwrap_or(false)),
+        ),
+        (
+            "github_email".to_string(),
+            json!(user["email"].as_str().unwrap_or("")),
+        ),
     ]
 }
 
@@ -247,27 +297,29 @@ pub fn gists_to_collection_items(gists: &[Value]) -> Vec<CollectionItem> {
         .map(|gist| {
             let id = gist["id"].as_str().unwrap_or("").to_string();
             let now = Utc::now();
-            
+
             // Extract files info
             let files: Vec<Value> = gist["files"]
                 .as_object()
                 .map(|f| {
                     f.values()
-                        .map(|file| json!({
-                            "filename": file["filename"].as_str().unwrap_or(""),
-                            "language": file["language"].as_str(),
-                            "size": file["size"].as_u64().unwrap_or(0),
-                        }))
+                        .map(|file| {
+                            json!({
+                                "filename": file["filename"].as_str().unwrap_or(""),
+                                "language": file["language"].as_str(),
+                                "size": file["size"].as_u64().unwrap_or(0),
+                            })
+                        })
                         .collect()
                 })
                 .unwrap_or_default();
-            
+
             let primary_language = gist["files"]
                 .as_object()
                 .and_then(|f| f.values().next())
                 .and_then(|file| file["language"].as_str())
                 .unwrap_or("");
-            
+
             CollectionItem {
                 id: id.clone(),
                 data: json!({
@@ -290,14 +342,11 @@ pub fn gists_to_collection_items(gists: &[Value]) -> Vec<CollectionItem> {
 }
 
 /// Create a WebsiteCollection from GitHub gists
-pub fn create_github_gists_collection(
-    website_id: Uuid,
-    gists: &[Value],
-) -> WebsiteCollection {
+pub fn create_github_gists_collection(website_id: Uuid, gists: &[Value]) -> WebsiteCollection {
     let items = gists_to_collection_items(gists);
     let total_count = items.len() as i32;
     let now = Utc::now();
-    
+
     WebsiteCollection {
         id: Uuid::new_v4(),
         website_id,
@@ -316,13 +365,12 @@ pub fn create_github_gists_collection(
 
 /// Convert GitHub organizations to collection items
 pub fn orgs_to_collection_items(orgs: &[Value]) -> Vec<CollectionItem> {
-    orgs
-        .iter()
+    orgs.iter()
         .map(|org| {
             let id = org["id"].as_u64().unwrap_or(0).to_string();
             let login = org["login"].as_str().unwrap_or("");
             let now = Utc::now();
-            
+
             CollectionItem {
                 id: id.clone(),
                 data: json!({
@@ -342,14 +390,11 @@ pub fn orgs_to_collection_items(orgs: &[Value]) -> Vec<CollectionItem> {
 }
 
 /// Create a WebsiteCollection from GitHub organizations
-pub fn create_github_orgs_collection(
-    website_id: Uuid,
-    orgs: &[Value],
-) -> WebsiteCollection {
+pub fn create_github_orgs_collection(website_id: Uuid, orgs: &[Value]) -> WebsiteCollection {
     let items = orgs_to_collection_items(orgs);
     let total_count = items.len() as i32;
     let now = Utc::now();
-    
+
     WebsiteCollection {
         id: Uuid::new_v4(),
         website_id,
@@ -373,7 +418,7 @@ pub fn starred_to_collection_items(starred: &[Value]) -> Vec<CollectionItem> {
         .map(|repo| {
             let id = repo["id"].as_u64().unwrap_or(0).to_string();
             let now = Utc::now();
-            
+
             CollectionItem {
                 id: id.clone(),
                 data: json!({
@@ -399,14 +444,11 @@ pub fn starred_to_collection_items(starred: &[Value]) -> Vec<CollectionItem> {
 }
 
 /// Create a WebsiteCollection from starred repositories
-pub fn create_github_starred_collection(
-    website_id: Uuid,
-    starred: &[Value],
-) -> WebsiteCollection {
+pub fn create_github_starred_collection(website_id: Uuid, starred: &[Value]) -> WebsiteCollection {
     let items = starred_to_collection_items(starred);
     let total_count = items.len() as i32;
     let now = Utc::now();
-    
+
     WebsiteCollection {
         id: Uuid::new_v4(),
         website_id,
@@ -437,31 +479,31 @@ const CONTRIBUTION_EVENTS: &[&str] = &[
 /// Compute contribution data from GitHub events
 /// Returns a map of date (YYYY-MM-DD) to contribution count
 pub fn compute_contributions_from_events(events: &[Value]) -> Value {
+    use chrono::{DateTime, Duration, Utc};
     use std::collections::HashMap;
-    use chrono::{DateTime, Utc, Duration};
-    
+
     // Initialize contribution map for the last 365 days
     let today = Utc::now().date_naive();
     let start_date = today - Duration::days(364);
-    
+
     let mut contribution_map: HashMap<String, i64> = HashMap::new();
-    
+
     // Initialize all days to 0
     let mut current = start_date;
     while current <= today {
         contribution_map.insert(current.format("%Y-%m-%d").to_string(), 0);
         current += Duration::days(1);
     }
-    
+
     // Process events
     for event in events {
         let event_type = event["type"].as_str().unwrap_or("");
-        
+
         if CONTRIBUTION_EVENTS.contains(&event_type) {
             if let Some(created_at) = event["created_at"].as_str() {
                 if let Ok(dt) = DateTime::parse_from_rfc3339(created_at) {
                     let date_key = dt.format("%Y-%m-%d").to_string();
-                    
+
                     if let Some(count) = contribution_map.get_mut(&date_key) {
                         // PushEvent has commits array
                         let contribution_count = if event_type == "PushEvent" {
@@ -472,25 +514,31 @@ pub fn compute_contributions_from_events(events: &[Value]) -> Value {
                         } else {
                             1
                         };
-                        
+
                         *count += contribution_count;
                     }
                 }
             }
         }
     }
-    
+
     // Convert to sorted array format for frontend
     let mut contributions: Vec<Value> = contribution_map
         .into_iter()
         .map(|(date, count)| {
             // Determine level based on count
-            let level = if count == 0 { 0 }
-                else if count < 3 { 1 }
-                else if count < 6 { 2 }
-                else if count < 10 { 3 }
-                else { 4 };
-            
+            let level = if count == 0 {
+                0
+            } else if count < 3 {
+                1
+            } else if count < 6 {
+                2
+            } else if count < 10 {
+                3
+            } else {
+                4
+            };
+
             json!({
                 "date": date,
                 "count": count,
@@ -498,16 +546,20 @@ pub fn compute_contributions_from_events(events: &[Value]) -> Value {
             })
         })
         .collect();
-    
+
     contributions.sort_by(|a, b| {
-        a["date"].as_str().unwrap_or("").cmp(b["date"].as_str().unwrap_or(""))
+        a["date"]
+            .as_str()
+            .unwrap_or("")
+            .cmp(b["date"].as_str().unwrap_or(""))
     });
-    
+
     // Calculate total
-    let total: i64 = contributions.iter()
+    let total: i64 = contributions
+        .iter()
         .map(|c| c["count"].as_i64().unwrap_or(0))
         .sum();
-    
+
     json!({
         "contributions": contributions,
         "total": total
@@ -581,16 +633,16 @@ mod tests {
     fn test_repos_to_collection_items() {
         let repos = sample_repos();
         let items = repos_to_collection_items(&repos);
-        
+
         assert_eq!(items.len(), 3);
-        
+
         // Check first item
         assert_eq!(items[0].id, "123456");
         assert_eq!(items[0].source_id, Some("123456".to_string()));
         assert_eq!(items[0].data["name"], "awesome-project");
         assert_eq!(items[0].data["stars"], 100);
         assert_eq!(items[0].data["language"], "Rust");
-        
+
         // Check second item
         assert_eq!(items[1].id, "789012");
         assert_eq!(items[2].id, "345678");
@@ -600,9 +652,9 @@ mod tests {
     fn test_create_github_repos_collection() {
         let repos = sample_repos();
         let website_id = Uuid::new_v4();
-        
+
         let collection = create_github_repos_collection(website_id, &repos, "testuser");
-        
+
         assert_eq!(collection.website_id, website_id);
         assert_eq!(collection.collection_slug, "github_repos");
         assert_eq!(collection.source_extension, "github-sync");
@@ -617,9 +669,9 @@ mod tests {
     fn test_compute_github_variables() {
         let repos = sample_repos();
         let variables = compute_github_variables(&repos);
-        
+
         let vars: std::collections::HashMap<String, Value> = variables.into_iter().collect();
-        
+
         assert_eq!(vars["github_total_repos"], json!(3));
         assert_eq!(vars["github_total_stars"], json!(175)); // 100 + 50 + 25
         assert_eq!(vars["github_total_forks"], json!(35)); // 20 + 10 + 5
@@ -630,9 +682,9 @@ mod tests {
     fn test_compute_github_variables_empty() {
         let repos: Vec<Value> = vec![];
         let variables = compute_github_variables(&repos);
-        
+
         let vars: std::collections::HashMap<String, Value> = variables.into_iter().collect();
-        
+
         assert_eq!(vars["github_total_repos"], json!(0));
         assert_eq!(vars["github_total_stars"], json!(0));
         assert_eq!(vars["github_total_forks"], json!(0));

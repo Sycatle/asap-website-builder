@@ -1,8 +1,6 @@
+use crate::{CheckoutSessionRequest, CheckoutSessionResponse, PaymentError, SubscriptionInfo};
 use async_trait::async_trait;
 use uuid::Uuid;
-use crate::{
-    CheckoutSessionRequest, CheckoutSessionResponse, SubscriptionInfo, PaymentError,
-};
 
 /// Payment gateway abstraction - allows swapping payment providers
 #[async_trait]
@@ -62,18 +60,24 @@ impl PaymentGateway for NoOpPaymentGateway {
         &self,
         _request: CheckoutSessionRequest,
     ) -> Result<CheckoutSessionResponse, PaymentError> {
-        Err(PaymentError::Configuration("Payment provider not configured".to_string()))
+        Err(PaymentError::Configuration(
+            "Payment provider not configured".to_string(),
+        ))
     }
 
     async fn get_subscription(
         &self,
         _subscription_id: &str,
     ) -> Result<SubscriptionInfo, PaymentError> {
-        Err(PaymentError::Configuration("Payment provider not configured".to_string()))
+        Err(PaymentError::Configuration(
+            "Payment provider not configured".to_string(),
+        ))
     }
 
     async fn get_customer_id(&self, _account_id: Uuid) -> Result<Option<String>, PaymentError> {
-        Err(PaymentError::Configuration("Payment provider not configured".to_string()))
+        Err(PaymentError::Configuration(
+            "Payment provider not configured".to_string(),
+        ))
     }
 
     async fn ensure_customer(
@@ -81,7 +85,9 @@ impl PaymentGateway for NoOpPaymentGateway {
         _account_id: Uuid,
         _email: String,
     ) -> Result<String, PaymentError> {
-        Err(PaymentError::Configuration("Payment provider not configured".to_string()))
+        Err(PaymentError::Configuration(
+            "Payment provider not configured".to_string(),
+        ))
     }
 
     async fn verify_webhook_signature(
@@ -89,11 +95,15 @@ impl PaymentGateway for NoOpPaymentGateway {
         _payload: &str,
         _signature: &str,
     ) -> Result<(), PaymentError> {
-        Err(PaymentError::Configuration("Payment provider not configured".to_string()))
+        Err(PaymentError::Configuration(
+            "Payment provider not configured".to_string(),
+        ))
     }
 
     async fn parse_webhook_event(&self, _payload: &str) -> Result<serde_json::Value, PaymentError> {
-        Err(PaymentError::Configuration("Payment provider not configured".to_string()))
+        Err(PaymentError::Configuration(
+            "Payment provider not configured".to_string(),
+        ))
     }
 }
 
@@ -144,7 +154,9 @@ mod tests {
         mock.expect_ensure_customer()
             .returning(|_, _| Ok("cus_test123".to_string()));
 
-        let result = mock.ensure_customer(account_id, "test@example.com".to_string()).await;
+        let result = mock
+            .ensure_customer(account_id, "test@example.com".to_string())
+            .await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "cus_test123");
     }

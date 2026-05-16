@@ -27,7 +27,7 @@ impl EventProcessor {
     /// Fetch all unprocessed events from the database, including those ready for retry
     pub async fn fetch_unprocessed_events(&self) -> Result<Vec<Event>> {
         let now = Utc::now();
-        
+
         // Note: The SQL uses POWER(2, retry_count) * INTERVAL '10 seconds' which matches
         // our calculate_backoff_seconds function (BASE_BACKOFF_SECONDS * 2^retry_count)
         let events: Vec<EventRow> = sqlx::query_as(
@@ -52,13 +52,11 @@ impl EventProcessor {
 
     /// Mark an event as processed
     pub async fn mark_processed(&self, event_id: Uuid) -> Result<()> {
-        sqlx::query(
-            "UPDATE events SET processed_at = $1 WHERE id = $2"
-        )
-        .bind(Utc::now())
-        .bind(event_id)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("UPDATE events SET processed_at = $1 WHERE id = $2")
+            .bind(Utc::now())
+            .bind(event_id)
+            .execute(&self.pool)
+            .await?;
 
         tracing::debug!("Event {} marked as processed", event_id);
         Ok(())
@@ -67,12 +65,11 @@ impl EventProcessor {
     /// Mark an event as failed with exponential backoff retry logic
     pub async fn mark_failed(&self, event_id: Uuid, error: &str) -> Result<()> {
         // Get current retry count
-        let row: Option<RetryCountRow> = sqlx::query_as(
-            "SELECT retry_count FROM events WHERE id = $1"
-        )
-        .bind(event_id)
-        .fetch_optional(&self.pool)
-        .await?;
+        let row: Option<RetryCountRow> =
+            sqlx::query_as("SELECT retry_count FROM events WHERE id = $1")
+                .bind(event_id)
+                .fetch_optional(&self.pool)
+                .await?;
 
         let retry_count = row.map(|r| r.retry_count).unwrap_or(0);
         let new_retry_count = retry_count + 1;
@@ -85,7 +82,7 @@ impl EventProcessor {
                 new_retry_count,
                 error
             );
-            
+
             sqlx::query(
                 r#"
                 UPDATE events 
@@ -94,7 +91,7 @@ impl EventProcessor {
                     failed_at = $1,
                     error_message = $3
                 WHERE id = $4
-                "#
+                "#,
             )
             .bind(Utc::now())
             .bind(new_retry_count)
@@ -106,7 +103,7 @@ impl EventProcessor {
             // Calculate next retry time with exponential backoff
             let backoff_seconds = calculate_backoff_seconds(retry_count);
             let next_retry = Utc::now() + Duration::seconds(backoff_seconds);
-            
+
             tracing::warn!(
                 "Event {} failed (attempt {}/{}): {}. Next retry in {} seconds at {}",
                 event_id,
@@ -116,7 +113,7 @@ impl EventProcessor {
                 backoff_seconds,
                 next_retry.format("%Y-%m-%d %H:%M:%S")
             );
-            
+
             sqlx::query(
                 r#"
                 UPDATE events 
@@ -124,7 +121,7 @@ impl EventProcessor {
                     failed_at = $2,
                     error_message = $3
                 WHERE id = $4
-                "#
+                "#,
             )
             .bind(new_retry_count)
             .bind(Utc::now())
@@ -165,33 +162,36 @@ impl From<EventRow> for Event {
             "USER_CREATED" => EventType::UserCreated,
             "USER_INTEGRATION_ADDED" => EventType::UserIntegrationAdded,
             "USER_INTEGRATION_UPDATED" => EventType::UserIntegrationUpdated,
-            
+
             // Website events
             "WEBSITE_CREATED" => EventType::WebsiteCreated,
             "WEBSITE_PUBLISHED" => EventType::WebsitePublished,
             "WEBSITE_UPDATED" => EventType::WebsiteUpdated,
             "WEBSITE_DELETED" => EventType::WebsiteDeleted,
-            
+
             // Module events
             "MODULE_CONFIG_CHANGED" => EventType::ModuleConfigChanged,
             "MODULE_ACTIVATED" => EventType::ModuleActivated,
             "MODULE_DEACTIVATED" => EventType::ModuleDeactivated,
             "MODULE_CONFIGURED" => EventType::ModuleConfigured,
-            
+
             // GitHub events
             "GITHUB_SYNC_REQUESTED" => EventType::GitHubSyncRequested,
-            
+
             // Element events
             "ELEMENT_CREATED" => EventType::ElementCreated,
             "ELEMENT_UPDATED" => EventType::ElementUpdated,
             "ELEMENT_DELETED" => EventType::ElementDeleted,
             "ELEMENT_REORDERED" => EventType::ElementReordered,
-            
+
             // Preset events
             "PRESET_APPLIED" => EventType::PresetApplied,
-            
+
             _ => {
-                tracing::warn!("Unknown event type: {}, defaulting to USER_CREATED", row.event_type);
+                tracing::warn!(
+                    "Unknown event type: {}, defaulting to USER_CREATED",
+                    row.event_type
+                );
                 EventType::UserCreated
             }
         };

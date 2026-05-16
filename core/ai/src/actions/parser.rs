@@ -34,7 +34,7 @@ impl ActionParser {
         for cap in self.json_block_regex.captures_iter(response) {
             if let Some(json_match) = cap.get(1) {
                 let json_str = json_match.as_str().trim();
-                
+
                 // Try to parse as single action
                 if let Ok(action) = serde_json::from_str::<AIAction>(json_str) {
                     debug!("Parsed single action: {:?}", action.action_type());
@@ -76,17 +76,23 @@ impl ActionParser {
         match action {
             AIAction::UpdateSectionProperty { property, .. } => {
                 if property.is_empty() {
-                    return Err(AIError::InvalidAction("Property name cannot be empty".to_string()));
+                    return Err(AIError::InvalidAction(
+                        "Property name cannot be empty".to_string(),
+                    ));
                 }
             }
             AIAction::AddSection { section_type, .. } => {
                 if section_type.is_empty() {
-                    return Err(AIError::InvalidAction("Section type cannot be empty".to_string()));
+                    return Err(AIError::InvalidAction(
+                        "Section type cannot be empty".to_string(),
+                    ));
                 }
             }
             AIAction::ChangeVariant { variant, .. } => {
                 if variant.is_empty() {
-                    return Err(AIError::InvalidAction("Variant cannot be empty".to_string()));
+                    return Err(AIError::InvalidAction(
+                        "Variant cannot be empty".to_string(),
+                    ));
                 }
             }
             AIAction::ReorderSections { order } => {
@@ -101,7 +107,10 @@ impl ActionParser {
 
     /// Extract text content (non-action parts) from response
     pub fn extract_text(&self, response: &str) -> String {
-        self.json_block_regex.replace_all(response, "").trim().to_string()
+        self.json_block_regex
+            .replace_all(response, "")
+            .trim()
+            .to_string()
     }
 }
 
@@ -125,9 +134,11 @@ Done!
 
         let actions = parser.extract_actions(response);
         assert_eq!(actions.len(), 1);
-        
+
         match &actions[0] {
-            AIAction::UpdateSectionProperty { property, value, .. } => {
+            AIAction::UpdateSectionProperty {
+                property, value, ..
+            } => {
                 assert_eq!(property, "headline");
                 assert_eq!(value, "Welcome!");
             }
@@ -164,9 +175,14 @@ I'll make those changes.
 
         let actions = parser.extract_actions(response);
         assert_eq!(actions.len(), 1);
-        
+
         match &actions[0] {
-            AIAction::AddSection { section_type, position, variant, .. } => {
+            AIAction::AddSection {
+                section_type,
+                position,
+                variant,
+                ..
+            } => {
                 assert_eq!(section_type, "faq");
                 assert_eq!(*position, Some(3));
                 assert_eq!(variant.as_deref(), Some("accordion"));
@@ -198,7 +214,7 @@ Is there anything else you'd like me to change?
     fn test_no_actions() {
         let parser = ActionParser::new();
         let response = "Sure, I can help you with that. What would you like to change?";
-        
+
         let actions = parser.extract_actions(response);
         assert!(actions.is_empty());
     }
@@ -206,7 +222,7 @@ Is there anything else you'd like me to change?
     #[test]
     fn test_validate_action() {
         let parser = ActionParser::new();
-        
+
         // Valid action
         let action = AIAction::UpdateSectionProperty {
             section_id: Uuid::new_v4(),
@@ -214,7 +230,7 @@ Is there anything else you'd like me to change?
             value: serde_json::json!("Hello"),
         };
         assert!(parser.validate_action(&action).is_ok());
-        
+
         // Invalid: empty property
         let action = AIAction::UpdateSectionProperty {
             section_id: Uuid::new_v4(),

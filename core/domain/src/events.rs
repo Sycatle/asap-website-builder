@@ -1,6 +1,6 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Event types that can be emitted by the core
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -10,31 +10,31 @@ pub enum EventType {
     UserCreated,
     UserIntegrationAdded,
     UserIntegrationUpdated,
-    
+
     // Website events
     WebsiteCreated,
     WebsitePublished,
     WebsiteUpdated,
     WebsiteDeleted,
-    
+
     // Module events
     ModuleConfigChanged,
     ModuleActivated,
     ModuleDeactivated,
     ModuleConfigured,
-    
+
     // GitHub events
     GitHubSyncRequested,
-    
+
     // Element events
     ElementCreated,
     ElementUpdated,
     ElementDeleted,
     ElementReordered,
-    
+
     // Preset events
     PresetApplied,
-    
+
     // Collection events
     SyncCollection,
     CollectionSynced,
@@ -108,11 +108,7 @@ mod tests {
             "email": "test@example.com"
         });
 
-        let event = Event::new(
-            account_id,
-            EventType::UserCreated,
-            payload.clone(),
-        );
+        let event = Event::new(account_id, EventType::UserCreated, payload.clone());
 
         assert_eq!(event.account_id, account_id);
         assert_eq!(event.event_type, EventType::UserCreated);
@@ -199,20 +195,52 @@ mod tests {
 
         let events = vec![
             Event::new(account_id, EventType::UserCreated, serde_json::json!({})),
-            Event::new(account_id, EventType::UserIntegrationAdded, serde_json::json!({})),
-            Event::new(account_id, EventType::UserIntegrationUpdated, serde_json::json!({})),
+            Event::new(
+                account_id,
+                EventType::UserIntegrationAdded,
+                serde_json::json!({}),
+            ),
+            Event::new(
+                account_id,
+                EventType::UserIntegrationUpdated,
+                serde_json::json!({}),
+            ),
             Event::new(account_id, EventType::WebsiteCreated, serde_json::json!({})),
-            Event::new(account_id, EventType::WebsitePublished, serde_json::json!({})),
+            Event::new(
+                account_id,
+                EventType::WebsitePublished,
+                serde_json::json!({}),
+            ),
             Event::new(account_id, EventType::WebsiteUpdated, serde_json::json!({})),
             Event::new(account_id, EventType::WebsiteDeleted, serde_json::json!({})),
-            Event::new(account_id, EventType::ModuleConfigChanged, serde_json::json!({})),
-            Event::new(account_id, EventType::ModuleActivated, serde_json::json!({})),
-            Event::new(account_id, EventType::ModuleDeactivated, serde_json::json!({})),
-            Event::new(account_id, EventType::ModuleConfigured, serde_json::json!({})),
+            Event::new(
+                account_id,
+                EventType::ModuleConfigChanged,
+                serde_json::json!({}),
+            ),
+            Event::new(
+                account_id,
+                EventType::ModuleActivated,
+                serde_json::json!({}),
+            ),
+            Event::new(
+                account_id,
+                EventType::ModuleDeactivated,
+                serde_json::json!({}),
+            ),
+            Event::new(
+                account_id,
+                EventType::ModuleConfigured,
+                serde_json::json!({}),
+            ),
             Event::new(account_id, EventType::ElementCreated, serde_json::json!({})),
             Event::new(account_id, EventType::ElementUpdated, serde_json::json!({})),
             Event::new(account_id, EventType::ElementDeleted, serde_json::json!({})),
-            Event::new(account_id, EventType::ElementReordered, serde_json::json!({})),
+            Event::new(
+                account_id,
+                EventType::ElementReordered,
+                serde_json::json!({}),
+            ),
             Event::new(account_id, EventType::PresetApplied, serde_json::json!({})),
         ];
 

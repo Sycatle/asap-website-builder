@@ -5,14 +5,13 @@ use axum::{
     http::StatusCode,
     Extension, Json,
 };
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
-use chrono::Utc;
 
 use crate::Claims;
 use asap_core_shared::SharedWsBroadcaster;
-
 
 // Helper function to parse account ID from claims
 fn get_account_id(claims: &Claims) -> Result<Uuid, StatusCode> {
@@ -22,7 +21,7 @@ fn get_account_id(claims: &Claims) -> Result<Uuid, StatusCode> {
 // Helper function to get unread notification count
 async fn get_unread_count_for_account(pool: &PgPool, account_id: Uuid) -> Result<i64, StatusCode> {
     let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*)::BIGINT FROM notifications WHERE account_id = $1 AND read = false"
+        "SELECT COUNT(*)::BIGINT FROM notifications WHERE account_id = $1 AND read = false",
     )
     .bind(account_id)
     .fetch_one(pool)
@@ -223,7 +222,7 @@ pub async fn list_notifications(
 
     // Get unread count
     let unread: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*)::BIGINT FROM notifications WHERE account_id = $1 AND read = false"
+        "SELECT COUNT(*)::BIGINT FROM notifications WHERE account_id = $1 AND read = false",
     )
     .bind(account_id)
     .fetch_one(&pool)
@@ -244,7 +243,7 @@ pub async fn get_unread_count(
 ) -> Result<Json<UnreadCountResponse>, StatusCode> {
     let account_id = get_account_id(&claims)?;
     let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*)::BIGINT FROM notifications WHERE account_id = $1 AND read = false"
+        "SELECT COUNT(*)::BIGINT FROM notifications WHERE account_id = $1 AND read = false",
     )
     .bind(account_id)
     .fetch_one(&pool)
@@ -299,7 +298,7 @@ pub async fn mark_as_read(
 ) -> Result<Json<MarkReadResponse>, StatusCode> {
     let account_id = get_account_id(&claims)?;
     let now = Utc::now();
-    
+
     let (updated, notification_ids) = if req.all.unwrap_or(false) {
         // Mark all as read
         let result = sqlx::query!(
@@ -317,7 +316,7 @@ pub async fn mark_as_read(
             tracing::error!("Failed to mark all as read: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
-        
+
         (result.rows_affected() as i64, None)
     } else if let Some(ids) = req.notification_ids {
         // Mark specific notifications as read
@@ -337,7 +336,7 @@ pub async fn mark_as_read(
             tracing::error!("Failed to mark notifications as read: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
-        
+
         let ids_as_strings: Vec<String> = ids.iter().map(|id| id.to_string()).collect();
         (result.rows_affected() as i64, Some(ids_as_strings))
     } else {
@@ -390,7 +389,7 @@ pub async fn mark_notification_read(
             (*ws_broadcaster).notify_notification_read(
                 &account_id.to_string(),
                 &notification_id.to_string(),
-                unread_count
+                unread_count,
             );
         }
         Ok(StatusCode::OK)
@@ -407,7 +406,7 @@ pub async fn delete_notification(
     Path(notification_id): Path<Uuid>,
 ) -> Result<StatusCode, StatusCode> {
     let account_id = get_account_id(&claims)?;
-    
+
     let result = sqlx::query!(
         "DELETE FROM notifications WHERE id = $1 AND account_id = $2",
         notification_id,
@@ -426,7 +425,7 @@ pub async fn delete_notification(
             (*ws_broadcaster).notify_notification_deleted(
                 &account_id.to_string(),
                 &notification_id.to_string(),
-                unread_count
+                unread_count,
             );
         }
         Ok(StatusCode::NO_CONTENT)
@@ -518,20 +517,18 @@ pub async fn get_vapid_public_key(
     Extension(_claims): Extension<Claims>,
 ) -> Result<Json<VapidPublicKeyResponse>, StatusCode> {
     // Get global VAPID key from database
-    let global_key = sqlx::query_scalar!(
-        "SELECT public_key FROM vapid_keys WHERE name = 'default' LIMIT 1"
-    )
-    .fetch_optional(&pool)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let global_key =
+        sqlx::query_scalar!("SELECT public_key FROM vapid_keys WHERE name = 'default' LIMIT 1")
+            .fetch_optional(&pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     match global_key {
         Some(key) => Ok(Json(VapidPublicKeyResponse { public_key: key })),
         None => {
             // Return env var if no database key
-            let key = std::env::var("VAPID_PUBLIC_KEY")
-                .unwrap_or_else(|_| "".to_string());
-            
+            let key = std::env::var("VAPID_PUBLIC_KEY").unwrap_or_else(|_| "".to_string());
+
             if key.is_empty() {
                 Err(StatusCode::NOT_FOUND)
             } else {
@@ -571,8 +568,7 @@ pub async fn get_notification_settings(
         Some(row) => Ok(Json(NotificationSettings {
             push_enabled: row.push_enabled,
             email_enabled: row.email_enabled,
-            enabled_categories: serde_json::from_value(row.enabled_categories)
-                .unwrap_or_default(),
+            enabled_categories: serde_json::from_value(row.enabled_categories).unwrap_or_default(),
             quiet_hours_start: row.quiet_hours_start,
             quiet_hours_end: row.quiet_hours_end,
         })),
@@ -587,8 +583,8 @@ pub async fn update_notification_settings(
     Json(settings): Json<NotificationSettings>,
 ) -> Result<Json<NotificationSettings>, StatusCode> {
     let account_id = get_account_id(&claims)?;
-    let categories_json = serde_json::to_value(&settings.enabled_categories)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let categories_json =
+        serde_json::to_value(&settings.enabled_categories).map_err(|_| StatusCode::BAD_REQUEST)?;
 
     sqlx::query!(
         r#"
@@ -673,11 +669,11 @@ pub async fn create_notification_internal(
 }
 
 /// Queue a notification for deferred processing with consolidation
-/// 
+///
 /// Instead of creating notifications immediately, this adds them to a queue.
 /// A background process consolidates similar notifications (same dedup_key)
 /// and only creates the final relevant notification.
-/// 
+///
 /// Example: activate → deactivate → activate within 30s = 1 notification "activated"
 pub async fn queue_notification(
     pool: &PgPool,
@@ -703,7 +699,7 @@ pub async fn queue_notification(
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         RETURNING id
-        "#
+        "#,
     )
     .bind(id)
     .bind(account_id)
@@ -719,25 +715,24 @@ pub async fn queue_notification(
     .bind(now)
     .fetch_one(pool)
     .await?;
-    
+
     Ok(result.0)
 }
 
 /// Process the notification queue - consolidate and create final notifications
-/// 
+///
 /// This should be called periodically (e.g., every 10-30 seconds) by a background worker.
 /// It processes notifications older than QUEUE_CONSOLIDATION_SECONDS and consolidates them.
 pub async fn process_notification_queue(pool: &PgPool) -> Result<(i32, i32), sqlx::Error> {
-    let result: (Option<i32>, Option<i32>) = sqlx::query_as(
-        "SELECT processed_count, created_count FROM process_notification_queue($1)"
-    )
-    .bind(QUEUE_CONSOLIDATION_SECONDS)
-    .fetch_one(pool)
-    .await?;
-    
+    let result: (Option<i32>, Option<i32>) =
+        sqlx::query_as("SELECT processed_count, created_count FROM process_notification_queue($1)")
+            .bind(QUEUE_CONSOLIDATION_SECONDS)
+            .fetch_one(pool)
+            .await?;
+
     let processed = result.0.unwrap_or(0);
     let created = result.1.unwrap_or(0);
-    
+
     if processed > 0 {
         tracing::info!(
             "Notification queue processed: {} queued → {} created",
@@ -745,24 +740,28 @@ pub async fn process_notification_queue(pool: &PgPool) -> Result<(i32, i32), sql
             created
         );
     }
-    
+
     Ok((processed, created))
 }
 
 /// Cleanup old processed queue entries
-pub async fn cleanup_notification_queue(pool: &PgPool, hours_to_keep: i32) -> Result<i32, sqlx::Error> {
-    let deleted: (Option<i32>,) = sqlx::query_as(
-        "SELECT cleanup_notification_queue($1)"
-    )
-    .bind(hours_to_keep)
-    .fetch_one(pool)
-    .await?;
-    
+pub async fn cleanup_notification_queue(
+    pool: &PgPool,
+    hours_to_keep: i32,
+) -> Result<i32, sqlx::Error> {
+    let deleted: (Option<i32>,) = sqlx::query_as("SELECT cleanup_notification_queue($1)")
+        .bind(hours_to_keep)
+        .fetch_one(pool)
+        .await?;
+
     Ok(deleted.0.unwrap_or(0))
 }
 
 /// Create a welcome notification for new users
-pub async fn create_welcome_notification(pool: &PgPool, account_id: Uuid) -> Result<(), sqlx::Error> {
+pub async fn create_welcome_notification(
+    pool: &PgPool,
+    account_id: Uuid,
+) -> Result<(), sqlx::Error> {
     create_notification_internal(
         pool,
         account_id,
@@ -774,7 +773,7 @@ pub async fn create_welcome_notification(pool: &PgPool, account_id: Uuid) -> Res
         Some("/app/extensions"),
         Some("sparkles"),
     ).await?;
-    
+
     Ok(())
 }
 
@@ -783,7 +782,10 @@ pub async fn create_welcome_notification(pool: &PgPool, account_id: Uuid) -> Res
 // ============================================================================
 
 /// Notification for successful payment
-pub async fn create_payment_success_notification(pool: &PgPool, account_id: Uuid) -> Result<(), sqlx::Error> {
+pub async fn create_payment_success_notification(
+    pool: &PgPool,
+    account_id: Uuid,
+) -> Result<(), sqlx::Error> {
     create_notification_internal(
         pool,
         account_id,
@@ -794,13 +796,17 @@ pub async fn create_payment_success_notification(pool: &PgPool, account_id: Uuid
         "normal",
         Some("/app/settings?tab=billing"),
         Some("credit-card"),
-    ).await?;
-    
+    )
+    .await?;
+
     Ok(())
 }
 
 /// Notification for failed payment
-pub async fn create_payment_failed_notification(pool: &PgPool, account_id: Uuid) -> Result<(), sqlx::Error> {
+pub async fn create_payment_failed_notification(
+    pool: &PgPool,
+    account_id: Uuid,
+) -> Result<(), sqlx::Error> {
     create_notification_internal(
         pool,
         account_id,
@@ -812,12 +818,16 @@ pub async fn create_payment_failed_notification(pool: &PgPool, account_id: Uuid)
         Some("/app/settings?tab=billing"),
         Some("alert-triangle"),
     ).await?;
-    
+
     Ok(())
 }
 
 /// Notification for new subscription
-pub async fn create_subscription_created_notification(pool: &PgPool, account_id: Uuid, plan_name: &str) -> Result<(), sqlx::Error> {
+pub async fn create_subscription_created_notification(
+    pool: &PgPool,
+    account_id: Uuid,
+    plan_name: &str,
+) -> Result<(), sqlx::Error> {
     create_notification_internal(
         pool,
         account_id,
@@ -829,12 +839,15 @@ pub async fn create_subscription_created_notification(pool: &PgPool, account_id:
         Some("/app/settings?tab=billing"),
         Some("rocket"),
     ).await?;
-    
+
     Ok(())
 }
 
 /// Notification for subscription cancelled
-pub async fn create_subscription_cancelled_notification(pool: &PgPool, account_id: Uuid) -> Result<(), sqlx::Error> {
+pub async fn create_subscription_cancelled_notification(
+    pool: &PgPool,
+    account_id: Uuid,
+) -> Result<(), sqlx::Error> {
     create_notification_internal(
         pool,
         account_id,
@@ -846,7 +859,7 @@ pub async fn create_subscription_cancelled_notification(pool: &PgPool, account_i
         Some("/app/settings?tab=billing"),
         Some("x-circle"),
     ).await?;
-    
+
     Ok(())
 }
 
@@ -855,19 +868,27 @@ pub async fn create_subscription_cancelled_notification(pool: &PgPool, account_i
 // ============================================================================
 
 /// Notification for website published
-pub async fn create_website_published_notification(pool: &PgPool, account_id: Uuid, website_slug: &str) -> Result<(), sqlx::Error> {
+pub async fn create_website_published_notification(
+    pool: &PgPool,
+    account_id: Uuid,
+    website_slug: &str,
+) -> Result<(), sqlx::Error> {
     create_notification_internal(
         pool,
         account_id,
         "Site publié ! 🎉",
-        &format!("Votre site {} est maintenant en ligne et accessible à tous.", website_slug),
+        &format!(
+            "Votre site {} est maintenant en ligne et accessible à tous.",
+            website_slug
+        ),
         "website_published",
         "website",
         "normal",
         Some(&format!("/{}", website_slug)),
         Some("globe"),
-    ).await?;
-    
+    )
+    .await?;
+
     Ok(())
 }
 
@@ -876,7 +897,10 @@ pub async fn create_website_published_notification(pool: &PgPool, account_id: Uu
 // ============================================================================
 
 /// Notification for password changed
-pub async fn create_password_changed_notification(pool: &PgPool, account_id: Uuid) -> Result<(), sqlx::Error> {
+pub async fn create_password_changed_notification(
+    pool: &PgPool,
+    account_id: Uuid,
+) -> Result<(), sqlx::Error> {
     create_notification_internal(
         pool,
         account_id,
@@ -888,17 +912,21 @@ pub async fn create_password_changed_notification(pool: &PgPool, account_id: Uui
         Some("/app/settings?tab=security"),
         Some("lock"),
     ).await?;
-    
+
     Ok(())
 }
 
 /// Notification for new login detected
-pub async fn create_new_login_notification(pool: &PgPool, account_id: Uuid, device_info: Option<&str>) -> Result<(), sqlx::Error> {
+pub async fn create_new_login_notification(
+    pool: &PgPool,
+    account_id: Uuid,
+    device_info: Option<&str>,
+) -> Result<(), sqlx::Error> {
     let message = match device_info {
         Some(info) => format!("Nouvelle connexion détectée depuis : {}. Si ce n'était pas vous, changez votre mot de passe immédiatement.", info),
         None => "Nouvelle connexion détectée sur votre compte. Si ce n'était pas vous, changez votre mot de passe immédiatement.".to_string(),
     };
-    
+
     create_notification_internal(
         pool,
         account_id,
@@ -909,8 +937,9 @@ pub async fn create_new_login_notification(pool: &PgPool, account_id: Uuid, devi
         "high",
         Some("/app/settings?tab=security"),
         Some("log-in"),
-    ).await?;
-    
+    )
+    .await?;
+
     Ok(())
 }
 
@@ -919,9 +948,13 @@ pub async fn create_new_login_notification(pool: &PgPool, account_id: Uuid, devi
 // ============================================================================
 
 /// Queue notification for extension activated (uses queue for consolidation)
-pub async fn create_extension_activated_notification(pool: &PgPool, account_id: Uuid, extension_name: &str) -> Result<(), sqlx::Error> {
+pub async fn create_extension_activated_notification(
+    pool: &PgPool,
+    account_id: Uuid,
+    extension_name: &str,
+) -> Result<(), sqlx::Error> {
     let dedup_key = format!("extension:{}", extension_name.to_lowercase());
-    
+
     queue_notification(
         pool,
         account_id,
@@ -934,26 +967,34 @@ pub async fn create_extension_activated_notification(pool: &PgPool, account_id: 
         Some("puzzle"),
         &dedup_key,
     ).await?;
-    
+
     Ok(())
 }
 
 /// Queue notification for extension deactivated (uses queue for consolidation)
-pub async fn create_extension_deactivated_notification(pool: &PgPool, account_id: Uuid, extension_name: &str) -> Result<(), sqlx::Error> {
+pub async fn create_extension_deactivated_notification(
+    pool: &PgPool,
+    account_id: Uuid,
+    extension_name: &str,
+) -> Result<(), sqlx::Error> {
     let dedup_key = format!("extension:{}", extension_name.to_lowercase());
-    
+
     queue_notification(
         pool,
         account_id,
         &format!("Extension {} désactivée", extension_name),
-        &format!("L'extension {} a été désactivée de votre site.", extension_name),
+        &format!(
+            "L'extension {} a été désactivée de votre site.",
+            extension_name
+        ),
         "extension_deactivated",
         "extension",
         "low",
         Some("/app/extensions"),
         Some("puzzle"),
         &dedup_key,
-    ).await?;
-    
+    )
+    .await?;
+
     Ok(())
 }

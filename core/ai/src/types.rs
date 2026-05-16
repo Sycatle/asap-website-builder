@@ -61,7 +61,7 @@ pub struct AIChatRequest {
     /// Conversation ID (to continue an existing conversation)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub conversation_id: Option<Uuid>,
-    
+
     /// Conversation history (previous messages)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub history: Vec<Message>,
@@ -482,7 +482,7 @@ pub struct CollectionSummary {
 }
 
 /// Website context for AI
-/// 
+///
 /// IMPORTANT: This context should only contain data that the requesting account
 /// has permission to access. The account_id field is used for audit logging
 /// and should always be set when executing tools or actions.
@@ -512,7 +512,7 @@ impl WebsiteContext {
     pub fn has_account_id(&self) -> bool {
         self.account_id.is_some()
     }
-    
+
     /// Get account_id or return error message for logging
     pub fn account_id_or_unknown(&self) -> String {
         self.account_id

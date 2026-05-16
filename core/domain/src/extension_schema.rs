@@ -457,7 +457,7 @@ impl ConfigSection {
 // ============================================================================
 
 /// Complete configuration schema for a module
-/// 
+///
 /// This is defined in code alongside the module and returned via the API.
 /// The frontend uses this to dynamically render the configuration UI.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -538,16 +538,14 @@ mod tests {
                     .with_description("Sync automatically every 24h")
                     .with_default(false),
             ])
-            .with_actions(vec![
-                ConfigAction::post("sync", "Sync Now", "/sync")
-                    .primary()
-                    .refresh_after(),
-            ]);
+            .with_actions(vec![ConfigAction::post("sync", "Sync Now", "/sync")
+                .primary()
+                .refresh_after()]);
 
         let json = serde_json::to_string_pretty(&schema).unwrap();
         assert!(json.contains("github_username"));
         assert!(json.contains("auto_sync"));
-        
+
         // Verify it can be deserialized back
         let _: ConfigSchema = serde_json::from_str(&json).unwrap();
     }

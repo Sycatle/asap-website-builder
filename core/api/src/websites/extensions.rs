@@ -1,16 +1,16 @@
 //! Website extensions management (legacy - per website)
 
 use axum::{
-    extract::{Path, State, Extension},
-    response::IntoResponse,
+    extract::{Extension, Path, State},
     http::StatusCode,
+    response::IntoResponse,
     Json,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use asap_core_shared::{Claims, SharedWsBroadcaster, ExtensionRegistry};
+use asap_core_shared::{Claims, ExtensionRegistry, SharedWsBroadcaster};
 
 #[derive(Debug, Serialize)]
 pub struct WebsiteExtensionResponse {
@@ -26,7 +26,7 @@ pub struct WebsiteExtensionResponse {
 
 #[derive(Debug, Deserialize)]
 pub struct ActivateExtensionRequest {
-    pub extension_id: String,  // Can be UUID or slug
+    pub extension_id: String, // Can be UUID or slug
     pub settings: Option<serde_json::Value>,
 }
 
@@ -37,34 +37,36 @@ pub struct UpdateExtensionSettingsRequest {
 }
 
 /// Resolve an extension identifier (UUID or slug) to an extension UUID
-/// 
+///
 /// This function first checks the extension catalog (source of truth),
 /// then ensures the extension exists in the database, creating it if needed.
-pub(crate) async fn resolve_extension_id(pool: &PgPool, extension_id_or_slug: &str) -> Result<Uuid, String> {
+pub(crate) async fn resolve_extension_id(
+    pool: &PgPool,
+    extension_id_or_slug: &str,
+) -> Result<Uuid, String> {
     // First try to parse as UUID
     if let Ok(uuid) = Uuid::parse_str(extension_id_or_slug) {
         return Ok(uuid);
     }
-    
+
     // Look up in the extension catalog (source of truth)
     let registry = ExtensionRegistry::load_from_workspace()
         .map_err(|e| format!("Failed to load extension registry: {}", e))?;
-    let extension_def = registry.get_by_slug(extension_id_or_slug)
+    let extension_def = registry
+        .get_by_slug(extension_id_or_slug)
         .ok_or_else(|| format!("Extension not found: {}", extension_id_or_slug))?;
-    
+
     // Check if extension exists in database
-    let existing = sqlx::query_as::<_, (Uuid,)>(
-        "SELECT id FROM extensions WHERE slug = $1"
-    )
-    .bind(&extension_def.slug)
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| format!("Database error: {}", e))?;
-    
+    let existing = sqlx::query_as::<_, (Uuid,)>("SELECT id FROM extensions WHERE slug = $1")
+        .bind(&extension_def.slug)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| format!("Database error: {}", e))?;
+
     if let Some((id,)) = existing {
         return Ok(id);
     }
-    
+
     // Extension not in DB, insert it from the catalog
     let new_id = Uuid::new_v4();
     sqlx::query(
@@ -98,16 +100,14 @@ pub(crate) async fn resolve_extension_id(pool: &PgPool, extension_id_or_slug: &s
     .execute(pool)
     .await
     .map_err(|e| format!("Failed to insert extension: {}", e))?;
-    
+
     // Fetch the actual ID (might be different if ON CONFLICT was triggered)
-    let result = sqlx::query_as::<_, (Uuid,)>(
-        "SELECT id FROM extensions WHERE slug = $1"
-    )
-    .bind(&extension_def.slug)
-    .fetch_one(pool)
-    .await
-    .map_err(|e| format!("Database error: {}", e))?;
-    
+    let result = sqlx::query_as::<_, (Uuid,)>("SELECT id FROM extensions WHERE slug = $1")
+        .bind(&extension_def.slug)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| format!("Database error: {}", e))?;
+
     Ok(result.0)
 }
 
@@ -119,49 +119,67 @@ pub async fn list_website_extensions(
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
     use crate::queries;
-    
+
     match queries::verify_website_access(&pool, website_uuid, account_id).await {
         Ok(true) => {}
         Ok(false) => {
-            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Website not found"
-            }))).into_response();
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "error": "Website not found"
+                })),
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error verifying website: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     }
 
     let result = queries::list_website_extensions(&pool, website_uuid).await;
 
     match result {
-        Ok(extensions) => {
-            (StatusCode::OK, Json(extensions)).into_response()
-        }
+        Ok(extensions) => (StatusCode::OK, Json(extensions)).into_response(),
         Err(e) => {
             tracing::error!("Database error listing website extensions: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -176,27 +194,39 @@ pub async fn activate_extension(
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let extension_uuid = match resolve_extension_id(&pool, &payload.extension_id).await {
         Ok(id) => id,
         Err(e) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": e
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": e
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -210,7 +240,8 @@ pub async fn activate_extension(
         extension_uuid,
         account_id,
         settings.clone(),
-    ).await;
+    )
+    .await;
 
     match result {
         Ok(activated_extension) => {
@@ -228,7 +259,13 @@ pub async fn activate_extension(
             .await;
 
             // Create notification for extension activated
-            if let Err(e) = crate::notifications::create_extension_activated_notification(&pool, account_id, &activated_extension.extension_name).await {
+            if let Err(e) = crate::notifications::create_extension_activated_notification(
+                &pool,
+                account_id,
+                &activated_extension.extension_name,
+            )
+            .await
+            {
                 tracing::error!("Failed to create extension activated notification: {}", e);
             }
 
@@ -261,9 +298,13 @@ pub async fn activate_extension(
         }
         Err(e) => {
             tracing::error!("Database error activating extension: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -278,27 +319,39 @@ pub async fn update_website_extension(
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let extension_uuid = match resolve_extension_id(&pool, &extension_id).await {
         Ok(id) => id,
         Err(e) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": e
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": e
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -310,7 +363,8 @@ pub async fn update_website_extension(
         account_id,
         &payload.settings,
         payload.enabled,
-    ).await;
+    )
+    .await;
 
     match result {
         Ok(updated) if updated => {
@@ -327,20 +381,30 @@ pub async fn update_website_extension(
                 }
             }
 
-            (StatusCode::OK, Json(serde_json::json!({
-                "message": "Extension updated successfully"
-            }))).into_response()
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "message": "Extension updated successfully"
+                })),
+            )
+                .into_response()
         }
-        Ok(_) => {
-            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+        Ok(_) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
                 "error": "Extension not found for this website"
-            }))).into_response()
-        }
+            })),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Database error updating extension: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -354,9 +418,13 @@ pub async fn deactivate_extension(
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -365,23 +433,31 @@ pub async fn deactivate_extension(
     let extension_uuid = match Uuid::parse_str(&extension_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid extension ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid extension ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
     use crate::queries;
-    
+
     // Get extension name before deletion for notification
     // Try both we.id (row id) and we.extension_id to match how deactivate_website_extension works
     let extension_name: Option<String> = sqlx::query_scalar(
@@ -389,7 +465,7 @@ pub async fn deactivate_extension(
         SELECT e.name FROM extensions e
         JOIN website_extensions we ON we.extension_id = e.id
         WHERE we.website_id = $1 AND (we.id = $2 OR we.extension_id = $2)
-        "#
+        "#,
     )
     .bind(website_uuid)
     .bind(extension_uuid)
@@ -397,13 +473,10 @@ pub async fn deactivate_extension(
     .await
     .ok()
     .flatten();
-    
-    let result = queries::deactivate_website_extension(
-        &pool,
-        website_uuid,
-        extension_uuid,
-        account_id,
-    ).await;
+
+    let result =
+        queries::deactivate_website_extension(&pool, website_uuid, extension_uuid, account_id)
+            .await;
 
     match result {
         Ok(deleted) if deleted => {
@@ -422,7 +495,11 @@ pub async fn deactivate_extension(
 
             // Create notification for extension deactivated
             if let Some(name) = extension_name {
-                if let Err(e) = crate::notifications::create_extension_deactivated_notification(&pool, account_id, &name).await {
+                if let Err(e) = crate::notifications::create_extension_deactivated_notification(
+                    &pool, account_id, &name,
+                )
+                .await
+                {
                     tracing::error!("Failed to create extension deactivated notification: {}", e);
                 }
             }
@@ -439,20 +516,30 @@ pub async fn deactivate_extension(
                 }
             }
 
-            (StatusCode::OK, Json(serde_json::json!({
-                "message": "Extension deactivated successfully"
-            }))).into_response()
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "message": "Extension deactivated successfully"
+                })),
+            )
+                .into_response()
         }
-        Ok(_) => {
-            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+        Ok(_) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
                 "error": "Extension not found for this website"
-            }))).into_response()
-        }
+            })),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Database error deactivating extension: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }

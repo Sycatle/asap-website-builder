@@ -1,15 +1,20 @@
-use axum::{Json, response::IntoResponse, http::StatusCode, extract::{State, Extension}, http::{HeaderMap, header}};
+use asap_core_shared::{
+    generate_jti, generate_password_reset_token, generate_refresh_token, generate_token,
+    generate_token_with_jti, hash_refresh_token, hash_token, validate_password_reset_token,
+    validate_refresh_token, AuthCookies, Claims, CookieConfig, SharedConfig,
+    PASSWORD_RESET_TOKEN_LIFETIME_SECS,
+};
+use axum::{
+    extract::{Extension, State},
+    http::StatusCode,
+    http::{header, HeaderMap},
+    response::IntoResponse,
+    Json,
+};
+use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
-use asap_core_shared::{
-    SharedConfig, generate_token, generate_token_with_jti, Claims,
-    generate_password_reset_token, validate_password_reset_token, hash_token,
-    PASSWORD_RESET_TOKEN_LIFETIME_SECS,
-    generate_refresh_token, validate_refresh_token, hash_refresh_token, generate_jti,
-    CookieConfig, AuthCookies,
-};
-use chrono::{Utc, Duration};
 
 /// Default creation mode for websites created during signup
 const DEFAULT_CREATION_MODE: &str = "from_scratch";
@@ -32,26 +37,30 @@ fn build_auth_response_with_cookies<T: Serialize>(
     refresh_expires_secs: u64,
 ) -> axum::response::Response {
     let cookie_config = CookieConfig::from_env();
-    
+
     let auth_cookies = AuthCookies {
         access_token: access_token.to_string(),
         refresh_token: refresh_token.to_string(),
         access_token_expires_secs: access_expires_secs,
         refresh_token_expires_secs: refresh_expires_secs,
     };
-    
+
     let (access_cookie, refresh_cookie) = auth_cookies.to_cookie_headers(&cookie_config);
-    
+
     let mut response = (status, Json(body)).into_response();
-    
+
     // Set auth cookies
     if let Ok(access_header) = header::HeaderValue::from_str(&access_cookie) {
-        response.headers_mut().append(header::SET_COOKIE, access_header);
+        response
+            .headers_mut()
+            .append(header::SET_COOKIE, access_header);
     }
     if let Ok(refresh_header) = header::HeaderValue::from_str(&refresh_cookie) {
-        response.headers_mut().append(header::SET_COOKIE, refresh_header);
+        response
+            .headers_mut()
+            .append(header::SET_COOKIE, refresh_header);
     }
-    
+
     response
 }
 
@@ -59,18 +68,26 @@ fn build_auth_response_with_cookies<T: Serialize>(
 fn build_logout_response() -> axum::response::Response {
     let cookie_config = CookieConfig::from_env();
     let (clear_access, clear_refresh) = AuthCookies::clear_headers(&cookie_config);
-    
-    let mut response = (StatusCode::OK, Json(serde_json::json!({
-        "message": "Logged out successfully"
-    }))).into_response();
-    
+
+    let mut response = (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "message": "Logged out successfully"
+        })),
+    )
+        .into_response();
+
     if let Ok(access_header) = header::HeaderValue::from_str(&clear_access) {
-        response.headers_mut().append(header::SET_COOKIE, access_header);
+        response
+            .headers_mut()
+            .append(header::SET_COOKIE, access_header);
     }
     if let Ok(refresh_header) = header::HeaderValue::from_str(&clear_refresh) {
-        response.headers_mut().append(header::SET_COOKIE, refresh_header);
+        response
+            .headers_mut()
+            .append(header::SET_COOKIE, refresh_header);
     }
-    
+
     response
 }
 
@@ -101,7 +118,7 @@ pub struct SignupRequest {
     pub password: String,
     /// Optional website slug - if provided, creates a website during signup
     /// For V1, website creation is handled by onboarding in the dashboard
-    #[serde(alias = "portfolio_slug")]  // Backward compatibility
+    #[serde(alias = "portfolio_slug")] // Backward compatibility
     pub website_slug: Option<String>,
 }
 
@@ -199,7 +216,7 @@ mod password_tests {
     fn test_hash_password() {
         let password = "secure_password_123";
         let hash = hash_password(password).unwrap();
-        
+
         // Hash should be different from original password
         assert_ne!(password, hash);
         // Hash should be a bcrypt hash (starts with $2a$, $2b$, or $2y$)
@@ -210,7 +227,7 @@ mod password_tests {
     fn test_verify_correct_password() {
         let password = "correct_password";
         let hash = hash_password(password).unwrap();
-        
+
         let result = verify_password(password, &hash).unwrap();
         assert!(result);
     }
@@ -219,7 +236,7 @@ mod password_tests {
     fn test_verify_incorrect_password() {
         let password = "correct_password";
         let hash = hash_password(password).unwrap();
-        
+
         let result = verify_password("wrong_password", &hash).unwrap();
         assert!(!result);
     }
@@ -229,10 +246,10 @@ mod password_tests {
         let password = "my_password";
         let hash1 = hash_password(password).unwrap();
         let hash2 = hash_password(password).unwrap();
-        
+
         // Bcrypt produces different hashes even for same password
         assert_ne!(hash1, hash2);
-        
+
         // But both should verify correctly
         assert!(verify_password(password, &hash1).unwrap());
         assert!(verify_password(password, &hash2).unwrap());
@@ -325,7 +342,7 @@ mod password_tests {
     #[test]
     fn test_slug_validation() {
         let valid_slugs = vec!["my-website", "website123", "a-b-c"];
-        
+
         for slug in valid_slugs {
             assert!(!slug.is_empty());
             assert!(slug.chars().all(|c| c.is_alphanumeric() || c == '-'));
@@ -335,7 +352,7 @@ mod password_tests {
     #[test]
     fn test_invalid_slug() {
         let invalid_slugs = vec!["my website", "website@123", "website#1"];
-        
+
         for slug in invalid_slugs {
             assert!(!slug.chars().all(|c| c.is_alphanumeric() || c == '-'));
         }
@@ -355,16 +372,24 @@ pub async fn signup(
 ) -> impl IntoResponse {
     // Validate email format
     if !payload.email.contains('@') {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "Invalid email format"
-        }))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "Invalid email format"
+            })),
+        )
+            .into_response();
     }
 
     // Validate password strength
     if let Err(e) = validate_password_strength(&payload.password) {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": e
-        }))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": e
+            })),
+        )
+            .into_response();
     }
 
     // Validate and sanitize slug if provided (website creation is optional for V1)
@@ -373,11 +398,18 @@ pub async fn signup(
         if !slug.is_empty() {
             // Validate slug format (strict security rules)
             if slug.len() < 3 || slug.len() > 50 {
-                return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                    "error": "Website slug must be between 3 and 50 characters"
-                }))).into_response();
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({
+                        "error": "Website slug must be between 3 and 50 characters"
+                    })),
+                )
+                    .into_response();
             }
-            if !slug.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-') {
+            if !slug
+                .chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+            {
                 return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
                     "error": "Website slug can only contain lowercase letters, numbers, and hyphens"
                 }))).into_response();
@@ -388,11 +420,18 @@ pub async fn signup(
                 }))).into_response();
             }
             // Reserved slugs that could conflict with routes
-            let reserved_slugs = ["api", "admin", "auth", "login", "signup", "public", "private", "health", "static", "assets", "www", "app"];
+            let reserved_slugs = [
+                "api", "admin", "auth", "login", "signup", "public", "private", "health", "static",
+                "assets", "www", "app",
+            ];
             if reserved_slugs.contains(&slug.as_str()) {
-                return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                    "error": "This website slug is reserved"
-                }))).into_response();
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({
+                        "error": "This website slug is reserved"
+                    })),
+                )
+                    .into_response();
             }
             Some(slug)
         } else {
@@ -407,9 +446,13 @@ pub async fn signup(
         Ok(hash) => hash,
         Err(e) => {
             tracing::error!("Failed to hash password: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -418,9 +461,13 @@ pub async fn signup(
         Ok(tx) => tx,
         Err(e) => {
             tracing::error!("Failed to start transaction: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -452,12 +499,17 @@ pub async fn signup(
         account_id
     )
     .execute(&mut *tx)
-    .await {
+    .await
+    {
         tracing::error!("Failed to create account_data: {}", e);
         let _ = tx.rollback().await;
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Internal server error"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Internal server error"
+            })),
+        )
+            .into_response();
     }
 
     // Create website only if slug was provided (optional for V1 onboarding flow)
@@ -483,17 +535,21 @@ pub async fn signup(
         }
 
         // Create website_data entry
-        if let Err(e) = sqlx::query(
-            "INSERT INTO website_data (website_id, data) VALUES ($1, '{}'::jsonb)"
-        )
-        .bind(website_id)
-        .execute(&mut *tx)
-        .await {
+        if let Err(e) =
+            sqlx::query("INSERT INTO website_data (website_id, data) VALUES ($1, '{}'::jsonb)")
+                .bind(website_id)
+                .execute(&mut *tx)
+                .await
+        {
             tracing::error!("Failed to create website_data: {}", e);
             let _ = tx.rollback().await;
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
 
         tracing::info!("Website {} created for account {}", slug, account_id);
@@ -502,16 +558,22 @@ pub async fn signup(
     // Commit transaction
     if let Err(e) = tx.commit().await {
         tracing::error!("Failed to commit transaction: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Internal server error"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Internal server error"
+            })),
+        )
+            .into_response();
     }
 
     // Create welcome notification (fire and forget)
     tokio::spawn({
         let pool = pool.clone();
         async move {
-            if let Err(e) = crate::notifications::create_welcome_notification(&pool, account_id).await {
+            if let Err(e) =
+                crate::notifications::create_welcome_notification(&pool, account_id).await
+            {
                 tracing::warn!("Failed to create welcome notification: {}", e);
             }
         }
@@ -522,9 +584,13 @@ pub async fn signup(
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate refresh token: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -537,9 +603,13 @@ pub async fn signup(
         Ok(u) => u,
         Err(e) => {
             tracing::error!("Invalid family_id UUID format: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -554,22 +624,32 @@ pub async fn signup(
         expires_at
     )
     .execute(&pool)
-    .await {
+    .await
+    {
         tracing::error!("Failed to store refresh token: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Internal server error"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Internal server error"
+            })),
+        )
+            .into_response();
     }
 
     // Generate JWT access token with JTI
     let jti = generate_jti();
-    let access_token: String = match generate_token_with_jti(&account_id.to_string(), &jti, &config) {
+    let access_token: String = match generate_token_with_jti(&account_id.to_string(), &jti, &config)
+    {
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate access token: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -578,9 +658,13 @@ pub async fn signup(
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate legacy token: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -620,7 +704,7 @@ pub async fn login(
         .get("user-agent")
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string());
-    
+
     let ip_address = headers
         .get("x-forwarded-for")
         .and_then(|v| v.to_str().ok())
@@ -634,37 +718,57 @@ pub async fn login(
         payload.email
     )
     .fetch_optional(&pool)
-    .await {
+    .await
+    {
         Ok(Some(account)) => account,
         Ok(None) => {
             // SECURITY: Perform dummy hash to prevent timing attack
             // This ensures response time is similar whether email exists or not
-            let _ = verify_password(&payload.password, "$2b$12$K4qSkN5vBnQK7mPjFn5Oau2WmWfOmVkhXJGpY9LJsMEbJwH4J9mqe");
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid email or password"
-            }))).into_response();
+            let _ = verify_password(
+                &payload.password,
+                "$2b$12$K4qSkN5vBnQK7mPjFn5Oau2WmWfOmVkhXJGpY9LJsMEbJwH4J9mqe",
+            );
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid email or password"
+                })),
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error during login: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
     // Verify password
     match verify_password(&payload.password, &account.password_hash) {
-        Ok(true) => {},
+        Ok(true) => {}
         Ok(false) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid email or password"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid email or password"
+                })),
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Failed to verify password: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     }
 
@@ -673,30 +777,37 @@ pub async fn login(
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate refresh token: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
     // Store refresh token - duration depends on remember_me
-    let expires_at = chrono::DateTime::from_timestamp(refresh.expires_at, 0)
-        .unwrap_or_else(|| {
-            if payload.remember_me {
-                Utc::now() + Duration::days(7)
-            } else {
-                Utc::now() + Duration::days(1)
-            }
-        });
+    let expires_at = chrono::DateTime::from_timestamp(refresh.expires_at, 0).unwrap_or_else(|| {
+        if payload.remember_me {
+            Utc::now() + Duration::days(7)
+        } else {
+            Utc::now() + Duration::days(1)
+        }
+    });
 
     // Convert family_id String to Uuid for database
     let family_uuid = match uuid::Uuid::parse_str(&refresh.family_id) {
         Ok(u) => u,
         Err(e) => {
             tracing::error!("Invalid family_id UUID format: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -722,13 +833,18 @@ pub async fn login(
 
     // Generate JWT access token with JTI
     let jti = generate_jti();
-    let access_token: String = match generate_token_with_jti(&account.id.to_string(), &jti, &config) {
+    let access_token: String = match generate_token_with_jti(&account.id.to_string(), &jti, &config)
+    {
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate access token: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -737,14 +853,20 @@ pub async fn login(
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate legacy token: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
     // Create notification for new login
-    if let Err(e) = crate::notifications::create_new_login_notification(&pool, account.id, None).await {
+    if let Err(e) =
+        crate::notifications::create_new_login_notification(&pool, account.id, None).await
+    {
         tracing::error!("Failed to create login notification: {}", e);
     }
 
@@ -780,9 +902,13 @@ pub async fn me(
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -795,23 +921,31 @@ pub async fn me(
     .await;
 
     match result {
-        Ok(Some(account)) => {
-            (StatusCode::OK, Json(MeResponse {
+        Ok(Some(account)) => (
+            StatusCode::OK,
+            Json(MeResponse {
                 id: account.id.to_string(),
                 email: account.email,
                 plan: account.plan,
-            })).into_response()
-        }
-        Ok(None) => {
-            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+            }),
+        )
+            .into_response(),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
                 "error": "Account not found"
-            }))).into_response()
-        }
+            })),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Database error fetching account: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -825,55 +959,78 @@ pub async fn change_password(
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
     // Validate new password strength
     if let Err(e) = validate_password_strength(&payload.new_password) {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": e
-        }))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": e
+            })),
+        )
+            .into_response();
     }
 
     // Get current password hash
-    let account_result = sqlx::query_scalar::<_, String>(
-        "SELECT password_hash FROM accounts WHERE id = $1"
-    )
-    .bind(account_id)
-    .fetch_optional(&pool)
-    .await;
+    let account_result =
+        sqlx::query_scalar::<_, String>("SELECT password_hash FROM accounts WHERE id = $1")
+            .bind(account_id)
+            .fetch_optional(&pool)
+            .await;
 
     let password_hash = match account_result {
         Ok(Some(hash)) => hash,
         Ok(None) => {
-            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Account not found"
-            }))).into_response();
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "error": "Account not found"
+                })),
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error fetching account: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
     // Verify current password
     match verify_password(&payload.current_password, &password_hash) {
-        Ok(true) => {},
+        Ok(true) => {}
         Ok(false) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Current password is incorrect"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Current password is incorrect"
+                })),
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Failed to verify password: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     }
 
@@ -882,20 +1039,22 @@ pub async fn change_password(
         Ok(hash) => hash,
         Err(e) => {
             tracing::error!("Failed to hash password: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
     // Update password
-    let update_result = sqlx::query(
-        "UPDATE accounts SET password_hash = $1 WHERE id = $2"
-    )
-    .bind(&new_password_hash)
-    .bind(account_id)
-    .execute(&pool)
-    .await;
+    let update_result = sqlx::query("UPDATE accounts SET password_hash = $1 WHERE id = $2")
+        .bind(&new_password_hash)
+        .bind(account_id)
+        .execute(&pool)
+        .await;
 
     match update_result {
         Ok(_) => {
@@ -910,26 +1069,36 @@ pub async fn change_password(
             }
 
             // Create notification for password change
-            if let Err(e) = crate::notifications::create_password_changed_notification(&pool, account_id).await {
+            if let Err(e) =
+                crate::notifications::create_password_changed_notification(&pool, account_id).await
+            {
                 tracing::error!("Failed to create password change notification: {}", e);
             }
-            
+
             tracing::debug!("Password changed successfully for account: {}", account_id);
-            (StatusCode::OK, Json(serde_json::json!({
-                "message": "Password changed successfully"
-            }))).into_response()
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "message": "Password changed successfully"
+                })),
+            )
+                .into_response()
         }
         Err(e) => {
             tracing::error!("Database error updating password: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
 
 /// Request a password reset email
-/// 
+///
 /// This endpoint always returns success to prevent email enumeration attacks.
 /// If the email exists, a reset token is generated and stored.
 /// In production, this would send an email with a reset link.
@@ -954,7 +1123,8 @@ pub async fn forgot_password(
         email
     )
     .fetch_optional(&pool)
-    .await {
+    .await
+    {
         Ok(Some(account)) => account,
         Ok(None) => {
             // Account not found - return success anyway to prevent enumeration
@@ -965,9 +1135,13 @@ pub async fn forgot_password(
         }
         Err(e) => {
             tracing::error!("Database error during password reset: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -976,9 +1150,13 @@ pub async fn forgot_password(
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate reset token: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -991,7 +1169,8 @@ pub async fn forgot_password(
         account.id
     )
     .execute(&pool)
-    .await {
+    .await
+    {
         tracing::warn!("Failed to delete old reset tokens: {}", e);
     }
 
@@ -1019,19 +1198,23 @@ pub async fn forgot_password(
         std::env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:4321".to_string()),
         reset_token.token
     );
-    
+
     // SECURITY: Only log reset URL in debug builds - never in production
     #[cfg(debug_assertions)]
     tracing::debug!("[DEV ONLY] Password reset URL: {}", reset_url);
-    
+
     tracing::info!("Password reset requested for {}", account.email);
 
     // Create notification (optional - can be used for email sending)
     // In the future, this could trigger an email notification
 
-    (StatusCode::OK, Json(serde_json::json!({
-        "message": "If an account with this email exists, a password reset link has been sent."
-    }))).into_response()
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "message": "If an account with this email exists, a password reset link has been sent."
+        })),
+    )
+        .into_response()
 }
 
 /// Reset password using a valid token
@@ -1042,9 +1225,13 @@ pub async fn reset_password(
 ) -> impl IntoResponse {
     // Validate new password strength
     if let Err(e) = validate_password_strength(&payload.new_password) {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": e
-        }))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": e
+            })),
+        )
+            .into_response();
     }
 
     // Validate token signature and expiration
@@ -1052,16 +1239,24 @@ pub async fn reset_password(
         Ok(valid) => valid,
         Err(e) => {
             tracing::warn!("Invalid reset token format: {}", e);
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid or expired reset token"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid or expired reset token"
+                })),
+            )
+                .into_response();
         }
     };
 
     if !is_valid {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "Invalid or expired reset token"
-        }))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "Invalid or expired reset token"
+            })),
+        )
+            .into_response();
     }
 
     // Hash the token to look up in database
@@ -1078,34 +1273,51 @@ pub async fn reset_password(
         token_hash
     )
     .fetch_optional(&pool)
-    .await {
+    .await
+    {
         Ok(Some(record)) => record,
         Ok(None) => {
             tracing::warn!("Reset token not found in database");
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid or expired reset token"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid or expired reset token"
+                })),
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error looking up reset token: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
     // Check if token was already used
     if token_record.used_at.is_some() {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "This reset link has already been used"
-        }))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "This reset link has already been used"
+            })),
+        )
+            .into_response();
     }
 
     // Check if token has expired (database-side check)
     if token_record.expires_at < Utc::now() {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": "This reset link has expired"
-        }))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "This reset link has expired"
+            })),
+        )
+            .into_response();
     }
 
     // Hash new password
@@ -1113,9 +1325,13 @@ pub async fn reset_password(
         Ok(hash) => hash,
         Err(e) => {
             tracing::error!("Failed to hash password: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -1124,9 +1340,13 @@ pub async fn reset_password(
         Ok(tx) => tx,
         Err(e) => {
             tracing::error!("Failed to start transaction: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -1137,12 +1357,17 @@ pub async fn reset_password(
         token_record.account_id
     )
     .execute(&mut *tx)
-    .await {
+    .await
+    {
         tracing::error!("Failed to update password: {}", e);
         let _ = tx.rollback().await;
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Internal server error"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Internal server error"
+            })),
+        )
+            .into_response();
     }
 
     // Mark token as used
@@ -1151,20 +1376,29 @@ pub async fn reset_password(
         token_record.id
     )
     .execute(&mut *tx)
-    .await {
+    .await
+    {
         tracing::error!("Failed to mark token as used: {}", e);
         let _ = tx.rollback().await;
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Internal server error"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Internal server error"
+            })),
+        )
+            .into_response();
     }
 
     // Commit transaction
     if let Err(e) = tx.commit().await {
         tracing::error!("Failed to commit transaction: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Internal server error"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Internal server error"
+            })),
+        )
+            .into_response();
     }
 
     // Invalidate all existing refresh tokens (security: forces re-login on all devices)
@@ -1178,11 +1412,17 @@ pub async fn reset_password(
     }
 
     // Create notification for password change
-    if let Err(e) = crate::notifications::create_password_changed_notification(&pool, token_record.account_id).await {
+    if let Err(e) =
+        crate::notifications::create_password_changed_notification(&pool, token_record.account_id)
+            .await
+    {
         tracing::error!("Failed to create password change notification: {}", e);
     }
 
-    tracing::info!("Password reset successfully for account: {}", token_record.email);
+    tracing::info!(
+        "Password reset successfully for account: {}",
+        token_record.email
+    );
 
     (StatusCode::OK, Json(serde_json::json!({
         "message": "Password has been reset successfully. You can now log in with your new password."
@@ -1190,7 +1430,7 @@ pub async fn reset_password(
 }
 
 /// Refresh access token using a refresh token
-/// 
+///
 /// This implements token rotation: a new refresh token is issued with each refresh.
 /// If a refresh token is reused, all tokens in the family are revoked (stolen token detection).
 pub async fn refresh_token(
@@ -1203,9 +1443,13 @@ pub async fn refresh_token(
         Ok(v) => v,
         Err(e) => {
             tracing::warn!("Invalid refresh token: {}", e);
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid or expired refresh token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid or expired refresh token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -1219,19 +1463,27 @@ pub async fn refresh_token(
         validated.token_hash
     )
     .fetch_optional(&pool)
-    .await {
+    .await
+    {
         Ok(Some(record)) => record,
         Ok(None) => {
             // Token not found - might be reuse of old rotated token
             // Check if family exists and revoke all tokens in that family
-            tracing::warn!("Refresh token not found, possible token reuse - revoking family {}", validated.family_id);
+            tracing::warn!(
+                "Refresh token not found, possible token reuse - revoking family {}",
+                validated.family_id
+            );
             // Convert family_id String to Uuid for database query
             let family_uuid = match uuid::Uuid::parse_str(&validated.family_id) {
                 Ok(u) => u,
                 Err(_) => {
-                    return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                        "error": "Invalid refresh token"
-                    }))).into_response();
+                    return (
+                        StatusCode::UNAUTHORIZED,
+                        Json(serde_json::json!({
+                            "error": "Invalid refresh token"
+                        })),
+                    )
+                        .into_response();
                 }
             };
             let _ = sqlx::query!(
@@ -1241,24 +1493,36 @@ pub async fn refresh_token(
             .execute(&pool)
             .await;
 
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid refresh token. Please log in again."
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid refresh token. Please log in again."
+                })),
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error looking up refresh token: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
     // Check if token was revoked
     if token_record.revoked_at.is_some() {
         tracing::warn!("Attempted use of revoked refresh token");
-        return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-            "error": "Refresh token has been revoked. Please log in again."
-        }))).into_response();
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({
+                "error": "Refresh token has been revoked. Please log in again."
+            })),
+        )
+            .into_response();
     }
 
     let account_id = token_record.account_id;
@@ -1268,9 +1532,13 @@ pub async fn refresh_token(
         Ok(tx) => tx,
         Err(e) => {
             tracing::error!("Failed to start transaction: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -1280,12 +1548,17 @@ pub async fn refresh_token(
         token_record.id
     )
     .execute(&mut *tx)
-    .await {
+    .await
+    {
         tracing::error!("Failed to revoke old refresh token: {}", e);
         let _ = tx.rollback().await;
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Internal server error"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Internal server error"
+            })),
+        )
+            .into_response();
     }
 
     // Generate new refresh token (same family for rotation chain)
@@ -1296,9 +1569,13 @@ pub async fn refresh_token(
         Err(e) => {
             tracing::error!("Failed to generate refresh token: {}", e);
             let _ = tx.rollback().await;
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -1312,9 +1589,13 @@ pub async fn refresh_token(
         Err(e) => {
             tracing::error!("Invalid family_id UUID format: {}", e);
             let _ = tx.rollback().await;
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -1330,31 +1611,45 @@ pub async fn refresh_token(
         expires_at
     )
     .execute(&mut *tx)
-    .await {
+    .await
+    {
         tracing::error!("Failed to store new refresh token: {}", e);
         let _ = tx.rollback().await;
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Internal server error"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Internal server error"
+            })),
+        )
+            .into_response();
     }
 
     // Commit transaction
     if let Err(e) = tx.commit().await {
         tracing::error!("Failed to commit transaction: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Internal server error"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Internal server error"
+            })),
+        )
+            .into_response();
     }
 
     // Generate new access token with JTI
     let jti = generate_jti();
-    let access_token: String = match generate_token_with_jti(&account_id.to_string(), &jti, &config) {
+    let access_token: String = match generate_token_with_jti(&account_id.to_string(), &jti, &config)
+    {
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to generate access token: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -1383,9 +1678,13 @@ pub async fn logout_all(
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -1439,9 +1738,13 @@ pub async fn logout(
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -1459,7 +1762,8 @@ pub async fn logout(
         account_id
     )
     .execute(&pool)
-    .await {
+    .await
+    {
         Ok(result) => {
             if result.rows_affected() == 0 {
                 tracing::warn!("Logout attempted with invalid or already revoked token");
@@ -1469,9 +1773,13 @@ pub async fn logout(
         }
         Err(e) => {
             tracing::error!("Failed to revoke refresh token: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     }
 
@@ -1506,7 +1814,8 @@ pub async fn is_token_blacklisted(pool: &PgPool, jti: &str) -> bool {
         jti
     )
     .fetch_optional(pool)
-    .await {
+    .await
+    {
         Ok(Some(_)) => true,
         Ok(None) => false,
         Err(e) => {
@@ -1551,9 +1860,13 @@ pub async fn list_sessions(
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid account ID"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid account ID"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -1570,13 +1883,18 @@ pub async fn list_sessions(
         account_id
     )
     .fetch_all(&pool)
-    .await {
+    .await
+    {
         Ok(rows) => rows,
         Err(e) => {
             tracing::error!("Failed to list sessions: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -1597,7 +1915,13 @@ pub async fn list_sessions(
         })
         .collect();
 
-    (StatusCode::OK, Json(ListSessionsResponse { sessions: session_list })).into_response()
+    (
+        StatusCode::OK,
+        Json(ListSessionsResponse {
+            sessions: session_list,
+        }),
+    )
+        .into_response()
 }
 
 /// Revoke a specific session
@@ -1609,18 +1933,26 @@ pub async fn revoke_session(
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid account ID"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid account ID"
+                })),
+            )
+                .into_response();
         }
     };
 
     let session_id = match Uuid::parse_str(&payload.session_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid session ID"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid session ID"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -1635,24 +1967,37 @@ pub async fn revoke_session(
         account_id
     )
     .execute(&pool)
-    .await {
+    .await
+    {
         Ok(result) => {
             if result.rows_affected() == 0 {
-                return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                    "error": "Session not found or already revoked"
-                }))).into_response();
+                return (
+                    StatusCode::NOT_FOUND,
+                    Json(serde_json::json!({
+                        "error": "Session not found or already revoked"
+                    })),
+                )
+                    .into_response();
             }
             tracing::info!("Account {} revoked session {}", account_id, session_id);
         }
         Err(e) => {
             tracing::error!("Failed to revoke session: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     }
 
-    (StatusCode::OK, Json(serde_json::json!({
-        "message": "Session revoked successfully"
-    }))).into_response()
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "message": "Session revoked successfully"
+        })),
+    )
+        .into_response()
 }

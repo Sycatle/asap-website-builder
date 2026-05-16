@@ -8,8 +8,8 @@ use axum::Json;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use asap_core_ai::AIAction;
 use crate::Claims;
+use asap_core_ai::AIAction;
 
 use super::types::ErrorResponse;
 
@@ -37,7 +37,7 @@ pub async fn verify_website_ownership(
             SELECT 1 FROM website_administrators 
             WHERE website_id = $1 AND account_id = $2 AND status = 'active'
         )
-        "#
+        "#,
     )
     .bind(website_id)
     .bind(account_id)
@@ -61,16 +61,15 @@ pub async fn verify_website_ownership(
 
 /// Get the user's plan from the database
 pub async fn get_user_plan(pool: &PgPool, account_id: Uuid) -> Result<String, StatusCode> {
-    let row: (String,) = sqlx::query_as(
-        "SELECT COALESCE(plan, 'free') FROM accounts WHERE id = $1"
-    )
-    .bind(account_id)
-    .fetch_one(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to get user plan: {}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    let row: (String,) =
+        sqlx::query_as("SELECT COALESCE(plan, 'free') FROM accounts WHERE id = $1")
+            .bind(account_id)
+            .fetch_one(pool)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to get user plan: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
 
     Ok(row.0)
 }
@@ -122,7 +121,9 @@ pub fn ai_error_to_response(err: asap_core_ai::AIError) -> (StatusCode, Json<Err
         AIError::ContextTooLong { .. } => (StatusCode::BAD_REQUEST, "context_too_large"),
         AIError::InvalidRequest(_) => (StatusCode::BAD_REQUEST, "invalid_request"),
         AIError::ProviderError { .. } => (StatusCode::BAD_GATEWAY, "provider_error"),
-        AIError::ProviderUnavailable(_) => (StatusCode::SERVICE_UNAVAILABLE, "provider_unavailable"),
+        AIError::ProviderUnavailable(_) => {
+            (StatusCode::SERVICE_UNAVAILABLE, "provider_unavailable")
+        }
         AIError::AuthenticationError(_) => (StatusCode::UNAUTHORIZED, "auth_error"),
         AIError::PermissionDenied(_) => (StatusCode::FORBIDDEN, "permission_denied"),
         AIError::WebsiteNotFound(_) => (StatusCode::NOT_FOUND, "website_not_found"),
@@ -130,7 +131,9 @@ pub fn ai_error_to_response(err: asap_core_ai::AIError) -> (StatusCode, Json<Err
         AIError::InvalidAction(_) => (StatusCode::BAD_REQUEST, "invalid_action"),
         AIError::ContentFiltered(_) => (StatusCode::BAD_REQUEST, "content_filtered"),
         AIError::ConfigError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "config_error"),
-        AIError::SerializationError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "serialization_error"),
+        AIError::SerializationError(_) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, "serialization_error")
+        }
         AIError::HttpError(_) => (StatusCode::BAD_GATEWAY, "http_error"),
         AIError::RedisError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "redis_error"),
         AIError::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, "internal_error"),

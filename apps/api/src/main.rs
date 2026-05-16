@@ -1,16 +1,24 @@
+mod cache;
 mod config;
 mod db;
-mod cache;
-mod website_cache;
 mod pool;
-mod websocket;
 mod redis_pubsub;
+mod website_cache;
+mod websocket;
 
-use std::net::SocketAddr;
-use std::sync::Arc;
-use axum::{Router, routing::get, Json, extract::State, middleware::Next, response::Response, body::Body, http::{Request, Method}};
+use axum::{
+    body::Body,
+    extract::State,
+    http::{Method, Request},
+    middleware::Next,
+    response::Response,
+    routing::get,
+    Json, Router,
+};
 use serde_json::json;
 use sqlx::PgPool;
+use std::net::SocketAddr;
+use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -20,29 +28,32 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 async fn security_headers_middleware(request: Request<Body>, next: Next) -> Response {
     let mut response = next.run(request).await;
     let headers = response.headers_mut();
-    
+
     // Prevent clickjacking
     if let Ok(value) = "DENY".parse() {
         headers.insert("x-frame-options", value);
     }
-    
+
     // Prevent MIME type sniffing
     if let Ok(value) = "nosniff".parse() {
         headers.insert("x-content-type-options", value);
     }
-    
+
     // XSS protection (legacy but still useful)
     if let Ok(value) = "1; mode=block".parse() {
         headers.insert("x-xss-protection", value);
     }
-    
+
     // Only in production: HSTS (requires HTTPS)
-    if std::env::var("ENVIRONMENT").map(|e| e == "production").unwrap_or(false) {
+    if std::env::var("ENVIRONMENT")
+        .map(|e| e == "production")
+        .unwrap_or(false)
+    {
         if let Ok(value) = "max-age=31536000; includeSubDomains".parse() {
             headers.insert("strict-transport-security", value);
         }
     }
-    
+
     response
 }
 
@@ -122,7 +133,10 @@ async fn main() -> anyhow::Result<()> {
                     Some(cache_service)
                 }
                 Err(e) => {
-                    tracing::warn!("Redis cache initialization failed: {}. Continuing without caching.", e);
+                    tracing::warn!(
+                        "Redis cache initialization failed: {}. Continuing without caching.",
+                        e
+                    );
                     None
                 }
             }
@@ -132,7 +146,7 @@ async fn main() -> anyhow::Result<()> {
             None
         }
     };
-    
+
     // Store cache for potential future use (e.g., public website caching)
     let _cache = cache;
 
@@ -149,7 +163,7 @@ async fn main() -> anyhow::Result<()> {
         // Notification subscriber
         redis_pubsub::spawn_redis_subscriber(ws_state.clone(), redis_url.clone());
         tracing::info!("Redis Pub/Sub subscriber started for real-time notifications");
-        
+
         // Sync subscriber (Phase 4)
         redis_pubsub::spawn_redis_sync_subscriber(ws_state.clone(), redis_url);
         tracing::info!("Redis Pub/Sub subscriber started for real-time sync events (Phase 4)");
@@ -162,8 +176,9 @@ async fn main() -> anyhow::Result<()> {
         pool.clone(),
         shared_config,
         Some(ws_state.clone() as asap_core_api::SharedWsBroadcaster),
-    ).await;
-    
+    )
+    .await;
+
     // Create health routes with pool state
     let health_router = Router::new()
         .route("/health", get(health))
@@ -174,17 +189,19 @@ async fn main() -> anyhow::Result<()> {
     let ws_router = Router::new()
         .route("/ws", get(websocket::ws_handler))
         .with_state(ws_state);
-    
+
     // Create main app router by merging routers
     // CORS configuration - explicitly list headers for Firefox compatibility
-    use axum::http::header::{AUTHORIZATION, CONTENT_TYPE, ACCEPT, ORIGIN, HeaderName};
+    use axum::http::header::{HeaderName, ACCEPT, AUTHORIZATION, CONTENT_TYPE, ORIGIN};
     use tower_http::cors::AllowOrigin;
-    
+
     // Build allowed origins from config
-    let allowed_origins: Vec<_> = config.allowed_origins.iter()
+    let allowed_origins: Vec<_> = config
+        .allowed_origins
+        .iter()
         .filter_map(|s| s.parse().ok())
         .collect();
-    
+
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::list(allowed_origins))
         .allow_methods([
@@ -204,9 +221,7 @@ async fn main() -> anyhow::Result<()> {
             HeaderName::from_static("x-csrf-token"),
         ])
         .allow_credentials(true)
-        .expose_headers([
-            HeaderName::from_static("x-request-id"),
-        ]);
+        .expose_headers([HeaderName::from_static("x-request-id")]);
 
     let app = Router::new()
         .merge(health_router)
@@ -219,12 +234,12 @@ async fn main() -> anyhow::Result<()> {
     // Start server with graceful shutdown
     let addr = SocketAddr::from((
         config.server_host.parse::<std::net::IpAddr>()?,
-        config.server_port
+        config.server_port,
     ));
     tracing::info!("Listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    
+
     // Graceful shutdown signal handler
     let shutdown_signal = async {
         let ctrl_c = async {
@@ -251,20 +266,23 @@ async fn main() -> anyhow::Result<()> {
 
         tracing::info!("Shutdown signal received, starting graceful shutdown...");
     };
-    
+
     // Serve with graceful shutdown (allows in-flight requests to complete)
     // Use into_make_service_with_connect_info to enable ConnectInfo<SocketAddr> for WebSocket handler
-    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
-        .with_graceful_shutdown(shutdown_signal)
-        .await?;
-    
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal)
+    .await?;
+
     // Cleanup after server stops
     tracing::info!("Server stopped, cleaning up connections...");
-    
+
     // Close database pool gracefully
     pool.close().await;
     tracing::info!("Database pool closed");
-    
+
     tracing::info!("Graceful shutdown complete");
 
     Ok(())

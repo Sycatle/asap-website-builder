@@ -1,4 +1,4 @@
-    //! Anthropic (Claude) Provider implementation
+//! Anthropic (Claude) Provider implementation
 
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -290,7 +290,9 @@ struct AnthropicUsage {
 enum AnthropicStreamEvent {
     MessageStart,
     ContentBlockStart,
-    ContentBlockDelta { delta: AnthropicDelta },
+    ContentBlockDelta {
+        delta: AnthropicDelta,
+    },
     ContentBlockStop,
     MessageDelta,
     MessageStop,
@@ -325,10 +327,7 @@ mod tests {
         };
         let provider = AnthropicProvider::new(config);
 
-        let messages = vec![
-            Message::system("You are helpful"),
-            Message::user("Hello"),
-        ];
+        let messages = vec![Message::system("You are helpful"), Message::user("Hello")];
 
         let system = provider.extract_system(&messages);
         assert_eq!(system, Some("You are helpful".to_string()));

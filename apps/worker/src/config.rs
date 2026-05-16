@@ -1,5 +1,5 @@
-use std::env;
 use anyhow::{Context, Result};
+use std::env;
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -14,8 +14,9 @@ pub struct Config {
 impl Config {
     pub fn from_env() -> Result<Self> {
         Ok(Config {
-            database_url: env::var("DATABASE_URL")
-                .context("DATABASE_URL must be set. Example: postgresql://user:pass@localhost:5432/dbname")?,
+            database_url: env::var("DATABASE_URL").context(
+                "DATABASE_URL must be set. Example: postgresql://user:pass@localhost:5432/dbname",
+            )?,
             polling_interval_secs: env::var("POLLING_INTERVAL_SECS")
                 .unwrap_or_else(|_| "5".to_string())
                 .parse()

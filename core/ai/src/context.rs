@@ -42,7 +42,7 @@ impl ContextBuilder {
     }
 
     /// Build context from raw data (typically from database)
-    /// 
+    ///
     /// NOTE: This creates a context without account_id. For secure operations,
     /// use `build_secure` or set account_id explicitly after building.
     pub fn build(
@@ -194,7 +194,7 @@ impl ContextBuilder {
         // Website Data Summary (minimal - tools will fetch details on demand)
         if let Some(ref data) = context.data {
             let mut data_summary = vec![];
-            
+
             // Count variables by source (don't include all values - use tools!)
             if !data.variables.is_empty() {
                 let mut var_counts: Vec<String> = Vec::new();
@@ -205,11 +205,17 @@ impl ContextBuilder {
                     }
                 }
                 if !var_counts.is_empty() {
-                    data_summary.push(format!("Variables available from: {}", var_counts.join(", ")));
-                    data_summary.push("Use search_variables tool to access specific variables when needed.".to_string());
+                    data_summary.push(format!(
+                        "Variables available from: {}",
+                        var_counts.join(", ")
+                    ));
+                    data_summary.push(
+                        "Use search_variables tool to access specific variables when needed."
+                            .to_string(),
+                    );
                 }
             }
-            
+
             // Collections summary (counts only - use tools to search!)
             if !data.collections.is_empty() {
                 let mut col_summary: Vec<String> = Vec::new();
@@ -217,14 +223,16 @@ impl ContextBuilder {
                     col_summary.push(format!("{} ({} items)", collection.slug, collection.count));
                 }
                 data_summary.push(format!("Collections available: {}", col_summary.join(", ")));
-                data_summary.push("Use search_collections tool to query collection data when needed.".to_string());
+                data_summary.push(
+                    "Use search_collections tool to query collection data when needed.".to_string(),
+                );
             }
-            
+
             if !data_summary.is_empty() {
                 parts.push("\n## Website Data Summary".to_string());
                 parts.push(data_summary.join("\n- "));
             }
-            
+
             // OLD CODE - loading ALL data into context (SLOW!)
             // Now we just show summaries and use tools on demand
             /*
@@ -242,12 +250,12 @@ impl ContextBuilder {
                     }
                 }
             }
-            
+
             // Collections summary with previews
             if !data.collections.is_empty() {
                 parts.push("\n## Available Collections".to_string());
                 for collection in &data.collections {
-                    parts.push(format!( 
+                    parts.push(format!(
                         "\n### {} ({} items, from: {})",
                         collection.slug, collection.count, collection.source
                     ));
@@ -340,7 +348,10 @@ fn format_value_for_prompt(value: &serde_json::Value) -> String {
         }
         serde_json::Value::Array(arr) => {
             if arr.len() <= 3 {
-                format!("{:?}", arr.iter().map(format_value_for_prompt).collect::<Vec<_>>())
+                format!(
+                    "{:?}",
+                    arr.iter().map(format_value_for_prompt).collect::<Vec<_>>()
+                )
             } else {
                 format!("[{} items]", arr.len())
             }
@@ -348,9 +359,22 @@ fn format_value_for_prompt(value: &serde_json::Value) -> String {
         serde_json::Value::Object(obj) => {
             let keys: Vec<_> = obj.keys().take(5).collect();
             if keys.len() < obj.len() {
-                format!("{{{}... ({} keys)}}", keys.iter().map(|k| k.as_str()).collect::<Vec<_>>().join(", "), obj.len())
+                format!(
+                    "{{{}... ({} keys)}}",
+                    keys.iter()
+                        .map(|k| k.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    obj.len()
+                )
             } else {
-                format!("{{{}}}", keys.iter().map(|k| k.as_str()).collect::<Vec<_>>().join(", "))
+                format!(
+                    "{{{}}}",
+                    keys.iter()
+                        .map(|k| k.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
             }
         }
         _ => value.to_string(),
@@ -363,7 +387,7 @@ fn format_collection_item_preview(item: &serde_json::Value) -> String {
         // Try to get common display fields
         let name = data.get("name").or(data.get("title")).or(data.get("login"));
         let desc = data.get("description").or(data.get("bio"));
-        
+
         let mut parts = vec![];
         if let Some(n) = name {
             if let Some(s) = n.as_str() {
@@ -372,7 +396,11 @@ fn format_collection_item_preview(item: &serde_json::Value) -> String {
         }
         if let Some(d) = desc {
             if let Some(s) = d.as_str() {
-                let truncated = if s.len() > 50 { format!("{}...", &s[..50]) } else { s.to_string() };
+                let truncated = if s.len() > 50 {
+                    format!("{}...", &s[..50])
+                } else {
+                    s.to_string()
+                };
                 parts.push(truncated);
             }
         }
@@ -417,9 +445,13 @@ pub fn build_system_prompt(context: &WebsiteContext) -> String {
     let mut personalization = String::new();
     if let Some(ref user) = context.user {
         if let Some(ref name) = user.name {
-            personalization.push_str(&format!("\n- The user's name is {}. Use it occasionally to be friendly.", name));
+            personalization.push_str(&format!(
+                "\n- The user's name is {}. Use it occasionally to be friendly.",
+                name
+            ));
         }
-        personalization.push_str(&format!("\n- Respond in {} when possible.", 
+        personalization.push_str(&format!(
+            "\n- Respond in {} when possible.",
             match user.language.as_str() {
                 "fr" => "French",
                 "es" => "Spanish",
@@ -432,25 +464,33 @@ pub fn build_system_prompt(context: &WebsiteContext) -> String {
             }
         ));
         if user.plan == "free" {
-            personalization.push_str("\n- The user is on a free plan. Be mindful of their limited quota.");
+            personalization
+                .push_str("\n- The user is on a free plan. Be mindful of their limited quota.");
         }
     }
-    
+
     // Add hints about available data and tools
     let mut data_hints = String::new();
     if let Some(ref data) = context.data {
         if !data.variables.is_empty() || !data.collections.is_empty() {
             data_hints.push_str("\n- Website data (Variables & Collections) available via tools - use search_variables and search_collections to fetch specific data on demand.");
         }
-        if data.collections.iter().any(|c| c.slug.starts_with("github")) {
+        if data
+            .collections
+            .iter()
+            .any(|c| c.slug.starts_with("github"))
+        {
             data_hints.push_str("\n- GitHub sync active. Use search_collections(collection='github-repos') to fetch user's repos, languages, etc.");
         }
         if data.collections.iter().any(|c| c.slug.contains("linkedin")) {
-            data_hints.push_str("\n- LinkedIn sync active. Query with search_collections to get profile data.");
+            data_hints.push_str(
+                "\n- LinkedIn sync active. Query with search_collections to get profile data.",
+            );
         }
     }
 
-    let base_prompt = format!(r##"# Expert Web Agency AI Assistant
+    let base_prompt = format!(
+        r##"# Expert Web Agency AI Assistant
 
 You are a **senior web agency expert** with 15+ years of experience helping clients create exceptional websites. You combine the expertise of:
 
@@ -578,7 +618,9 @@ Available Tools:
 
 ---
 
-"##, current_date, personalization, data_hints);
+"##,
+        current_date, personalization, data_hints
+    );
 
     format!("{}{}", base_prompt, context_str)
 }
@@ -607,14 +649,7 @@ mod tests {
     #[test]
     fn test_token_estimation() {
         let builder = ContextBuilder::new();
-        let context = builder.build(
-            Uuid::new_v4(),
-            "test",
-            None,
-            None,
-            vec![],
-            json!({}),
-        );
+        let context = builder.build(Uuid::new_v4(), "test", None, None, vec![], json!({}));
 
         let tokens = builder.estimate_tokens(&context);
         assert!(tokens > 0);
@@ -641,7 +676,7 @@ mod tests {
         );
 
         let prompt = build_system_prompt(&context);
-        
+
         assert!(prompt.contains("ASAP"));
         assert!(prompt.contains("test-site"));
         assert!(prompt.contains("hero"));

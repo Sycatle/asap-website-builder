@@ -155,7 +155,8 @@ fn list_extensions_tool() -> ToolDefinition {
         tool_type: "function".to_string(),
         function: FunctionDefinition {
             name: "list_extensions".to_string(),
-            description: "List extensions installed on the website and what data they provide.".to_string(),
+            description: "List extensions installed on the website and what data they provide."
+                .to_string(),
             parameters: json!({
                 "type": "object",
                 "properties": {
@@ -177,7 +178,8 @@ fn get_page_content_tool() -> ToolDefinition {
         tool_type: "function".to_string(),
         function: FunctionDefinition {
             name: "get_page_content".to_string(),
-            description: "Get content of a specific page including its sections and layout.".to_string(),
+            description: "Get content of a specific page including its sections and layout."
+                .to_string(),
             parameters: json!({
                 "type": "object",
                 "properties": {
@@ -238,7 +240,7 @@ fn request_visual_analysis_tool() -> ToolDefinition {
 fn web_search_tool() -> ToolDefinition {
     let now = chrono::Utc::now();
     let current_year = now.format("%Y");
-    
+
     ToolDefinition {
         tool_type: "function".to_string(),
         function: FunctionDefinition {
@@ -345,7 +347,7 @@ mod tests {
     fn test_tool_definitions_valid() {
         let tools = get_tool_definitions();
         assert_eq!(tools.len(), 11);
-        
+
         for tool in &tools {
             assert_eq!(tool.tool_type, "function");
             assert!(!tool.function.name.is_empty());
@@ -357,18 +359,20 @@ mod tests {
     fn test_tool_names_unique() {
         let tools = get_tool_definitions();
         let names: Vec<&str> = tools.iter().map(|t| t.function.name.as_str()).collect();
-        
+
         let mut unique_names = names.clone();
         unique_names.sort();
         unique_names.dedup();
-        
+
         assert_eq!(names.len(), unique_names.len(), "Tool names must be unique");
     }
-    
+
     #[test]
     fn test_visual_analysis_tool_exists() {
         let tools = get_tool_definitions();
-        let visual_tool = tools.iter().find(|t| t.function.name == "request_visual_analysis");
+        let visual_tool = tools
+            .iter()
+            .find(|t| t.function.name == "request_visual_analysis");
         assert!(visual_tool.is_some(), "Visual analysis tool should exist");
     }
 }

@@ -1,10 +1,10 @@
-use sqlx::{PgPool, postgres::PgPoolOptions};
-use std::time::Duration;
+use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 
 /// Configuration for database pool
-/// 
+///
 /// NOTE: Comprehensive pool configuration for different deployment scenarios.
 /// Some fields like `enable_stats` are prepared for future metrics integration.
 #[allow(dead_code)]
@@ -65,7 +65,7 @@ impl PoolConfig {
 }
 
 /// Pool statistics for monitoring
-/// 
+///
 /// NOTE: Atomic counters for tracking pool health metrics.
 /// Prepared for future Prometheus/metrics integration.
 #[derive(Clone)]
@@ -159,15 +159,15 @@ pub async fn create_pool_with_config(
 /// Create pool optimized for API with warmup
 pub async fn create_api_pool(database_url: &str) -> anyhow::Result<PgPool> {
     let pool = create_pool_with_config(database_url, PoolConfig::for_api()).await?;
-    
+
     // Warmup: pre-allocate minimum connections
     warmup_pool(&pool).await?;
-    
+
     Ok(pool)
 }
 
 /// Create pool optimized for worker
-/// 
+///
 /// NOTE: Prepared for worker service integration.
 #[allow(dead_code)]
 pub async fn create_worker_pool(database_url: &str) -> anyhow::Result<PgPool> {
@@ -177,7 +177,7 @@ pub async fn create_worker_pool(database_url: &str) -> anyhow::Result<PgPool> {
 /// Warmup pool by acquiring and releasing minimum connections
 async fn warmup_pool(pool: &PgPool) -> anyhow::Result<()> {
     tracing::info!("Warming up database pool...");
-    
+
     let warmup_tasks: Vec<_> = (0..5)
         .map(|_| {
             let pool = pool.clone();
@@ -199,7 +199,7 @@ async fn warmup_pool(pool: &PgPool) -> anyhow::Result<()> {
     // Wait for all warmup tasks
     for task in warmup_tasks {
         match task.await {
-            Ok(Ok(())) => {},
+            Ok(Ok(())) => {}
             Ok(Err(e)) => {
                 tracing::warn!("Warmup task error: {}", e);
                 // Don't fail completely if warmup has issues
@@ -215,7 +215,7 @@ async fn warmup_pool(pool: &PgPool) -> anyhow::Result<()> {
 }
 
 /// Health check with timeout
-/// 
+///
 /// NOTE: Health check function with configurable timeout.
 /// Can be used for /health endpoint or readiness probes.
 #[allow(dead_code)]
@@ -250,7 +250,8 @@ pub async fn get_pool_info(_pool: &PgPool) -> anyhow::Result<String> {
          - Pool is active and responding\n  \
          - Monitor via: SELECT COUNT(*) FROM pg_stat_activity\n  \
          - Acquire timeout: 10s\n  \
-         - Idle timeout: 30m".to_string();
+         - Idle timeout: 30m"
+        .to_string();
     Ok(info)
 }
 
@@ -282,11 +283,11 @@ mod tests {
     #[test]
     fn test_pool_stats() {
         let stats = PoolStats::default();
-        
+
         stats.increment_connections();
         stats.increment_active();
         stats.increment_queries();
-        
+
         let (total_conn, active, failed, total_q, failed_q) = stats.get_stats();
         assert_eq!(total_conn, 1);
         assert_eq!(active, 1);
@@ -298,14 +299,14 @@ mod tests {
     #[test]
     fn test_pool_stats_operations() {
         let stats = PoolStats::default();
-        
+
         // Simulate connection lifecycle
         stats.increment_connections();
         stats.increment_active();
         stats.increment_queries();
         stats.increment_queries();
         stats.decrement_active();
-        
+
         let (total_conn, active, _, total_q, _) = stats.get_stats();
         assert_eq!(total_conn, 1);
         assert_eq!(active, 0);

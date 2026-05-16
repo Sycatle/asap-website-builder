@@ -6,14 +6,14 @@
 //! Usage:
 //! ```ignore
 //! use asap_core_shared::extension_registry::ExtensionRegistry;
-//! 
+//!
 //! let registry = ExtensionRegistry::load_from_workspace()?;
 //! let github_ext = registry.get_by_slug("github-sync")?;
 //! ```
 
 use asap_core_domain::{
-    ConfigSchema, ConfigField, ConfigAction, ConfigSection,
-    DataDisplay, DataDisplayField, FieldValidation,
+    ConfigAction, ConfigField, ConfigSchema, ConfigSection, DataDisplay, DataDisplayField,
+    FieldValidation,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -165,11 +165,7 @@ impl ExtensionRegistry {
                             extensions.insert(ext.slug.clone(), ext);
                         }
                         Err(e) => {
-                            tracing::error!(
-                                "Failed to load extension from {:?}: {}",
-                                toml_path,
-                                e
-                            );
+                            tracing::error!("Failed to load extension from {:?}: {}", toml_path, e);
                         }
                     }
                 }
@@ -200,24 +196,23 @@ impl ExtensionRegistry {
         let toml: ExtensionToml = toml::from_str(&content)?;
 
         // Convert default_settings to JSON
-        let default_settings_map: toml::map::Map<String, toml::Value> = 
+        let default_settings_map: toml::map::Map<String, toml::Value> =
             toml.default_settings.into_iter().collect();
         let default_settings = Self::toml_to_json(toml::Value::Table(default_settings_map))?;
 
         // Build config schema
-        let config_schema = if !toml.fields.is_empty()
-            || !toml.actions.is_empty()
-            || !toml.data_display.is_empty()
-        {
-            Some(Self::build_config_schema(
-                toml.fields,
-                toml.actions,
-                toml.data_display,
-                toml.sections,
-            )?)
-        } else {
-            None
-        };
+        let config_schema =
+            if !toml.fields.is_empty() || !toml.actions.is_empty() || !toml.data_display.is_empty()
+            {
+                Some(Self::build_config_schema(
+                    toml.fields,
+                    toml.actions,
+                    toml.data_display,
+                    toml.sections,
+                )?)
+            } else {
+                None
+            };
 
         Ok(ExtensionDefinition {
             slug: toml.extension.slug,
@@ -251,10 +246,8 @@ impl ExtensionRegistry {
         schema = schema.with_fields(config_fields);
 
         // Convert actions
-        let config_actions: Vec<ConfigAction> = actions
-            .into_iter()
-            .map(Self::convert_action)
-            .collect();
+        let config_actions: Vec<ConfigAction> =
+            actions.into_iter().map(Self::convert_action).collect();
         if !config_actions.is_empty() {
             schema = schema.with_actions(config_actions);
         }
@@ -269,10 +262,8 @@ impl ExtensionRegistry {
         }
 
         // Convert sections
-        let config_sections: Vec<ConfigSection> = sections
-            .into_iter()
-            .map(Self::convert_section)
-            .collect();
+        let config_sections: Vec<ConfigSection> =
+            sections.into_iter().map(Self::convert_section).collect();
         if !config_sections.is_empty() {
             schema = schema.with_sections(config_sections);
         }
@@ -289,8 +280,8 @@ impl ExtensionRegistry {
                 // For select fields without options, treat as text
                 ConfigField::text(&field.id, &field.label)
             }
-            "textarea" => ConfigField::text(&field.id, &field.label),  // Treat as text
-            "array" => ConfigField::text(&field.id, &field.label),     // Treat as text
+            "textarea" => ConfigField::text(&field.id, &field.label), // Treat as text
+            "array" => ConfigField::text(&field.id, &field.label),    // Treat as text
             other => anyhow::bail!("Unknown field type: {}", other),
         };
 
@@ -345,7 +336,7 @@ impl ExtensionRegistry {
         let mut data_display = match display.display_type.as_str() {
             "list" => DataDisplay::list(&display.id),
             "stats" => DataDisplay::stats(&display.id),
-            "table" => DataDisplay::list(&display.id),  // Treat table as list
+            "table" => DataDisplay::list(&display.id), // Treat table as list
             other => anyhow::bail!("Unknown data display type: {}", other),
         };
 
@@ -371,7 +362,7 @@ impl ExtensionRegistry {
             }
             "badge" => DataDisplayField::badge(&field.id, &field.label),
             "number" => DataDisplayField::number(&field.id, &field.label),
-            "duration" => DataDisplayField::text(&field.id, &field.label),    // Treat as text
+            "duration" => DataDisplayField::text(&field.id, &field.label), // Treat as text
             "percentage" => DataDisplayField::number(&field.id, &field.label), // Treat as number
             other => anyhow::bail!("Unknown data display field type: {}", other),
         };

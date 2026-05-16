@@ -9,8 +9,7 @@ use std::time::Duration;
 use tokio::sync::mpsc;
 
 use asap_core_ai::{
-    AIOrchestrator, OpenAIProvider, WebsiteContext,
-    get_tool_definitions, ToolExecutor,
+    get_tool_definitions, AIOrchestrator, OpenAIProvider, ToolExecutor, WebsiteContext,
 };
 
 // ============================================================================
@@ -175,7 +174,7 @@ fn truncate_tool_result(content: &str, max_len: usize) -> &str {
 /// Execute data tools in a loop to gather comprehensive context before generating the final response.
 /// Uses chain-of-thought: the AI can request multiple tools across multiple iterations
 /// until it has gathered all the information it needs.
-/// 
+///
 /// If `event_sender` is provided, tool events will be sent in real-time for streaming.
 pub async fn execute_data_tools(
     orchestrator: &AIOrchestrator,
@@ -184,7 +183,15 @@ pub async fn execute_data_tools(
     history: &[asap_core_ai::Message],
     preloaded_screenshot: Option<PreloadedScreenshot>,
 ) -> Option<DataToolExecution> {
-    execute_data_tools_with_events(orchestrator, context, user_message, history, preloaded_screenshot, None).await
+    execute_data_tools_with_events(
+        orchestrator,
+        context,
+        user_message,
+        history,
+        preloaded_screenshot,
+        None,
+    )
+    .await
 }
 
 /// Execute data tools with optional real-time event streaming
@@ -295,20 +302,25 @@ If you find yourself about to call the same tool with the same arguments twice, 
     loop {
         iteration += 1;
         if iteration > MAX_TOOL_ITERATIONS {
-            tracing::warn!("Data tools reached max iterations ({}), stopping", MAX_TOOL_ITERATIONS);
+            tracing::warn!(
+                "Data tools reached max iterations ({}), stopping",
+                MAX_TOOL_ITERATIONS
+            );
             break;
         }
 
         tracing::debug!("Data tools iteration {}", iteration);
 
         // Call OpenAI with tools
-        let result = openai.chat_with_tools(
-            messages.clone(),
-            Some(&tool_definitions),
-            None, // Use default model
-            Some(1024), // Token limit for tool decision
-            Some(0.3), // Lower temperature for deterministic tool selection
-        ).await;
+        let result = openai
+            .chat_with_tools(
+                messages.clone(),
+                Some(&tool_definitions),
+                None,       // Use default model
+                Some(1024), // Token limit for tool decision
+                Some(0.3),  // Lower temperature for deterministic tool selection
+            )
+            .await;
 
         let response = match result {
             Ok(r) => r,
@@ -328,14 +340,20 @@ If you find yourself about to call the same tool with the same arguments twice, 
             "Iteration {}: AI requested {} data tools: {:?}",
             iteration,
             response.tool_calls.len(),
-            response.tool_calls.iter().map(|t| &t.function.name).collect::<Vec<_>>()
+            response
+                .tool_calls
+                .iter()
+                .map(|t| &t.function.name)
+                .collect::<Vec<_>>()
         );
 
         // Check for duplicate tool calls (AI looping without progress)
-        let current_tool_signature: Vec<String> = response.tool_calls.iter()
+        let current_tool_signature: Vec<String> = response
+            .tool_calls
+            .iter()
             .map(|t| format!("{}:{}", t.function.name, t.function.arguments))
             .collect();
-        
+
         if iteration > 1 && current_tool_signature == previous_tool_calls {
             tracing::warn!(
                 "AI is repeating the same tool calls (iteration {}). Stopping to prevent infinite loop.",
@@ -391,24 +409,28 @@ If you find yourself about to call the same tool with the same arguments twice, 
 
                 // Parse the tool arguments
                 let params: asap_core_ai::VisualAnalysisParams =
-                    serde_json::from_str(&tool_call.function.arguments)
-                        .unwrap_or_else(|_| asap_core_ai::VisualAnalysisParams {
+                    serde_json::from_str(&tool_call.function.arguments).unwrap_or_else(|_| {
+                        asap_core_ai::VisualAnalysisParams {
                             viewport: "desktop".to_string(),
                             focus: "overall".to_string(),
                             section: None,
                             question: None,
-                        });
+                        }
+                    });
 
                 // Get website slug for screenshot service
                 let website_slug = context.website.slug.clone();
 
                 // OPTIMIZATION #8: Use preloaded screenshot if available and viewport matches
                 // Otherwise capture a new one (different viewport requested)
-                let can_use_preloaded = params.viewport == "desktop" && preloaded_screenshot.is_some();
+                let can_use_preloaded =
+                    params.viewport == "desktop" && preloaded_screenshot.is_some();
 
                 tracing::info!(
                     "Visual analysis for {}: preloaded={}, viewport={}",
-                    website_slug, can_use_preloaded, params.viewport
+                    website_slug,
+                    can_use_preloaded,
+                    params.viewport
                 );
 
                 let capture_result = if can_use_preloaded {
@@ -423,14 +445,20 @@ If you find yourself about to call the same tool with the same arguments twice, 
                             tracing::warn!("Preloaded screenshot failed, capturing new: {}", e);
                             let screenshot_url = std::env::var("SCREENSHOT_SERVICE_URL")
                                 .unwrap_or_else(|_| "http://screenshot:3001".to_string());
-                            capture_screenshot_server_side(&screenshot_url, &website_slug, &params.viewport).await
+                            capture_screenshot_server_side(
+                                &screenshot_url,
+                                &website_slug,
+                                &params.viewport,
+                            )
+                            .await
                         }
                     }
                 } else {
                     // Capture new screenshot (different viewport or no preload)
                     let screenshot_url = std::env::var("SCREENSHOT_SERVICE_URL")
                         .unwrap_or_else(|_| "http://screenshot:3001".to_string());
-                    capture_screenshot_server_side(&screenshot_url, &website_slug, &params.viewport).await
+                    capture_screenshot_server_side(&screenshot_url, &website_slug, &params.viewport)
+                        .await
                 };
 
                 match capture_result {
@@ -442,7 +470,8 @@ If you find yourself about to call the same tool with the same arguments twice, 
                         );
 
                         // Build the image data URL for GPT-4 Vision
-                        let image_url = format!("data:image/png;base64,{}", screenshot_data.image_base64);
+                        let image_url =
+                            format!("data:image/png;base64,{}", screenshot_data.image_base64);
 
                         // Build analysis prompt based on focus
                         let focus_instruction = match params.focus.as_str() {
@@ -503,13 +532,15 @@ Structure your response:
 
                         // Call GPT-4 Vision for the actual analysis
                         tracing::info!("Calling GPT-4 Vision for visual analysis");
-                        let vision_result = openai.chat_with_vision(
-                            &vision_prompt,
-                            vec![image_url],
-                            None, // No additional system prompt
-                            Some("gpt-4o"),
-                            Some(2000),
-                        ).await;
+                        let vision_result = openai
+                            .chat_with_vision(
+                                &vision_prompt,
+                                vec![image_url],
+                                None, // No additional system prompt
+                                Some("gpt-4o"),
+                                Some(2000),
+                            )
+                            .await;
 
                         match vision_result {
                             Ok(vision_response) => {
@@ -538,7 +569,7 @@ Structure your response:
                                 // Add result for next iteration so AI knows analysis is done
                                 tool_results_for_continuation.push((
                                     tool_call.id.clone(),
-                                    format!("VISUAL_ANALYSIS_COMPLETE: {}", visual_result)
+                                    format!("VISUAL_ANALYSIS_COMPLETE: {}", visual_result),
                                 ));
 
                                 // Mark visual analysis as done to prevent duplicates
@@ -553,7 +584,9 @@ Structure your response:
                                         success: true,
                                         description: description.to_string(),
                                         duration_ms,
-                                        result_preview: Some("Analyse visuelle terminée".to_string()),
+                                        result_preview: Some(
+                                            "Analyse visuelle terminée".to_string(),
+                                        ),
                                     });
                                 }
 
@@ -571,9 +604,7 @@ Structure your response:
                                     "[Visual Analysis - Error]\n\
                                     Screenshot captured ({}x{}) but vision analysis failed: {}.\n\
                                     Please try again.",
-                                    screenshot_data.width,
-                                    screenshot_data.height,
-                                    vision_error
+                                    screenshot_data.width, screenshot_data.height, vision_error
                                 ));
                                 let duration_ms = start_time.elapsed().as_millis() as u64;
 
@@ -600,17 +631,27 @@ Structure your response:
                         }
                     }
                     Err(e) => {
-                        tracing::warn!("Screenshot capture failed, using structural fallback: {}", e);
+                        tracing::warn!(
+                            "Screenshot capture failed, using structural fallback: {}",
+                            e
+                        );
                         let duration_ms = start_time.elapsed().as_millis() as u64;
 
                         // OPTIMIZATION #6: Graceful fallback - provide structural analysis instead
-                        let sections_summary = context.sections.iter()
-                            .map(|s| format!("- {} ({}): {}",
-                                s.section_type,
-                                s.id,
-                                s.properties.get("title")
-                                    .and_then(|v| v.as_str())
-                                    .unwrap_or("untitled")))
+                        let sections_summary = context
+                            .sections
+                            .iter()
+                            .map(|s| {
+                                format!(
+                                    "- {} ({}): {}",
+                                    s.section_type,
+                                    s.id,
+                                    s.properties
+                                        .get("title")
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("untitled")
+                                )
+                            })
                             .collect::<Vec<_>>()
                             .join("\n");
 
@@ -699,9 +740,10 @@ Structure your response:
         // Add tool results as user messages for the next iteration
         // (OpenAI expects tool results with role "tool", but we simulate with user messages)
         for (tool_call_id, result_content) in tool_results_for_continuation {
-            messages.push(asap_core_ai::Message::user(
-                format!("[Tool result for {}]: {}", tool_call_id, result_content)
-            ));
+            messages.push(asap_core_ai::Message::user(format!(
+                "[Tool result for {}]: {}",
+                tool_call_id, result_content
+            )));
         }
     }
 
@@ -748,7 +790,7 @@ pub fn execute_data_tools_streaming_channel(
     mpsc::UnboundedReceiver<ToolEvent>,
 ) {
     let (tx, rx) = mpsc::unbounded_channel();
-    
+
     let future = Box::pin(async move {
         execute_data_tools_with_events(
             &orchestrator,
@@ -757,9 +799,10 @@ pub fn execute_data_tools_streaming_channel(
             &history,
             preloaded_screenshot,
             Some(tx),
-        ).await
+        )
+        .await
     });
-    
+
     (future, rx)
 }
 
@@ -771,5 +814,13 @@ pub async fn execute_data_tools_streaming(
     history: &[asap_core_ai::Message],
     preloaded_screenshot: Option<PreloadedScreenshot>,
 ) -> Option<DataToolExecution> {
-    execute_data_tools_with_events(orchestrator, context, user_message, history, preloaded_screenshot, None).await
+    execute_data_tools_with_events(
+        orchestrator,
+        context,
+        user_message,
+        history,
+        preloaded_screenshot,
+        None,
+    )
+    .await
 }

@@ -1,5 +1,5 @@
-use std::env;
 use anyhow::{anyhow, Context, Result};
+use std::env;
 
 fn is_production() -> bool {
     env::var("ASAP_ENV")
@@ -9,11 +9,7 @@ fn is_production() -> bool {
 }
 
 const JWT_SECRET_MIN_LEN: usize = 32;
-const JWT_SECRET_BANNED: &[&str] = &[
-    "dev-secret-change-in-production",
-    "change-me",
-    "secret",
-];
+const JWT_SECRET_BANNED: &[&str] = &["dev-secret-change-in-production", "change-me", "secret"];
 
 fn load_jwt_secret() -> Result<String> {
     let is_prod = is_production();
@@ -28,7 +24,10 @@ fn load_jwt_secret() -> Result<String> {
                     trimmed.len()
                 ));
             }
-            if JWT_SECRET_BANNED.iter().any(|b| b.eq_ignore_ascii_case(trimmed)) {
+            if JWT_SECRET_BANNED
+                .iter()
+                .any(|b| b.eq_ignore_ascii_case(trimmed))
+            {
                 return Err(anyhow!("JWT_SECRET is set to a known insecure placeholder"));
             }
             Ok(trimmed.to_string())
@@ -65,8 +64,9 @@ pub struct Config {
 impl Config {
     pub fn from_env() -> Result<Self> {
         Ok(Config {
-            database_url: env::var("DATABASE_URL")
-                .context("DATABASE_URL must be set. Example: postgresql://user:pass@localhost:5432/dbname")?,
+            database_url: env::var("DATABASE_URL").context(
+                "DATABASE_URL must be set. Example: postgresql://user:pass@localhost:5432/dbname",
+            )?,
             jwt_secret: load_jwt_secret()?,
             jwt_expiration_hours: env::var("JWT_EXPIRATION_HOURS")
                 .unwrap_or_else(|_| "24".to_string())
@@ -87,11 +87,12 @@ impl Config {
                 let raw = match (raw, is_production()) {
                     (Some(v), _) => v,
                     (None, true) => {
-                        return Err(anyhow!(
-                            "CORS_ALLOWED_ORIGINS must be set in production"
-                        ));
+                        return Err(anyhow!("CORS_ALLOWED_ORIGINS must be set in production"));
                     }
-                    (None, false) => "http://localhost:4321,http://localhost:4322,http://localhost:4323".to_string(),
+                    (None, false) => {
+                        "http://localhost:4321,http://localhost:4322,http://localhost:4323"
+                            .to_string()
+                    }
                 };
                 let origins: Vec<String> = raw
                     .split(',')

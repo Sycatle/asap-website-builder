@@ -1,18 +1,18 @@
 use axum::{
-    extract::{multipart::Multipart, Path, Extension},
-    http::{StatusCode, header},
-    response::Response,
     body::Body,
+    extract::{multipart::Multipart, Extension, Path},
+    http::{header, StatusCode},
+    response::Response,
     Json,
 };
-use uuid::Uuid;
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
+use std::collections::HashMap;
+use uuid::Uuid;
 
 use crate::storage::FileStorageService;
-use asap_core_shared::{Claims, SharedConfig, SharedWsBroadcaster, validate_token};
 use asap_core_domain::{FileUploadResponse, StorageQuotaResponse};
+use asap_core_shared::{validate_token, Claims, SharedConfig, SharedWsBroadcaster};
 
 // ============================================
 // FILE UPDATE TYPES
@@ -21,7 +21,7 @@ use asap_core_domain::{FileUploadResponse, StorageQuotaResponse};
 #[derive(Debug, Deserialize)]
 pub struct UpdateFileRequest {
     pub filename: Option<String>,
-    pub folder_id: Option<String>,  // UUID string or "root" to move to root folder
+    pub folder_id: Option<String>, // UUID string or "root" to move to root folder
     pub visibility: Option<String>,
     pub website_id: Option<Uuid>,
     pub description: Option<String>,
@@ -103,7 +103,7 @@ pub async fn upload_file(
         .map_err(|e| (StatusCode::BAD_REQUEST, format!("Multipart error: {}", e)))?
     {
         let field_name = field.name().map(|s| s.to_string());
-        
+
         match field_name.as_deref() {
             Some("file") => {
                 let filename = field
@@ -114,10 +114,12 @@ pub async fn upload_file(
                     .content_type()
                     .ok_or_else(|| (StatusCode::BAD_REQUEST, "Missing content-type".to_string()))?
                     .to_string();
-                let data = field
-                    .bytes()
-                    .await
-                    .map_err(|e| (StatusCode::BAD_REQUEST, format!("Failed to read file: {}", e)))?;
+                let data = field.bytes().await.map_err(|e| {
+                    (
+                        StatusCode::BAD_REQUEST,
+                        format!("Failed to read file: {}", e),
+                    )
+                })?;
                 file_data = Some((filename, content_type, data));
             }
             Some("website_id") => {
@@ -154,22 +156,30 @@ pub async fn upload_file(
         }
     }
 
-    let (filename, content_type, data) = file_data
-        .ok_or_else(|| (StatusCode::BAD_REQUEST, "No file provided".to_string()))?;
+    let (filename, content_type, data) =
+        file_data.ok_or_else(|| (StatusCode::BAD_REQUEST, "No file provided".to_string()))?;
 
     // If website_id is provided, verify user has access to this website
     if let Some(wid) = website_id {
         let has_access: Option<bool> = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND account_id = $2)"
+            "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND account_id = $2)",
         )
         .bind(wid)
         .bind(account_id)
         .fetch_one(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
-        
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Database error: {}", e),
+            )
+        })?;
+
         if !has_access.unwrap_or(false) {
-            return Err((StatusCode::FORBIDDEN, "Access denied to this website".to_string()));
+            return Err((
+                StatusCode::FORBIDDEN,
+                "Access denied to this website".to_string(),
+            ));
         }
     }
 
@@ -179,14 +189,19 @@ pub async fn upload_file(
     // Security: Validate magic bytes match declared MIME type
     storage
         .validate_magic_bytes(&data, &content_type)
-        .map_err(|e| (StatusCode::BAD_REQUEST, format!("File validation failed: {}", e)))?;
+        .map_err(|e| {
+            (
+                StatusCode::BAD_REQUEST,
+                format!("File validation failed: {}", e),
+            )
+        })?;
 
     // Upload file (with compression and validation)
     let file = storage
         .upload_file_with_metadata(
-            account_id, 
-            &filename, 
-            &content_type, 
+            account_id,
+            &filename,
+            &content_type,
             &data,
             website_id,
             folder_id,
@@ -198,7 +213,7 @@ pub async fn upload_file(
         .map_err(|e: anyhow::Error| (StatusCode::BAD_REQUEST, format!("Upload failed: {}", e)))?;
 
     let response = FileUploadResponse::from(file);
-    
+
     // Broadcast file uploaded event to all connected clients for this account
     (*ws_broadcaster).sync_file_uploaded(
         &claims.sub,
@@ -217,11 +232,11 @@ pub async fn list_files(
 ) -> Result<Json<Vec<FileUploadResponse>>, (StatusCode, String)> {
     let account_id = uuid::Uuid::parse_str(&claims.sub)
         .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid account ID".to_string()))?;
-    
+
     // Security: Strict pagination limits to prevent DoS
     const MAX_LIMIT: i64 = 100;
     const MAX_OFFSET: i64 = 10_000;
-    
+
     let limit = params
         .get("limit")
         .and_then(|s| s.parse::<i64>().ok())
@@ -232,7 +247,7 @@ pub async fn list_files(
         .and_then(|s| s.parse::<i64>().ok())
         .map(|o| o.clamp(0, MAX_OFFSET)) // Enforce bounds
         .unwrap_or(0);
-    
+
     // Optional folder filter - "root" means files at root level (folder_id IS NULL)
     let folder_id = params.get("folder_id").and_then(|s| {
         if s == "root" {
@@ -241,23 +256,35 @@ pub async fn list_files(
             Uuid::parse_str(s).ok()
         }
     });
-    let filter_root = params.get("folder_id").map(|s| s == "root").unwrap_or(false);
-    
+    let filter_root = params
+        .get("folder_id")
+        .map(|s| s == "root")
+        .unwrap_or(false);
+
     // Optional website_id filter - None for personal cloud, Some for website-scoped
-    let website_id = params.get("website_id").and_then(|s| Uuid::parse_str(s).ok());
+    let website_id = params
+        .get("website_id")
+        .and_then(|s| Uuid::parse_str(s).ok());
 
     let files = storage
-        .list_account_files(account_id, limit, offset, folder_id, filter_root, website_id)
+        .list_account_files(
+            account_id,
+            limit,
+            offset,
+            folder_id,
+            filter_root,
+            website_id,
+        )
         .await
         .map_err(|e: anyhow::Error| {
             tracing::error!("Failed to list files: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to list files".to_string())
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to list files".to_string(),
+            )
         })?;
 
-    let responses = files
-        .into_iter()
-        .map(FileUploadResponse::from)
-        .collect();
+    let responses = files.into_iter().map(FileUploadResponse::from).collect();
 
     Ok(Json(responses))
 }
@@ -282,10 +309,16 @@ pub async fn delete_file(
                 (StatusCode::NOT_FOUND, "File not found".to_string())
             } else if error_msg.contains("Unauthorized") {
                 tracing::warn!("Unauthorized deletion attempt for file {}", file_id);
-                (StatusCode::FORBIDDEN, "Not authorized to delete this file".to_string())
+                (
+                    StatusCode::FORBIDDEN,
+                    "Not authorized to delete this file".to_string(),
+                )
             } else {
                 tracing::error!("Failed to delete file {}: {}", file_id, e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to delete file".to_string())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to delete file".to_string(),
+                )
             }
         })?;
 
@@ -307,12 +340,13 @@ pub async fn download_file(
     axum::extract::Query(params): axum::extract::Query<HashMap<String, String>>,
 ) -> Result<Response, (StatusCode, String)> {
     // Support token via query param for media embeds (img/video/audio tags)
-    let token = params.get("token")
+    let token = params
+        .get("token")
         .ok_or_else(|| (StatusCode::UNAUTHORIZED, "Missing token".to_string()))?;
-    
+
     let claims = validate_token(token, &config)
         .map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid token".to_string()))?;
-    
+
     let account_id = uuid::Uuid::parse_str(&claims.sub)
         .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid account ID".to_string()))?;
 
@@ -335,18 +369,19 @@ pub async fn download_file(
 
     // Build response with proper headers
     // SECURITY: Escape filename for Content-Disposition header to prevent header injection
-    let safe_filename = file.filename
+    let safe_filename = file
+        .filename
         .replace('\\', "\\\\")
         .replace('"', "\\\"")
         .replace(['\r', '\n'], "");
-    
+
     let response = Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, &file.mime_type)
         .header(header::CONTENT_LENGTH, content.len())
         .header(
             header::CONTENT_DISPOSITION,
-            format!("inline; filename=\"{}\"", safe_filename)
+            format!("inline; filename=\"{}\"", safe_filename),
         )
         .header(header::CACHE_CONTROL, "private, max-age=3600")
         .body(Body::from(content))
@@ -400,17 +435,25 @@ pub async fn update_file(
     let file_visibility: Option<String> = file_row.get("visibility");
     let file_website_id: Option<Uuid> = file_row.get("website_id");
     let file_description: Option<String> = file_row.get("description");
-    let file_tags: Vec<String> = file_row.get::<Option<Vec<String>>, _>("tags").unwrap_or_default();
+    let file_tags: Vec<String> = file_row
+        .get::<Option<Vec<String>>, _>("tags")
+        .unwrap_or_default();
 
     // Build update query dynamically
     let new_filename = request.filename.unwrap_or(file_filename);
     // Handle folder_id: "root" means move to root (NULL), UUID string means specific folder
     let new_folder_id: Option<Uuid> = match request.folder_id.as_deref() {
-        Some("root") => None,  // Explicitly move to root
-        Some(id) => Some(Uuid::parse_str(id).map_err(|_| (StatusCode::BAD_REQUEST, "Invalid folder_id".to_string()))?),
-        None => file_folder_id,  // Keep existing
+        Some("root") => None, // Explicitly move to root
+        Some(id) => Some(
+            Uuid::parse_str(id)
+                .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid folder_id".to_string()))?,
+        ),
+        None => file_folder_id, // Keep existing
     };
-    let new_visibility = request.visibility.as_deref().unwrap_or(file_visibility.as_deref().unwrap_or("private"));
+    let new_visibility = request
+        .visibility
+        .as_deref()
+        .unwrap_or(file_visibility.as_deref().unwrap_or("private"));
     let new_website_id = request.website_id.or(file_website_id);
     let new_description = request.description.or(file_description);
     let new_tags = request.tags.unwrap_or(file_tags);
@@ -452,7 +495,10 @@ pub async fn update_file(
     .await
     .map_err(|e| {
         tracing::error!("Failed to fetch updated file: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database error".to_string(),
+        )
     })?;
 
     Ok(Json(serde_json::json!({
@@ -461,8 +507,8 @@ pub async fn update_file(
         "mime_type": updated.mime_type,
         "original_size": updated.original_size,
         "compressed_size": updated.compressed_size,
-        "compression_ratio": if updated.compressed_size > 0 { 
-            updated.original_size as f64 / updated.compressed_size as f64 
+        "compression_ratio": if updated.compressed_size > 0 {
+            updated.original_size as f64 / updated.compressed_size as f64
         } else { 1.0 },
         "folder_id": updated.folder_id,
         "visibility": updated.visibility,
@@ -491,7 +537,7 @@ pub async fn list_folders(
     let parent_id: Option<Uuid> = parent_id_param
         .filter(|s| *s != "root")
         .and_then(|s| Uuid::parse_str(s).ok());
-    
+
     // Optional website_id filter - None for personal cloud, Some for website-scoped
     let website_id: Option<Uuid> = params
         .get("website_id")
@@ -517,7 +563,7 @@ pub async fn list_folders(
     );
 
     let mut param_idx = 2;
-    
+
     // Add parent_id filter
     if let Some(_pid) = parent_id {
         query.push_str(&format!(" AND ff.parent_folder_id = ${}", param_idx));
@@ -526,7 +572,7 @@ pub async fn list_folders(
         query.push_str(" AND ff.parent_folder_id IS NULL");
     }
     // If neither, no parent filter (returns all folders)
-    
+
     // Add website_id filter
     if website_id.is_some() {
         query.push_str(&format!(" AND ff.website_id = ${}", param_idx));
@@ -534,7 +580,7 @@ pub async fn list_folders(
         // Personal cloud: only show folders without website_id
         query.push_str(" AND ff.website_id IS NULL");
     }
-    
+
     query.push_str(" ORDER BY ff.name ASC");
 
     // Execute with appropriate bindings
@@ -570,7 +616,10 @@ pub async fn list_folders(
     }
     .map_err(|e| {
         tracing::error!("Failed to list folders: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to list folders".to_string())
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to list folders".to_string(),
+        )
     })?;
 
     let responses: Vec<FolderResponse> = rows
@@ -603,9 +652,12 @@ pub async fn create_folder(
 
     // Validate folder name
     if request.name.trim().is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "Folder name cannot be empty".to_string()));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Folder name cannot be empty".to_string(),
+        ));
     }
-    
+
     if request.name.len() > 255 {
         return Err((StatusCode::BAD_REQUEST, "Folder name too long".to_string()));
     }
@@ -613,16 +665,24 @@ pub async fn create_folder(
     // If website_id is provided, verify user has access to this website
     if let Some(wid) = request.website_id {
         let has_access: Option<bool> = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND account_id = $2)"
+            "SELECT EXISTS(SELECT 1 FROM websites WHERE id = $1 AND account_id = $2)",
         )
         .bind(wid)
         .bind(account_id)
         .fetch_one(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
-        
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Database error: {}", e),
+            )
+        })?;
+
         if !has_access.unwrap_or(false) {
-            return Err((StatusCode::FORBIDDEN, "Access denied to this website".to_string()));
+            return Err((
+                StatusCode::FORBIDDEN,
+                "Access denied to this website".to_string(),
+            ));
         }
     }
 
@@ -630,7 +690,7 @@ pub async fn create_folder(
     let (path, effective_website_id) = if let Some(parent_id) = request.parent_folder_id {
         // Verify parent exists and belongs to user (use dynamic query to avoid SQLx cache issues)
         let parent_row = sqlx::query(
-            "SELECT path, website_id FROM file_folders WHERE id = $1 AND account_id = $2"
+            "SELECT path, website_id FROM file_folders WHERE id = $1 AND account_id = $2",
         )
         .bind(parent_id)
         .bind(account_id)
@@ -638,7 +698,10 @@ pub async fn create_folder(
         .await
         .map_err(|e| {
             tracing::error!("Failed to fetch parent folder: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Database error".to_string(),
+            )
         })?
         .ok_or_else(|| (StatusCode::NOT_FOUND, "Parent folder not found".to_string()))?;
 
@@ -727,7 +790,7 @@ pub async fn update_folder(
 
     let name_changed = request.name.is_some();
     let new_name = request.name.unwrap_or_else(|| folder_name.clone());
-    
+
     // Update path if name changed
     let new_path = if name_changed {
         let parent_path = folder_path.rsplit_once('/').map(|(p, _)| p).unwrap_or("");
@@ -740,18 +803,19 @@ pub async fn update_folder(
         folder_path.clone()
     };
 
-    sqlx::query(
-        "UPDATE file_folders SET name = $1, path = $2, updated_at = NOW() WHERE id = $3"
-    )
-    .bind(&new_name)
-    .bind(&new_path)
-    .bind(folder_id)
-    .execute(&pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to update folder: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update folder".to_string())
-    })?;
+    sqlx::query("UPDATE file_folders SET name = $1, path = $2, updated_at = NOW() WHERE id = $3")
+        .bind(&new_name)
+        .bind(&new_path)
+        .bind(folder_id)
+        .execute(&pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to update folder: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to update folder".to_string(),
+            )
+        })?;
 
     // Get counts
     let file_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM files WHERE folder_id = $1")
@@ -760,11 +824,12 @@ pub async fn update_folder(
         .await
         .unwrap_or(0);
 
-    let subfolder_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM file_folders WHERE parent_id = $1")
-        .bind(folder_id)
-        .fetch_one(&pool)
-        .await
-        .unwrap_or(0);
+    let subfolder_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM file_folders WHERE parent_id = $1")
+            .bind(folder_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap_or(0);
 
     Ok(Json(FolderResponse {
         id: folder_id,
@@ -796,17 +861,19 @@ pub async fn delete_folder(
         .unwrap_or(false);
 
     // Verify folder exists and belongs to user (use dynamic query to avoid SQLx cache issues)
-    let folder_exists = sqlx::query(
-        "SELECT id FROM file_folders WHERE id = $1 AND account_id = $2"
-    )
-    .bind(folder_id)
-    .bind(account_id)
-    .fetch_optional(&pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to check folder: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
-    })?;
+    let folder_exists =
+        sqlx::query("SELECT id FROM file_folders WHERE id = $1 AND account_id = $2")
+            .bind(folder_id)
+            .bind(account_id)
+            .fetch_optional(&pool)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to check folder: {}", e);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Database error".to_string(),
+                )
+            })?;
 
     if folder_exists.is_none() {
         return Err((StatusCode::NOT_FOUND, "Folder not found".to_string()));
@@ -819,28 +886,33 @@ pub async fn delete_folder(
         .await
         .unwrap_or(0);
 
-    let has_subfolders: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM file_folders WHERE parent_folder_id = $1")
-        .bind(folder_id)
-        .fetch_one(&pool)
-        .await
-        .unwrap_or(0);
+    let has_subfolders: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM file_folders WHERE parent_folder_id = $1")
+            .bind(folder_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap_or(0);
 
     if (has_files > 0 || has_subfolders > 0) && !delete_contents {
-        return Err((StatusCode::CONFLICT, "Folder is not empty. Use delete_contents=true to delete anyway.".to_string()));
+        return Err((
+            StatusCode::CONFLICT,
+            "Folder is not empty. Use delete_contents=true to delete anyway.".to_string(),
+        ));
     }
 
     // Delete folder (cascade will handle contents if any)
-    sqlx::query(
-        "DELETE FROM file_folders WHERE id = $1 AND account_id = $2"
-    )
-    .bind(folder_id)
-    .bind(account_id)
-    .execute(&pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to delete folder: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to delete folder".to_string())
-    })?;
+    sqlx::query("DELETE FROM file_folders WHERE id = $1 AND account_id = $2")
+        .bind(folder_id)
+        .bind(account_id)
+        .execute(&pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to delete folder: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to delete folder".to_string(),
+            )
+        })?;
 
     Ok(StatusCode::NO_CONTENT)
 }

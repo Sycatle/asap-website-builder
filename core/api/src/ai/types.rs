@@ -192,8 +192,8 @@ pub enum SseEventData {
     /// Stream complete
     Done,
     /// Error occurred
-    Error { 
-        code: String, 
+    Error {
+        code: String,
         message: String,
         #[serde(skip_serializing_if = "Option::is_none")]
         cause: Option<String>,

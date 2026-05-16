@@ -69,12 +69,12 @@ impl AIOrchestrator {
         // Build messages with history
         let system_prompt = build_system_prompt(&context);
         let mut messages = vec![Message::system(system_prompt)];
-        
+
         // Add conversation history
         for msg in &request.history {
             messages.push(msg.clone());
         }
-        
+
         // Add current user message
         messages.push(Message::user(&request.message));
 
@@ -143,12 +143,12 @@ impl AIOrchestrator {
         // Build messages with history
         let system_prompt = build_system_prompt(&context);
         let mut messages = vec![Message::system(system_prompt)];
-        
+
         // Add conversation history
         for msg in &request.history {
             messages.push(msg.clone());
         }
-        
+
         // Add current user message
         messages.push(Message::user(&request.message));
 
@@ -237,7 +237,7 @@ mod tests {
     fn test_orchestrator_creation() {
         let config = test_config();
         let orchestrator = AIOrchestrator::new_without_rate_limiter(config);
-        
+
         // No providers configured (no API keys)
         assert!(!orchestrator.is_configured());
     }

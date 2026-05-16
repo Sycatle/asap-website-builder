@@ -1,8 +1,8 @@
-use sqlx::{PgPool, postgres::PgPoolOptions};
+use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::time::Duration;
 
 /// Create a simple database pool (legacy function, prefer pool.rs for advanced configuration)
-/// 
+///
 /// NOTE: Kept for backwards compatibility and simpler use cases.
 /// For production, use `create_api_pool` or `create_pool_with_config` from pool.rs
 #[allow(dead_code)]
@@ -16,15 +16,13 @@ pub async fn create_pool(database_url: &str) -> anyhow::Result<PgPool> {
         .await?;
 
     tracing::info!("Database connection pool created successfully with min=5, max=20");
-    
+
     Ok(pool)
 }
 
 pub async fn health_check(pool: &PgPool) -> anyhow::Result<()> {
-    sqlx::query("SELECT 1")
-        .fetch_one(pool)
-        .await?;
-    
+    sqlx::query("SELECT 1").fetch_one(pool).await?;
+
     Ok(())
 }
 
@@ -33,12 +31,13 @@ pub async fn create_redis_cache(redis_url: &str) -> anyhow::Result<crate::cache:
     let cache = crate::cache::CacheService::new(redis_url)
         .await
         .map_err(|e| anyhow::anyhow!("Failed to create Redis cache: {}", e))?;
-    
+
     // Perform health check
-    cache.health_check()
+    cache
+        .health_check()
         .await
         .map_err(|e| anyhow::anyhow!("Redis health check failed: {}", e))?;
-    
+
     tracing::info!("Redis cache initialized successfully");
     Ok(cache)
 }

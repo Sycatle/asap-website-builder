@@ -133,26 +133,31 @@ impl RateLimiter {
         self.maybe_cleanup().await;
 
         let mut entries = self.entries.write().await;
-        
+
         // Enforce maximum entries to prevent memory exhaustion during DDoS
         if entries.len() >= MAX_TRACKED_IPS && !entries.contains_key(ip) {
             // Emergency cleanup: remove oldest 10%
             self.emergency_cleanup(&mut entries);
-            
+
             // If still at capacity after cleanup, temporarily block new IPs
             if entries.len() >= MAX_TRACKED_IPS {
-                tracing::warn!("Rate limiter at capacity ({}), temporarily blocking new IP", MAX_TRACKED_IPS);
+                tracing::warn!(
+                    "Rate limiter at capacity ({}), temporarily blocking new IP",
+                    MAX_TRACKED_IPS
+                );
                 return (false, 0, 60); // Block for 60 seconds
             }
         }
-        
+
         let ip_entries = entries.entry(ip.to_string()).or_insert_with(HashMap::new);
 
         let now = Instant::now();
         let window_duration = Duration::from_secs(config.window_secs);
 
         // Get or create entry for this endpoint
-        let entry = ip_entries.entry(endpoint.to_string()).or_insert_with(RateLimitEntry::new);
+        let entry = ip_entries
+            .entry(endpoint.to_string())
+            .or_insert_with(RateLimitEntry::new);
 
         // Check if currently blocked
         if let Some(blocked_until) = entry.blocked_until {
@@ -184,7 +189,11 @@ impl RateLimiter {
             entry.blocked_until = Some(now + Duration::from_secs(config.block_duration_secs));
             tracing::warn!(
                 "Rate limit exceeded for IP {} on endpoint {}: {} requests in {}s, blocked for {}s",
-                ip, endpoint, entry.count, config.window_secs, config.block_duration_secs
+                ip,
+                endpoint,
+                entry.count,
+                config.window_secs,
+                config.block_duration_secs
             );
             return (false, 0, config.block_duration_secs);
         }
@@ -199,7 +208,7 @@ impl RateLimiter {
     /// Clean up old entries to prevent memory growth
     async fn maybe_cleanup(&self) {
         let cleanup_interval = Duration::from_secs(300); // 5 minutes
-        
+
         {
             let last = self.last_cleanup.read().await;
             if last.elapsed() < cleanup_interval {
@@ -219,13 +228,16 @@ impl RateLimiter {
         entries.retain(|_ip, ip_entries| {
             ip_entries.retain(|_endpoint, entry| {
                 // Keep if still blocked or window is recent
-                entry.blocked_until.is_some_and(|b| b > now) ||
-                    now.duration_since(entry.window_start) < max_age
+                entry.blocked_until.is_some_and(|b| b > now)
+                    || now.duration_since(entry.window_start) < max_age
             });
             !ip_entries.is_empty()
         });
 
-        tracing::debug!("Rate limiter cleanup complete, {} IPs tracked", entries.len());
+        tracing::debug!(
+            "Rate limiter cleanup complete, {} IPs tracked",
+            entries.len()
+        );
     }
 
     /// Emergency cleanup when at capacity - removes oldest 20% of entries
@@ -294,16 +306,17 @@ fn get_trusted_proxies() -> Vec<std::net::IpAddr> {
 /// SECURITY: Only trusts X-Forwarded-For when request comes from a trusted proxy
 fn extract_client_ip(req: &Request) -> String {
     // Get direct connection IP first
-    let direct_ip = req.extensions()
+    let direct_ip = req
+        .extensions()
         .get::<ConnectInfo<SocketAddr>>()
         .map(|ci| ci.0.ip());
-    
+
     // Only trust forwarded headers if from a trusted proxy
     let trusted_proxies = get_trusted_proxies();
     let from_trusted_proxy = direct_ip
         .map(|ip| trusted_proxies.contains(&ip))
         .unwrap_or(false);
-    
+
     if from_trusted_proxy {
         // Trust X-Forwarded-For only from trusted proxies
         if let Some(forwarded) = req.headers().get("x-forwarded-for") {
@@ -360,10 +373,7 @@ pub async fn auth_rate_limit_middleware(
     let (allowed, remaining, reset_at) = limiter.check_rate_limit(&client_ip, &path, &config).await;
 
     if !allowed {
-        tracing::warn!(
-            "Rate limit blocked request from {} to {}",
-            client_ip, path
-        );
+        tracing::warn!("Rate limit blocked request from {} to {}", client_ip, path);
 
         let mut response = (
             StatusCode::TOO_MANY_REQUESTS,
@@ -372,7 +382,8 @@ pub async fn auth_rate_limit_middleware(
                 "code": "RATE_LIMITED",
                 "retry_after": reset_at
             })),
-        ).into_response();
+        )
+            .into_response();
 
         // Add rate limit headers
         let headers = response.headers_mut();
@@ -384,10 +395,7 @@ pub async fn auth_rate_limit_middleware(
             "X-RateLimit-Limit",
             HeaderValue::from_str(&config.max_requests.to_string()).unwrap(),
         );
-        headers.insert(
-            "X-RateLimit-Remaining",
-            HeaderValue::from_static("0"),
-        );
+        headers.insert("X-RateLimit-Remaining", HeaderValue::from_static("0"));
         headers.insert(
             "X-RateLimit-Reset",
             HeaderValue::from_str(&reset_at.to_string()).unwrap(),
@@ -431,7 +439,9 @@ mod tests {
         };
 
         for i in 1..=3 {
-            let (allowed, remaining, _) = limiter.check_rate_limit("127.0.0.1", "/test", &config).await;
+            let (allowed, remaining, _) = limiter
+                .check_rate_limit("127.0.0.1", "/test", &config)
+                .await;
             assert!(allowed, "Request {} should be allowed", i);
             assert_eq!(remaining, 3 - i);
         }
@@ -447,11 +457,17 @@ mod tests {
         };
 
         // First 2 requests should pass
-        limiter.check_rate_limit("127.0.0.1", "/test", &config).await;
-        limiter.check_rate_limit("127.0.0.1", "/test", &config).await;
+        limiter
+            .check_rate_limit("127.0.0.1", "/test", &config)
+            .await;
+        limiter
+            .check_rate_limit("127.0.0.1", "/test", &config)
+            .await;
 
         // Third request should be blocked
-        let (allowed, remaining, _) = limiter.check_rate_limit("127.0.0.1", "/test", &config).await;
+        let (allowed, remaining, _) = limiter
+            .check_rate_limit("127.0.0.1", "/test", &config)
+            .await;
         assert!(!allowed, "Third request should be blocked");
         assert_eq!(remaining, 0);
     }
@@ -466,15 +482,21 @@ mod tests {
         };
 
         // First request to /login should pass
-        let (allowed, _, _) = limiter.check_rate_limit("127.0.0.1", "/login", &config).await;
+        let (allowed, _, _) = limiter
+            .check_rate_limit("127.0.0.1", "/login", &config)
+            .await;
         assert!(allowed);
 
         // Second request to /login should be blocked
-        let (allowed, _, _) = limiter.check_rate_limit("127.0.0.1", "/login", &config).await;
+        let (allowed, _, _) = limiter
+            .check_rate_limit("127.0.0.1", "/login", &config)
+            .await;
         assert!(!allowed);
 
         // Request to /signup should still pass (different endpoint)
-        let (allowed, _, _) = limiter.check_rate_limit("127.0.0.1", "/signup", &config).await;
+        let (allowed, _, _) = limiter
+            .check_rate_limit("127.0.0.1", "/signup", &config)
+            .await;
         assert!(allowed);
     }
 
@@ -488,12 +510,18 @@ mod tests {
         };
 
         // First IP gets blocked after 1 request
-        limiter.check_rate_limit("192.168.1.1", "/test", &config).await;
-        let (allowed, _, _) = limiter.check_rate_limit("192.168.1.1", "/test", &config).await;
+        limiter
+            .check_rate_limit("192.168.1.1", "/test", &config)
+            .await;
+        let (allowed, _, _) = limiter
+            .check_rate_limit("192.168.1.1", "/test", &config)
+            .await;
         assert!(!allowed);
 
         // Second IP can still make requests
-        let (allowed, _, _) = limiter.check_rate_limit("192.168.1.2", "/test", &config).await;
+        let (allowed, _, _) = limiter
+            .check_rate_limit("192.168.1.2", "/test", &config)
+            .await;
         assert!(allowed);
     }
 

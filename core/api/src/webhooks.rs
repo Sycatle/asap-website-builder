@@ -1,14 +1,14 @@
+use asap_core_payments::PaymentGateway;
 use axum::{
-    extract::{State, Json},
-    http::{StatusCode, HeaderMap},
+    body::Bytes,
+    extract::{Json, State},
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     Extension,
-    body::Bytes,
 };
 use serde::Serialize;
 use sqlx::PgPool;
 use uuid::Uuid;
-use asap_core_payments::PaymentGateway;
 
 #[derive(Debug, Serialize)]
 pub struct WebhookResponse {
@@ -25,11 +25,10 @@ pub async fn stripe_webhook(
 ) -> Result<Json<WebhookResponse>, Response> {
     tracing::info!("Received Stripe webhook");
 
-    let payload = String::from_utf8(body.to_vec())
-        .map_err(|e| {
-            tracing::error!("Invalid UTF-8 payload: {}", e);
-            (StatusCode::BAD_REQUEST, "Invalid payload encoding").into_response()
-        })?;
+    let payload = String::from_utf8(body.to_vec()).map_err(|e| {
+        tracing::error!("Invalid UTF-8 payload: {}", e);
+        (StatusCode::BAD_REQUEST, "Invalid payload encoding").into_response()
+    })?;
 
     // Get signature from headers
     let signature = headers
@@ -86,16 +85,15 @@ pub async fn stripe_webhook(
     let payload_hash = event_id.to_string();
 
     // Check if event already processed (idempotency)
-    let existing = sqlx::query_scalar::<_, Uuid>(
-        "SELECT id FROM payment_events WHERE event_id = $1"
-    )
-    .bind(event_id)
-    .fetch_optional(&pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Database error checking event: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response()
-    })?;
+    let existing =
+        sqlx::query_scalar::<_, Uuid>("SELECT id FROM payment_events WHERE event_id = $1")
+            .bind(event_id)
+            .fetch_optional(&pool)
+            .await
+            .map_err(|e| {
+                tracing::error!("Database error checking event: {}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response()
+            })?;
 
     if existing.is_some() {
         tracing::info!("Event {} already processed, skipping", event_id);
@@ -117,21 +115,20 @@ pub async fn stripe_webhook(
     };
 
     // Find account by customer ID
-    let account_id = sqlx::query_scalar::<_, Uuid>(
-        "SELECT id FROM accounts WHERE stripe_customer_id = $1"
-    )
-    .bind(customer_id)
-    .fetch_optional(&pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Database error fetching account: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response()
-    })?;
+    let account_id =
+        sqlx::query_scalar::<_, Uuid>("SELECT id FROM accounts WHERE stripe_customer_id = $1")
+            .bind(customer_id)
+            .fetch_optional(&pool)
+            .await
+            .map_err(|e| {
+                tracing::error!("Database error fetching account: {}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response()
+            })?;
 
     // Store event for idempotency
     sqlx::query(
         "INSERT INTO payment_events (event_id, event_type, payload_hash, account_id, processed_at) 
-         VALUES ($1, $2, $3, $4, now())"
+         VALUES ($1, $2, $3, $4, now())",
     )
     .bind(event_id)
     .bind(event_type)
@@ -151,10 +148,15 @@ pub async fn stripe_webhook(
                 process_subscription_event(&pool, tid, &event).await?;
                 // Send notification for new subscription
                 if event_type == "customer.subscription.created" {
-                    let plan_name = event["data"]["object"]["items"]["data"][0]["price"]["nickname"]
+                    let plan_name = event["data"]["object"]["items"]["data"][0]["price"]
+                        ["nickname"]
                         .as_str()
                         .unwrap_or("Premium");
-                    if let Err(e) = crate::notifications::create_subscription_created_notification(&pool, tid, plan_name).await {
+                    if let Err(e) = crate::notifications::create_subscription_created_notification(
+                        &pool, tid, plan_name,
+                    )
+                    .await
+                    {
                         tracing::error!("Failed to create subscription notification: {}", e);
                     }
                 }
@@ -164,8 +166,14 @@ pub async fn stripe_webhook(
             if let Some(tid) = account_id {
                 process_subscription_deleted(&pool, tid).await?;
                 // Send notification for cancelled subscription
-                if let Err(e) = crate::notifications::create_subscription_cancelled_notification(&pool, tid).await {
-                    tracing::error!("Failed to create subscription cancelled notification: {}", e);
+                if let Err(e) =
+                    crate::notifications::create_subscription_cancelled_notification(&pool, tid)
+                        .await
+                {
+                    tracing::error!(
+                        "Failed to create subscription cancelled notification: {}",
+                        e
+                    );
                 }
             }
         }
@@ -173,7 +181,9 @@ pub async fn stripe_webhook(
             tracing::info!("Payment succeeded for customer {}", customer_id);
             // Send notification for successful payment
             if let Some(tid) = account_id {
-                if let Err(e) = crate::notifications::create_payment_success_notification(&pool, tid).await {
+                if let Err(e) =
+                    crate::notifications::create_payment_success_notification(&pool, tid).await
+                {
                     tracing::error!("Failed to create payment success notification: {}", e);
                 }
             }
@@ -183,7 +193,9 @@ pub async fn stripe_webhook(
             if let Some(tid) = account_id {
                 update_plan_status(&pool, tid, "past_due").await?;
                 // Send urgent notification for failed payment
-                if let Err(e) = crate::notifications::create_payment_failed_notification(&pool, tid).await {
+                if let Err(e) =
+                    crate::notifications::create_payment_failed_notification(&pool, tid).await
+                {
                     tracing::error!("Failed to create payment failed notification: {}", e);
                 }
             }
@@ -202,7 +214,7 @@ async fn process_subscription_event(
     event: &serde_json::Value,
 ) -> Result<(), Response> {
     let subscription = &event["data"]["object"];
-    
+
     let status = subscription["status"].as_str().unwrap_or("inactive");
     let current_period_end = subscription["current_period_end"]
         .as_i64()
@@ -211,7 +223,7 @@ async fn process_subscription_event(
     sqlx::query(
         "UPDATE accounts 
          SET plan_status = $1, current_period_end = $2 
-         WHERE id = $3"
+         WHERE id = $3",
     )
     .bind(status)
     .bind(current_period_end)
@@ -223,35 +235,34 @@ async fn process_subscription_event(
         (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update status").into_response()
     })?;
 
-    tracing::info!("Updated subscription status for account {} to {}", account_id, status);
+    tracing::info!(
+        "Updated subscription status for account {} to {}",
+        account_id,
+        status
+    );
     Ok(())
 }
 
-async fn process_subscription_deleted(
-    pool: &PgPool,
-    account_id: Uuid,
-) -> Result<(), Response> {
+async fn process_subscription_deleted(pool: &PgPool, account_id: Uuid) -> Result<(), Response> {
     update_plan_status(pool, account_id, "canceled").await
 }
 
-async fn update_plan_status(
-    pool: &PgPool,
-    account_id: Uuid,
-    status: &str,
-) -> Result<(), Response> {
-    sqlx::query(
-        "UPDATE accounts SET plan_status = $1 WHERE id = $2"
-    )
-    .bind(status)
-    .bind(account_id)
-    .execute(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to update plan status: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update status").into_response()
-    })?;
+async fn update_plan_status(pool: &PgPool, account_id: Uuid, status: &str) -> Result<(), Response> {
+    sqlx::query("UPDATE accounts SET plan_status = $1 WHERE id = $2")
+        .bind(status)
+        .bind(account_id)
+        .execute(pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to update plan status: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update status").into_response()
+        })?;
 
-    tracing::info!("Updated plan status for account {} to {}", account_id, status);
+    tracing::info!(
+        "Updated plan status for account {} to {}",
+        account_id,
+        status
+    );
     Ok(())
 }
 

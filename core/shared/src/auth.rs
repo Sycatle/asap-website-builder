@@ -11,17 +11,14 @@ pub type Result<T> = std::result::Result<T, SharedError>;
 /// JWT Claims structure
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
-    pub sub: String,      // account_id
+    pub sub: String, // account_id
     pub exp: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub jti: Option<String>,  // JWT ID for token blacklisting
+    pub jti: Option<String>, // JWT ID for token blacklisting
 }
 
 /// Generate a JWT token for an account (legacy, longer expiration)
-pub fn generate_token(
-    account_id: &str,
-    config: &SharedConfig,
-) -> Result<String> {
+pub fn generate_token(account_id: &str, config: &SharedConfig) -> Result<String> {
     let expiration = Utc::now()
         .checked_add_signed(Duration::hours(config.jwt_expiration_hours))
         .expect("valid timestamp")
@@ -71,10 +68,7 @@ pub const JWT_ISSUER: &str = "asap-auth";
 pub const JWT_AUDIENCE: &str = "asap-api";
 
 /// Validate and decode a JWT token
-pub fn validate_token(
-    token: &str,
-    config: &SharedConfig,
-) -> Result<Claims> {
+pub fn validate_token(token: &str, config: &SharedConfig) -> Result<Claims> {
     // Configure validation with audience and issuer
     let mut validation = Validation::default();
     validation.set_audience(&[JWT_AUDIENCE]);
@@ -82,7 +76,7 @@ pub fn validate_token(
     // Audience validation is now enabled (tokens without aud will still validate
     // as Validation::default() allows missing aud when not strictly required)
     // The set_audience call configures which audiences are acceptable when present
-    
+
     let token_data = decode::<Claims>(
         token,
         &DecodingKey::from_secret(config.jwt_secret.as_ref()),

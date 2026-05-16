@@ -1,9 +1,9 @@
 //! Website elements management
 
 use axum::{
-    extract::{Path, State, Extension},
-    response::IntoResponse,
+    extract::{Extension, Path, State},
     http::StatusCode,
+    response::IntoResponse,
     Json,
 };
 use serde::{Deserialize, Serialize};
@@ -61,18 +61,26 @@ pub async fn list_website_elements(
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -80,14 +88,16 @@ pub async fn list_website_elements(
     let result = queries::list_website_elements(&pool, website_uuid, account_id).await;
 
     match result {
-        Ok(elements) => {
-            (StatusCode::OK, Json(elements)).into_response()
-        }
+        Ok(elements) => (StatusCode::OK, Json(elements)).into_response(),
         Err(e) => {
             tracing::error!("Database error listing elements: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -102,18 +112,26 @@ pub async fn create_element(
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -121,9 +139,13 @@ pub async fn create_element(
         Some(ref id) => match Uuid::parse_str(id) {
             Ok(uuid) => Some(uuid),
             Err(_) => {
-                return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                    "error": "Invalid extension ID format"
-                }))).into_response();
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({
+                        "error": "Invalid extension ID format"
+                    })),
+                )
+                    .into_response();
             }
         },
         None => None,
@@ -146,7 +168,8 @@ pub async fn create_element(
         payload.layout.as_deref().unwrap_or("full"),
         &settings,
         &data,
-    ).await;
+    )
+    .await;
 
     match result {
         Ok(element_id) => {
@@ -191,16 +214,24 @@ pub async fn create_element(
                 }
             }
 
-            (StatusCode::CREATED, Json(serde_json::json!({
-                "id": element_id.to_string(),
-                "message": "Element created successfully"
-            }))).into_response()
+            (
+                StatusCode::CREATED,
+                Json(serde_json::json!({
+                    "id": element_id.to_string(),
+                    "message": "Element created successfully"
+                })),
+            )
+                .into_response()
         }
         Err(e) => {
             tracing::error!("Database error creating element: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -215,27 +246,39 @@ pub async fn update_element(
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let element_uuid = match Uuid::parse_str(&element_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid element ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid element ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -250,7 +293,8 @@ pub async fn update_element(
         payload.settings.as_ref(),
         payload.data.as_ref(),
         payload.visible,
-    ).await;
+    )
+    .await;
 
     match result {
         Ok(updated) if updated => {
@@ -277,20 +321,30 @@ pub async fn update_element(
                 }
             }
 
-            (StatusCode::OK, Json(serde_json::json!({
-                "message": "Element updated successfully"
-            }))).into_response()
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "message": "Element updated successfully"
+                })),
+            )
+                .into_response()
         }
-        Ok(_) => {
-            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+        Ok(_) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
                 "error": "Element not found"
-            }))).into_response()
-        }
+            })),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Database error updating element: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -304,32 +358,45 @@ pub async fn delete_element(
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let element_uuid = match Uuid::parse_str(&element_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid element ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid element ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
     use crate::queries;
-    let result = queries::delete_website_element(&pool, element_uuid, website_uuid, account_id).await;
+    let result =
+        queries::delete_website_element(&pool, element_uuid, website_uuid, account_id).await;
 
     match result {
         Ok(deleted) if deleted => {
@@ -358,20 +425,30 @@ pub async fn delete_element(
                 }
             }
 
-            (StatusCode::OK, Json(serde_json::json!({
-                "message": "Element deleted successfully"
-            }))).into_response()
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "message": "Element deleted successfully"
+                })),
+            )
+                .into_response()
         }
-        Ok(_) => {
-            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+        Ok(_) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
                 "error": "Element not found"
-            }))).into_response()
-        }
+            })),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Database error deleting element: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -386,22 +463,31 @@ pub async fn reorder_elements(
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
-    let element_uuids: Result<Vec<Uuid>, _> = payload.element_ids
+    let element_uuids: Result<Vec<Uuid>, _> = payload
+        .element_ids
         .iter()
         .map(|id| Uuid::parse_str(id))
         .collect();
@@ -409,14 +495,19 @@ pub async fn reorder_elements(
     let element_uuids = match element_uuids {
         Ok(ids) => ids,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid element ID format in list"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid element ID format in list"
+                })),
+            )
+                .into_response();
         }
     };
 
     use crate::queries;
-    let result = queries::reorder_website_elements(&pool, website_uuid, account_id, &element_uuids).await;
+    let result =
+        queries::reorder_website_elements(&pool, website_uuid, account_id, &element_uuids).await;
 
     match result {
         Ok(_) => {
@@ -445,15 +536,23 @@ pub async fn reorder_elements(
                 }
             }
 
-            (StatusCode::OK, Json(serde_json::json!({
-                "message": "Elements reordered successfully"
-            }))).into_response()
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "message": "Elements reordered successfully"
+                })),
+            )
+                .into_response()
         }
         Err(e) => {
             tracing::error!("Database error reordering elements: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -464,25 +563,33 @@ pub async fn get_public_website_elements(
     Path(slug): Path<String>,
 ) -> impl IntoResponse {
     use crate::queries;
-    
+
     // First get the website by slug to verify it's published
     let website_result = queries::get_public_website(&pool, &slug).await;
-    
+
     let website = match website_result {
         Ok(Some(w)) => w,
         Ok(None) => {
-            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Website not found or not published"
-            }))).into_response();
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "error": "Website not found or not published"
+                })),
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error fetching website: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
-    
+
     // Get elements for this website (public - only visible ones)
     let result = queries::list_public_website_elements(&pool, website.id).await;
 
@@ -491,26 +598,32 @@ pub async fn get_public_website_elements(
             // Map to response format
             let response: Vec<serde_json::Value> = elements
                 .into_iter()
-                .map(|e| serde_json::json!({
-                    "id": e.id.to_string(),
-                    "website_id": e.website_id.to_string(),
-                    "element_type": e.element_type,
-                    "title": e.title,
-                    "layout": e.layout,
-                    "content": e.data,
-                    "settings": e.settings,
-                    "visible": e.visible,
-                    "order_index": e.order
-                }))
+                .map(|e| {
+                    serde_json::json!({
+                        "id": e.id.to_string(),
+                        "website_id": e.website_id.to_string(),
+                        "element_type": e.element_type,
+                        "title": e.title,
+                        "layout": e.layout,
+                        "content": e.data,
+                        "settings": e.settings,
+                        "visible": e.visible,
+                        "order_index": e.order
+                    })
+                })
                 .collect();
-            
+
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
             tracing::error!("Database error listing public elements: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }

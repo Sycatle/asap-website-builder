@@ -1,6 +1,6 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Account represents a user account with authentication and billing
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -8,13 +8,13 @@ use axum::{
 use chrono::Utc;
 use futures::{sink::SinkExt, stream::StreamExt};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, RwLock};
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 // Import the broadcaster trait from core-api (which re-exports from core-shared)
-use asap_core_api::{WsBroadcaster, WsBroadcastMessage, SharedConfig, validate_token, Claims};
+use asap_core_api::{validate_token, Claims, SharedConfig, WsBroadcastMessage, WsBroadcaster};
 
 /// WebSocket message structure
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -91,11 +91,11 @@ impl WsState {
             access_cache: Arc::new(RwLock::new(HashMap::new())),
         }
     }
-    
+
     /// Check if user has access to website (with caching)
     pub async fn check_website_access(&self, account_id: &str, website_id: &str) -> bool {
         let cache_key = (account_id.to_string(), website_id.to_string());
-        
+
         // Check cache first
         {
             let cache = self.access_cache.read().await;
@@ -105,12 +105,14 @@ impl WsState {
                 }
             }
         }
-        
+
         // Cache miss or expired - query database
-        let has_access = match (uuid::Uuid::parse_str(website_id), uuid::Uuid::parse_str(account_id)) {
-            (Ok(website_uuid), Ok(account_uuid)) => {
-                sqlx::query_scalar::<_, bool>(
-                    r#"
+        let has_access = match (
+            uuid::Uuid::parse_str(website_id),
+            uuid::Uuid::parse_str(account_id),
+        ) {
+            (Ok(website_uuid), Ok(account_uuid)) => sqlx::query_scalar::<_, bool>(
+                r#"
                     SELECT EXISTS (
                         SELECT 1 
                         FROM websites w
@@ -124,42 +126,44 @@ impl WsState {
                                      AND wa.status = 'active'
                                ))
                     )
-                    "#
-                )
-                .bind(website_uuid)
-                .bind(account_uuid)
-                .fetch_one(&self.pool)
-                .await
-                .unwrap_or(false)
-            }
+                    "#,
+            )
+            .bind(website_uuid)
+            .bind(account_uuid)
+            .fetch_one(&self.pool)
+            .await
+            .unwrap_or(false),
             _ => false,
         };
-        
+
         // Update cache
         {
             let mut cache = self.access_cache.write().await;
-            cache.insert(cache_key, AccessCacheEntry {
-                has_access,
-                cached_at: std::time::Instant::now(),
-            });
-            
+            cache.insert(
+                cache_key,
+                AccessCacheEntry {
+                    has_access,
+                    cached_at: std::time::Instant::now(),
+                },
+            );
+
             // Cleanup old entries periodically (if cache > 1000 entries)
             if cache.len() > 1000 {
                 let now = std::time::Instant::now();
                 cache.retain(|_, entry| entry.cached_at.elapsed() < ACCESS_CACHE_TTL);
             }
         }
-        
+
         has_access
     }
-    
+
     /// Invalidate access cache for a website (call when permissions change)
     #[allow(dead_code)]
     pub async fn invalidate_website_access_cache(&self, website_id: &str) {
         let mut cache = self.access_cache.write().await;
         cache.retain(|(_, wid), _| wid != website_id);
     }
-    
+
     /// Register an authenticated client
     pub async fn register_client(&self, account_id: String, client_id: uuid::Uuid) {
         let mut clients = self.authenticated_clients.write().await;
@@ -171,9 +175,9 @@ impl WsState {
                 client_id,
             });
     }
-    
+
     /// Unregister a client
-    /// 
+    ///
     /// IMPORTANT: Must leave website presence BEFORE removing from authenticated_clients.
     /// This prevents a race condition where leave_website() would fail to find the user_id
     /// (needed to broadcast the user-left event) because the client was already removed.
@@ -181,7 +185,7 @@ impl WsState {
         // First, leave the website presence while we still have the account_id
         // This ensures the user-left event is properly broadcast
         self.leave_website_with_account(client_id, account_id).await;
-        
+
         // Then, release the client from authenticated_clients
         let mut clients = self.authenticated_clients.write().await;
         if let Some(account_clients) = clients.get_mut(account_id) {
@@ -191,107 +195,137 @@ impl WsState {
             }
         }
     }
-    
+
     /// Join a website presence room
-    pub async fn join_website(&self, client_id: uuid::Uuid, website_id: String, user: WebsitePresenceUser) {
+    pub async fn join_website(
+        &self,
+        client_id: uuid::Uuid,
+        website_id: String,
+        user: WebsitePresenceUser,
+    ) {
         // Track which website this client is in
         let mut client_websites = self.client_websites.write().await;
-        
+
         // Leave previous website if any
         if let Some(old_website_id) = client_websites.get(&client_id).cloned() {
             drop(client_websites);
-            self.leave_website_internal(client_id, &old_website_id, &user.id).await;
+            self.leave_website_internal(client_id, &old_website_id, &user.id)
+                .await;
             client_websites = self.client_websites.write().await;
         }
-        
+
         client_websites.insert(client_id, website_id.clone());
         drop(client_websites);
-        
+
         // Add to website presence
         let mut presence = self.website_presence.write().await;
         let users = presence.entry(website_id.clone()).or_insert_with(Vec::new);
-        
+
         // Don't add if already present
         if !users.iter().any(|u| u.id == user.id) {
             users.push(user.clone());
         }
-        
+
         // Broadcast user joined
         let users_clone = users.clone();
         drop(presence);
-        
-        self.broadcast_website_presence(&website_id, "presence:website:user-joined", serde_json::json!({
-            "website_id": website_id,
-            "user": user
-        }));
-        
-        info!("User {} joined website {} presence ({} users)", user.id, website_id, users_clone.len());
+
+        self.broadcast_website_presence(
+            &website_id,
+            "presence:website:user-joined",
+            serde_json::json!({
+                "website_id": website_id,
+                "user": user
+            }),
+        );
+
+        info!(
+            "User {} joined website {} presence ({} users)",
+            user.id,
+            website_id,
+            users_clone.len()
+        );
     }
-    
+
     /// Leave a website presence room
     pub async fn leave_website(&self, client_id: uuid::Uuid) {
         let mut client_websites = self.client_websites.write().await;
         if let Some(website_id) = client_websites.remove(&client_id) {
             drop(client_websites);
-            
+
             // Find user_id from authenticated clients
             let clients = self.authenticated_clients.read().await;
-            let user_id = clients.values()
+            let user_id = clients
+                .values()
                 .flat_map(|v| v.iter())
                 .find(|c| c.client_id == client_id)
                 .map(|c| c.account_id.clone());
             drop(clients);
-            
+
             if let Some(user_id) = user_id {
-                self.leave_website_internal(client_id, &website_id, &user_id).await;
+                self.leave_website_internal(client_id, &website_id, &user_id)
+                    .await;
             }
         }
     }
-    
+
     /// Leave a website presence room with known account_id
     /// Used when unregistering a client where we already know the account_id
     pub async fn leave_website_with_account(&self, client_id: uuid::Uuid, account_id: &str) {
         let mut client_websites = self.client_websites.write().await;
         if let Some(website_id) = client_websites.remove(&client_id) {
             drop(client_websites);
-            self.leave_website_internal(client_id, &website_id, account_id).await;
+            self.leave_website_internal(client_id, &website_id, account_id)
+                .await;
         }
     }
-    
-    async fn leave_website_internal(&self, _client_id: uuid::Uuid, website_id: &str, user_id: &str) {
+
+    async fn leave_website_internal(
+        &self,
+        _client_id: uuid::Uuid,
+        website_id: &str,
+        user_id: &str,
+    ) {
         let mut presence = self.website_presence.write().await;
         if let Some(users) = presence.get_mut(website_id) {
             users.retain(|u| u.id != user_id);
-            
+
             let remaining = users.len();
             if users.is_empty() {
                 presence.remove(website_id);
             }
             drop(presence);
-            
+
             // Broadcast user left
-            self.broadcast_website_presence(website_id, "presence:website:user-left", serde_json::json!({
-                "website_id": website_id,
-                "user_id": user_id
-            }));
-            
-            info!("User {} left website {} presence ({} users remaining)", user_id, website_id, remaining);
+            self.broadcast_website_presence(
+                website_id,
+                "presence:website:user-left",
+                serde_json::json!({
+                    "website_id": website_id,
+                    "user_id": user_id
+                }),
+            );
+
+            info!(
+                "User {} left website {} presence ({} users remaining)",
+                user_id, website_id, remaining
+            );
         }
     }
-    
+
     /// Get users present on a website
     pub async fn get_website_users(&self, website_id: &str) -> Vec<WebsitePresenceUser> {
         let presence = self.website_presence.read().await;
         presence.get(website_id).cloned().unwrap_or_default()
     }
-    
+
     /// Update the current page for a user on a website
     pub async fn update_user_page(&self, client_id: uuid::Uuid, user_id: &str, current_page: &str) {
         // Get the website this client is on
         let client_websites = self.client_websites.read().await;
         let website_id = client_websites.get(&client_id).cloned();
         drop(client_websites);
-        
+
         if let Some(website_id) = website_id {
             let mut presence = self.website_presence.write().await;
             if let Some(users) = presence.get_mut(&website_id) {
@@ -299,23 +333,35 @@ impl WsState {
                     user.current_page = Some(current_page.to_string());
                     let user_clone = user.clone();
                     drop(presence);
-                    
+
                     // Broadcast the page update
-                    self.broadcast_website_presence(&website_id, "presence:website:user-page-updated", serde_json::json!({
-                        "website_id": website_id,
-                        "user_id": user_id,
-                        "current_page": current_page,
-                        "user": user_clone
-                    }));
-                    
-                    info!("User {} updated page to {} on website {}", user_id, current_page, website_id);
+                    self.broadcast_website_presence(
+                        &website_id,
+                        "presence:website:user-page-updated",
+                        serde_json::json!({
+                            "website_id": website_id,
+                            "user_id": user_id,
+                            "current_page": current_page,
+                            "user": user_clone
+                        }),
+                    );
+
+                    info!(
+                        "User {} updated page to {} on website {}",
+                        user_id, current_page, website_id
+                    );
                 }
             }
         }
     }
-    
+
     /// Broadcast presence message to all clients on a website
-    fn broadcast_website_presence(&self, website_id: &str, msg_type: &str, data: serde_json::Value) {
+    fn broadcast_website_presence(
+        &self,
+        website_id: &str,
+        msg_type: &str,
+        data: serde_json::Value,
+    ) {
         let msg = WsMessage {
             msg_type: msg_type.to_string(),
             data,
@@ -323,7 +369,7 @@ impl WsState {
         // Broadcast to all - clients will filter by website_id
         self.broadcast(msg);
     }
-    
+
     /// Check if an account has any connected clients
     pub async fn has_connected_clients(&self, account_id: &str) -> bool {
         let clients = self.authenticated_clients.read().await;
@@ -336,7 +382,7 @@ impl WsState {
             warn!("Failed to broadcast message: {}", e);
         }
     }
-    
+
     /// Broadcast a message to all clients of a specific account (Phase 4)
     /// Note: Currently uses the broadcast channel with account_id metadata
     /// The actual filtering happens in the WebSocket receiver task
@@ -345,12 +391,15 @@ impl WsState {
         if let Some(data) = msg.data.as_object_mut() {
             data.insert("__account_id".to_string(), serde_json::json!(account_id));
         }
-        
+
         // Check if account has connected clients before broadcasting
         if self.has_connected_clients(account_id).await {
             self.broadcast(msg);
         } else {
-            tracing::debug!("No clients connected for account: {}, skipping broadcast", account_id);
+            tracing::debug!(
+                "No clients connected for account: {}, skipping broadcast",
+                account_id
+            );
         }
     }
 
@@ -423,12 +472,12 @@ impl WsBroadcaster for WsState {
             msg_type: msg.msg_type,
             data: msg.data,
         };
-        
+
         // Add account_id for filtering (Phase 4 - account-based access control)
         if let Some(data) = ws_msg.data.as_object_mut() {
             data.insert("__account_id".to_string(), serde_json::json!(account_id));
         }
-        
+
         self.broadcast(ws_msg);
     }
 }
@@ -440,8 +489,9 @@ const MAX_CONNECTIONS_PER_IP: usize = 10;
 const MAX_TOTAL_CONNECTIONS: usize = 10_000;
 
 /// Connection tracking for rate limiting
-static CONNECTION_COUNTS: std::sync::LazyLock<tokio::sync::RwLock<std::collections::HashMap<std::net::IpAddr, usize>>> = 
-    std::sync::LazyLock::new(|| tokio::sync::RwLock::new(std::collections::HashMap::new()));
+static CONNECTION_COUNTS: std::sync::LazyLock<
+    tokio::sync::RwLock<std::collections::HashMap<std::net::IpAddr, usize>>,
+> = std::sync::LazyLock::new(|| tokio::sync::RwLock::new(std::collections::HashMap::new()));
 
 static TOTAL_CONNECTIONS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
@@ -453,24 +503,29 @@ pub async fn ws_handler(
     State(state): State<Arc<WsState>>,
 ) -> Response {
     let client_ip = addr.ip();
-    
+
     // Check total connection limit
     let total = TOTAL_CONNECTIONS.load(std::sync::atomic::Ordering::Relaxed);
     if total >= MAX_TOTAL_CONNECTIONS {
-        warn!("WebSocket connection rejected: server at capacity ({} connections)", total);
+        warn!(
+            "WebSocket connection rejected: server at capacity ({} connections)",
+            total
+        );
         return axum::response::Response::builder()
             .status(axum::http::StatusCode::SERVICE_UNAVAILABLE)
             .body(axum::body::Body::from("Server at capacity"))
             .unwrap();
     }
-    
+
     // Check per-IP connection limit
     {
         let counts = CONNECTION_COUNTS.read().await;
         if let Some(&count) = counts.get(&client_ip) {
             if count >= MAX_CONNECTIONS_PER_IP {
-                warn!("WebSocket connection rejected: IP {} has {} connections (max {})", 
-                      client_ip, count, MAX_CONNECTIONS_PER_IP);
+                warn!(
+                    "WebSocket connection rejected: IP {} has {} connections (max {})",
+                    client_ip, count, MAX_CONNECTIONS_PER_IP
+                );
                 return axum::response::Response::builder()
                     .status(axum::http::StatusCode::TOO_MANY_REQUESTS)
                     .body(axum::body::Body::from("Too many connections from this IP"))
@@ -478,22 +533,26 @@ pub async fn ws_handler(
             }
         }
     }
-    
+
     // Increment counters
     {
         let mut counts = CONNECTION_COUNTS.write().await;
         *counts.entry(client_ip).or_insert(0) += 1;
     }
     TOTAL_CONNECTIONS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    
+
     info!("WebSocket connection upgrade requested from {}", client_ip);
     ws.on_upgrade(move |socket| handle_socket_with_cleanup(socket, state, client_ip))
 }
 
 /// Handle socket with connection cleanup on disconnect
-async fn handle_socket_with_cleanup(socket: WebSocket, state: Arc<WsState>, client_ip: std::net::IpAddr) {
+async fn handle_socket_with_cleanup(
+    socket: WebSocket,
+    state: Arc<WsState>,
+    client_ip: std::net::IpAddr,
+) {
     handle_socket(socket, state).await;
-    
+
     // Decrement counters on disconnect
     {
         let mut counts = CONNECTION_COUNTS.write().await;
@@ -511,7 +570,7 @@ async fn handle_socket_with_cleanup(socket: WebSocket, state: Arc<WsState>, clie
 async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
     let (mut sender, mut receiver) = socket.split();
     let mut broadcast_rx = state.tx.subscribe();
-    
+
     let client_id = uuid::Uuid::new_v4();
     info!("New WebSocket client connected: {}", client_id);
 
@@ -527,7 +586,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
     const PING_INTERVAL: std::time::Duration = std::time::Duration::from_secs(30);
     const PONG_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
     const AUTH_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
-    
+
     // Track last pong received
     let last_pong = Arc::new(tokio::sync::RwLock::new(std::time::Instant::now()));
     let last_pong_clone = last_pong.clone();
@@ -537,7 +596,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
     let mut send_task = tokio::spawn(async move {
         let mut ping_interval = tokio::time::interval(PING_INTERVAL);
         ping_interval.tick().await; // Skip first immediate tick
-        
+
         loop {
             tokio::select! {
                 // Send periodic pings to check connection health
@@ -548,7 +607,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                         warn!("WebSocket client {} timed out (no pong received)", client_id);
                         break;
                     }
-                    
+
                     // Send ping
                     if sender.send(Message::Ping(vec![])).await.is_err() {
                         break;
@@ -569,7 +628,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                         let auth = auth_clone.read().await;
                         auth.clone()
                     };
-                    
+
                     if let Some(account_id) = account_id.as_ref() {
                         // Check if message is targeted for this account
                         let should_send = if let Some(target_account) = msg.data.get("__account_id") {
@@ -579,13 +638,13 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                             // No account filter, send to all authenticated clients
                             true
                         };
-                        
+
                         if should_send {
                             // Remove internal metadata before sending
                             if let Some(data) = msg.data.as_object_mut() {
                                 data.remove("__account_id");
                             }
-                            
+
                             if let Ok(json) = serde_json::to_string(&msg) {
                                 if sender.send(Message::Text(json)).await.is_err() {
                                     break;
@@ -600,32 +659,45 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
 
     // Task to receive messages from this client
     let broadcast_tx = state.tx.clone();
-    let state_for_cleanup = state.clone();  // Clone for cleanup after tasks complete
+    let state_for_cleanup = state.clone(); // Clone for cleanup after tasks complete
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
             match msg {
                 Message::Text(text) => {
                     match serde_json::from_str::<WsMessage>(&text) {
                         Ok(ws_msg) => {
-                            info!("Received message from client {}: {}", client_id, ws_msg.msg_type);
-                            
+                            info!(
+                                "Received message from client {}: {}",
+                                client_id, ws_msg.msg_type
+                            );
+
                             match ws_msg.msg_type.as_str() {
                                 "auth" => {
                                     // Handle authentication
-                                    if let Ok(payload) = serde_json::from_value::<AuthPayload>(ws_msg.data.clone()) {
+                                    if let Ok(payload) =
+                                        serde_json::from_value::<AuthPayload>(ws_msg.data.clone())
+                                    {
                                         // Verify JWT token and extract account ID
-                                        if let Some(claims) = verify_token_and_get_claims(&payload.token, &state.config) {
+                                        if let Some(claims) = verify_token_and_get_claims(
+                                            &payload.token,
+                                            &state.config,
+                                        ) {
                                             let account_id = claims.sub.clone();
                                             {
                                                 let mut auth = authenticated_account.write().await;
                                                 *auth = Some(account_id.clone());
                                             }
-                                            
+
                                             // Register this client
-                                            state.register_client(account_id.clone(), client_id).await;
-                                            
-                                            info!("Client {} authenticated for account: {}", client_id, account_id);
-                                            
+                                            state
+                                                .register_client(account_id.clone(), client_id)
+                                                .await;
+
+                                            info!(
+                                                "Client {} authenticated for account: {}",
+                                                client_id, account_id
+                                            );
+
                                             // Send auth success message directly to this client
                                             let auth_success = WsMessage {
                                                 msg_type: "auth-success".to_string(),
@@ -637,7 +709,10 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                             };
                                             let _ = direct_tx.send(auth_success).await;
                                         } else {
-                                            warn!("Client {} authentication failed: invalid token", client_id);
+                                            warn!(
+                                                "Client {} authentication failed: invalid token",
+                                                client_id
+                                            );
                                             // Send auth failed message directly to this client
                                             let auth_failed = WsMessage {
                                                 msg_type: "auth-failed".to_string(),
@@ -671,14 +746,18 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                 // Presence handlers
                                 // ========================================
                                 "presence:join-website" => {
-                                    if let Some(account_id) = authenticated_account.read().await.as_ref() {
+                                    if let Some(account_id) =
+                                        authenticated_account.read().await.as_ref()
+                                    {
                                         if let (Some(website_id), Some(user_data)) = (
                                             ws_msg.data.get("website_id").and_then(|v| v.as_str()),
-                                            ws_msg.data.get("user")
+                                            ws_msg.data.get("user"),
                                         ) {
                                             // Verify user has access to this website (cached)
-                                            let has_access = state.check_website_access(account_id, website_id).await;
-                                                            
+                                            let has_access = state
+                                                .check_website_access(account_id, website_id)
+                                                .await;
+
                                             if !has_access {
                                                 warn!("User {} attempted to join website {} without access", account_id, website_id);
                                                 let error_msg = WsMessage {
@@ -690,19 +769,41 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                                 let _ = direct_tx.send(error_msg).await;
                                                 continue;
                                             }
-                                            
+
                                             // User has access, proceed with joining
                                             let user = WebsitePresenceUser {
                                                 id: account_id.clone(),
-                                                email: user_data.get("email").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                                                name: user_data.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                                                avatar: user_data.get("avatar").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                                                email: user_data
+                                                    .get("email")
+                                                    .and_then(|v| v.as_str())
+                                                    .unwrap_or("")
+                                                    .to_string(),
+                                                name: user_data
+                                                    .get("name")
+                                                    .and_then(|v| v.as_str())
+                                                    .map(|s| s.to_string()),
+                                                avatar: user_data
+                                                    .get("avatar")
+                                                    .and_then(|v| v.as_str())
+                                                    .map(|s| s.to_string()),
                                                 joined_at: Utc::now().to_rfc3339(),
-                                                current_page: user_data.get("current_page").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                                                current_page: user_data
+                                                    .get("current_page")
+                                                    .and_then(|v| v.as_str())
+                                                    .map(|s| s.to_string()),
                                             };
-                                            state.join_website(client_id, website_id.to_string(), user).await;
-                                            info!("User {} joined website {} presence", account_id, website_id);
-                                                            
+                                            state
+                                                .join_website(
+                                                    client_id,
+                                                    website_id.to_string(),
+                                                    user,
+                                                )
+                                                .await;
+                                            info!(
+                                                "User {} joined website {} presence",
+                                                account_id, website_id
+                                            );
+
                                             // Note: We don't send the users list here anymore
                                             // The client will request it explicitly via presence:get-website-users
                                             // when it's ready to receive it (after setting up listeners)
@@ -715,13 +816,20 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                     }
                                 }
                                 "presence:get-website-users" => {
-                                    if let Some(account_id) = authenticated_account.read().await.as_ref() {
-                                        if let Some(website_id) = ws_msg.data.get("website_id").and_then(|v| v.as_str()) {
+                                    if let Some(account_id) =
+                                        authenticated_account.read().await.as_ref()
+                                    {
+                                        if let Some(website_id) =
+                                            ws_msg.data.get("website_id").and_then(|v| v.as_str())
+                                        {
                                             // Verify user has access to this website (cached)
-                                            let has_access = state.check_website_access(account_id, website_id).await;
-                                                    
+                                            let has_access = state
+                                                .check_website_access(account_id, website_id)
+                                                .await;
+
                                             if has_access {
-                                                let users = state.get_website_users(website_id).await;
+                                                let users =
+                                                    state.get_website_users(website_id).await;
                                                 let users_msg = WsMessage {
                                                     msg_type: "presence:website:users".to_string(),
                                                     data: serde_json::json!({
@@ -735,14 +843,27 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                                     }
                                 }
                                 "presence:update-page" => {
-                                    if let Some(account_id) = authenticated_account.read().await.as_ref() {
-                                        if let Some(current_page) = ws_msg.data.get("current_page").and_then(|v| v.as_str()) {
-                                            state.update_user_page(client_id, account_id, current_page).await;
+                                    if let Some(account_id) =
+                                        authenticated_account.read().await.as_ref()
+                                    {
+                                        if let Some(current_page) =
+                                            ws_msg.data.get("current_page").and_then(|v| v.as_str())
+                                        {
+                                            state
+                                                .update_user_page(
+                                                    client_id,
+                                                    account_id,
+                                                    current_page,
+                                                )
+                                                .await;
                                         }
                                     }
                                 }
                                 _ => {
-                                    warn!("Unknown message type from client {}: {}", client_id, ws_msg.msg_type);
+                                    warn!(
+                                        "Unknown message type from client {}: {}",
+                                        client_id, ws_msg.msg_type
+                                    );
                                 }
                             }
                         }
@@ -767,7 +888,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
                 _ => {}
             }
         }
-        
+
         info!("Client {} disconnected", client_id);
     });
 
@@ -780,18 +901,23 @@ async fn handle_socket(socket: WebSocket, state: Arc<WsState>) {
             send_task.abort();
         },
     }
-    
+
     // Cleanup: Unregister client if authenticated
     let account_id = {
         let auth = auth_for_cleanup.read().await;
         auth.clone()
     };
-    
+
     if let Some(account_id) = account_id.as_ref() {
-        state_for_cleanup.unregister_client(account_id, client_id).await;
-        info!("Unregistered client {} for account {}", client_id, account_id);
+        state_for_cleanup
+            .unregister_client(account_id, client_id)
+            .await;
+        info!(
+            "Unregistered client {} for account {}",
+            client_id, account_id
+        );
     }
-    
+
     info!("WebSocket connection closed for client {}", client_id);
 }
 
@@ -819,10 +945,10 @@ pub fn spawn_cleanup_task(state: Arc<WsState>) {
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(CLEANUP_INTERVAL);
         interval.tick().await; // Skip first immediate tick
-        
+
         loop {
             interval.tick().await;
-            
+
             // Cleanup stale IP connection counts (IPs with 0 connections)
             {
                 let mut counts = CONNECTION_COUNTS.write().await;
@@ -830,10 +956,13 @@ pub fn spawn_cleanup_task(state: Arc<WsState>) {
                 counts.retain(|_, &mut count| count > 0);
                 let after = counts.len();
                 if before != after {
-                    info!("Cleaned up {} stale IP entries from connection counts", before - after);
+                    info!(
+                        "Cleaned up {} stale IP entries from connection counts",
+                        before - after
+                    );
                 }
             }
-            
+
             // Cleanup expired access cache entries
             {
                 let mut cache = state.access_cache.write().await;
@@ -845,13 +974,13 @@ pub fn spawn_cleanup_task(state: Arc<WsState>) {
                     info!("Cleaned up {} expired access cache entries", before - after);
                 }
             }
-            
+
             // Log current stats
             let total_connections = TOTAL_CONNECTIONS.load(std::sync::atomic::Ordering::Relaxed);
             let ip_count = CONNECTION_COUNTS.read().await.len();
             let cache_size = state.access_cache.read().await.len();
             let presence_rooms = state.website_presence.read().await.len();
-            
+
             tracing::debug!(
                 "WebSocket stats: {} total connections, {} unique IPs, {} cache entries, {} presence rooms",
                 total_connections, ip_count, cache_size, presence_rooms

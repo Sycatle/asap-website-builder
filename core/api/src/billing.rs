@@ -1,5 +1,7 @@
+use asap_core_payments::{CheckoutSessionRequest, PaymentGateway};
+use asap_core_shared::Claims;
 use axum::{
-    extract::{State, Json},
+    extract::{Json, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     Extension,
@@ -7,10 +9,6 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
-use asap_core_shared::Claims;
-use asap_core_payments::{
-    PaymentGateway, CheckoutSessionRequest,
-};
 
 #[derive(Debug, Deserialize)]
 pub struct CreateCheckoutSessionRequest {
@@ -36,21 +34,18 @@ pub async fn create_checkout_session(
     tracing::info!("Creating checkout session for account: {}", claims.sub);
 
     // Parse account_id from string to Uuid
-    let account_id = Uuid::parse_str(&claims.sub).map_err(|_| {
-        (StatusCode::BAD_REQUEST, "Invalid account ID").into_response()
-    })?;
+    let account_id = Uuid::parse_str(&claims.sub)
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid account ID").into_response())?;
 
     // Get account email for customer creation
-    let email = sqlx::query_scalar::<_, String>(
-        "SELECT email FROM accounts WHERE id = $1"
-    )
-    .bind(account_id)
-    .fetch_one(&pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to fetch account: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch account").into_response()
-    })?;
+    let email = sqlx::query_scalar::<_, String>("SELECT email FROM accounts WHERE id = $1")
+        .bind(account_id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to fetch account: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch account").into_response()
+        })?;
 
     // Ensure customer exists in Stripe
     payment_gateway
@@ -58,7 +53,11 @@ pub async fn create_checkout_session(
         .await
         .map_err(|e| {
             tracing::error!("Failed to ensure customer: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create customer").into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to create customer",
+            )
+                .into_response()
         })?;
 
     // Create checkout session
@@ -74,7 +73,11 @@ pub async fn create_checkout_session(
         .await
         .map_err(|e| {
             tracing::error!("Failed to create checkout session: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create checkout session").into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to create checkout session",
+            )
+                .into_response()
         })?;
 
     Ok(Json(CreateCheckoutSessionResponse {

@@ -1,8 +1,8 @@
-use sqlx::PgPool;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use tracing::info;
 use serde::Serialize;
+use sqlx::PgPool;
+use tracing::info;
 
 /// FileCleanupService handles periodic cleanup of file metadata and orphaned files
 pub struct FileCleanupService {
@@ -38,7 +38,7 @@ impl FileCleanupService {
     async fn cleanup_orphaned_files(&self) -> Result<u64> {
         let result = sqlx::query(
             "DELETE FROM files 
-             WHERE account_id NOT IN (SELECT id FROM accounts)"
+             WHERE account_id NOT IN (SELECT id FROM accounts)",
         )
         .execute(&self.pool)
         .await?;
@@ -52,7 +52,7 @@ impl FileCleanupService {
     async fn cleanup_old_audit_logs(&self) -> Result<u64> {
         let result = sqlx::query(
             "DELETE FROM file_operations_audit 
-             WHERE created_at < now() - interval '90 days'"
+             WHERE created_at < now() - interval '90 days'",
         )
         .execute(&self.pool)
         .await?;
@@ -66,12 +66,15 @@ impl FileCleanupService {
     async fn cleanup_deleted_user_quotas(&self) -> Result<u64> {
         let result = sqlx::query(
             "DELETE FROM user_storage_quota 
-             WHERE account_id NOT IN (SELECT id FROM accounts)"
+             WHERE account_id NOT IN (SELECT id FROM accounts)",
         )
         .execute(&self.pool)
         .await?;
 
-        info!("Cleaned {} quota entries for deleted users", result.rows_affected());
+        info!(
+            "Cleaned {} quota entries for deleted users",
+            result.rows_affected()
+        );
 
         Ok(result.rows_affected())
     }
@@ -83,7 +86,7 @@ impl FileCleanupService {
                 COUNT(*) as total_files,
                 SUM(compressed_size) as total_compressed_size,
                 SUM(original_size) as total_original_size
-             FROM files"
+             FROM files",
         )
         .fetch_one(&self.pool)
         .await?;

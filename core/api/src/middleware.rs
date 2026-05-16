@@ -21,9 +21,7 @@ pub async fn auth_middleware(
         .and_then(|h| h.to_str().ok());
 
     let token = match auth_header {
-        Some(header) if header.starts_with("Bearer ") => {
-            header.trim_start_matches("Bearer ")
-        }
+        Some(header) if header.starts_with("Bearer ") => header.trim_start_matches("Bearer "),
         _ => {
             return Err((
                 StatusCode::UNAUTHORIZED,
@@ -31,7 +29,7 @@ pub async fn auth_middleware(
                     "error": "Missing or invalid Authorization header"
                 })),
             ));
-        }   
+        }
     };
 
     // Validate token

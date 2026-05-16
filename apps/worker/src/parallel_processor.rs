@@ -4,10 +4,10 @@
 //! Processes multiple events concurrently using tokio::task::JoinSet
 //! instead of sequential processing.
 
-use anyhow::Result;
-use asap_core_domain::events::Event;
 use crate::event_processor::EventProcessor;
 use crate::extension_executor::ExtensionExecutorRegistry;
+use anyhow::Result;
+use asap_core_domain::events::Event;
 use std::sync::Arc;
 
 /// Configuration for parallel event processing
@@ -16,7 +16,7 @@ pub struct ParallelProcessorConfig {
     /// Maximum number of concurrent event processors
     /// Recommended: 2-4x number of CPU cores
     pub max_concurrency: usize,
-    
+
     /// Whether to track detailed metrics
     pub enable_metrics: bool,
 }
@@ -60,7 +60,7 @@ impl ProcessingStats {
 }
 
 /// Process events in parallel using tokio::task::JoinSet
-/// 
+///
 /// This replaces the sequential loop with concurrent processing,
 /// dramatically improving throughput for I/O-bound operations.
 pub async fn process_events_parallel(
@@ -93,7 +93,7 @@ pub async fn process_events_parallel(
         if let Some(event) = event_iter.next() {
             let processor = event_processor.clone();
             let registry = registry.clone();
-            
+
             set.spawn(process_single_event(processor, registry, event));
         }
     }
@@ -112,7 +112,7 @@ pub async fn process_events_parallel(
         if let Some(event) = event_iter.next() {
             let processor = event_processor.clone();
             let registry = registry.clone();
-            
+
             set.spawn(process_single_event(processor, registry, event));
         }
     }
@@ -171,10 +171,10 @@ async fn process_single_event(
 }
 
 /// Alternative helper for custom concurrency control
-/// 
+///
 /// This is exported for users who want more fine-grained control
 /// over the concurrency limit.
-/// 
+///
 /// NOTE: Can be used externally for custom parallelism tuning.
 #[allow(dead_code)]
 pub fn get_optimal_concurrency() -> usize {

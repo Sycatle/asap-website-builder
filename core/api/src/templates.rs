@@ -4,16 +4,16 @@
 //! Templates allow users to save configured sections for reuse across websites.
 
 use axum::{
-    extract::{Path, Query, State, Extension},
-    response::IntoResponse,
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
+    response::IntoResponse,
     Json,
 };
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sqlx::PgPool;
 use uuid::Uuid;
-use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
-use serde_json::Value;
 
 use asap_core_shared::Claims;
 
@@ -53,7 +53,7 @@ pub struct ElementTemplateSummary {
 }
 
 // ============================================================================
-// Request Types  
+// Request Types
 // ============================================================================
 
 /// Request to create a new element template
@@ -143,11 +143,11 @@ pub async fn list_templates(
         Ok(id) => id,
         Err(e) => return e.into_response(),
     };
-    
+
     let limit = query.limit.unwrap_or(50).min(100);
     let offset = query.offset.unwrap_or(0);
     let favorites_only = query.favorites_only.unwrap_or(false);
-    
+
     let result = sqlx::query!(
         r#"
         SELECT id, name, description, element_type, variant, preview_image, tags, is_favorite, created_at
@@ -170,7 +170,7 @@ pub async fn list_templates(
     )
     .fetch_all(&pool)
     .await;
-    
+
     match result {
         Ok(rows) => {
             let templates: Vec<ElementTemplateSummary> = rows
@@ -187,7 +187,7 @@ pub async fn list_templates(
                     created_at: r.created_at,
                 })
                 .collect();
-            
+
             (StatusCode::OK, Json(templates)).into_response()
         }
         Err(e) => {
@@ -195,7 +195,8 @@ pub async fn list_templates(
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({ "error": "Failed to list templates" })),
-            ).into_response()
+            )
+                .into_response()
         }
     }
 }
@@ -211,7 +212,7 @@ pub async fn get_template(
         Ok(id) => id,
         Err(e) => return e.into_response(),
     };
-    
+
     let result = sqlx::query!(
         r#"
         SELECT id, account_id, name, description, element_type, variant, settings, 
@@ -224,7 +225,7 @@ pub async fn get_template(
     )
     .fetch_optional(&pool)
     .await;
-    
+
     match result {
         Ok(Some(r)) => {
             let template = ElementTemplateResponse {
@@ -241,21 +242,21 @@ pub async fn get_template(
                 created_at: r.created_at,
                 updated_at: r.updated_at,
             };
-            
+
             (StatusCode::OK, Json(template)).into_response()
         }
-        Ok(None) => {
-            (
-                StatusCode::NOT_FOUND,
-                Json(serde_json::json!({ "error": "Template not found" })),
-            ).into_response()
-        }
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({ "error": "Template not found" })),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Failed to get template: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({ "error": "Failed to get template" })),
-            ).into_response()
+            )
+                .into_response()
         }
     }
 }
@@ -271,22 +272,24 @@ pub async fn create_template(
         Ok(id) => id,
         Err(e) => return e.into_response(),
     };
-    
+
     // Validate required fields
     if request.name.trim().is_empty() {
         return (
             StatusCode::BAD_REQUEST,
             Json(serde_json::json!({ "error": "Template name is required" })),
-        ).into_response();
+        )
+            .into_response();
     }
-    
+
     if request.element_type.trim().is_empty() {
         return (
             StatusCode::BAD_REQUEST,
             Json(serde_json::json!({ "error": "Element type is required" })),
-        ).into_response();
+        )
+            .into_response();
     }
-    
+
     let result = sqlx::query!(
         r#"
         INSERT INTO element_templates (account_id, name, description, element_type, variant, settings, preview_image, tags)
@@ -305,7 +308,7 @@ pub async fn create_template(
     )
     .fetch_one(&pool)
     .await;
-    
+
     match result {
         Ok(r) => {
             let template = ElementTemplateResponse {
@@ -322,14 +325,14 @@ pub async fn create_template(
                 created_at: r.created_at,
                 updated_at: r.updated_at,
             };
-            
+
             tracing::info!(
                 account_id = %account_id,
                 template_id = %template.id,
                 element_type = %template.element_type,
                 "Element template created"
             );
-            
+
             (StatusCode::CREATED, Json(template)).into_response()
         }
         Err(e) => {
@@ -337,7 +340,8 @@ pub async fn create_template(
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({ "error": "Failed to create template" })),
-            ).into_response()
+            )
+                .into_response()
         }
     }
 }
@@ -354,7 +358,7 @@ pub async fn update_template(
         Ok(id) => id,
         Err(e) => return e.into_response(),
     };
-    
+
     // Verify ownership
     let exists = sqlx::query_scalar!(
         "SELECT EXISTS(SELECT 1 FROM element_templates WHERE id = $1 AND account_id = $2)",
@@ -363,24 +367,26 @@ pub async fn update_template(
     )
     .fetch_one(&pool)
     .await;
-    
+
     match exists {
         Ok(Some(true)) => {}
         Ok(_) => {
             return (
                 StatusCode::NOT_FOUND,
                 Json(serde_json::json!({ "error": "Template not found" })),
-            ).into_response();
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Failed to verify template ownership: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({ "error": "Database error" })),
-            ).into_response();
+            )
+                .into_response();
         }
     }
-    
+
     // Update template
     let result = sqlx::query!(
         r#"
@@ -410,7 +416,7 @@ pub async fn update_template(
     )
     .fetch_one(&pool)
     .await;
-    
+
     match result {
         Ok(r) => {
             let template = ElementTemplateResponse {
@@ -427,7 +433,7 @@ pub async fn update_template(
                 created_at: r.created_at,
                 updated_at: r.updated_at,
             };
-            
+
             (StatusCode::OK, Json(template)).into_response()
         }
         Err(e) => {
@@ -435,7 +441,8 @@ pub async fn update_template(
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({ "error": "Failed to update template" })),
-            ).into_response()
+            )
+                .into_response()
         }
     }
 }
@@ -451,7 +458,7 @@ pub async fn delete_template(
         Ok(id) => id,
         Err(e) => return e.into_response(),
     };
-    
+
     let result = sqlx::query!(
         "DELETE FROM element_templates WHERE id = $1 AND account_id = $2",
         template_id,
@@ -459,7 +466,7 @@ pub async fn delete_template(
     )
     .execute(&pool)
     .await;
-    
+
     match result {
         Ok(r) if r.rows_affected() > 0 => {
             tracing::info!(
@@ -469,18 +476,18 @@ pub async fn delete_template(
             );
             StatusCode::NO_CONTENT.into_response()
         }
-        Ok(_) => {
-            (
-                StatusCode::NOT_FOUND,
-                Json(serde_json::json!({ "error": "Template not found" })),
-            ).into_response()
-        }
+        Ok(_) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({ "error": "Template not found" })),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Failed to delete template: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({ "error": "Failed to delete template" })),
-            ).into_response()
+            )
+                .into_response()
         }
     }
 }
@@ -496,7 +503,7 @@ pub async fn toggle_favorite(
         Ok(id) => id,
         Err(e) => return e.into_response(),
     };
-    
+
     let result = sqlx::query!(
         r#"
         UPDATE element_templates
@@ -510,7 +517,7 @@ pub async fn toggle_favorite(
     )
     .fetch_optional(&pool)
     .await;
-    
+
     match result {
         Ok(Some(r)) => {
             let template = ElementTemplateResponse {
@@ -527,21 +534,21 @@ pub async fn toggle_favorite(
                 created_at: r.created_at,
                 updated_at: r.updated_at,
             };
-            
+
             (StatusCode::OK, Json(template)).into_response()
         }
-        Ok(None) => {
-            (
-                StatusCode::NOT_FOUND,
-                Json(serde_json::json!({ "error": "Template not found" })),
-            ).into_response()
-        }
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({ "error": "Template not found" })),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Failed to toggle favorite: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({ "error": "Failed to toggle favorite" })),
-            ).into_response()
+            )
+                .into_response()
         }
     }
 }

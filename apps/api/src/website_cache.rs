@@ -5,7 +5,7 @@ use std::time::Duration;
 use crate::cache::CacheService;
 
 /// Website cache entry
-/// 
+///
 /// NOTE: Prepared for caching published websites for public access.
 /// Will be integrated when public website routes are implemented.
 #[allow(dead_code)]
@@ -24,7 +24,7 @@ pub struct CachedWebsite {
 }
 
 /// Website caching service
-/// 
+///
 /// NOTE: Service for caching public website data with Redis.
 /// Prepared for future integration with public website routes.
 #[allow(dead_code)]
@@ -92,8 +92,25 @@ impl WebsiteCacheService {
     }
 
     /// Fetch website directly from database
-    async fn fetch_from_db(&self, slug: &str) -> Result<Option<CachedWebsite>, Box<dyn std::error::Error + Send + Sync>> {
-        let result = sqlx::query_as::<_, (uuid::Uuid, uuid::Uuid, String, String, String, String, String, Option<uuid::Uuid>, serde_json::Value, serde_json::Value)>(
+    async fn fetch_from_db(
+        &self,
+        slug: &str,
+    ) -> Result<Option<CachedWebsite>, Box<dyn std::error::Error + Send + Sync>> {
+        let result = sqlx::query_as::<
+            _,
+            (
+                uuid::Uuid,
+                uuid::Uuid,
+                String,
+                String,
+                String,
+                String,
+                String,
+                Option<uuid::Uuid>,
+                serde_json::Value,
+                serde_json::Value,
+            ),
+        >(
             r#"
             SELECT 
                 w.id, w.account_id, w.slug, w.title, w.tagline, w.status, 
@@ -102,30 +119,46 @@ impl WebsiteCacheService {
             FROM websites w
             LEFT JOIN website_data wd ON w.id = wd.website_id
             WHERE w.slug = $1 AND w.status = 'published'
-            "#
+            "#,
         )
         .bind(slug)
         .fetch_optional(&self.db_pool)
         .await?;
 
-        Ok(result.map(|(id, account_id, slug, title, tagline, status, creation_mode, preset_id, metadata, data)| {
-            CachedWebsite {
-                id: id.to_string(),
-                account_id: account_id.to_string(),
+        Ok(result.map(
+            |(
+                id,
+                account_id,
                 slug,
                 title,
                 tagline,
                 status,
                 creation_mode,
-                preset_id: preset_id.map(|p| p.to_string()),
+                preset_id,
                 metadata,
                 data,
-            }
-        }))
+            )| {
+                CachedWebsite {
+                    id: id.to_string(),
+                    account_id: account_id.to_string(),
+                    slug,
+                    title,
+                    tagline,
+                    status,
+                    creation_mode,
+                    preset_id: preset_id.map(|p| p.to_string()),
+                    metadata,
+                    data,
+                }
+            },
+        ))
     }
 
     /// Invalidate cache for a website
-    pub async fn invalidate_website(&self, slug: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn invalidate_website(
+        &self,
+        slug: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let cache_key = Self::website_cache_key(slug);
         self.cache.delete(&cache_key).await?;
         tracing::info!("Cache invalidated for website: {}", slug);
@@ -144,7 +177,7 @@ impl WebsiteCacheService {
 
         let key_refs: Vec<&str> = keys.iter().map(|k| k.as_str()).collect();
         self.cache.delete_many(&key_refs).await?;
-        
+
         tracing::info!("Cache invalidated for {} websites", slugs.len());
         Ok(())
     }
@@ -153,7 +186,9 @@ impl WebsiteCacheService {
     pub async fn clear_all(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // We could use a pattern match here if we have many website caches
         // For now, we'll be conservative and not flush everything
-        tracing::warn!("Website cache clear_all requested (not implemented - use invalidate_website instead)");
+        tracing::warn!(
+            "Website cache clear_all requested (not implemented - use invalidate_website instead)"
+        );
         Ok(())
     }
 }
@@ -185,7 +220,7 @@ mod tests {
 
         let json = serde_json::to_string(&website).unwrap();
         let deserialized: CachedWebsite = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(deserialized.slug, "test");
         assert_eq!(deserialized.status, "published");
         assert_eq!(deserialized.creation_mode, "from_scratch");
@@ -208,7 +243,7 @@ mod tests {
 
         let json = serde_json::to_string(&website).unwrap();
         let deserialized: CachedWebsite = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(deserialized.creation_mode, "from_preset");
         assert_eq!(deserialized.preset_id, Some("789".to_string()));
     }

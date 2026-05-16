@@ -33,7 +33,9 @@ pub fn parse_manifest_file(path: &Path) -> Result<ExtensionManifest, ManifestPar
 }
 
 /// Parse a manifest without validation (useful for partial manifests)
-pub fn parse_manifest_unchecked(toml_content: &str) -> Result<ExtensionManifest, ManifestParseError> {
+pub fn parse_manifest_unchecked(
+    toml_content: &str,
+) -> Result<ExtensionManifest, ManifestParseError> {
     let manifest: ExtensionManifest = toml::from_str(toml_content)?;
     Ok(manifest)
 }
@@ -148,7 +150,7 @@ fields = ["github_username", "auto_sync", "include_forks", "max_repos"]
     #[test]
     fn test_parse_github_sync_manifest() {
         let manifest = parse_manifest(GITHUB_SYNC_MANIFEST).expect("Failed to parse manifest");
-        
+
         assert_eq!(manifest.extension.slug, "github-sync");
         assert_eq!(manifest.extension.name, "Github Sync");
         assert_eq!(manifest.extension.version, "1.0.0");
@@ -168,9 +170,9 @@ version = "0.1.0"
 description = "A minimal extension"
 category = "utility"
 "#;
-        
+
         let manifest = parse_manifest(minimal).expect("Failed to parse minimal manifest");
-        
+
         assert_eq!(manifest.extension.slug, "minimal-ext");
         assert!(manifest.fields.is_empty());
         assert!(manifest.actions.is_empty());
@@ -190,9 +192,9 @@ category = "integration"
 scopes = ["website:read", "website:write", "storage:read"]
 external_services = ["github.com", "api.github.com"]
 "#;
-        
+
         let manifest = parse_manifest(with_perms).expect("Failed to parse manifest");
-        
+
         let perms = manifest.permissions.expect("Missing permissions");
         assert_eq!(perms.scopes.len(), 3);
         assert_eq!(perms.external_services.len(), 2);
@@ -215,9 +217,9 @@ currency = "EUR"
 interval = "month"
 trial_days = 14
 "#;
-        
+
         let manifest = parse_manifest(with_pricing).expect("Failed to parse manifest");
-        
+
         let pricing = manifest.pricing.expect("Missing pricing");
         assert_eq!(pricing.price, Some(999));
         assert_eq!(pricing.trial_days, 14);
@@ -233,7 +235,7 @@ version = "1.0.0"
 description = "Invalid slug"
 category = "utility"
 "#;
-        
+
         let result = parse_manifest(invalid);
         assert!(result.is_err());
     }
@@ -248,7 +250,7 @@ version = "v1.0"
 description = "Invalid version"
 category = "utility"
 "#;
-        
+
         let result = parse_manifest(invalid);
         assert!(result.is_err());
     }
@@ -275,9 +277,9 @@ type = "text"
 label = "Feature Configuration"
 conditions = { show_when = { enable_feature = true } }
 "#;
-        
+
         let manifest = parse_manifest(conditional).expect("Failed to parse manifest");
-        
+
         let feature_config = &manifest.fields[1];
         assert!(feature_config.conditions.is_some());
         let conditions = feature_config.conditions.as_ref().unwrap();
@@ -300,9 +302,9 @@ on_uninstall = "/hooks/uninstall"
 on_enable = "/hooks/enable"
 on_config_change = "/hooks/config-changed"
 "#;
-        
+
         let manifest = parse_manifest(with_lifecycle).expect("Failed to parse manifest");
-        
+
         let lifecycle = manifest.lifecycle.expect("Missing lifecycle");
         assert_eq!(lifecycle.on_install, Some("/hooks/install".to_string()));
         assert!(lifecycle.on_disable.is_none());
@@ -313,7 +315,7 @@ on_config_change = "/hooks/config-changed"
         let manifest = parse_manifest(GITHUB_SYNC_MANIFEST).expect("Failed to parse manifest");
         let serialized = serialize_manifest(&manifest).expect("Failed to serialize");
         let reparsed = parse_manifest(&serialized).expect("Failed to reparse");
-        
+
         assert_eq!(manifest.extension.slug, reparsed.extension.slug);
         assert_eq!(manifest.fields.len(), reparsed.fields.len());
     }

@@ -1,8 +1,8 @@
-                //! Website element queries
+//! Website element queries
 
+use serde_json::Value as JsonValue;
 use sqlx::PgPool;
 use uuid::Uuid;
-use serde_json::Value as JsonValue;
 
 use super::types::WebsiteElementRow;
 
@@ -17,7 +17,22 @@ pub async fn list_website_elements(
         return Err("Website not found".into());
     }
 
-    let rows = sqlx::query_as::<_, (Uuid, Uuid, Option<Uuid>, String, String, String, i32, String, JsonValue, JsonValue, bool)>(
+    let rows = sqlx::query_as::<
+        _,
+        (
+            Uuid,
+            Uuid,
+            Option<Uuid>,
+            String,
+            String,
+            String,
+            i32,
+            String,
+            JsonValue,
+            JsonValue,
+            bool,
+        ),
+    >(
         r#"
         SELECT 
             id, website_id, extension_id, element_type, slug, title,
@@ -25,27 +40,44 @@ pub async fn list_website_elements(
         FROM website_elements
         WHERE website_id = $1
         ORDER BY "order"
-        "#
+        "#,
     )
     .bind(website_id)
     .fetch_all(pool)
     .await?;
 
-    Ok(rows.into_iter().map(|(id, website_id, extension_id, element_type, slug, title, order, layout, settings, data, visible)| {
-        WebsiteElementRow {
-            id,
-            website_id,
-            extension_id,
-            element_type,
-            slug,
-            title,
-            order,
-            layout,
-            settings,
-            data,
-            visible,
-        }
-    }).collect())
+    Ok(rows
+        .into_iter()
+        .map(
+            |(
+                id,
+                website_id,
+                extension_id,
+                element_type,
+                slug,
+                title,
+                order,
+                layout,
+                settings,
+                data,
+                visible,
+            )| {
+                WebsiteElementRow {
+                    id,
+                    website_id,
+                    extension_id,
+                    element_type,
+                    slug,
+                    title,
+                    order,
+                    layout,
+                    settings,
+                    data,
+                    visible,
+                }
+            },
+        )
+        .collect())
 }
 
 /// Create an element for a website
@@ -180,13 +212,11 @@ pub async fn delete_website_element(
         return Ok(false);
     }
 
-    let result = sqlx::query(
-        "DELETE FROM website_elements WHERE id = $1 AND website_id = $2"
-    )
-    .bind(element_id)
-    .bind(website_id)
-    .execute(pool)
-    .await?;
+    let result = sqlx::query("DELETE FROM website_elements WHERE id = $1 AND website_id = $2")
+        .bind(element_id)
+        .bind(website_id)
+        .execute(pool)
+        .await?;
 
     Ok(result.rows_affected() > 0)
 }
@@ -225,7 +255,22 @@ pub async fn list_public_website_elements(
     pool: &PgPool,
     website_id: Uuid,
 ) -> Result<Vec<WebsiteElementRow>, Box<dyn std::error::Error + Send + Sync>> {
-    let rows = sqlx::query_as::<_, (Uuid, Uuid, Option<Uuid>, String, String, String, i32, String, JsonValue, JsonValue, bool)>(
+    let rows = sqlx::query_as::<
+        _,
+        (
+            Uuid,
+            Uuid,
+            Option<Uuid>,
+            String,
+            String,
+            String,
+            i32,
+            String,
+            JsonValue,
+            JsonValue,
+            bool,
+        ),
+    >(
         r#"
         SELECT 
             id, website_id, extension_id, element_type, slug, title,
@@ -233,25 +278,42 @@ pub async fn list_public_website_elements(
         FROM website_elements
         WHERE website_id = $1 AND visible = true
         ORDER BY "order"
-        "#
+        "#,
     )
     .bind(website_id)
     .fetch_all(pool)
     .await?;
 
-    Ok(rows.into_iter().map(|(id, website_id, extension_id, element_type, slug, title, order, layout, settings, data, visible)| {
-        WebsiteElementRow {
-            id,
-            website_id,
-            extension_id,
-            element_type,
-            slug,
-            title,
-            order,
-            layout,
-            settings,
-            data,
-            visible,
-        }
-    }).collect())
+    Ok(rows
+        .into_iter()
+        .map(
+            |(
+                id,
+                website_id,
+                extension_id,
+                element_type,
+                slug,
+                title,
+                order,
+                layout,
+                settings,
+                data,
+                visible,
+            )| {
+                WebsiteElementRow {
+                    id,
+                    website_id,
+                    extension_id,
+                    element_type,
+                    slug,
+                    title,
+                    order,
+                    layout,
+                    settings,
+                    data,
+                    visible,
+                }
+            },
+        )
+        .collect())
 }

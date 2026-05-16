@@ -1,7 +1,7 @@
 use axum::{
-    extract::{Path, State, Extension},
-    response::IntoResponse,
+    extract::{Extension, Path, State},
     http::StatusCode,
+    response::IntoResponse,
     Json,
 };
 use serde::{Deserialize, Serialize};
@@ -37,7 +37,7 @@ fn validate_account_data(data: &serde_json::Value) -> Result<(), &'static str> {
     if serialized.len() > MAX_ACCOUNT_DATA_SIZE {
         return Err("Data payload too large (max 64KB)");
     }
-    
+
     // Check nesting depth
     fn check_depth(value: &serde_json::Value, current_depth: usize) -> bool {
         if current_depth > MAX_JSON_DEPTH {
@@ -47,17 +47,15 @@ fn validate_account_data(data: &serde_json::Value) -> Result<(), &'static str> {
             serde_json::Value::Object(map) => {
                 map.values().all(|v| check_depth(v, current_depth + 1))
             }
-            serde_json::Value::Array(arr) => {
-                arr.iter().all(|v| check_depth(v, current_depth + 1))
-            }
+            serde_json::Value::Array(arr) => arr.iter().all(|v| check_depth(v, current_depth + 1)),
             _ => true,
         }
     }
-    
+
     if !check_depth(data, 0) {
         return Err("JSON nesting too deep (max 10 levels)");
     }
-    
+
     Ok(())
 }
 
@@ -70,9 +68,13 @@ pub async fn get_account(
     let account_id = match Uuid::parse_str(&id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid account ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid account ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -80,16 +82,24 @@ pub async fn get_account(
     let claims_account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
     if account_id != claims_account_id {
-        return (StatusCode::FORBIDDEN, Json(serde_json::json!({
-            "error": "Access denied"
-        }))).into_response();
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({
+                "error": "Access denied"
+            })),
+        )
+            .into_response();
     }
 
     // Query account and account_data
@@ -108,29 +118,40 @@ pub async fn get_account(
     match result {
         Ok(Some(account)) => {
             // Extract avatar_file_id from account_data and generate URL
-            let avatar_url = account.data
+            let avatar_url = account
+                .data
                 .get("avatar_file_id")
                 .and_then(|v| v.as_str())
                 .map(|file_id| format!("/files/{}", file_id));
 
-            (StatusCode::OK, Json(AccountData {
-                id: account.id.to_string(),
-                email: account.email,
-                plan: account.plan,
-                data: account.data,
-                avatar_url,
-            })).into_response()
+            (
+                StatusCode::OK,
+                Json(AccountData {
+                    id: account.id.to_string(),
+                    email: account.email,
+                    plan: account.plan,
+                    data: account.data,
+                    avatar_url,
+                }),
+            )
+                .into_response()
         }
-        Ok(None) => {
-            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
                 "error": "Account not found"
-            }))).into_response()
-        }
+            })),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Database error fetching account: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -145,9 +166,13 @@ pub async fn update_account(
     let account_id = match Uuid::parse_str(&id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid account ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid account ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -155,23 +180,35 @@ pub async fn update_account(
     let claims_account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
     if account_id != claims_account_id {
-        return (StatusCode::FORBIDDEN, Json(serde_json::json!({
-            "error": "Access denied"
-        }))).into_response();
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({
+                "error": "Access denied"
+            })),
+        )
+            .into_response();
     }
 
     // Validate payload data (size, depth, structure)
     if let Err(e) = validate_account_data(&payload.data) {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": e
-        }))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": e
+            })),
+        )
+            .into_response();
     }
 
     // Update account_data
@@ -189,16 +226,22 @@ pub async fn update_account(
     .await;
 
     match result {
-        Ok(_) => {
-            (StatusCode::OK, Json(serde_json::json!({
+        Ok(_) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
                 "message": "Account data updated successfully"
-            }))).into_response()
-        }
+            })),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Database error updating account: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -214,9 +257,13 @@ pub async fn delete_account(
     let account_id = match Uuid::parse_str(&id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid account ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid account ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -224,16 +271,24 @@ pub async fn delete_account(
     let claims_account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
     if account_id != claims_account_id {
-        return (StatusCode::FORBIDDEN, Json(serde_json::json!({
-            "error": "You can only delete your own account"
-        }))).into_response();
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({
+                "error": "You can only delete your own account"
+            })),
+        )
+            .into_response();
     }
 
     // Start a transaction to ensure all deletions succeed or none do
@@ -241,61 +296,93 @@ pub async fn delete_account(
         Ok(tx) => tx,
         Err(e) => {
             tracing::error!("Failed to start transaction: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
     // Delete order: child tables first, then parent
     // This follows foreign key constraints
-    
+
     // 1. Delete refresh tokens (sessions)
     if let Err(e) = sqlx::query!(
         "DELETE FROM refresh_tokens WHERE account_id = $1",
         account_id
-    ).execute(&mut *tx).await {
+    )
+    .execute(&mut *tx)
+    .await
+    {
         tracing::error!("Failed to delete refresh tokens: {}", e);
         let _ = tx.rollback().await;
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Failed to delete account data"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Failed to delete account data"
+            })),
+        )
+            .into_response();
     }
 
     // 2. Delete password reset tokens
     if let Err(e) = sqlx::query!(
         "DELETE FROM password_reset_tokens WHERE account_id = $1",
         account_id
-    ).execute(&mut *tx).await {
+    )
+    .execute(&mut *tx)
+    .await
+    {
         tracing::error!("Failed to delete password reset tokens: {}", e);
         let _ = tx.rollback().await;
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Failed to delete account data"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Failed to delete account data"
+            })),
+        )
+            .into_response();
     }
 
     // 3. Delete notifications
     if let Err(e) = sqlx::query!(
         "DELETE FROM notifications WHERE account_id = $1",
         account_id
-    ).execute(&mut *tx).await {
+    )
+    .execute(&mut *tx)
+    .await
+    {
         tracing::error!("Failed to delete notifications: {}", e);
         let _ = tx.rollback().await;
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Failed to delete account data"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Failed to delete account data"
+            })),
+        )
+            .into_response();
     }
 
     // 4. Delete notification queue items
     if let Err(e) = sqlx::query!(
         "DELETE FROM notification_queue WHERE account_id = $1",
         account_id
-    ).execute(&mut *tx).await {
+    )
+    .execute(&mut *tx)
+    .await
+    {
         tracing::error!("Failed to delete notification queue: {}", e);
         let _ = tx.rollback().await;
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Failed to delete account data"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Failed to delete account data"
+            })),
+        )
+            .into_response();
     }
 
     // 5-6. Optional tables: file_audit_logs and file_contents.
@@ -332,41 +419,56 @@ pub async fn delete_account(
     }
 
     // 7. Delete files metadata
-    if let Err(e) = sqlx::query!(
-        "DELETE FROM files WHERE account_id = $1",
-        account_id
-    ).execute(&mut *tx).await {
+    if let Err(e) = sqlx::query!("DELETE FROM files WHERE account_id = $1", account_id)
+        .execute(&mut *tx)
+        .await
+    {
         tracing::error!("Failed to delete files: {}", e);
         let _ = tx.rollback().await;
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Failed to delete account data"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Failed to delete account data"
+            })),
+        )
+            .into_response();
     }
 
     // 8. Delete storage quota
     if let Err(e) = sqlx::query!(
         "DELETE FROM account_storage_quota WHERE account_id = $1",
         account_id
-    ).execute(&mut *tx).await {
+    )
+    .execute(&mut *tx)
+    .await
+    {
         tracing::error!("Failed to delete storage quota: {}", e);
         let _ = tx.rollback().await;
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Failed to delete account data"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Failed to delete account data"
+            })),
+        )
+            .into_response();
     }
 
     // 9. Get all websites owned by this account
-    let websites = match sqlx::query!(
-        "SELECT id FROM websites WHERE account_id = $1",
-        account_id
-    ).fetch_all(&mut *tx).await {
+    let websites = match sqlx::query!("SELECT id FROM websites WHERE account_id = $1", account_id)
+        .fetch_all(&mut *tx)
+        .await
+    {
         Ok(websites) => websites,
         Err(e) => {
             tracing::error!("Failed to fetch websites: {}", e);
             let _ = tx.rollback().await;
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Failed to delete account data"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to delete account data"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -378,102 +480,146 @@ pub async fn delete_account(
         if let Err(e) = sqlx::query!(
             "DELETE FROM website_elements WHERE website_id = $1",
             website_id
-        ).execute(&mut *tx).await {
+        )
+        .execute(&mut *tx)
+        .await
+        {
             tracing::error!("Failed to delete website elements: {}", e);
             let _ = tx.rollback().await;
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Failed to delete account data"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to delete account data"
+                })),
+            )
+                .into_response();
         }
 
         // Delete website extensions
         if let Err(e) = sqlx::query!(
             "DELETE FROM website_extensions WHERE website_id = $1",
             website_id
-        ).execute(&mut *tx).await {
+        )
+        .execute(&mut *tx)
+        .await
+        {
             tracing::error!("Failed to delete website extensions: {}", e);
             let _ = tx.rollback().await;
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Failed to delete account data"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to delete account data"
+                })),
+            )
+                .into_response();
         }
 
         // Delete website pages
         if let Err(e) = sqlx::query!(
             "DELETE FROM website_pages WHERE website_id = $1",
             website_id
-        ).execute(&mut *tx).await {
+        )
+        .execute(&mut *tx)
+        .await
+        {
             tracing::error!("Failed to delete website pages: {}", e);
             let _ = tx.rollback().await;
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Failed to delete account data"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to delete account data"
+                })),
+            )
+                .into_response();
         }
 
         // Delete website data
-        if let Err(e) = sqlx::query!(
-            "DELETE FROM website_data WHERE website_id = $1",
-            website_id
-        ).execute(&mut *tx).await {
+        if let Err(e) = sqlx::query!("DELETE FROM website_data WHERE website_id = $1", website_id)
+            .execute(&mut *tx)
+            .await
+        {
             tracing::error!("Failed to delete website data: {}", e);
             let _ = tx.rollback().await;
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Failed to delete account data"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to delete account data"
+                })),
+            )
+                .into_response();
         }
     }
 
     // 10. Delete all websites
-    if let Err(e) = sqlx::query!(
-        "DELETE FROM websites WHERE account_id = $1",
-        account_id
-    ).execute(&mut *tx).await {
+    if let Err(e) = sqlx::query!("DELETE FROM websites WHERE account_id = $1", account_id)
+        .execute(&mut *tx)
+        .await
+    {
         tracing::error!("Failed to delete websites: {}", e);
         let _ = tx.rollback().await;
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Failed to delete account data"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Failed to delete account data"
+            })),
+        )
+            .into_response();
     }
 
     // 11. Delete account data (JSONB settings, integrations, etc.)
-    if let Err(e) = sqlx::query!(
-        "DELETE FROM account_data WHERE account_id = $1",
-        account_id
-    ).execute(&mut *tx).await {
+    if let Err(e) = sqlx::query!("DELETE FROM account_data WHERE account_id = $1", account_id)
+        .execute(&mut *tx)
+        .await
+    {
         tracing::error!("Failed to delete account data: {}", e);
         let _ = tx.rollback().await;
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": "Failed to delete account data"
-        }))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Failed to delete account data"
+            })),
+        )
+            .into_response();
     }
 
     // 12. Finally, delete the account itself
-    let result = sqlx::query!(
-        "DELETE FROM accounts WHERE id = $1",
-        account_id
-    ).execute(&mut *tx).await;
+    let result = sqlx::query!("DELETE FROM accounts WHERE id = $1", account_id)
+        .execute(&mut *tx)
+        .await;
 
     match result {
         Ok(_) => {
             // Commit transaction
             if let Err(e) = tx.commit().await {
                 tracing::error!("Failed to commit transaction: {}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                    "error": "Failed to complete account deletion"
-                }))).into_response();
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({
+                        "error": "Failed to complete account deletion"
+                    })),
+                )
+                    .into_response();
             }
 
             tracing::info!("Account deleted successfully: {}", account_id);
-            (StatusCode::OK, Json(serde_json::json!({
-                "message": "Account and all associated data deleted successfully"
-            }))).into_response()
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "message": "Account and all associated data deleted successfully"
+                })),
+            )
+                .into_response()
         }
         Err(e) => {
             tracing::error!("Failed to delete account: {}", e);
             let _ = tx.rollback().await;
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Failed to delete account"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to delete account"
+                })),
+            )
+                .into_response()
         }
     }
 }

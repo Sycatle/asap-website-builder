@@ -25,26 +25,21 @@ impl AIContextCache {
     }
 
     /// Get cached website context
-    pub async fn get_website_context<T: DeserializeOwned>(
-        &self,
-        website_id: Uuid,
-    ) -> Option<T> {
+    pub async fn get_website_context<T: DeserializeOwned>(&self, website_id: Uuid) -> Option<T> {
         let key = format!("ai:ctx:website:{}", website_id);
         let mut conn = self.redis.clone();
-        
+
         match conn.get::<_, Option<String>>(&key).await {
-            Ok(Some(data)) => {
-                match serde_json::from_str(&data) {
-                    Ok(ctx) => {
-                        tracing::debug!("AI context cache HIT for website {}", website_id);
-                        Some(ctx)
-                    }
-                    Err(e) => {
-                        tracing::warn!("Failed to deserialize cached context: {}", e);
-                        None
-                    }
+            Ok(Some(data)) => match serde_json::from_str(&data) {
+                Ok(ctx) => {
+                    tracing::debug!("AI context cache HIT for website {}", website_id);
+                    Some(ctx)
                 }
-            }
+                Err(e) => {
+                    tracing::warn!("Failed to deserialize cached context: {}", e);
+                    None
+                }
+            },
             Ok(None) => {
                 tracing::debug!("AI context cache MISS for website {}", website_id);
                 None
@@ -70,38 +65,41 @@ impl AIContextCache {
                 return Ok(()); // Silently skip caching on serialization error
             }
         };
-        
+
         let mut conn = self.redis.clone();
-        conn.set_ex::<_, _, ()>(&key, &data, CACHE_TTL_SECONDS as u64).await?;
-        
-        tracing::debug!("Cached AI context for website {} (TTL: {}s)", website_id, CACHE_TTL_SECONDS);
+        conn.set_ex::<_, _, ()>(&key, &data, CACHE_TTL_SECONDS as u64)
+            .await?;
+
+        tracing::debug!(
+            "Cached AI context for website {} (TTL: {}s)",
+            website_id,
+            CACHE_TTL_SECONDS
+        );
         Ok(())
     }
 
     /// Invalidate website context cache
     /// Call this when website data is updated
-    pub async fn invalidate_website_context(&self, website_id: Uuid) -> Result<(), redis::RedisError> {
+    pub async fn invalidate_website_context(
+        &self,
+        website_id: Uuid,
+    ) -> Result<(), redis::RedisError> {
         let key = format!("ai:ctx:website:{}", website_id);
         let mut conn = self.redis.clone();
         conn.del::<_, ()>(&key).await?;
-        
+
         tracing::debug!("Invalidated AI context cache for website {}", website_id);
         Ok(())
     }
 
     /// Get cached user context
-    pub async fn get_user_context<T: DeserializeOwned>(
-        &self,
-        account_id: Uuid,
-    ) -> Option<T> {
+    pub async fn get_user_context<T: DeserializeOwned>(&self, account_id: Uuid) -> Option<T> {
         let key = format!("ai:ctx:user:{}", account_id);
         let mut conn = self.redis.clone();
-        
+
         match conn.get::<_, Option<String>>(&key).await {
-            Ok(Some(data)) => {
-                serde_json::from_str(&data).ok()
-            }
-            _ => None
+            Ok(Some(data)) => serde_json::from_str(&data).ok(),
+            _ => None,
         }
     }
 
@@ -116,10 +114,11 @@ impl AIContextCache {
             Ok(d) => d,
             Err(_) => return Ok(()), // Silently skip on error
         };
-        
+
         let mut conn = self.redis.clone();
-        conn.set_ex::<_, _, ()>(&key, &data, CACHE_TTL_SECONDS as u64).await?;
-        
+        conn.set_ex::<_, _, ()>(&key, &data, CACHE_TTL_SECONDS as u64)
+            .await?;
+
         Ok(())
     }
 
@@ -128,7 +127,7 @@ impl AIContextCache {
         let key = format!("ai:ctx:user:{}", account_id);
         let mut conn = self.redis.clone();
         conn.del::<_, ()>(&key).await?;
-        
+
         Ok(())
     }
 }

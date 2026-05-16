@@ -1,8 +1,8 @@
 //! Preset queries
 
+use serde_json::Value as JsonValue;
 use sqlx::PgPool;
 use uuid::Uuid;
-use serde_json::Value as JsonValue;
 
 use super::types::PresetRow;
 
@@ -40,28 +40,42 @@ struct PageElementBatch {
 pub async fn list_presets(
     pool: &PgPool,
 ) -> Result<Vec<PresetRow>, Box<dyn std::error::Error + Send + Sync>> {
-    let rows = sqlx::query_as::<_, (Uuid, String, String, String, String, JsonValue, Option<String>)>(
+    let rows = sqlx::query_as::<
+        _,
+        (
+            Uuid,
+            String,
+            String,
+            String,
+            String,
+            JsonValue,
+            Option<String>,
+        ),
+    >(
         r#"
         SELECT id, name, slug, description, category, config, thumbnail_url
         FROM presets
         WHERE enabled = true
         ORDER BY name
-        "#
+        "#,
     )
     .fetch_all(pool)
     .await?;
 
-    Ok(rows.into_iter().map(|(id, name, slug, description, category, config, thumbnail_url)| {
-        PresetRow {
-            id,
-            name,
-            slug,
-            description,
-            category,
-            config,
-            thumbnail_url,
-        }
-    }).collect())
+    Ok(rows
+        .into_iter()
+        .map(
+            |(id, name, slug, description, category, config, thumbnail_url)| PresetRow {
+                id,
+                name,
+                slug,
+                description,
+                category,
+                config,
+                thumbnail_url,
+            },
+        )
+        .collect())
 }
 
 /// Create website from preset
@@ -74,12 +88,11 @@ pub async fn create_website_from_preset(
     tagline: &str,
 ) -> Result<Uuid, Box<dyn std::error::Error + Send + Sync>> {
     // Get preset
-    let preset: Option<(JsonValue,)> = sqlx::query_as(
-        "SELECT config FROM presets WHERE id = $1 AND enabled = true"
-    )
-    .bind(preset_id)
-    .fetch_optional(pool)
-    .await?;
+    let preset: Option<(JsonValue,)> =
+        sqlx::query_as("SELECT config FROM presets WHERE id = $1 AND enabled = true")
+            .bind(preset_id)
+            .fetch_optional(pool)
+            .await?;
 
     let config = match preset {
         Some((c,)) => c,
@@ -94,7 +107,7 @@ pub async fn create_website_from_preset(
         r#"
         INSERT INTO websites (id, account_id, slug, title, tagline, creation_mode, preset_id)
         VALUES ($1, $2, $3, $4, $5, 'from_preset', $6)
-        "#
+        "#,
     )
     .bind(website_id)
     .bind(account_id)
@@ -106,12 +119,10 @@ pub async fn create_website_from_preset(
     .await?;
 
     // Create website data
-    sqlx::query(
-        "INSERT INTO website_data (website_id) VALUES ($1)"
-    )
-    .bind(website_id)
-    .execute(&mut *tx)
-    .await?;
+    sqlx::query("INSERT INTO website_data (website_id) VALUES ($1)")
+        .bind(website_id)
+        .execute(&mut *tx)
+        .await?;
 
     // Activate extensions from preset config
     if let Some(extensions) = config.get("extensions").and_then(|m| m.as_array()) {
@@ -149,8 +160,14 @@ pub async fn create_website_from_preset(
         for (page_order, page) in pages.iter().enumerate() {
             let page_slug = page.get("slug").and_then(|s| s.as_str()).unwrap_or("");
             let page_title = page.get("title").and_then(|s| s.as_str()).unwrap_or("Page");
-            let page_description = page.get("description").and_then(|s| s.as_str()).unwrap_or("");
-            let is_homepage = page.get("is_homepage").and_then(|h| h.as_bool()).unwrap_or(false);
+            let page_description = page
+                .get("description")
+                .and_then(|s| s.as_str())
+                .unwrap_or("");
+            let is_homepage = page
+                .get("is_homepage")
+                .and_then(|h| h.as_bool())
+                .unwrap_or(false);
 
             let page_id = Uuid::new_v4();
             page_batches.push(PageBatch {
@@ -164,15 +181,29 @@ pub async fn create_website_from_preset(
             });
 
             // Collect elements for this page (supports both "elements" and "sections" keys)
-            if let Some(elements) = page.get("elements").and_then(|s| s.as_array())
-                .or_else(|| page.get("sections").and_then(|s| s.as_array())) {
+            if let Some(elements) = page
+                .get("elements")
+                .and_then(|s| s.as_array())
+                .or_else(|| page.get("sections").and_then(|s| s.as_array()))
+            {
                 for (element_order, element) in elements.iter().enumerate() {
-                    let element_type = element.get("element_type").and_then(|s| s.as_str())
+                    let element_type = element
+                        .get("element_type")
+                        .and_then(|s| s.as_str())
                         .or_else(|| element.get("section_type").and_then(|s| s.as_str()))
                         .unwrap_or("custom");
-                    let element_slug = element.get("slug").and_then(|s| s.as_str()).unwrap_or("element");
-                    let element_title = element.get("title").and_then(|s| s.as_str()).unwrap_or("Element");
-                    let layout = element.get("layout").and_then(|l| l.as_str()).unwrap_or("full");
+                    let element_slug = element
+                        .get("slug")
+                        .and_then(|s| s.as_str())
+                        .unwrap_or("element");
+                    let element_title = element
+                        .get("title")
+                        .and_then(|s| s.as_str())
+                        .unwrap_or("Element");
+                    let layout = element
+                        .get("layout")
+                        .and_then(|l| l.as_str())
+                        .unwrap_or("full");
                     let default_settings = serde_json::json!({});
                     let settings = element.get("settings").unwrap_or(&default_settings).clone();
 
@@ -196,8 +227,11 @@ pub async fn create_website_from_preset(
                 }
             }
         }
-    } else if let Some(elements) = config.get("elements").and_then(|s| s.as_array())
-                .or_else(|| config.get("sections").and_then(|s| s.as_array())) {
+    } else if let Some(elements) = config
+        .get("elements")
+        .and_then(|s| s.as_array())
+        .or_else(|| config.get("sections").and_then(|s| s.as_array()))
+    {
         // Fallback: Legacy support for old presets with elements/sections at root level
         let page_id = Uuid::new_v4();
         page_batches.push(PageBatch {
@@ -211,12 +245,23 @@ pub async fn create_website_from_preset(
         });
 
         for (order, element) in elements.iter().enumerate() {
-            let element_type = element.get("element_type").and_then(|s| s.as_str())
+            let element_type = element
+                .get("element_type")
+                .and_then(|s| s.as_str())
                 .or_else(|| element.get("section_type").and_then(|s| s.as_str()))
                 .unwrap_or("custom");
-            let element_slug = element.get("slug").and_then(|s| s.as_str()).unwrap_or("element");
-            let element_title = element.get("title").and_then(|s| s.as_str()).unwrap_or("Element");
-            let layout = element.get("layout").and_then(|l| l.as_str()).unwrap_or("full");
+            let element_slug = element
+                .get("slug")
+                .and_then(|s| s.as_str())
+                .unwrap_or("element");
+            let element_title = element
+                .get("title")
+                .and_then(|s| s.as_str())
+                .unwrap_or("Element");
+            let layout = element
+                .get("layout")
+                .and_then(|l| l.as_str())
+                .unwrap_or("full");
             let default_settings = serde_json::json!({});
             let settings = element.get("settings").unwrap_or(&default_settings).clone();
 
@@ -246,7 +291,8 @@ pub async fn create_website_from_preset(
         let website_ids: Vec<Uuid> = page_batches.iter().map(|p| p.website_id).collect();
         let slugs: Vec<String> = page_batches.iter().map(|p| p.slug.clone()).collect();
         let titles: Vec<String> = page_batches.iter().map(|p| p.title.clone()).collect();
-        let descriptions: Vec<String> = page_batches.iter().map(|p| p.description.clone()).collect();
+        let descriptions: Vec<String> =
+            page_batches.iter().map(|p| p.description.clone()).collect();
         let is_homepages: Vec<bool> = page_batches.iter().map(|p| p.is_homepage).collect();
         let orders: Vec<i32> = page_batches.iter().map(|p| p.order).collect();
 
@@ -272,7 +318,10 @@ pub async fn create_website_from_preset(
     if !element_batches.is_empty() {
         let ids: Vec<Uuid> = element_batches.iter().map(|e| e.id).collect();
         let website_ids: Vec<Uuid> = element_batches.iter().map(|e| e.website_id).collect();
-        let element_types: Vec<String> = element_batches.iter().map(|e| e.element_type.clone()).collect();
+        let element_types: Vec<String> = element_batches
+            .iter()
+            .map(|e| e.element_type.clone())
+            .collect();
         let slugs: Vec<String> = element_batches.iter().map(|e| e.slug.clone()).collect();
         let titles: Vec<String> = element_batches.iter().map(|e| e.title.clone()).collect();
         let orders: Vec<i32> = element_batches.iter().map(|e| e.order).collect();
@@ -300,7 +349,10 @@ pub async fn create_website_from_preset(
     // Batch insert page-element links (single query with UNNEST)
     if !page_element_batches.is_empty() {
         let page_ids: Vec<Uuid> = page_element_batches.iter().map(|pe| pe.page_id).collect();
-        let element_ids: Vec<Uuid> = page_element_batches.iter().map(|pe| pe.element_id).collect();
+        let element_ids: Vec<Uuid> = page_element_batches
+            .iter()
+            .map(|pe| pe.element_id)
+            .collect();
         let orders: Vec<i32> = page_element_batches.iter().map(|pe| pe.order).collect();
 
         sqlx::query(

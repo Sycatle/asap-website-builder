@@ -1,6 +1,6 @@
 use sqlx::PgPool;
 use tokio::time::{interval, Duration};
-use tracing::{info, error};
+use tracing::{error, info};
 
 /// FileCleanupTask handles periodic cleanup of files and metadata
 pub struct FileCleanupTask {
@@ -19,7 +19,7 @@ impl FileCleanupTask {
 
         loop {
             cleanup_interval.tick().await;
-            
+
             if let Err(e) = self.run_cleanup().await {
                 error!("File cleanup task failed: {}", e);
             }
@@ -54,7 +54,7 @@ impl FileCleanupTask {
     async fn cleanup_orphaned_files(&self) -> anyhow::Result<u64> {
         let result = sqlx::query(
             "DELETE FROM files 
-             WHERE account_id NOT IN (SELECT id FROM accounts)"
+             WHERE account_id NOT IN (SELECT id FROM accounts)",
         )
         .execute(&self.pool)
         .await?;
@@ -66,7 +66,7 @@ impl FileCleanupTask {
     async fn cleanup_old_audit_logs(&self) -> anyhow::Result<u64> {
         let result = sqlx::query(
             "DELETE FROM file_operations_audit 
-             WHERE created_at < now() - interval '90 days'"
+             WHERE created_at < now() - interval '90 days'",
         )
         .execute(&self.pool)
         .await?;
@@ -78,7 +78,7 @@ impl FileCleanupTask {
     async fn cleanup_deleted_user_quotas(&self) -> anyhow::Result<u64> {
         let result = sqlx::query(
             "DELETE FROM account_storage_quota 
-             WHERE account_id NOT IN (SELECT id FROM accounts)"
+             WHERE account_id NOT IN (SELECT id FROM accounts)",
         )
         .execute(&self.pool)
         .await?;
@@ -101,7 +101,7 @@ impl FileCleanupTask {
                  SELECT COALESCE(SUM(compressed_size), 0)
                  FROM files
                  WHERE files.account_id = account_storage_quota.account_id
-             )"
+             )",
         )
         .execute(&self.pool)
         .await?;

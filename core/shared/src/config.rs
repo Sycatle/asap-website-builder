@@ -1,5 +1,5 @@
-use std::env;
 use crate::errors::SharedError;
+use std::env;
 
 pub type Result<T> = std::result::Result<T, SharedError>;
 
@@ -24,7 +24,7 @@ impl SharedConfig {
             Err(_) => {
                 if is_production {
                     return Err(SharedError::ConfigError(
-                        "JWT_SECRET must be set in production environment".to_string()
+                        "JWT_SECRET must be set in production environment".to_string(),
                     ));
                 }
                 tracing::warn!("JWT_SECRET not set, using default (NOT SECURE FOR PRODUCTION)");

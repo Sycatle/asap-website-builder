@@ -25,7 +25,11 @@ pub async fn check_account_payment_status(
     let dubious_statuses = ["incomplete", "past_due", "unpaid"];
     if let Some(status) = account.plan_status {
         if dubious_statuses.contains(&status.as_str()) {
-            tracing::warn!("Account {} has dubious payment status: {}", account_id, status);
+            tracing::warn!(
+                "Account {} has dubious payment status: {}",
+                account_id,
+                status
+            );
             return Ok(true);
         }
     }
@@ -113,7 +117,7 @@ mod tests {
             status: Some("active".to_string()),
             current_period_end: None,
         };
-        
+
         assert!(info.is_active());
         assert!(!info.is_expired());
     }
@@ -126,7 +130,7 @@ mod tests {
             status: Some("past_due".to_string()),
             current_period_end: None,
         };
-        
+
         assert!(info.needs_attention());
         assert!(!info.is_active());
     }
@@ -140,7 +144,7 @@ mod tests {
             status: Some("active".to_string()),
             current_period_end: Some(past_date),
         };
-        
+
         assert!(info.is_expired());
         assert!(info.needs_attention());
     }

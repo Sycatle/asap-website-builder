@@ -1,13 +1,13 @@
 use axum::{
-    extract::{Path, State, Extension, Query},
-    response::IntoResponse,
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
+    response::IntoResponse,
     Json,
 };
+use chrono;
 use serde::{Deserialize, Serialize, Serializer};
 use sqlx::PgPool;
 use uuid::Uuid;
-use chrono;
 
 use asap_core_shared::Claims;
 
@@ -19,14 +19,20 @@ where
     serializer.serialize_str(&uuid.to_string())
 }
 
-fn serialize_datetime<S>(dt: &chrono::DateTime<chrono::Utc>, serializer: S) -> Result<S::Ok, S::Error>
+fn serialize_datetime<S>(
+    dt: &chrono::DateTime<chrono::Utc>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
     serializer.serialize_str(&dt.to_rfc3339())
 }
 
-fn serialize_option_datetime<S>(dt: &Option<chrono::DateTime<chrono::Utc>>, serializer: S) -> Result<S::Ok, S::Error>
+fn serialize_option_datetime<S>(
+    dt: &Option<chrono::DateTime<chrono::Utc>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -71,9 +77,13 @@ pub async fn get_events(
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -84,7 +94,7 @@ pub async fn get_events(
     let mut query_str = String::from(
         "SELECT id, account_id, event_type, payload, created_at, processed_at FROM events WHERE account_id = $1"
     );
-    
+
     let has_event_type = params.event_type.is_some();
 
     if has_event_type {
@@ -127,9 +137,13 @@ pub async fn get_events(
         Ok(rows) => rows,
         Err(e) => {
             tracing::error!("Database error fetching events: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -159,9 +173,13 @@ pub async fn create_event(
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -183,17 +201,25 @@ pub async fn create_event(
     match result {
         Ok(event) => {
             tracing::info!("Event created: {} ({})", payload.event_type, event_id);
-            (StatusCode::CREATED, Json(serde_json::json!({
-                "id": event.id.to_string(),
-                "event_type": payload.event_type,
-                "created_at": event.created_at.to_string()
-            }))).into_response()
+            (
+                StatusCode::CREATED,
+                Json(serde_json::json!({
+                    "id": event.id.to_string(),
+                    "event_type": payload.event_type,
+                    "created_at": event.created_at.to_string()
+                })),
+            )
+                .into_response()
         }
         Err(e) => {
             tracing::error!("Database error creating event: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }
@@ -206,18 +232,26 @@ pub async fn mark_processed(
     let event_id = match Uuid::parse_str(&id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid event ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid event ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -236,20 +270,30 @@ pub async fn mark_processed(
     match result {
         Ok(result) if result.rows_affected() > 0 => {
             tracing::info!("Event marked as processed: {}", event_id);
-            (StatusCode::OK, Json(serde_json::json!({
-                "message": "Event marked as processed"
-            }))).into_response()
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "message": "Event marked as processed"
+                })),
+            )
+                .into_response()
         }
-        Ok(_) => {
-            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+        Ok(_) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
                 "error": "Event not found or already processed"
-            }))).into_response()
-        }
+            })),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Database error marking event as processed: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response()
         }
     }
 }

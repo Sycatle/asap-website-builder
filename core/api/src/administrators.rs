@@ -14,8 +14,8 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
+use tracing::{error, info};
 use uuid::Uuid;
-use tracing::{info, error};
 
 use asap_core_shared::Claims;
 
@@ -243,7 +243,9 @@ pub async fn invite_administrator(
     if !has_invite {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(serde_json::json!({"error": "You don't have permission to invite administrators"})),
+            Json(
+                serde_json::json!({"error": "You don't have permission to invite administrators"}),
+            ),
         ));
     }
 
@@ -267,35 +269,39 @@ pub async fn invite_administrator(
         if existing.status == "active" || existing.status == "pending" {
             return Err((
                 StatusCode::CONFLICT,
-                Json(serde_json::json!({"error": "This email is already an administrator or has a pending invitation"})),
+                Json(
+                    serde_json::json!({"error": "This email is already an administrator or has a pending invitation"}),
+                ),
             ));
         }
-        
+
         // If revoked, reactivate instead of creating a new entry
         if existing.status == "revoked" {
             // Check if user already exists in the system
-            let existing_user = sqlx::query!(
-                "SELECT id FROM accounts WHERE email = $1",
-                request.email
-            )
-            .fetch_optional(&pool)
-            .await
-            .map_err(|e| {
-                error!("Database error checking user: {}", e);
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({"error": "Database error"})),
-                )
-            })?;
-            
+            let existing_user =
+                sqlx::query!("SELECT id FROM accounts WHERE email = $1", request.email)
+                    .fetch_optional(&pool)
+                    .await
+                    .map_err(|e| {
+                        error!("Database error checking user: {}", e);
+                        (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            Json(serde_json::json!({"error": "Database error"})),
+                        )
+                    })?;
+
             // Get permissions (custom or default for role)
             let permissions = request
                 .custom_permissions
                 .unwrap_or_else(|| get_role_permissions(&request.role));
-            
+
             // If user already has an account, activate immediately. Otherwise, pending.
-            let new_status = if existing_user.is_some() { "active" } else { "pending" };
-            
+            let new_status = if existing_user.is_some() {
+                "active"
+            } else {
+                "pending"
+            };
+
             // Update the existing administrator
             let admin = sqlx::query!(
                 r#"
@@ -326,15 +332,18 @@ pub async fn invite_administrator(
                     Json(serde_json::json!({"error": "Failed to reactivate administrator"})),
                 )
             })?;
-            
-            info!("Administrator reactivated: {} to website {}", request.email, website_id);
-            
+
+            info!(
+                "Administrator reactivated: {} to website {}",
+                request.email, website_id
+            );
+
             let message = if new_status == "active" {
                 "Administrator reactivated successfully (user already has an account)"
             } else {
                 "Administrator reactivated, invitation sent"
             };
-            
+
             return Ok(Json(serde_json::json!({
                 "success": true,
                 "administrator": {
@@ -355,22 +364,19 @@ pub async fn invite_administrator(
         .unwrap_or_else(|| get_role_permissions(&request.role));
 
     // Check if user already exists in the system
-    let existing_user = sqlx::query!(
-        "SELECT id FROM accounts WHERE email = $1",
-        request.email
-    )
-    .fetch_optional(&pool)
-    .await
-    .map_err(|e| {
-        error!("Database error checking user: {}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({"error": "Database error"})),
-        )
-    })?;
+    let existing_user = sqlx::query!("SELECT id FROM accounts WHERE email = $1", request.email)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| {
+            error!("Database error checking user: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "Database error"})),
+            )
+        })?;
 
     let invitation_token = Uuid::new_v4();
-    
+
     // If user already has an account, activate immediately. Otherwise, pending.
     let status = if existing_user.is_some() {
         "active"
@@ -423,7 +429,10 @@ pub async fn invite_administrator(
     .await
     .ok();
 
-    info!("Administrator invited: {} to website {}", request.email, website_id);
+    info!(
+        "Administrator invited: {} to website {}",
+        request.email, website_id
+    );
 
     // TODO: Send invitation email via notification system
 
@@ -465,7 +474,9 @@ pub async fn update_administrator(
     if !has_permission {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(serde_json::json!({"error": "You don't have permission to modify administrators"})),
+            Json(
+                serde_json::json!({"error": "You don't have permission to modify administrators"}),
+            ),
         ));
     }
 
@@ -556,7 +567,10 @@ pub async fn update_administrator(
     .await
     .ok();
 
-    info!("Administrator {} updated in website {}", admin_id, website_id);
+    info!(
+        "Administrator {} updated in website {}",
+        admin_id, website_id
+    );
 
     Ok(Json(serde_json::json!({
         "success": true,
@@ -582,7 +596,9 @@ pub async fn remove_administrator(
     if !has_remove {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(serde_json::json!({"error": "You don't have permission to remove administrators"})),
+            Json(
+                serde_json::json!({"error": "You don't have permission to remove administrators"}),
+            ),
         ));
     }
 
@@ -669,7 +685,10 @@ pub async fn remove_administrator(
     .await
     .ok();
 
-    info!("Administrator {} removed from website {}", admin_id, website_id);
+    info!(
+        "Administrator {} removed from website {}",
+        admin_id, website_id
+    );
 
     Ok(Json(serde_json::json!({
         "success": true,
@@ -724,7 +743,9 @@ pub async fn resend_invitation(
     if admin.status != "pending" {
         return Err((
             StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({"error": "Can only resend invitations to pending administrators"})),
+            Json(
+                serde_json::json!({"error": "Can only resend invitations to pending administrators"}),
+            ),
         ));
     }
 
@@ -745,7 +766,10 @@ pub async fn resend_invitation(
         )
     })?;
 
-    info!("Invitation resent to {} for website {}", admin.email, website_id);
+    info!(
+        "Invitation resent to {} for website {}",
+        admin.email, website_id
+    );
 
     // TODO: Send invitation email via notification system
 

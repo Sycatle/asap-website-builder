@@ -8,17 +8,17 @@
 //! - `presets` - Preset templates
 //! - `catalog` - Extension catalog (available extensions)
 
+mod catalog;
 mod core;
-mod extensions;
 mod elements;
+mod extensions;
 mod pages;
 mod presets;
-mod catalog;
 
 // Re-export all public items
 pub use self::core::*;
-pub use extensions::*;
+pub use catalog::*;
 pub use elements::*;
+pub use extensions::*;
 pub use pages::*;
 pub use presets::*;
-pub use catalog::*;

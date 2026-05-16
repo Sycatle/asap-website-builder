@@ -12,22 +12,22 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
-mod types;
-mod websites;
+mod elements;
+mod events;
 mod extensions;
 mod extensions_store;
-mod elements;
 mod presets;
-mod events;
+mod types;
+mod websites;
 
 // Re-export all public items
-pub use types::*;
-pub use websites::*;
+pub use elements::*;
+pub use events::*;
 pub use extensions::*;
 pub use extensions_store::*;
-pub use elements::*;
 pub use presets::*;
-pub use events::*;
+pub use types::*;
+pub use websites::*;
 
 /// Verify that an account has access to a website (either as owner or active administrator)
 pub async fn verify_website_access(
@@ -48,7 +48,7 @@ pub async fn verify_website_access(
                      AND wa.account_id = $2 
                      AND wa.status = 'active'
                ))
-        "#
+        "#,
     )
     .bind(website_id)
     .bind(account_id)
@@ -73,7 +73,7 @@ pub async fn get_website_account_ids(
             SELECT account_id FROM website_administrators 
             WHERE website_id = $1 AND status = 'active'
         ) AS all_accounts
-        "#
+        "#,
     )
     .bind(website_id)
     .fetch_all(pool)

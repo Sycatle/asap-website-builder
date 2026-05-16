@@ -7,4 +7,7 @@ pub mod manifest;
 pub mod parser;
 
 pub use manifest::*;
-pub use parser::{parse_manifest, parse_manifest_file, parse_manifest_unchecked, serialize_manifest, ManifestParseError};
+pub use parser::{
+    parse_manifest, parse_manifest_file, parse_manifest_unchecked, serialize_manifest,
+    ManifestParseError,
+};

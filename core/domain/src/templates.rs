@@ -1,34 +1,34 @@
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use uuid::Uuid;
 
 /// User-saved section configuration template
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ElementTemplate {
     pub id: Uuid,
     pub account_id: Uuid,
-    
+
     /// Template display name
     pub name: String,
     /// Optional description
     pub description: Option<String>,
-    
+
     /// Section type (hero, features, pricing, etc.)
     pub element_type: String,
     /// Visual variant (centered, split, minimal, etc.)
     pub variant: Option<String>,
     /// Complete settings snapshot
     pub settings: Value,
-    
+
     /// Optional preview image (base64 or URL)
     pub preview_image: Option<String>,
-    
+
     /// User-defined tags for organization
     pub tags: Vec<String>,
     /// Whether template is marked as favorite
     pub is_favorite: bool,
-    
+
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -153,7 +153,7 @@ mod tests {
 
         let json = serde_json::to_string(&template).unwrap();
         let deserialized: ElementTemplate = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(deserialized.name, "My Hero");
         assert_eq!(deserialized.element_type, "hero");
         assert_eq!(deserialized.tags.len(), 2);
@@ -166,9 +166,9 @@ mod tests {
             "element_type": "features",
             "settings": {"columns": 3}
         }"#;
-        
+
         let request: CreateElementTemplateRequest = serde_json::from_str(json).unwrap();
-        
+
         assert_eq!(request.name, "Test Template");
         assert!(request.description.is_none());
         assert!(request.variant.is_none());
@@ -193,7 +193,7 @@ mod tests {
         };
 
         let summary: ElementTemplateSummary = template.into();
-        
+
         assert_eq!(summary.element_type, "pricing");
         assert_eq!(summary.variant, Some("comparison".to_string()));
     }

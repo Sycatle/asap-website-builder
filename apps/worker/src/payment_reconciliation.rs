@@ -1,7 +1,7 @@
-use sqlx::PgPool;
-use uuid::Uuid;
 use asap_core_payments::{PaymentGateway, StripeProvider};
+use sqlx::PgPool;
 use std::sync::Arc;
+use uuid::Uuid;
 
 pub struct PaymentReconciliation {
     pool: PgPool,
@@ -11,14 +11,13 @@ pub struct PaymentReconciliation {
 impl PaymentReconciliation {
     pub fn new(pool: PgPool) -> anyhow::Result<Self> {
         // Initialize Stripe provider
-        let stripe_api_key = std::env::var("STRIPE_API_KEY")
-            .unwrap_or_else(|_| "sk_test_placeholder".to_string());
+        let stripe_api_key =
+            std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_placeholder".to_string());
         let stripe_webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET")
             .unwrap_or_else(|_| "whsec_placeholder".to_string());
-        
-        let payment_gateway: Arc<dyn PaymentGateway> = Arc::new(
-            StripeProvider::new(stripe_api_key, stripe_webhook_secret)?
-        );
+
+        let payment_gateway: Arc<dyn PaymentGateway> =
+            Arc::new(StripeProvider::new(stripe_api_key, stripe_webhook_secret)?);
 
         Ok(Self {
             pool,
@@ -34,7 +33,7 @@ impl PaymentReconciliation {
 
         // Fetch all accounts with Stripe customer IDs in a single query (avoids N+1)
         let accounts = sqlx::query_as::<_, (Uuid, String)>(
-            "SELECT id, stripe_customer_id FROM accounts WHERE stripe_customer_id IS NOT NULL"
+            "SELECT id, stripe_customer_id FROM accounts WHERE stripe_customer_id IS NOT NULL",
         )
         .fetch_all(&self.pool)
         .await?;
@@ -42,7 +41,10 @@ impl PaymentReconciliation {
         stats.total_accounts = accounts.len();
 
         for (account_id, customer_id) in accounts {
-            match self.reconcile_account_with_customer(account_id, &customer_id).await {
+            match self
+                .reconcile_account_with_customer(account_id, &customer_id)
+                .await
+            {
                 Ok(_) => {
                     stats.successful += 1;
                 }
@@ -64,8 +66,16 @@ impl PaymentReconciliation {
     }
 
     /// Reconcile a specific account with known customer ID (no extra DB query)
-    async fn reconcile_account_with_customer(&self, account_id: Uuid, customer_id: &str) -> anyhow::Result<()> {
-        tracing::debug!("Reconciling account {} with customer {}", account_id, customer_id);
+    async fn reconcile_account_with_customer(
+        &self,
+        account_id: Uuid,
+        customer_id: &str,
+    ) -> anyhow::Result<()> {
+        tracing::debug!(
+            "Reconciling account {} with customer {}",
+            account_id,
+            customer_id
+        );
 
         // Fetch active subscriptions from Stripe
         // Note: In a real implementation, we'd need to call Stripe API to list subscriptions
@@ -81,7 +91,7 @@ impl PaymentReconciliation {
 
         // Get account with customer ID
         let customer_id = sqlx::query_scalar::<_, Option<String>>(
-            "SELECT stripe_customer_id FROM accounts WHERE id = $1"
+            "SELECT stripe_customer_id FROM accounts WHERE id = $1",
         )
         .bind(account_id)
         .fetch_optional(&self.pool)
@@ -92,7 +102,8 @@ impl PaymentReconciliation {
             return Ok(());
         };
 
-        self.reconcile_account_with_customer(account_id, &customer_id).await
+        self.reconcile_account_with_customer(account_id, &customer_id)
+            .await
     }
 
     /// Check if an account needs reconciliation (dubious status)
@@ -100,7 +111,7 @@ impl PaymentReconciliation {
         let result = sqlx::query_as::<_, (Option<String>, Option<chrono::DateTime<chrono::Utc>>)>(
             "SELECT plan_status, current_period_end 
              FROM accounts 
-             WHERE id = $1 AND stripe_customer_id IS NOT NULL"
+             WHERE id = $1 AND stripe_customer_id IS NOT NULL",
         )
         .bind(account_id)
         .fetch_optional(&self.pool)
@@ -134,7 +145,7 @@ impl PaymentReconciliation {
 
         loop {
             tracing::info!("Running scheduled payment reconciliation");
-            
+
             match self.reconcile_all().await {
                 Ok(stats) => {
                     tracing::info!("Reconciliation completed: {:?}", stats);

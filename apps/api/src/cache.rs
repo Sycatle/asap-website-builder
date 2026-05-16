@@ -3,7 +3,7 @@ use std::time::Duration;
 use tracing::{debug, warn};
 
 /// CacheService handles Redis caching for public data
-/// 
+///
 /// NOTE: This service is prepared for future use in caching public websites.
 /// Currently not integrated into the main API routes but kept for upcoming features.
 #[allow(dead_code)]
@@ -19,9 +19,9 @@ impl CacheService {
     pub async fn new(redis_url: &str) -> Result<Self, RedisError> {
         let client = redis::Client::open(redis_url)?;
         let manager = ConnectionManager::new(client).await?;
-        
+
         tracing::info!("Redis cache service initialized");
-        
+
         Ok(Self {
             client: manager,
             default_ttl: Duration::from_secs(3600), // 1 hour default
@@ -32,9 +32,12 @@ impl CacheService {
     pub async fn new_with_ttl(redis_url: &str, ttl_secs: u64) -> Result<Self, RedisError> {
         let client = redis::Client::open(redis_url)?;
         let manager = ConnectionManager::new(client).await?;
-        
-        tracing::info!("Redis cache service initialized with TTL: {} seconds", ttl_secs);
-        
+
+        tracing::info!(
+            "Redis cache service initialized with TTL: {} seconds",
+            ttl_secs
+        );
+
         Ok(Self {
             client: manager,
             default_ttl: Duration::from_secs(ttl_secs),
@@ -61,11 +64,7 @@ impl CacheService {
     }
 
     /// Set a cached value with default TTL
-    pub async fn set(
-        &self,
-        key: &str,
-        value: String,
-    ) -> Result<(), RedisError> {
+    pub async fn set(&self, key: &str, value: String) -> Result<(), RedisError> {
         self.set_with_ttl(key, value, self.default_ttl).await
     }
 
@@ -78,10 +77,10 @@ impl CacheService {
     ) -> Result<(), RedisError> {
         let mut conn = self.client.clone();
         let ttl_secs = ttl.as_secs();
-        
+
         conn.set_ex::<_, _, ()>(key, value, ttl_secs).await?;
         debug!("Cache SET: {} (TTL: {} secs)", key, ttl_secs);
-        
+
         Ok(())
     }
 
@@ -98,7 +97,7 @@ impl CacheService {
         if keys.is_empty() {
             return Ok(());
         }
-        
+
         let mut conn = self.client.clone();
         conn.del::<_, ()>(keys).await?;
         debug!("Cache DELETE: {:?}", keys);
@@ -123,9 +122,7 @@ impl CacheService {
     /// Health check
     pub async fn health_check(&self) -> Result<bool, RedisError> {
         let mut conn = self.client.clone();
-        let pong: String = redis::cmd("PING")
-            .query_async(&mut conn)
-            .await?;
+        let pong: String = redis::cmd("PING").query_async(&mut conn).await?;
         Ok(pong == "PONG")
     }
 }

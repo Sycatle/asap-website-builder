@@ -8,6 +8,5 @@ pub mod executor;
 pub mod types;
 
 pub use definitions::get_tool_definitions;
-pub use executor::{ToolExecutor, WebSearchBackend, WebBrowseBackend};
+pub use executor::{ToolExecutor, WebBrowseBackend, WebSearchBackend};
 pub use types::*;
-

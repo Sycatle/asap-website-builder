@@ -1,9 +1,9 @@
 //! Extension catalog (available extensions listing and actions)
 
 use axum::{
-    extract::{Path, State, Extension},
-    response::IntoResponse,
+    extract::{Extension, Path, State},
     http::StatusCode,
+    response::IntoResponse,
     Json,
 };
 use sqlx::PgPool;
@@ -13,34 +13,39 @@ use asap_core_shared::{Claims, ExtensionRegistry};
 
 /// List available extensions from the code-defined catalog
 /// Extensions are no longer stored in database - schemas are defined in code
-pub async fn list_available_extensions(
-    Extension(_claims): Extension<Claims>,
-) -> impl IntoResponse {
+pub async fn list_available_extensions(Extension(_claims): Extension<Claims>) -> impl IntoResponse {
     let registry = match ExtensionRegistry::load_from_workspace() {
         Ok(r) => r,
         Err(e) => {
             tracing::error!("Failed to load extension registry: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Failed to load extensions"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to load extensions"
+                })),
+            )
+                .into_response();
         }
     };
     let extensions = registry.get_user_extensions();
-    
-    let response: Vec<serde_json::Value> = extensions.into_iter().map(|e| {
-        serde_json::json!({
-            "id": e.slug.clone(),
-            "name": e.name,
-            "slug": e.slug,
-            "version": e.version,
-            "description": e.description,
-            "category": e.category,
-            "default_settings": e.default_settings,
-            "config_schema": e.config_schema,
-            "icon": e.icon
+
+    let response: Vec<serde_json::Value> = extensions
+        .into_iter()
+        .map(|e| {
+            serde_json::json!({
+                "id": e.slug.clone(),
+                "name": e.name,
+                "slug": e.slug,
+                "version": e.version,
+                "description": e.description,
+                "category": e.category,
+                "default_settings": e.default_settings,
+                "config_schema": e.config_schema,
+                "icon": e.icon
+            })
         })
-    }).collect();
-    
+        .collect();
+
     (StatusCode::OK, Json(response)).into_response()
 }
 
@@ -53,14 +58,19 @@ pub async fn get_extension_by_slug(
         Ok(r) => r,
         Err(e) => {
             tracing::error!("Failed to load extension registry: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Failed to load extensions"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to load extensions"
+                })),
+            )
+                .into_response();
         }
     };
     match registry.get_by_slug(&slug) {
-        Some(e) => {
-            (StatusCode::OK, Json(serde_json::json!({
+        Some(e) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
                 "id": e.slug.clone(),
                 "name": e.name,
                 "slug": e.slug,
@@ -70,13 +80,16 @@ pub async fn get_extension_by_slug(
                 "default_settings": e.default_settings,
                 "config_schema": e.config_schema,
                 "icon": e.icon
-            }))).into_response()
-        }
-        None => {
-            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+            })),
+        )
+            .into_response(),
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
                 "error": "Extension not found"
-            }))).into_response()
-        }
+            })),
+        )
+            .into_response(),
     }
 }
 
@@ -89,63 +102,86 @@ pub async fn get_website_extension_data(
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
     // Verify website belongs to account
-    let website_check = sqlx::query_as::<_, (Uuid,)>(
-        "SELECT id FROM websites WHERE id = $1 AND account_id = $2"
-    )
-    .bind(website_uuid)
-    .bind(account_id)
-    .fetch_optional(&pool)
-    .await;
+    let website_check =
+        sqlx::query_as::<_, (Uuid,)>("SELECT id FROM websites WHERE id = $1 AND account_id = $2")
+            .bind(website_uuid)
+            .bind(account_id)
+            .fetch_optional(&pool)
+            .await;
 
     let website_exists = match website_check {
         Ok(Some(_)) => true,
         Ok(None) => false,
         Err(e) => {
             tracing::error!("Database error checking website: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
     if !website_exists {
-        return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-            "error": "Website not found"
-        }))).into_response();
+        return (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
+                "error": "Website not found"
+            })),
+        )
+            .into_response();
     }
 
     let registry = match ExtensionRegistry::load_from_workspace() {
         Ok(r) => r,
         Err(e) => {
             tracing::error!("Failed to load extension registry: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Failed to load extensions"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to load extensions"
+                })),
+            )
+                .into_response();
         }
     };
 
     let extension_def = match registry.get_by_slug(&extension_slug) {
         Some(e) => e,
         None => {
-            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Extension not found"
-            }))).into_response();
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "error": "Extension not found"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -155,7 +191,7 @@ pub async fn get_website_extension_data(
         FROM website_extensions we
         INNER JOIN extensions e ON e.id = we.extension_id
         WHERE we.website_id = $1 AND e.slug = $2
-        "#
+        "#,
     )
     .bind(website_uuid)
     .bind(&extension_slug)
@@ -167,17 +203,21 @@ pub async fn get_website_extension_data(
         Ok(None) => (extension_def.default_settings.clone(), false),
         Err(e) => {
             tracing::error!("Database error getting website extension: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     };
 
     let mut data = serde_json::json!({});
-    
+
     if extension_slug == "github-sync" {
         let website_data = sqlx::query_as::<_, (serde_json::Value, chrono::DateTime<chrono::Utc>)>(
-            r#"SELECT data, updated_at FROM website_data WHERE website_id = $1"#
+            r#"SELECT data, updated_at FROM website_data WHERE website_id = $1"#,
         )
         .bind(website_uuid)
         .fetch_optional(&pool)
@@ -185,11 +225,12 @@ pub async fn get_website_extension_data(
 
         if let Ok(Some((wd_data, updated_at))) = website_data {
             // Get generated_at from inside the JSON data, fallback to updated_at
-            let last_sync = wd_data.get("generated_at")
+            let last_sync = wd_data
+                .get("generated_at")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string())
                 .unwrap_or_else(|| updated_at.to_rfc3339());
-            
+
             data = serde_json::json!({
                 "projects": wd_data.get("projects").cloned().unwrap_or(serde_json::json!([])),
                 "profile": wd_data.get("profile").cloned(),
@@ -198,22 +239,26 @@ pub async fn get_website_extension_data(
         }
     }
 
-    (StatusCode::OK, Json(serde_json::json!({
-        "extension": {
-            "id": extension_def.slug.clone(),
-            "name": extension_def.name,
-            "slug": extension_def.slug,
-            "version": extension_def.version,
-            "description": extension_def.description,
-            "category": extension_def.category,
-            "default_settings": extension_def.default_settings,
-            "config_schema": extension_def.config_schema,
-            "icon": extension_def.icon
-        },
-        "settings": settings,
-        "enabled": enabled,
-        "data": data
-    }))).into_response()
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "extension": {
+                "id": extension_def.slug.clone(),
+                "name": extension_def.name,
+                "slug": extension_def.slug,
+                "version": extension_def.version,
+                "description": extension_def.description,
+                "category": extension_def.category,
+                "default_settings": extension_def.default_settings,
+                "config_schema": extension_def.config_schema,
+                "icon": extension_def.icon
+            },
+            "settings": settings,
+            "enabled": enabled,
+            "data": data
+        })),
+    )
+        .into_response()
 }
 
 /// Execute an extension action (e.g., sync GitHub)
@@ -226,42 +271,57 @@ pub async fn execute_extension_action(
     let website_uuid = match Uuid::parse_str(&website_id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
     // Verify website belongs to account
-    let website_check = sqlx::query_as::<_, (Uuid,)>(
-        "SELECT id FROM websites WHERE id = $1 AND account_id = $2"
-    )
-    .bind(website_uuid)
-    .bind(account_id)
-    .fetch_optional(&pool)
-    .await;
+    let website_check =
+        sqlx::query_as::<_, (Uuid,)>("SELECT id FROM websites WHERE id = $1 AND account_id = $2")
+            .bind(website_uuid)
+            .bind(account_id)
+            .fetch_optional(&pool)
+            .await;
 
     match website_check {
         Ok(Some(_)) => { /* website exists, continue */ }
         Ok(None) => {
-            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Website not found"
-            }))).into_response();
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "error": "Website not found"
+                })),
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error checking website: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Internal server error"
-            }))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Internal server error"
+                })),
+            )
+                .into_response();
         }
     }
 
@@ -274,7 +334,7 @@ pub async fn execute_extension_action(
                     // Try to get from extension settings
                     let settings: Option<(serde_json::Value,)> = sqlx::query_as(
                         r#"
-                        SELECT we.settings 
+                        SELECT we.settings
                         FROM website_extensions we
                         JOIN extensions e ON we.extension_id = e.id
                         WHERE we.website_id = $1 AND e.slug = 'github-sync'
@@ -285,7 +345,7 @@ pub async fn execute_extension_action(
                     .await
                     .ok()
                     .flatten();
-                    
+
                     settings.and_then(|(s,)| s.get("github_username").and_then(|v| v.as_str()).map(|s| s.to_string()))
                 }
             };

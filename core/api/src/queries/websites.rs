@@ -1,8 +1,8 @@
 //! Website CRUD queries
 
+use serde_json::Value as JsonValue;
 use sqlx::PgPool;
 use uuid::Uuid;
-use serde_json::Value as JsonValue;
 
 use super::types::WebsiteWithData;
 
@@ -13,13 +13,12 @@ pub async fn verify_website_ownership(
     website_id: Uuid,
     account_id: Uuid,
 ) -> Result<bool, sqlx::Error> {
-    let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2"
-    )
-    .bind(website_id)
-    .bind(account_id)
-    .fetch_one(pool)
-    .await?;
+    let count: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM websites WHERE id = $1 AND account_id = $2")
+            .bind(website_id)
+            .bind(account_id)
+            .fetch_one(pool)
+            .await?;
 
     Ok(count.0 > 0)
 }
@@ -39,7 +38,7 @@ pub async fn get_website_with_data(
         FROM websites w
         LEFT JOIN website_data wd ON w.id = wd.website_id
         WHERE w.id = $1 AND w.account_id = $2
-        "#
+        "#,
     )
     .bind(website_id)
     .bind(account_id)
@@ -68,7 +67,7 @@ pub async fn list_websites_with_data(
            OR (wa.account_id = $1 AND wa.status = 'active')
         ORDER BY w.created_at DESC
         LIMIT 100
-        "#
+        "#,
     )
     .bind(account_id)
     .fetch_all(pool)
@@ -76,12 +75,9 @@ pub async fn list_websites_with_data(
 }
 
 /// Get website data only (without website metadata)
-pub async fn get_website_data(
-    pool: &PgPool,
-    website_id: Uuid,
-) -> Result<JsonValue, sqlx::Error> {
+pub async fn get_website_data(pool: &PgPool, website_id: Uuid) -> Result<JsonValue, sqlx::Error> {
     let result: Option<(JsonValue,)> = sqlx::query_as(
-        "SELECT COALESCE(data, '{}'::jsonb) FROM website_data WHERE website_id = $1"
+        "SELECT COALESCE(data, '{}'::jsonb) FROM website_data WHERE website_id = $1",
     )
     .bind(website_id)
     .fetch_optional(pool)
@@ -104,7 +100,7 @@ pub async fn get_public_website(
         FROM websites w
         LEFT JOIN website_data wd ON w.id = wd.website_id
         WHERE w.slug = $1 AND w.status = 'published'
-        "#
+        "#,
     )
     .bind(slug)
     .fetch_optional(pool)
@@ -119,7 +115,7 @@ pub async fn update_website_status(
     status: &str,
 ) -> Result<sqlx::postgres::PgQueryResult, sqlx::Error> {
     sqlx::query(
-        "UPDATE websites SET status = $1, updated_at = now() WHERE id = $2 AND account_id = $3"
+        "UPDATE websites SET status = $1, updated_at = now() WHERE id = $2 AND account_id = $3",
     )
     .bind(status)
     .bind(website_id)
@@ -141,7 +137,7 @@ pub async fn update_website_batch_fields(
 
     if let Some(t) = title {
         sqlx::query(
-            "UPDATE websites SET title = $1, updated_at = now() WHERE id = $2 AND account_id = $3"
+            "UPDATE websites SET title = $1, updated_at = now() WHERE id = $2 AND account_id = $3",
         )
         .bind(t)
         .bind(website_id)
@@ -190,7 +186,7 @@ pub async fn upsert_website_data(
         DO UPDATE SET 
             data = website_data.data || $2,
             updated_at = now()
-        "#
+        "#,
     )
     .bind(website_id)
     .bind(data)

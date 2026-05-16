@@ -1,26 +1,30 @@
 //! Website extension queries
 
+use asap_core_shared::ExtensionRegistry;
+use chrono::{DateTime, Utc};
+use serde_json::Value as JsonValue;
 use sqlx::PgPool;
 use uuid::Uuid;
-use serde_json::Value as JsonValue;
-use chrono::{DateTime, Utc};
-use asap_core_shared::ExtensionRegistry;
 
 use super::types::WebsiteExtensionRow;
 
 /// Sync all extensions from the catalog to the database
-/// 
+///
 /// This should be called at startup to ensure all extensions defined in code
 /// exist in the database with their latest metadata.
-pub async fn sync_extensions_catalog(pool: &PgPool) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
+pub async fn sync_extensions_catalog(
+    pool: &PgPool,
+) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
     let registry = ExtensionRegistry::load_from_workspace()?;
     let extensions = registry.get_all();
     let mut synced = 0;
-    
+
     for extension in extensions {
-        let config_schema = extension.config_schema.as_ref()
+        let config_schema = extension
+            .config_schema
+            .as_ref()
             .and_then(|s| serde_json::to_value(s).ok());
-        
+
         let result = sqlx::query(
             r#"
             INSERT INTO extensions (id, name, slug, version, description, category, icon, default_settings, config_schema, sidebar_order, sidebar_label, enabled)
@@ -49,12 +53,12 @@ pub async fn sync_extensions_catalog(pool: &PgPool) -> Result<usize, Box<dyn std
         .bind(&extension.sidebar_label)
         .execute(pool)
         .await?;
-        
+
         if result.rows_affected() > 0 {
             synced += 1;
         }
     }
-    
+
     Ok(synced)
 }
 
@@ -63,7 +67,21 @@ pub async fn list_website_extensions(
     pool: &PgPool,
     website_id: Uuid,
 ) -> Result<Vec<WebsiteExtensionRow>, Box<dyn std::error::Error + Send + Sync>> {
-    let rows = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, String, Option<String>, JsonValue, bool, DateTime<Utc>)>(
+    let rows = sqlx::query_as::<
+        _,
+        (
+            Uuid,
+            Uuid,
+            Uuid,
+            String,
+            String,
+            String,
+            Option<String>,
+            JsonValue,
+            bool,
+            DateTime<Utc>,
+        ),
+    >(
         r#"
         SELECT 
             we.id, we.website_id, we.extension_id, 
@@ -73,26 +91,42 @@ pub async fn list_website_extensions(
         JOIN extensions e ON we.extension_id = e.id
         WHERE we.website_id = $1
         ORDER BY we.activated_at
-        "#
+        "#,
     )
     .bind(website_id)
     .fetch_all(pool)
     .await?;
 
-    Ok(rows.into_iter().map(|(id, website_id, extension_id, extension_name, extension_slug, category, icon, settings, enabled, activated_at)| {
-        WebsiteExtensionRow {
-            id,
-            website_id,
-            extension_id,
-            extension_name,
-            extension_slug,
-            category,
-            icon,
-            settings,
-            enabled,
-            activated_at,
-        }
-    }).collect())
+    Ok(rows
+        .into_iter()
+        .map(
+            |(
+                id,
+                website_id,
+                extension_id,
+                extension_name,
+                extension_slug,
+                category,
+                icon,
+                settings,
+                enabled,
+                activated_at,
+            )| {
+                WebsiteExtensionRow {
+                    id,
+                    website_id,
+                    extension_id,
+                    extension_name,
+                    extension_slug,
+                    category,
+                    icon,
+                    settings,
+                    enabled,
+                    activated_at,
+                }
+            },
+        )
+        .collect())
 }
 
 /// Activate an extension for a website
@@ -110,7 +144,21 @@ pub async fn activate_website_extension(
     }
 
     // Insert or update extension activation and return the result
-    let row = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, String, Option<String>, JsonValue, bool, DateTime<Utc>)>(
+    let row = sqlx::query_as::<
+        _,
+        (
+            Uuid,
+            Uuid,
+            Uuid,
+            String,
+            String,
+            String,
+            Option<String>,
+            JsonValue,
+            bool,
+            DateTime<Utc>,
+        ),
+    >(
         r#"
         WITH upserted AS (
             INSERT INTO website_extensions (website_id, extension_id, settings, enabled)
@@ -125,7 +173,7 @@ pub async fn activate_website_extension(
             u.settings, u.enabled, u.activated_at
         FROM upserted u
         JOIN extensions e ON u.extension_id = e.id
-        "#
+        "#,
     )
     .bind(website_id)
     .bind(extension_id)
@@ -200,7 +248,7 @@ pub async fn deactivate_website_extension(
 
     // Delete the extension from the website - try both id (row id) and extension_id
     let result = sqlx::query(
-        "DELETE FROM website_extensions WHERE website_id = $1 AND (id = $2 OR extension_id = $2)"
+        "DELETE FROM website_extensions WHERE website_id = $1 AND (id = $2 OR extension_id = $2)",
     )
     .bind(website_id)
     .bind(extension_id_or_row_id)

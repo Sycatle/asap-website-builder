@@ -95,39 +95,31 @@ impl GitHubClient {
         let client = reqwest::Client::builder()
             .user_agent("asap-website-generator/0.1")
             .build()?;
-        
+
         Ok(Self { client })
     }
 
     /// Fetch public repositories for a given GitHub username
     pub async fn fetch_repos(&self, username: &str) -> Result<Vec<serde_json::Value>> {
         tracing::info!("Fetching repos for user: {}", username);
-        
+
         let url = format!("https://api.github.com/users/{}/repos", username);
-        
+
         let response = self
             .client
             .get(&url)
-            .query(&[
-                ("type", "owner"),
-                ("sort", "updated"),
-                ("per_page", "100"),
-            ])
+            .query(&[("type", "owner"), ("sort", "updated"), ("per_page", "100")])
             .send()
             .await?;
 
         if !response.status().is_success() {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
-            anyhow::bail!(
-                "GitHub API request failed with status {}: {}",
-                status,
-                body
-            );
+            anyhow::bail!("GitHub API request failed with status {}: {}", status, body);
         }
 
         let repos: Vec<GitHubRepo> = response.json().await?;
-        
+
         // Filter out forks and archived repos
         let filtered_repos: Vec<GitHubRepo> = repos
             .into_iter()
@@ -144,68 +136,52 @@ impl GitHubClient {
             .into_iter()
             .map(serde_json::to_value)
             .collect::<Result<Vec<_>, _>>()?;
-            
+
         Ok(json_repos)
     }
 
     /// Fetch user profile for a given GitHub username
     pub async fn fetch_user(&self, username: &str) -> Result<serde_json::Value> {
         tracing::info!("Fetching user profile for: {}", username);
-        
+
         let url = format!("https://api.github.com/users/{}", username);
-        
-        let response = self
-            .client
-            .get(&url)
-            .send()
-            .await?;
+
+        let response = self.client.get(&url).send().await?;
 
         if !response.status().is_success() {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
-            anyhow::bail!(
-                "GitHub API request failed with status {}: {}",
-                status,
-                body
-            );
+            anyhow::bail!("GitHub API request failed with status {}: {}", status, body);
         }
 
         let user: GitHubUser = response.json().await?;
         tracing::info!("Fetched user profile: {}", user.login);
-        
+
         Ok(serde_json::to_value(user)?)
     }
 
     /// Fetch organizations for a given GitHub username
     pub async fn fetch_orgs(&self, username: &str) -> Result<Vec<serde_json::Value>> {
         tracing::info!("Fetching organizations for: {}", username);
-        
+
         let url = format!("https://api.github.com/users/{}/orgs", username);
-        
-        let response = self
-            .client
-            .get(&url)
-            .send()
-            .await?;
+
+        let response = self.client.get(&url).send().await?;
 
         if !response.status().is_success() {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
-            anyhow::bail!(
-                "GitHub API request failed with status {}: {}",
-                status,
-                body
-            );
+            anyhow::bail!("GitHub API request failed with status {}: {}", status, body);
         }
 
         let orgs: Vec<GitHubOrg> = response.json().await?;
         tracing::info!("Fetched {} organizations", orgs.len());
-        
+
         let json_orgs: Vec<serde_json::Value> = orgs
             .into_iter()
             .map(serde_json::to_value)
             .collect::<Result<Vec<_>, _>>()?;
-            
+
         Ok(json_orgs)
     }
 
@@ -213,20 +189,16 @@ impl GitHubClient {
     /// Returns up to 300 events (3 pages of 100)
     pub async fn fetch_events(&self, username: &str) -> Result<Vec<serde_json::Value>> {
         tracing::info!("Fetching public events for: {}", username);
-        
+
         let mut all_events = Vec::new();
-        
+
         for page in 1..=10 {
             let url = format!(
                 "https://api.github.com/users/{}/events/public?per_page=100&page={}",
                 username, page
             );
-            
-            let response = self
-                .client
-                .get(&url)
-                .send()
-                .await?;
+
+            let response = self.client.get(&url).send().await?;
 
             if !response.status().is_success() {
                 // Don't fail on events, just return what we have
@@ -235,19 +207,19 @@ impl GitHubClient {
             }
 
             let events: Vec<serde_json::Value> = response.json().await?;
-            
+
             if events.is_empty() {
                 break;
             }
-            
+
             all_events.extend(events);
-            
+
             // If we got less than 100 events, we've reached the end
             if all_events.len() % 100 != 0 {
                 break;
             }
         }
-        
+
         tracing::info!("Fetched {} public events", all_events.len());
         Ok(all_events)
     }
@@ -255,9 +227,9 @@ impl GitHubClient {
     /// Fetch public gists for a given GitHub username
     pub async fn fetch_gists(&self, username: &str) -> Result<Vec<serde_json::Value>> {
         tracing::info!("Fetching gists for: {}", username);
-        
+
         let url = format!("https://api.github.com/users/{}/gists", username);
-        
+
         let response = self
             .client
             .get(&url)
@@ -268,37 +240,34 @@ impl GitHubClient {
         if !response.status().is_success() {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
-            anyhow::bail!(
-                "GitHub API request failed with status {}: {}",
-                status,
-                body
-            );
+            anyhow::bail!("GitHub API request failed with status {}: {}", status, body);
         }
 
         let gists: Vec<GitHubGist> = response.json().await?;
-        
+
         // Only keep public gists
-        let public_gists: Vec<GitHubGist> = gists
-            .into_iter()
-            .filter(|g| g.public)
-            .collect();
-        
+        let public_gists: Vec<GitHubGist> = gists.into_iter().filter(|g| g.public).collect();
+
         tracing::info!("Fetched {} public gists", public_gists.len());
-        
+
         let json_gists: Vec<serde_json::Value> = public_gists
             .into_iter()
             .map(serde_json::to_value)
             .collect::<Result<Vec<_>, _>>()?;
-            
+
         Ok(json_gists)
     }
 
     /// Fetch starred repositories for a given GitHub username
-    pub async fn fetch_starred(&self, username: &str, limit: usize) -> Result<Vec<serde_json::Value>> {
+    pub async fn fetch_starred(
+        &self,
+        username: &str,
+        limit: usize,
+    ) -> Result<Vec<serde_json::Value>> {
         tracing::info!("Fetching starred repos for: {}", username);
-        
+
         let url = format!("https://api.github.com/users/{}/starred", username);
-        
+
         let response = self
             .client
             .get(&url)
@@ -309,34 +278,30 @@ impl GitHubClient {
         if !response.status().is_success() {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
-            anyhow::bail!(
-                "GitHub API request failed with status {}: {}",
-                status,
-                body
-            );
+            anyhow::bail!("GitHub API request failed with status {}: {}", status, body);
         }
 
         let starred: Vec<GitHubStarredRepo> = response.json().await?;
         tracing::info!("Fetched {} starred repos", starred.len());
-        
+
         let json_starred: Vec<serde_json::Value> = starred
             .into_iter()
             .map(serde_json::to_value)
             .collect::<Result<Vec<_>, _>>()?;
-            
+
         Ok(json_starred)
     }
 
     /// Fetch the profile README content for a user (if exists)
     pub async fn fetch_profile_readme(&self, username: &str) -> Result<Option<String>> {
         tracing::info!("Fetching profile README for: {}", username);
-        
+
         // GitHub profile READMEs are in a repo named after the username
         let url = format!(
             "https://api.github.com/repos/{}/{}/readme",
             username, username
         );
-        
+
         let response = self
             .client
             .get(&url)
@@ -357,7 +322,7 @@ impl GitHubClient {
 
         let content = response.text().await?;
         tracing::info!("Fetched profile README ({} chars)", content.len());
-        
+
         Ok(Some(content))
     }
 
@@ -365,14 +330,11 @@ impl GitHubClient {
     /// Returns a JSON object with contributions array and total count
     pub async fn fetch_contributions(&self, username: &str) -> Result<serde_json::Value> {
         tracing::info!("Fetching contributions for: {}", username);
-        
+
         // Fetch the contributions calendar from GitHub's contribution page
         // GitHub exposes this as an SVG/HTML that we can parse
-        let url = format!(
-            "https://github.com/users/{}/contributions",
-            username
-        );
-        
+        let url = format!("https://github.com/users/{}/contributions", username);
+
         let response = self
             .client
             .get(&url)
@@ -391,23 +353,21 @@ impl GitHubClient {
         }
 
         let html = response.text().await?;
-        
+
         // Parse the contribution data from the HTML
         // GitHub uses data-date and data-level attributes on td elements
         let mut contributions: Vec<serde_json::Value> = Vec::new();
         let mut total: i64 = 0;
-        
+
         // Parse using regex to extract contribution data
         // Format: <td ... data-date="2024-01-15" data-level="2" ...>
-        let date_level_re = regex::Regex::new(
-            r#"data-date="(\d{4}-\d{2}-\d{2})"[^>]*data-level="(\d)""#
-        )?;
-        
+        let date_level_re =
+            regex::Regex::new(r#"data-date="(\d{4}-\d{2}-\d{2})"[^>]*data-level="(\d)""#)?;
+
         // Also try the reverse order
-        let level_date_re = regex::Regex::new(
-            r#"data-level="(\d)"[^>]*data-date="(\d{4}-\d{2}-\d{2})""#
-        )?;
-        
+        let level_date_re =
+            regex::Regex::new(r#"data-level="(\d)"[^>]*data-date="(\d{4}-\d{2}-\d{2})""#)?;
+
         // Try to extract total from the page (e.g., "1,234 contributions")
         let total_re = regex::Regex::new(r#"([\d,]+)\s+contributions?\s+in\s+the\s+last\s+year"#)?;
         if let Some(cap) = total_re.captures(&html) {
@@ -415,26 +375,26 @@ impl GitHubClient {
                 total = t;
             }
         }
-        
+
         // Collect all dates with their levels
         let mut date_map: std::collections::HashMap<String, u8> = std::collections::HashMap::new();
-        
+
         for cap in date_level_re.captures_iter(&html) {
             let date = cap[1].to_string();
             let level: u8 = cap[2].parse().unwrap_or(0);
             date_map.insert(date, level);
         }
-        
+
         for cap in level_date_re.captures_iter(&html) {
             let level: u8 = cap[1].parse().unwrap_or(0);
             let date = cap[2].to_string();
             date_map.entry(date).or_insert(level);
         }
-        
+
         // Convert to sorted contributions array
         let mut dates: Vec<_> = date_map.into_iter().collect();
         dates.sort_by(|a, b| a.0.cmp(&b.0));
-        
+
         for (date, level) in dates {
             // Estimate count based on level (GitHub doesn't expose exact counts in HTML)
             let count = match level {
@@ -451,13 +411,13 @@ impl GitHubClient {
                 "level": level
             }));
         }
-        
+
         tracing::info!(
             "Fetched {} contribution days, total: {}",
             contributions.len(),
             total
         );
-        
+
         Ok(serde_json::json!({
             "contributions": contributions,
             "total": total

@@ -31,10 +31,12 @@ pub enum SharedError {
 impl From<jsonwebtoken::errors::Error> for SharedError {
     fn from(err: jsonwebtoken::errors::Error) -> Self {
         use jsonwebtoken::errors::ErrorKind;
-        
+
         match err.kind() {
             ErrorKind::ExpiredSignature => SharedError::TokenExpired,
-            ErrorKind::InvalidToken => SharedError::InvalidToken("Invalid token format".to_string()),
+            ErrorKind::InvalidToken => {
+                SharedError::InvalidToken("Invalid token format".to_string())
+            }
             _ => SharedError::JwtError(err.to_string()),
         }
     }

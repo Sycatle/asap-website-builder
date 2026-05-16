@@ -7,14 +7,11 @@
 //! - Logging of registered modules at startup
 
 use anyhow::Result;
-use sqlx::PgPool;
 use asap_core_domain::events::EventType;
+use sqlx::PgPool;
 
 use crate::extension_executor::{
-    ExtensionExecutorRegistry, 
-    GitHubIntegrationExecutor, 
-    WebsiteExtensionExecutor,
-    ExtensionInfo,
+    ExtensionExecutorRegistry, ExtensionInfo, GitHubIntegrationExecutor, WebsiteExtensionExecutor,
 };
 
 /// Configuration for module registration
@@ -68,11 +65,9 @@ pub fn register_all_modules(config: ModuleRegistryConfig) -> Result<ExtensionExe
     // GitHub Integration Module
     // =========================================================================
     if config.enable_github {
-        let github_executor = GitHubIntegrationExecutor::new(
-            config.pool.clone(),
-            config.core_api_url.clone(),
-        )?;
-        
+        let github_executor =
+            GitHubIntegrationExecutor::new(config.pool.clone(), config.core_api_url.clone())?;
+
         log_module_registration(&github_executor);
         registry.register(Box::new(github_executor));
         registered_count += 1;
@@ -83,7 +78,7 @@ pub fn register_all_modules(config: ModuleRegistryConfig) -> Result<ExtensionExe
     // =========================================================================
     if config.enable_website {
         let website_executor = WebsiteExtensionExecutor::new(config.pool.clone());
-        
+
         log_module_registration(&website_executor);
         registry.register(Box::new(website_executor));
         registered_count += 1;
@@ -92,7 +87,7 @@ pub fn register_all_modules(config: ModuleRegistryConfig) -> Result<ExtensionExe
     // =========================================================================
     // Future modules can be added here:
     // =========================================================================
-    // 
+    //
     // // Blog Engine Module
     // if config.enable_blog {
     //     let blog_executor = BlogEngineExecutor::new(config.pool.clone());
@@ -196,10 +191,10 @@ mod tests {
     fn test_module_summary() {
         let modules = get_available_modules();
         assert!(modules.len() >= 2);
-        
+
         let github = modules.iter().find(|m| m.slug == "github-sync");
         assert!(github.is_some());
-        
+
         let website = modules.iter().find(|m| m.slug == "website-lifecycle");
         assert!(website.is_some());
     }
@@ -207,11 +202,18 @@ mod tests {
     #[test]
     fn test_module_events() {
         let modules = get_available_modules();
-        
+
         let github = modules.iter().find(|m| m.slug == "github-sync").unwrap();
-        assert!(github.handled_events.contains(&EventType::GitHubSyncRequested));
-        
-        let website = modules.iter().find(|m| m.slug == "website-lifecycle").unwrap();
-        assert!(website.handled_events.contains(&EventType::WebsitePublished));
+        assert!(github
+            .handled_events
+            .contains(&EventType::GitHubSyncRequested));
+
+        let website = modules
+            .iter()
+            .find(|m| m.slug == "website-lifecycle")
+            .unwrap();
+        assert!(website
+            .handled_events
+            .contains(&EventType::WebsitePublished));
     }
 }

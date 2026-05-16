@@ -1,5 +1,5 @@
 //! OAuth authentication routes for user login/signup
-//! 
+//!
 //! Supports OAuth providers (Google, GitHub, etc.) for user authentication.
 //! Flow:
 //! 1. Frontend calls GET /auth/oauth/{provider} to get OAuth URL
@@ -9,22 +9,22 @@
 //! 5. Creates or logs in user, returns JWT tokens
 
 use axum::{
-    extract::{Path, Query, State, Extension},
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
 use base64::Engine;
+use chrono::Utc;
 use hmac::{Hmac, Mac};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use uuid::Uuid;
-use chrono::Utc;
 
 use asap_core_shared::{
-    generate_token_with_jti, generate_refresh_token, generate_jti, SharedConfig,
+    generate_jti, generate_refresh_token, generate_token_with_jti, SharedConfig,
 };
 
 type HmacSha256 = Hmac<Sha256>;
@@ -36,8 +36,8 @@ const B64: base64::engine::GeneralPurpose = base64::engine::general_purpose::URL
 fn encode_state(payload: &OAuthStatePayload, secret: &str) -> String {
     let json = serde_json::to_vec(payload).expect("OAuthStatePayload serialization");
     let body = B64.encode(&json);
-    let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
-        .expect("HMAC accepts any key length");
+    let mut mac =
+        HmacSha256::new_from_slice(secret.as_bytes()).expect("HMAC accepts any key length");
     mac.update(json.as_slice());
     let tag = B64.encode(mac.finalize().into_bytes());
     format!("{body}.{tag}")
@@ -138,7 +138,7 @@ pub struct OAuthCallbackResponse {
 /// Google user info response
 #[derive(Debug, Deserialize)]
 struct GoogleUserInfo {
-    sub: String,  // Google user ID
+    sub: String, // Google user ID
     email: String,
     email_verified: bool,
     name: Option<String>,
@@ -158,9 +158,9 @@ struct GitHubUserInfo {
 }
 
 /// Initiate OAuth flow
-/// 
+///
 /// GET /auth/oauth/{provider}?redirect_url=...
-/// 
+///
 /// Security: The state parameter contains a CSRF token (UUID) that is validated
 /// on callback. This prevents CSRF attacks as the token is unpredictable and
 /// tied to the user's session via the redirect flow.
@@ -176,7 +176,7 @@ pub async fn initiate_oauth(
                 StatusCode::BAD_REQUEST,
                 Json(serde_json::json!({
                     "error": e
-                }))
+                })),
             ));
         }
     };
@@ -203,8 +203,9 @@ pub async fn initiate_oauth(
         OAuthProvider::Google => {
             let client_id = std::env::var("GOOGLE_CLIENT_ID")
                 .unwrap_or_else(|_| "GOOGLE_CLIENT_ID_NOT_SET".to_string());
-            let redirect_uri = std::env::var("GOOGLE_REDIRECT_URI")
-                .unwrap_or_else(|_| "http://localhost:3000/api/auth/oauth/google/callback".to_string());
+            let redirect_uri = std::env::var("GOOGLE_REDIRECT_URI").unwrap_or_else(|_| {
+                "http://localhost:3000/api/auth/oauth/google/callback".to_string()
+            });
 
             let challenge = pkce_challenge
                 .as_deref()
@@ -229,8 +230,9 @@ pub async fn initiate_oauth(
         OAuthProvider::GitHub => {
             let client_id = std::env::var("GITHUB_CLIENT_ID")
                 .unwrap_or_else(|_| "GITHUB_CLIENT_ID_NOT_SET".to_string());
-            let redirect_uri = std::env::var("GITHUB_REDIRECT_URI")
-                .unwrap_or_else(|_| "http://localhost:3000/api/auth/oauth/github/callback".to_string());
+            let redirect_uri = std::env::var("GITHUB_REDIRECT_URI").unwrap_or_else(|_| {
+                "http://localhost:3000/api/auth/oauth/github/callback".to_string()
+            });
 
             format!(
                 "https://github.com/login/oauth/authorize?\
@@ -253,9 +255,9 @@ pub async fn initiate_oauth(
 }
 
 /// Handle OAuth callback
-/// 
+///
 /// GET /auth/oauth/{provider}/callback?code=...&state=...
-/// 
+///
 /// Security: Validates the CSRF token from state parameter by checking
 /// it's a valid UUID format. While not stored server-side, the unpredictability
 /// of UUID v4 combined with the state parameter binding provides CSRF protection.
@@ -267,15 +269,17 @@ pub async fn oauth_callback(
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     // Check for OAuth errors from provider
     if let Some(error) = params.error {
-        let error_desc = params.error_description.unwrap_or_else(|| "OAuth authentication failed".to_string());
+        let error_desc = params
+            .error_description
+            .unwrap_or_else(|| "OAuth authentication failed".to_string());
         tracing::warn!("OAuth error from provider: {} - {}", error, error_desc);
-        
+
         return Err((
             StatusCode::BAD_REQUEST,
             Json(serde_json::json!({
                 "error": error,
                 "error_description": error_desc
-            }))
+            })),
         ));
     }
 
@@ -290,7 +294,7 @@ pub async fn oauth_callback(
                     Json(serde_json::json!({
                         "error": "Invalid OAuth state",
                         "code": "STATE_INVALID"
-                    }))
+                    })),
                 ));
             }
         },
@@ -301,7 +305,7 @@ pub async fn oauth_callback(
                 Json(serde_json::json!({
                     "error": "Missing state parameter",
                     "code": "STATE_MISSING"
-                }))
+                })),
             ));
         }
     };
@@ -316,7 +320,7 @@ pub async fn oauth_callback(
             Json(serde_json::json!({
                 "error": "Invalid CSRF token format",
                 "code": "CSRF_INVALID"
-            }))
+            })),
         ));
     }
     tracing::debug!("OAuth state HMAC verified, CSRF token format OK");
@@ -328,35 +332,34 @@ pub async fn oauth_callback(
                 StatusCode::BAD_REQUEST,
                 Json(serde_json::json!({
                     "error": e
-                }))
+                })),
             ));
         }
     };
-    
+
     // Exchange authorization code for access token
-    let (oauth_email, oauth_user_id, display_name, avatar_url, given_name, family_name) = match provider {
-        OAuthProvider::Google => {
-            let verifier = pkce_verifier.as_deref().ok_or_else(|| {
-                tracing::warn!("Google OAuth callback missing PKCE verifier in state");
-                (
-                    StatusCode::BAD_REQUEST,
-                    Json(serde_json::json!({
-                        "error": "Missing PKCE verifier",
-                        "code": "PKCE_MISSING"
-                    })),
-                )
-            })?;
-            exchange_google_code(&params.code, verifier).await?
-        }
-        OAuthProvider::GitHub => {
-            exchange_github_code(&params.code).await?
-        }
-    };
+    let (oauth_email, oauth_user_id, display_name, avatar_url, given_name, family_name) =
+        match provider {
+            OAuthProvider::Google => {
+                let verifier = pkce_verifier.as_deref().ok_or_else(|| {
+                    tracing::warn!("Google OAuth callback missing PKCE verifier in state");
+                    (
+                        StatusCode::BAD_REQUEST,
+                        Json(serde_json::json!({
+                            "error": "Missing PKCE verifier",
+                            "code": "PKCE_MISSING"
+                        })),
+                    )
+                })?;
+                exchange_google_code(&params.code, verifier).await?
+            }
+            OAuthProvider::GitHub => exchange_github_code(&params.code).await?,
+        };
 
     tracing::info!(
-        "OAuth user info retrieved: provider={}, email={}, user_id={}", 
-        provider.as_str(), 
-        oauth_email, 
+        "OAuth user info retrieved: provider={}, email={}, user_id={}",
+        provider.as_str(),
+        oauth_email,
         oauth_user_id
     );
 
@@ -377,7 +380,7 @@ pub async fn oauth_callback(
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({
                 "error": "Database error"
-            }))
+            })),
         )
     })?;
 
@@ -401,7 +404,8 @@ pub async fn oauth_callback(
 
             let should_update_avatar = if let Some(data_row) = current_data_row {
                 // Extract current avatar_url from JSONB
-                let current_avatar_url = data_row.data
+                let current_avatar_url = data_row
+                    .data
                     .get("oauth")
                     .and_then(|oauth| oauth.get(provider.as_str()))
                     .and_then(|p| p.get("avatar_url"))
@@ -415,16 +419,30 @@ pub async fn oauth_callback(
             };
 
             if should_update_avatar {
-                tracing::info!("Avatar URL changed for account {}, downloading new avatar", account.id);
-                
+                tracing::info!(
+                    "Avatar URL changed for account {}, downloading new avatar",
+                    account.id
+                );
+
                 // Download and store new avatar with provider-specific naming
-                let new_avatar_file_id = match download_and_store_avatar(&pool, account.id, new_avatar_url, provider.as_str()).await {
+                let new_avatar_file_id = match download_and_store_avatar(
+                    &pool,
+                    account.id,
+                    new_avatar_url,
+                    provider.as_str(),
+                )
+                .await
+                {
                     Ok(file_id) => {
                         tracing::info!("Avatar successfully updated for account {}", account.id);
                         Some(file_id)
                     }
                     Err(e) => {
-                        tracing::error!("Failed to update avatar for account {}: {}", account.id, e);
+                        tracing::error!(
+                            "Failed to update avatar for account {}: {}",
+                            account.id,
+                            e
+                        );
                         None
                     }
                 };
@@ -466,13 +484,13 @@ pub async fn oauth_callback(
     } else {
         // New user - create account
         tracing::info!("Creating new account for email: {}", oauth_email);
-        
+
         let new_account_id = Uuid::new_v4();
         let now = Utc::now();
-        
+
         // OAuth users don't have passwords
         let placeholder_password = "OAUTH_USER_NO_PASSWORD";
-        
+
         sqlx::query!(
             r#"
             INSERT INTO accounts (id, email, password_hash, plan, created_at)
@@ -491,19 +509,28 @@ pub async fn oauth_callback(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({
                     "error": "Failed to create account"
-                }))
+                })),
             )
         })?;
 
         // Download and store avatar in user's cloud storage with provider-specific naming
         let avatar_file_id = if let Some(ref avatar_url) = avatar_url {
-            match download_and_store_avatar(&pool, new_account_id, avatar_url, provider.as_str()).await {
+            match download_and_store_avatar(&pool, new_account_id, avatar_url, provider.as_str())
+                .await
+            {
                 Ok(file_id) => {
-                    tracing::info!("Avatar successfully downloaded for account {}", new_account_id);
+                    tracing::info!(
+                        "Avatar successfully downloaded for account {}",
+                        new_account_id
+                    );
                     Some(file_id)
                 }
                 Err(e) => {
-                    tracing::error!("Failed to download avatar for account {}: {}", new_account_id, e);
+                    tracing::error!(
+                        "Failed to download avatar for account {}: {}",
+                        new_account_id,
+                        e
+                    );
                     None
                 }
             }
@@ -548,32 +575,30 @@ pub async fn oauth_callback(
 
     // Generate JWT tokens
     let jti = generate_jti();
-    
-    let access_token = generate_token_with_jti(
-        &account_id.to_string(),
-        &jti,
-        &config
-    ).map_err(|e| {
-        tracing::error!("Failed to generate access token: {}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({
-                "error": "Failed to generate tokens"
-            }))
-        )
-    })?;
+
+    let access_token =
+        generate_token_with_jti(&account_id.to_string(), &jti, &config).map_err(|e| {
+            tracing::error!("Failed to generate access token: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to generate tokens"
+                })),
+            )
+        })?;
 
     let refresh_token_obj = generate_refresh_token(
         &config.jwt_secret,
         None,
-        true // remember_me = true pour OAuth
-    ).map_err(|e| {
+        true, // remember_me = true pour OAuth
+    )
+    .map_err(|e| {
         tracing::error!("Failed to generate refresh token: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({
                 "error": "Failed to generate tokens"
-            }))
+            })),
         )
     })?;
 
@@ -582,17 +607,17 @@ pub async fn oauth_callback(
     let refresh_expires_at = chrono::DateTime::from_timestamp(refresh_token_obj.expires_at, 0)
         .unwrap_or_else(|| Utc::now() + chrono::Duration::days(7));
     let now = Utc::now();
-    
+
     let family_id = Uuid::parse_str(&refresh_token_obj.family_id).map_err(|e| {
         tracing::error!("Invalid family_id format: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({
                 "error": "Invalid session ID format"
-            }))
+            })),
         )
     })?;
-    
+
     sqlx::query!(
         r#"
         INSERT INTO refresh_tokens (account_id, token_hash, family_id, expires_at, created_at)
@@ -612,15 +637,15 @@ pub async fn oauth_callback(
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({
                 "error": "Failed to store session"
-            }))
+            })),
         )
     })?;
 
     // Note: jwt_sessions table not implemented yet - session management via refresh_tokens only
 
     tracing::info!(
-        "OAuth authentication successful: account_id={}, is_new_user={}, redirect_url={:?}", 
-        account_id, 
+        "OAuth authentication successful: account_id={}, is_new_user={}, redirect_url={:?}",
+        account_id,
         is_new_user,
         redirect_url_from_state
     );
@@ -638,27 +663,35 @@ pub async fn oauth_callback(
 async fn exchange_google_code(
     code: &str,
     code_verifier: &str,
-) -> Result<(String, String, Option<String>, Option<String>, Option<String>, Option<String>), (StatusCode, Json<serde_json::Value>)> {
-    let client_id = std::env::var("GOOGLE_CLIENT_ID")
-        .map_err(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({
-                    "error": "Google OAuth not configured"
-                }))
-            )
-        })?;
-    
-    let client_secret = std::env::var("GOOGLE_CLIENT_SECRET")
-        .map_err(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({
-                    "error": "Google OAuth not configured"
-                }))
-            )
-        })?;
-    
+) -> Result<
+    (
+        String,
+        String,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+    ),
+    (StatusCode, Json<serde_json::Value>),
+> {
+    let client_id = std::env::var("GOOGLE_CLIENT_ID").map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Google OAuth not configured"
+            })),
+        )
+    })?;
+
+    let client_secret = std::env::var("GOOGLE_CLIENT_SECRET").map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "Google OAuth not configured"
+            })),
+        )
+    })?;
+
     let redirect_uri = std::env::var("GOOGLE_REDIRECT_URI")
         .unwrap_or_else(|_| "http://localhost:3000/api/auth/oauth/google/callback".to_string());
 
@@ -682,7 +715,7 @@ async fn exchange_google_code(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({
                     "error": "Failed to authenticate with Google"
-                }))
+                })),
             )
         })?;
 
@@ -693,7 +726,7 @@ async fn exchange_google_code(
             StatusCode::UNAUTHORIZED,
             Json(serde_json::json!({
                 "error": "Google authentication failed"
-            }))
+            })),
         ));
     }
 
@@ -703,20 +736,18 @@ async fn exchange_google_code(
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({
                 "error": "Invalid response from Google"
-            }))
+            })),
         )
     })?;
 
-    let access_token = token_data["access_token"]
-        .as_str()
-        .ok_or_else(|| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({
-                    "error": "No access token in Google response"
-                }))
-            )
-        })?;
+    let access_token = token_data["access_token"].as_str().ok_or_else(|| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "No access token in Google response"
+            })),
+        )
+    })?;
 
     // Fetch user info
     let user_info_response = client
@@ -730,7 +761,7 @@ async fn exchange_google_code(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({
                     "error": "Failed to fetch user info from Google"
-                }))
+                })),
             )
         })?;
 
@@ -740,7 +771,7 @@ async fn exchange_google_code(
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({
                 "error": "Invalid user info from Google"
-            }))
+            })),
         )
     })?;
 
@@ -749,7 +780,7 @@ async fn exchange_google_code(
             StatusCode::FORBIDDEN,
             Json(serde_json::json!({
                 "error": "Email not verified with Google"
-            }))
+            })),
         ));
     }
 
@@ -766,26 +797,34 @@ async fn exchange_google_code(
 /// Exchange GitHub authorization code for user info
 async fn exchange_github_code(
     code: &str,
-) -> Result<(String, String, Option<String>, Option<String>, Option<String>, Option<String>), (StatusCode, Json<serde_json::Value>)> {
-    let client_id = std::env::var("GITHUB_CLIENT_ID")
-        .map_err(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({
-                    "error": "GitHub OAuth not configured"
-                }))
-            )
-        })?;
-    
-    let client_secret = std::env::var("GITHUB_CLIENT_SECRET")
-        .map_err(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({
-                    "error": "GitHub OAuth not configured"
-                }))
-            )
-        })?;
+) -> Result<
+    (
+        String,
+        String,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+    ),
+    (StatusCode, Json<serde_json::Value>),
+> {
+    let client_id = std::env::var("GITHUB_CLIENT_ID").map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "GitHub OAuth not configured"
+            })),
+        )
+    })?;
+
+    let client_secret = std::env::var("GITHUB_CLIENT_SECRET").map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "GitHub OAuth not configured"
+            })),
+        )
+    })?;
 
     // Exchange code for access token
     let client = reqwest::Client::new();
@@ -805,7 +844,7 @@ async fn exchange_github_code(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({
                     "error": "Failed to authenticate with GitHub"
-                }))
+                })),
             )
         })?;
 
@@ -815,20 +854,18 @@ async fn exchange_github_code(
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({
                 "error": "Invalid response from GitHub"
-            }))
+            })),
         )
     })?;
 
-    let access_token = token_data["access_token"]
-        .as_str()
-        .ok_or_else(|| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({
-                    "error": "No access token in GitHub response"
-                }))
-            )
-        })?;
+    let access_token = token_data["access_token"].as_str().ok_or_else(|| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": "No access token in GitHub response"
+            })),
+        )
+    })?;
 
     // Fetch user info
     let user_info_response = client
@@ -843,7 +880,7 @@ async fn exchange_github_code(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({
                     "error": "Failed to fetch user info from GitHub"
-                }))
+                })),
             )
         })?;
 
@@ -853,7 +890,7 @@ async fn exchange_github_code(
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({
                 "error": "Invalid user info from GitHub"
-            }))
+            })),
         )
     })?;
 
@@ -874,7 +911,7 @@ async fn exchange_github_code(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(serde_json::json!({
                         "error": "Failed to fetch email from GitHub"
-                    }))
+                    })),
                 )
             })?;
 
@@ -884,7 +921,7 @@ async fn exchange_github_code(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({
                     "error": "Invalid email data from GitHub"
-                }))
+                })),
             )
         })?;
 
@@ -898,7 +935,7 @@ async fn exchange_github_code(
                     StatusCode::FORBIDDEN,
                     Json(serde_json::json!({
                         "error": "No verified email found in GitHub account"
-                    }))
+                    })),
                 )
             })?
             .to_string()
@@ -923,18 +960,18 @@ async fn download_and_store_avatar(
     provider: &str,
 ) -> anyhow::Result<Uuid> {
     use crate::storage::FileStorageService;
-    
+
     // Download avatar image
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(10))
         .build()?;
-    
+
     let response = client.get(avatar_url).send().await?;
-    
+
     if !response.status().is_success() {
         anyhow::bail!("Failed to download avatar: HTTP {}", response.status());
     }
-    
+
     // Get content type
     let content_type = response
         .headers()
@@ -942,10 +979,10 @@ async fn download_and_store_avatar(
         .and_then(|v| v.to_str().ok())
         .unwrap_or("image/jpeg")
         .to_string();
-    
+
     // Download image bytes
     let image_bytes = response.bytes().await?;
-    
+
     // Generate filename based on provider and content type
     // Convention: {provider}-avatar.{extension}
     let extension = match content_type.as_str() {
@@ -956,7 +993,7 @@ async fn download_and_store_avatar(
         _ => "jpg",
     };
     let filename = format!("{}-avatar.{}", provider, extension);
-    
+
     // Store in user's personal cloud storage with public visibility
     // No website_id = personal cloud
     let storage = FileStorageService::new(pool.clone());
@@ -973,7 +1010,7 @@ async fn download_and_store_avatar(
             None,           // tags
         )
         .await?;
-    
+
     tracing::info!(
         "Avatar downloaded and stored: account_id={}, file_id={}, filename={}, size={}",
         account_id,
@@ -996,7 +1033,10 @@ mod tests {
         hasher.update(verifier.as_bytes());
         let expected = B64.encode(hasher.finalize());
         assert_eq!(challenge, expected);
-        assert!(verifier.len() >= 43, "verifier must be >= 43 chars (RFC 7636)");
+        assert!(
+            verifier.len() >= 43,
+            "verifier must be >= 43 chars (RFC 7636)"
+        );
     }
 
     #[test]

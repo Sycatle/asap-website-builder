@@ -6,7 +6,7 @@ pub async fn generate_website_content(
     orgs: Option<Vec<serde_json::Value>>,
 ) -> Result<serde_json::Value> {
     tracing::info!("Processing {} repositories", repos.len());
-    
+
     // Transform repos into website projects
     let mut projects: Vec<serde_json::Value> = repos
         .into_iter()
@@ -254,7 +254,7 @@ mod tests {
         })]);
 
         let result = generate_website_content(repos, user, orgs).await.unwrap();
-        
+
         let profile = &result["profile"];
         assert_eq!(profile["username"], "testuser");
         assert_eq!(profile["name"], "Test User");

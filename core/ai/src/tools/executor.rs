@@ -17,7 +17,7 @@ use crate::types::WebsiteContext;
 pub trait WebSearchBackend: Send + Sync {
     /// Execute a web search and return results
     async fn search(&self, params: &WebSearchParams) -> Result<Vec<WebSearchResult>, String>;
-    
+
     /// Check if the backend is configured and ready
     fn is_available(&self) -> bool;
 }
@@ -27,7 +27,7 @@ pub trait WebSearchBackend: Send + Sync {
 pub trait WebBrowseBackend: Send + Sync {
     /// Browse a URL and extract content
     async fn browse(&self, params: &BrowseUrlParams) -> Result<BrowsedContent, String>;
-    
+
     /// Check if the backend is configured and ready
     fn is_available(&self) -> bool;
 }
@@ -70,35 +70,37 @@ impl ToolExecutor {
 
     /// Check if web search is available
     pub fn has_web_search(&self) -> bool {
-        self.web_search_backend.as_ref().map(|b| b.is_available()).unwrap_or(false)
+        self.web_search_backend
+            .as_ref()
+            .map(|b| b.is_available())
+            .unwrap_or(false)
     }
 
     /// Check if URL browsing is available
     pub fn has_web_browse(&self) -> bool {
-        self.web_browse_backend.as_ref().map(|b| b.is_available()).unwrap_or(false)
+        self.web_browse_backend
+            .as_ref()
+            .map(|b| b.is_available())
+            .unwrap_or(false)
     }
 
     /// Execute a tool call and return the result
-    /// 
+    ///
     /// # Arguments
     /// * `tool_call` - The tool call to execute
     /// * `context` - Website context (must include account_id for secure operations)
-    /// 
+    ///
     /// # Security
     /// The context should be built with `build_secure` or have account_id set.
     /// Operations on website data are scoped to the context - ensure the context
     /// was populated only with data the account has access to.
-    pub async fn execute(
-        &self,
-        tool_call: &ToolCall,
-        context: &WebsiteContext,
-    ) -> ToolResult {
+    pub async fn execute(&self, tool_call: &ToolCall, context: &WebsiteContext) -> ToolResult {
         let function_name = &tool_call.function.name;
         let args = &tool_call.function.arguments;
 
         // Log with account context for audit trail
         let account_str = context.account_id_or_unknown();
-        
+
         // Warn if account_id is missing (potential security issue)
         if !context.has_account_id() {
             warn!(
@@ -138,7 +140,7 @@ impl ToolExecutor {
             },
             Err(error) => {
                 warn!(
-                    tool = function_name, 
+                    tool = function_name,
                     error = %error,
                     website_id = %context.website.id,
                     account_id = %account_str,
@@ -156,11 +158,11 @@ impl ToolExecutor {
 
     /// Search within collections
     fn search_collections(&self, args: &str, context: &WebsiteContext) -> Result<String, String> {
-        let params: SearchCollectionsParams = serde_json::from_str(args)
-            .map_err(|e| format!("Invalid parameters: {}", e))?;
+        let params: SearchCollectionsParams =
+            serde_json::from_str(args).map_err(|e| format!("Invalid parameters: {}", e))?;
 
         let data = context.data.as_ref().ok_or("No website data available")?;
-        
+
         let mut results: Vec<CollectionItem> = Vec::new();
         let limit = params.limit.min(50);
 
@@ -174,12 +176,13 @@ impl ToolExecutor {
 
             // Search through preview items (Vec<serde_json::Value>)
             for item in &collection.preview {
-                let item_data: HashMap<String, serde_json::Value> = if let Some(obj) = item.as_object() {
-                    obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
-                } else {
-                    continue;
-                };
-                
+                let item_data: HashMap<String, serde_json::Value> =
+                    if let Some(obj) = item.as_object() {
+                        obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+                    } else {
+                        continue;
+                    };
+
                 let mut matches = true;
                 let mut score: f32 = 1.0;
 
@@ -187,7 +190,7 @@ impl ToolExecutor {
                 if let Some(ref query) = params.query {
                     let query_lower = query.to_lowercase();
                     let mut found = false;
-                    
+
                     for value in item_data.values() {
                         if let Some(text) = value.as_str() {
                             if text.to_lowercase().contains(&query_lower) {
@@ -202,7 +205,7 @@ impl ToolExecutor {
                             }
                         }
                     }
-                    
+
                     if !found {
                         matches = false;
                     }
@@ -218,23 +221,39 @@ impl ToolExecutor {
                                     for (op, val) in obj {
                                         match op.as_str() {
                                             "$gt" => {
-                                                if let (Some(a), Some(b)) = (actual_value.as_i64(), val.as_i64()) {
-                                                    if a <= b { matches = false; }
+                                                if let (Some(a), Some(b)) =
+                                                    (actual_value.as_i64(), val.as_i64())
+                                                {
+                                                    if a <= b {
+                                                        matches = false;
+                                                    }
                                                 }
                                             }
                                             "$lt" => {
-                                                if let (Some(a), Some(b)) = (actual_value.as_i64(), val.as_i64()) {
-                                                    if a >= b { matches = false; }
+                                                if let (Some(a), Some(b)) =
+                                                    (actual_value.as_i64(), val.as_i64())
+                                                {
+                                                    if a >= b {
+                                                        matches = false;
+                                                    }
                                                 }
                                             }
                                             "$gte" => {
-                                                if let (Some(a), Some(b)) = (actual_value.as_i64(), val.as_i64()) {
-                                                    if a < b { matches = false; }
+                                                if let (Some(a), Some(b)) =
+                                                    (actual_value.as_i64(), val.as_i64())
+                                                {
+                                                    if a < b {
+                                                        matches = false;
+                                                    }
                                                 }
                                             }
                                             "$lte" => {
-                                                if let (Some(a), Some(b)) = (actual_value.as_i64(), val.as_i64()) {
-                                                    if a > b { matches = false; }
+                                                if let (Some(a), Some(b)) =
+                                                    (actual_value.as_i64(), val.as_i64())
+                                                {
+                                                    if a > b {
+                                                        matches = false;
+                                                    }
                                                 }
                                             }
                                             _ => {}
@@ -252,7 +271,8 @@ impl ToolExecutor {
 
                 if matches {
                     results.push(CollectionItem {
-                        id: item_data.get("id")
+                        id: item_data
+                            .get("id")
                             .or_else(|| item_data.get("name"))
                             .and_then(|v| v.as_str())
                             .unwrap_or("unknown")
@@ -274,22 +294,26 @@ impl ToolExecutor {
 
         // Sort by score descending
         results.sort_by(|a, b| {
-            b.score.unwrap_or(0.0).partial_cmp(&a.score.unwrap_or(0.0)).unwrap()
+            b.score
+                .unwrap_or(0.0)
+                .partial_cmp(&a.score.unwrap_or(0.0))
+                .unwrap()
         });
 
         Ok(serde_json::to_string(&json!({
             "count": results.len(),
             "items": results
-        })).unwrap())
+        }))
+        .unwrap())
     }
 
     /// Search website variables
     fn search_variables(&self, args: &str, context: &WebsiteContext) -> Result<String, String> {
-        let params: SearchVariablesParams = serde_json::from_str(args)
-            .map_err(|e| format!("Invalid parameters: {}", e))?;
+        let params: SearchVariablesParams =
+            serde_json::from_str(args).map_err(|e| format!("Invalid parameters: {}", e))?;
 
         let data = context.data.as_ref().ok_or("No website data available")?;
-        
+
         let mut results: Vec<VariableItem> = Vec::new();
 
         for group in &data.variables {
@@ -319,13 +343,14 @@ impl ToolExecutor {
         Ok(serde_json::to_string(&json!({
             "count": results.len(),
             "variables": results
-        })).unwrap())
+        }))
+        .unwrap())
     }
 
     /// Get website sections
     fn get_sections(&self, args: &str, context: &WebsiteContext) -> Result<String, String> {
-        let params: GetSectionsParams = serde_json::from_str(args)
-            .map_err(|e| format!("Invalid parameters: {}", e))?;
+        let params: GetSectionsParams =
+            serde_json::from_str(args).map_err(|e| format!("Invalid parameters: {}", e))?;
 
         let mut sections: Vec<serde_json::Value> = Vec::new();
 
@@ -348,9 +373,11 @@ impl ToolExecutor {
                 section_info["properties"] = section.properties.clone();
             } else {
                 // Include a brief preview from properties
-                if let Some(headline) = section.properties.get("headline").and_then(|v| v.as_str()) {
+                if let Some(headline) = section.properties.get("headline").and_then(|v| v.as_str())
+                {
                     section_info["preview"] = json!({"headline": headline});
-                } else if let Some(title) = section.properties.get("title").and_then(|v| v.as_str()) {
+                } else if let Some(title) = section.properties.get("title").and_then(|v| v.as_str())
+                {
                     section_info["preview"] = json!({"title": title});
                 }
             }
@@ -361,7 +388,8 @@ impl ToolExecutor {
         Ok(serde_json::to_string(&json!({
             "count": sections.len(),
             "sections": sections
-        })).unwrap())
+        }))
+        .unwrap())
     }
 
     /// Get website theme
@@ -370,13 +398,34 @@ impl ToolExecutor {
 
         // Return summary of theme
         let theme_info = ThemeInfo {
-            primary_color: theme.get("primaryColor").and_then(|v| v.as_str()).map(String::from),
-            secondary_color: theme.get("secondaryColor").and_then(|v| v.as_str()).map(String::from),
-            background_color: theme.get("backgroundColor").and_then(|v| v.as_str()).map(String::from),
-            text_color: theme.get("textColor").and_then(|v| v.as_str()).map(String::from),
-            font_family: theme.get("fontFamily").and_then(|v| v.as_str()).map(String::from),
-            font_scale: theme.get("fontScale").and_then(|v| v.as_str()).map(String::from),
-            border_radius: theme.get("borderRadius").and_then(|v| v.as_str()).map(String::from),
+            primary_color: theme
+                .get("primaryColor")
+                .and_then(|v| v.as_str())
+                .map(String::from),
+            secondary_color: theme
+                .get("secondaryColor")
+                .and_then(|v| v.as_str())
+                .map(String::from),
+            background_color: theme
+                .get("backgroundColor")
+                .and_then(|v| v.as_str())
+                .map(String::from),
+            text_color: theme
+                .get("textColor")
+                .and_then(|v| v.as_str())
+                .map(String::from),
+            font_family: theme
+                .get("fontFamily")
+                .and_then(|v| v.as_str())
+                .map(String::from),
+            font_scale: theme
+                .get("fontScale")
+                .and_then(|v| v.as_str())
+                .map(String::from),
+            border_radius: theme
+                .get("borderRadius")
+                .and_then(|v| v.as_str())
+                .map(String::from),
             full: Some(theme.clone()),
         };
         Ok(serde_json::to_string(&theme_info).unwrap())
@@ -393,7 +442,10 @@ impl ToolExecutor {
             seo: data.get("seo").cloned(),
             social: data.get("social").cloned(),
             analytics: data.get("analytics").cloned(),
-            domain: data.get("domain").and_then(|v| v.as_str()).map(String::from),
+            domain: data
+                .get("domain")
+                .and_then(|v| v.as_str())
+                .map(String::from),
             full: Some(data.clone()),
         };
         Ok(serde_json::to_string(&settings_info).unwrap())
@@ -402,45 +454,55 @@ impl ToolExecutor {
     /// List extensions
     fn list_extensions(&self, context: &WebsiteContext) -> Result<String, String> {
         // Use the extensions list from context (loaded from website_extensions_v2)
-        let extensions: Vec<ExtensionInfo> = context.extensions.iter().map(|ext| {
-            // Count variables and collections from this extension
-            let (variables_count, collections_count) = if let Some(data) = context.data.as_ref() {
-                let vars = data.variables.iter()
-                    .filter(|g| g.source == ext.slug)
-                    .map(|g| g.variables.len())
-                    .sum();
-                let cols = data.collections.iter()
-                    .filter(|c| c.source == ext.slug)
-                    .count();
-                (vars, cols)
-            } else {
-                (0, 0)
-            };
-            
-            ExtensionInfo {
-                id: ext.slug.clone(),
-                name: ext.name.clone(),
-                active: ext.enabled,
-                variables_count,
-                collections_count,
-            }
-        }).collect();
+        let extensions: Vec<ExtensionInfo> = context
+            .extensions
+            .iter()
+            .map(|ext| {
+                // Count variables and collections from this extension
+                let (variables_count, collections_count) = if let Some(data) = context.data.as_ref()
+                {
+                    let vars = data
+                        .variables
+                        .iter()
+                        .filter(|g| g.source == ext.slug)
+                        .map(|g| g.variables.len())
+                        .sum();
+                    let cols = data
+                        .collections
+                        .iter()
+                        .filter(|c| c.source == ext.slug)
+                        .count();
+                    (vars, cols)
+                } else {
+                    (0, 0)
+                };
+
+                ExtensionInfo {
+                    id: ext.slug.clone(),
+                    name: ext.name.clone(),
+                    active: ext.enabled,
+                    variables_count,
+                    collections_count,
+                }
+            })
+            .collect();
 
         Ok(serde_json::to_string(&json!({
             "count": extensions.len(),
             "extensions": extensions
-        })).unwrap())
+        }))
+        .unwrap())
     }
 
     /// Get page content
     fn get_page_content(&self, args: &str, context: &WebsiteContext) -> Result<String, String> {
-        let params: GetPageContentParams = serde_json::from_str(args)
-            .map_err(|e| format!("Invalid parameters: {}", e))?;
+        let params: GetPageContentParams =
+            serde_json::from_str(args).map_err(|e| format!("Invalid parameters: {}", e))?;
 
         // For now, treat the whole website as a single page
         // In the future, this can be expanded for multi-page support
         let page = &params.page;
-        
+
         let mut page_info = json!({
             "slug": page,
             "title": context.website.title,
@@ -448,18 +510,24 @@ impl ToolExecutor {
         });
 
         if params.include_sections {
-            let sections: Vec<serde_json::Value> = context.sections.iter().map(|s| {
-                json!({
-                    "id": s.id,
-                    "type": s.section_type,
-                    "variant": s.variant,
-                    "position": s.position,
-                    "properties": s.properties,
+            let sections: Vec<serde_json::Value> = context
+                .sections
+                .iter()
+                .map(|s| {
+                    json!({
+                        "id": s.id,
+                        "type": s.section_type,
+                        "variant": s.variant,
+                        "position": s.position,
+                        "properties": s.properties,
+                    })
                 })
-            }).collect();
+                .collect();
             page_info["sections"] = json!(sections);
         } else {
-            let section_types: Vec<&str> = context.sections.iter()
+            let section_types: Vec<&str> = context
+                .sections
+                .iter()
                 .map(|s| s.section_type.as_str())
                 .collect();
             page_info["section_types"] = json!(section_types);
@@ -469,15 +537,17 @@ impl ToolExecutor {
     }
 
     /// Search the web for information
-    /// 
+    ///
     /// NOTE: Requires a WebSearchBackend to be configured.
     /// Without a backend, returns an explicit error instead of fake data.
     async fn web_search(&self, args: &str) -> Result<String, String> {
-        let params: WebSearchParams = serde_json::from_str(args)
-            .map_err(|e| format!("Invalid parameters: {}", e))?;
+        let params: WebSearchParams =
+            serde_json::from_str(args).map_err(|e| format!("Invalid parameters: {}", e))?;
 
-        debug!("Web search requested: query='{}', num_results={}, time_range='{}'", 
-            params.query, params.num_results, params.time_range);
+        debug!(
+            "Web search requested: query='{}', num_results={}, time_range='{}'",
+            params.query, params.num_results, params.time_range
+        );
 
         // Check if we have a search backend configured
         if self.web_search_backend.is_none() {
@@ -492,14 +562,19 @@ impl ToolExecutor {
         }
 
         // Execute search via backend
-        match self.web_search_backend.as_ref().unwrap().search(&params).await {
-            Ok(results) => {
-                Ok(serde_json::to_string(&json!({
-                    "query": params.query,
-                    "count": results.len(),
-                    "results": results
-                })).unwrap())
-            }
+        match self
+            .web_search_backend
+            .as_ref()
+            .unwrap()
+            .search(&params)
+            .await
+        {
+            Ok(results) => Ok(serde_json::to_string(&json!({
+                "query": params.query,
+                "count": results.len(),
+                "results": results
+            }))
+            .unwrap()),
             Err(e) => {
                 error!("Web search failed: {}", e);
                 Ok(serde_json::to_string(&json!({
@@ -514,13 +589,16 @@ impl ToolExecutor {
     }
 
     /// Browse a URL and extract content
-    /// 
+    ///
     /// NOTE: Requires a WebBrowseBackend to be configured.
     async fn browse_url(&self, args: &str) -> Result<String, String> {
-        let params: BrowseUrlParams = serde_json::from_str(args)
-            .map_err(|e| format!("Invalid parameters: {}", e))?;
+        let params: BrowseUrlParams =
+            serde_json::from_str(args).map_err(|e| format!("Invalid parameters: {}", e))?;
 
-        debug!("Browse URL requested: url='{}', extract='{}'", params.url, params.extract);
+        debug!(
+            "Browse URL requested: url='{}', extract='{}'",
+            params.url, params.extract
+        );
 
         // Validate URL
         if !params.url.starts_with("http://") && !params.url.starts_with("https://") {
@@ -542,7 +620,13 @@ impl ToolExecutor {
         }
 
         // Execute browse via backend
-        match self.web_browse_backend.as_ref().unwrap().browse(&params).await {
+        match self
+            .web_browse_backend
+            .as_ref()
+            .unwrap()
+            .browse(&params)
+            .await
+        {
             Ok(content) => Ok(serde_json::to_string(&content).unwrap()),
             Err(e) => {
                 error!("URL browse failed: {}", e);
@@ -554,28 +638,32 @@ impl ToolExecutor {
                         "error": "BROWSE_FAILED",
                         "message": format!("Failed to browse URL: {}", e)
                     })),
-                }).unwrap())
+                })
+                .unwrap())
             }
         }
     }
 
     /// Analyze trends for target audiences using web research
     async fn analyze_trends(&self, args: &str) -> Result<String, String> {
-        let params: AnalyzeTrendsParams = serde_json::from_str(args)
-            .map_err(|e| format!("Invalid parameters: {}", e))?;
+        let params: AnalyzeTrendsParams =
+            serde_json::from_str(args).map_err(|e| format!("Invalid parameters: {}", e))?;
 
-        debug!("Trend analysis requested: audience='{}', industry={:?}, focus='{}', time_period='{}'",
-            params.audience, params.industry, params.focus, params.time_period);
+        debug!(
+            "Trend analysis requested: audience='{}', industry={:?}, focus='{}', time_period='{}'",
+            params.audience, params.industry, params.focus, params.time_period
+        );
 
         // Get current year dynamically
         let current_year = chrono::Utc::now().format("%Y").to_string();
 
         // Build a comprehensive search query for trends
-        let industry_part = params.industry
+        let industry_part = params
+            .industry
             .as_deref()
             .map(|i| format!("{} ", i))
             .unwrap_or_default();
-        
+
         let time_qualifier = match params.time_period.as_str() {
             "current" => format!("{} trends", current_year),
             "recent" => "recent trends".to_string(),
@@ -585,19 +673,21 @@ impl ToolExecutor {
 
         let search_query = format!(
             "{}{} {} {} target audience",
-            industry_part,
-            params.focus,
-            time_qualifier,
-            params.audience
+            industry_part, params.focus, time_qualifier, params.audience
         );
 
         debug!("Executing web search for trends: '{}'", search_query);
 
         // Perform web search
-        let search_result = self.web_search(&serde_json::json!({
-            "query": search_query,
-            "num_results": 5
-        }).to_string()).await;
+        let search_result = self
+            .web_search(
+                &serde_json::json!({
+                    "query": search_query,
+                    "num_results": 5
+                })
+                .to_string(),
+            )
+            .await;
 
         let search_data = match search_result {
             Ok(data) => data,
@@ -616,7 +706,8 @@ impl ToolExecutor {
             .map_err(|e| format!("Failed to parse search results: {}", e))?;
 
         // Extract results array
-        let results = search_response["results"].as_array()
+        let results = search_response["results"]
+            .as_array()
             .ok_or_else(|| "No results array in search response".to_string())?;
 
         // Extract trends from search results
@@ -675,7 +766,7 @@ fn matches_pattern(key: &str, pattern: &str) -> bool {
         } else if pattern.starts_with('*') {
             key.ends_with(&pattern[1..])
         } else if pattern.ends_with('*') {
-            key.starts_with(&pattern[..pattern.len()-1])
+            key.starts_with(&pattern[..pattern.len() - 1])
         } else {
             key == pattern
         }

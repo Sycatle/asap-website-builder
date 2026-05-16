@@ -4,25 +4,25 @@ use thiserror::Error;
 pub enum PaymentError {
     #[error("Invalid webhook signature")]
     InvalidSignature,
-    
+
     #[error("Customer not found: {0}")]
     CustomerNotFound(String),
-    
+
     #[error("Subscription not found: {0}")]
     SubscriptionNotFound(String),
-    
+
     #[error("Payment event processing failed: {0}")]
     EventProcessingFailed(String),
-    
+
     #[error("Invalid configuration: {0}")]
     InvalidConfiguration(String),
-    
+
     #[error("Payment provider not configured: {0}")]
     Configuration(String),
-    
+
     #[error("Database error: {0}")]
     DatabaseError(String),
-    
+
     #[error("Unknown error: {0}")]
     Unknown(String),
 }

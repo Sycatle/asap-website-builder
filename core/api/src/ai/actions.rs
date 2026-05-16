@@ -3,16 +3,12 @@
 //! Functions to execute AI-generated actions on websites
 //! (update sections, add/remove sections, change themes, etc.)
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    Extension, Json,
-};
+use axum::{extract::State, http::StatusCode, Extension, Json};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use asap_core_ai::AIAction;
 use crate::Claims;
+use asap_core_ai::AIAction;
 
 use super::helpers::get_account_id;
 use super::types::{ErrorResponse, ExecuteActionRequest, ExecuteActionResponse};
@@ -29,7 +25,14 @@ pub async fn execute_action(
     Json(req): Json<ExecuteActionRequest>,
 ) -> Result<Json<ExecuteActionResponse>, (StatusCode, Json<ErrorResponse>)> {
     let account_id = get_account_id(&claims).map_err(|s| {
-        (s, Json(ErrorResponse { error: "Unauthorized".to_string(), code: "unauthorized".to_string(), ..Default::default() }))
+        (
+            s,
+            Json(ErrorResponse {
+                error: "Unauthorized".to_string(),
+                code: "unauthorized".to_string(),
+                ..Default::default()
+            }),
+        )
     })?;
 
     // Verify website access
@@ -37,11 +40,25 @@ pub async fn execute_action(
         .await
         .map_err(|e| {
             tracing::error!("Failed to verify website access: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "Failed to verify access".to_string(), code: "internal_error".to_string(), ..Default::default() }))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Failed to verify access".to_string(),
+                    code: "internal_error".to_string(),
+                    ..Default::default()
+                }),
+            )
         })?;
 
     if !has_access {
-        return Err((StatusCode::FORBIDDEN, Json(ErrorResponse { error: "Access denied to this website".to_string(), code: "forbidden".to_string(), ..Default::default() })));
+        return Err((
+            StatusCode::FORBIDDEN,
+            Json(ErrorResponse {
+                error: "Access denied to this website".to_string(),
+                code: "forbidden".to_string(),
+                ..Default::default()
+            }),
+        ));
     }
 
     tracing::info!(
@@ -55,14 +72,12 @@ pub async fn execute_action(
     let result = execute_ai_action(&pool, req.website_id, account_id, &req.action).await;
 
     match result {
-        Ok((message, affected_id)) => {
-            Ok(Json(ExecuteActionResponse {
-                success: true,
-                message,
-                affected_element_id: affected_id,
-                error: None,
-            }))
-        }
+        Ok((message, affected_id)) => Ok(Json(ExecuteActionResponse {
+            success: true,
+            message,
+            affected_element_id: affected_id,
+            error: None,
+        })),
         Err(e) => {
             tracing::error!("Action execution failed: {}", e);
             Ok(Json(ExecuteActionResponse {
@@ -87,14 +102,21 @@ pub async fn execute_ai_action(
     action: &AIAction,
 ) -> Result<(String, Option<Uuid>), Box<dyn std::error::Error + Send + Sync>> {
     match action {
-        AIAction::UpdateSectionProperty { section_id, property, value } => {
+        AIAction::UpdateSectionProperty {
+            section_id,
+            property,
+            value,
+        } => {
             // Update settings or data based on property type
             // Properties like "headline", "subheadline", etc. go in settings
             // Dynamic content goes in data
 
             // First, get current element
-            let elements = crate::queries::list_website_elements(pool, website_id, account_id).await?;
-            let element = elements.iter().find(|e| e.id == *section_id)
+            let elements =
+                crate::queries::list_website_elements(pool, website_id, account_id).await?;
+            let element = elements
+                .iter()
+                .find(|e| e.id == *section_id)
                 .ok_or("Section not found")?;
 
             // Update settings with the new property value
@@ -104,16 +126,33 @@ pub async fn execute_ai_action(
             }
 
             crate::queries::update_website_element(
-                pool, *section_id, website_id, account_id,
-                None, None, Some(&settings), None, None
-            ).await?;
+                pool,
+                *section_id,
+                website_id,
+                account_id,
+                None,
+                None,
+                Some(&settings),
+                None,
+                None,
+            )
+            .await?;
 
-            Ok((format!("Updated '{}' on section", property), Some(*section_id)))
+            Ok((
+                format!("Updated '{}' on section", property),
+                Some(*section_id),
+            ))
         }
 
-        AIAction::AddSection { section_type, position, variant, properties } => {
+        AIAction::AddSection {
+            section_type,
+            position,
+            variant,
+            properties,
+        } => {
             // Get max order
-            let elements = crate::queries::list_website_elements(pool, website_id, account_id).await?;
+            let elements =
+                crate::queries::list_website_elements(pool, website_id, account_id).await?;
             let order = position.unwrap_or_else(|| elements.len() as i32);
 
             // Build settings from properties and variant
@@ -124,10 +163,20 @@ pub async fn execute_ai_action(
                 }
             }
 
-            let slug = format!("{}-{}", section_type, uuid::Uuid::new_v4().to_string().split('-').next().unwrap_or("new"));
+            let slug = format!(
+                "{}-{}",
+                section_type,
+                uuid::Uuid::new_v4()
+                    .to_string()
+                    .split('-')
+                    .next()
+                    .unwrap_or("new")
+            );
 
             let element_id = crate::queries::create_website_element(
-                pool, website_id, account_id,
+                pool,
+                website_id,
+                account_id,
                 None, // extension_id
                 section_type,
                 &slug,
@@ -136,13 +185,15 @@ pub async fn execute_ai_action(
                 "default", // layout
                 &settings,
                 &serde_json::json!({}), // data
-            ).await?;
+            )
+            .await?;
 
             Ok((format!("Added {} section", section_type), Some(element_id)))
         }
 
         AIAction::RemoveSection { section_id } => {
-            crate::queries::delete_website_element(pool, *section_id, website_id, account_id).await?;
+            crate::queries::delete_website_element(pool, *section_id, website_id, account_id)
+                .await?;
             Ok(("Section removed".to_string(), Some(*section_id)))
         }
 
@@ -151,10 +202,16 @@ pub async fn execute_ai_action(
             Ok((format!("Reordered {} sections", order.len()), None))
         }
 
-        AIAction::ChangeVariant { section_id, variant } => {
+        AIAction::ChangeVariant {
+            section_id,
+            variant,
+        } => {
             // Get current element
-            let elements = crate::queries::list_website_elements(pool, website_id, account_id).await?;
-            let element = elements.iter().find(|e| e.id == *section_id)
+            let elements =
+                crate::queries::list_website_elements(pool, website_id, account_id).await?;
+            let element = elements
+                .iter()
+                .find(|e| e.id == *section_id)
                 .ok_or("Section not found")?;
 
             // Update settings with new variant
@@ -164,11 +221,22 @@ pub async fn execute_ai_action(
             }
 
             crate::queries::update_website_element(
-                pool, *section_id, website_id, account_id,
-                None, None, Some(&settings), None, None
-            ).await?;
+                pool,
+                *section_id,
+                website_id,
+                account_id,
+                None,
+                None,
+                Some(&settings),
+                None,
+                None,
+            )
+            .await?;
 
-            Ok((format!("Changed variant to '{}'", variant), Some(*section_id)))
+            Ok((
+                format!("Changed variant to '{}'", variant),
+                Some(*section_id),
+            ))
         }
 
         AIAction::UpdateTheme { changes } => {
@@ -185,7 +253,7 @@ pub async fn execute_ai_action(
                 ),
                 updated_at = now()
                 WHERE id = $2 AND account_id = $3
-                "#
+                "#,
             )
             .bind(changes)
             .bind(website_id)
@@ -213,7 +281,11 @@ pub async fn execute_ai_action(
             Ok(("Metadata updated".to_string(), None))
         }
 
-        AIAction::GenerateImage { prompt, target_section_id, target_property } => {
+        AIAction::GenerateImage {
+            prompt,
+            target_section_id,
+            target_property,
+        } => {
             // Image generation is handled separately through the AI orchestrator
             // For now, just acknowledge the request
             tracing::info!(
@@ -223,7 +295,10 @@ pub async fn execute_ai_action(
                 "Image generation requested - not yet implemented"
             );
 
-            Ok(("Image generation queued (coming soon)".to_string(), *target_section_id))
+            Ok((
+                "Image generation queued (coming soon)".to_string(),
+                *target_section_id,
+            ))
         }
     }
 }

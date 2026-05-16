@@ -56,23 +56,23 @@ pub enum NotificationType {
     WelcomeMessage,
     SystemUpdate,
     MaintenanceScheduled,
-    
+
     // Account notifications
     PasswordChanged,
     EmailVerified,
     ProfileUpdated,
-    
+
     // Website notifications
     WebsitePublished,
     WebsiteUnpublished,
     WebsiteDataUpdated,
     NewVisitor,
-    
+
     // Extension notifications
     ExtensionActivated,
     ExtensionDeactivated,
     ExtensionConfigUpdated,
-    
+
     // Billing notifications
     PaymentSuccessful,
     PaymentFailed,
@@ -80,16 +80,16 @@ pub enum NotificationType {
     SubscriptionExpiring,
     PlanUpgraded,
     PlanDowngraded,
-    
+
     // Analytics notifications
     MilestoneReached,
     WeeklyReport,
     TrafficSpike,
-    
+
     // Security notifications
     NewLoginDetected,
     SuspiciousActivity,
-    
+
     // Custom notification
     Custom(String),
 }

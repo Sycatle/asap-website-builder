@@ -1,10 +1,10 @@
 //! Shared data types for queries
 
-use sqlx::FromRow;
-use uuid::Uuid;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
-use chrono::{DateTime, Utc};
+use sqlx::FromRow;
+use uuid::Uuid;
 
 /// Website with data
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]

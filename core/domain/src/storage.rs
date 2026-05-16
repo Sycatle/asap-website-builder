@@ -1,16 +1,16 @@
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+use uuid::Uuid;
 
 /// File visibility levels
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum FileVisibility {
     #[default]
-    Private,  // Accessible only to owner with auth token
-    Public,   // Accessible to anyone via public URL
-    Website,  // Inherits visibility from associated website
+    Private, // Accessible only to owner with auth token
+    Public,  // Accessible to anyone via public URL
+    Website, // Inherits visibility from associated website
 }
 
 impl FileVisibility {
@@ -62,7 +62,7 @@ impl FileFolder {
             Some(p) if !p.is_empty() && p != "/" => format!("{}/{}", p, name),
             _ => format!("/{}", name),
         };
-        
+
         Self {
             id: Uuid::new_v4(),
             account_id,
@@ -372,13 +372,13 @@ mod tests {
     fn test_quota_can_upload() {
         let account_id = Uuid::new_v4();
         let mut quota = AccountStorageQuota::new(account_id);
-        
+
         // Should allow upload initially (default quota is 50 MB)
         assert!(quota.can_upload(10_000_000)); // 10 MB
-        
+
         // Fill quota
         quota.total_size_used = quota.quota_limit;
-        
+
         // Should not allow upload when full
         assert!(!quota.can_upload(1_000_000));
     }
@@ -387,9 +387,9 @@ mod tests {
     fn test_quota_remaining() {
         let account_id = Uuid::new_v4();
         let mut quota = AccountStorageQuota::new(account_id);
-        
+
         quota.total_size_used = 10_000_000; // 10 MB
-        
+
         // Remaining should be quota_limit - used
         let expected = AccountStorageQuota::DEFAULT_QUOTA - 10_000_000;
         assert_eq!(quota.remaining(), expected);

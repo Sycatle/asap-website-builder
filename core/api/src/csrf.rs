@@ -1,12 +1,12 @@
+use asap_core_shared::{validate_csrf_token, SharedConfig, CSRF_HEADER};
 use axum::{
     extract::{Request, State},
-    http::{header, StatusCode, HeaderValue},
+    http::{header, HeaderValue, StatusCode},
     middleware::Next,
-    response::{Response, IntoResponse},
+    response::{IntoResponse, Response},
     Json,
 };
 use serde_json::json;
-use asap_core_shared::{validate_csrf_token, SharedConfig, CSRF_HEADER};
 
 /// Routes that require CSRF validation
 /// These are state-changing operations that could be exploited via CSRF
@@ -20,7 +20,7 @@ const CSRF_EXEMPT_PATHS: &[&str] = &[
 ];
 
 /// CSRF middleware
-/// 
+///
 /// Validates X-CSRF-Token header for state-changing requests.
 /// Tokens are validated using HMAC-SHA256 with the JWT secret.
 pub async fn csrf_middleware(
@@ -30,23 +30,23 @@ pub async fn csrf_middleware(
 ) -> Result<Response, (StatusCode, Json<serde_json::Value>)> {
     let method = req.method().as_str();
     let path = req.uri().path();
-    
+
     // Only check CSRF for state-changing methods
     if !CSRF_PROTECTED_METHODS.contains(&method) {
         return Ok(next.run(req).await);
     }
-    
+
     // Skip CSRF check for exempt paths
-    if CSRF_EXEMPT_PATHS.iter().any(|exempt| path.starts_with(exempt)) {
+    if CSRF_EXEMPT_PATHS
+        .iter()
+        .any(|exempt| path.starts_with(exempt))
+    {
         return Ok(next.run(req).await);
     }
-    
+
     // Extract CSRF token from header
-    let csrf_token = req
-        .headers()
-        .get(CSRF_HEADER)
-        .and_then(|h| h.to_str().ok());
-    
+    let csrf_token = req.headers().get(CSRF_HEADER).and_then(|h| h.to_str().ok());
+
     let token = match csrf_token {
         Some(token) if !token.is_empty() => token,
         _ => {
@@ -60,7 +60,7 @@ pub async fn csrf_middleware(
             ));
         }
     };
-    
+
     // Validate token
     match validate_csrf_token(token, &config.jwt_secret) {
         Ok(true) => Ok(next.run(req).await),
@@ -92,30 +92,30 @@ pub async fn get_csrf_token(
     axum::Extension(config): axum::Extension<SharedConfig>,
 ) -> impl IntoResponse {
     use asap_core_shared::generate_csrf_token;
-    
+
     match generate_csrf_token(&config.jwt_secret) {
         Ok(token) => {
             let mut response = Json(json!({
                 "csrf_token": token.token
-            })).into_response();
-            
+            }))
+            .into_response();
+
             // Add Secure flag in production (when not localhost)
             let is_secure = std::env::var("ENVIRONMENT")
                 .map(|e| e == "production")
                 .unwrap_or(false);
             let secure_flag = if is_secure { "; Secure" } else { "" };
-            
+
             // Also set as cookie for convenience
             let cookie = format!(
                 "csrf_token={}; Path=/; HttpOnly; SameSite=Strict; Max-Age=3600{}",
-                token.token,
-                secure_flag
+                token.token, secure_flag
             );
             response.headers_mut().insert(
                 header::SET_COOKIE,
-                HeaderValue::from_str(&cookie).unwrap_or_else(|_| HeaderValue::from_static(""))
+                HeaderValue::from_str(&cookie).unwrap_or_else(|_| HeaderValue::from_static("")),
             );
-            
+
             response
         }
         Err(e) => {
@@ -125,7 +125,8 @@ pub async fn get_csrf_token(
                 Json(json!({
                     "error": "Failed to generate CSRF token"
                 })),
-            ).into_response()
+            )
+                .into_response()
         }
     }
 }

@@ -1,6 +1,6 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Plan status for subscriptions
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -30,7 +30,7 @@ impl PlanStatus {
             _ => PlanStatus::Inactive,
         }
     }
-    
+
     pub fn as_str(&self) -> &str {
         match self {
             PlanStatus::Active => "active",
@@ -123,7 +123,7 @@ mod tests {
             "customer.subscription.created".to_string(),
             "hash123".to_string(),
         );
-        
+
         assert_eq!(event.event_id, "evt_test_123");
         assert_eq!(event.event_type, "customer.subscription.created");
         assert_eq!(event.payload_hash, "hash123");
@@ -138,7 +138,7 @@ mod tests {
             success_url: "https://example.com/success".to_string(),
             cancel_url: "https://example.com/cancel".to_string(),
         };
-        
+
         assert_eq!(request.price_id, "price_123");
         assert!(request.success_url.contains("success"));
     }

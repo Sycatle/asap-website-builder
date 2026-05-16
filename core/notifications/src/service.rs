@@ -2,9 +2,9 @@
 
 use crate::types::*;
 use anyhow::Result;
+use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
-use chrono::Utc;
 
 /// Notification service for managing user notifications
 pub struct NotificationService {
@@ -22,7 +22,9 @@ impl NotificationService {
         let now = Utc::now();
         let category = req.category.unwrap_or_default();
         let priority = req.priority.unwrap_or_default();
-        let notification_type = req.notification_type.unwrap_or_else(|| "custom".to_string());
+        let notification_type = req
+            .notification_type
+            .unwrap_or_else(|| "custom".to_string());
 
         let notification = sqlx::query_as!(
             NotificationRow,
@@ -124,7 +126,11 @@ impl NotificationService {
     }
 
     /// Get a single notification
-    pub async fn get(&self, notification_id: Uuid, account_id: Uuid) -> Result<Option<Notification>> {
+    pub async fn get(
+        &self,
+        notification_id: Uuid,
+        account_id: Uuid,
+    ) -> Result<Option<Notification>> {
         let notification = sqlx::query_as!(
             NotificationRow,
             r#"
@@ -488,11 +494,17 @@ pub mod helpers {
     }
 
     /// Create a website published notification
-    pub fn website_published_notification(account_id: Uuid, website_slug: &str) -> CreateNotificationRequest {
+    pub fn website_published_notification(
+        account_id: Uuid,
+        website_slug: &str,
+    ) -> CreateNotificationRequest {
         CreateNotificationRequest {
             account_id,
             title: "Site publié ! 🚀".to_string(),
-            message: format!("Votre site est maintenant accessible à l'adresse {}.asap.cool", website_slug),
+            message: format!(
+                "Votre site est maintenant accessible à l'adresse {}.asap.cool",
+                website_slug
+            ),
             notification_type: Some(NotificationType::WebsitePublished.to_string()),
             category: Some(NotificationCategory::Website),
             priority: Some(NotificationPriority::High),
@@ -503,7 +515,10 @@ pub mod helpers {
     }
 
     /// Create a payment successful notification
-    pub fn payment_successful_notification(account_id: Uuid, plan: &str) -> CreateNotificationRequest {
+    pub fn payment_successful_notification(
+        account_id: Uuid,
+        plan: &str,
+    ) -> CreateNotificationRequest {
         CreateNotificationRequest {
             account_id,
             title: "Paiement confirmé ✅".to_string(),
@@ -518,11 +533,17 @@ pub mod helpers {
     }
 
     /// Create an extension activated notification
-    pub fn extension_activated_notification(account_id: Uuid, extension_name: &str) -> CreateNotificationRequest {
+    pub fn extension_activated_notification(
+        account_id: Uuid,
+        extension_name: &str,
+    ) -> CreateNotificationRequest {
         CreateNotificationRequest {
             account_id,
             title: format!("Extension {} activée", extension_name),
-            message: format!("L'extension {} a été activée sur votre site.", extension_name),
+            message: format!(
+                "L'extension {} a été activée sur votre site.",
+                extension_name
+            ),
             notification_type: Some(NotificationType::ExtensionActivated.to_string()),
             category: Some(NotificationCategory::Extension),
             priority: Some(NotificationPriority::Normal),
@@ -533,12 +554,15 @@ pub mod helpers {
     }
 
     /// Create a security notification for new login
-    pub fn new_login_notification(account_id: Uuid, device_info: Option<&str>) -> CreateNotificationRequest {
+    pub fn new_login_notification(
+        account_id: Uuid,
+        device_info: Option<&str>,
+    ) -> CreateNotificationRequest {
         let message = match device_info {
             Some(info) => format!("Nouvelle connexion détectée depuis: {}", info),
             None => "Nouvelle connexion détectée à votre compte.".to_string(),
         };
-        
+
         CreateNotificationRequest {
             account_id,
             title: "Nouvelle connexion 🔐".to_string(),

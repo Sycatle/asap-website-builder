@@ -7,8 +7,8 @@ use anyhow::{Context, Result};
 use sqlx::PgPool;
 use uuid::Uuid;
 use web_push::{
-    ContentEncoding, IsahcWebPushClient, SubscriptionInfo, VapidSignatureBuilder,
-    WebPushClient, WebPushMessageBuilder,
+    ContentEncoding, IsahcWebPushClient, SubscriptionInfo, VapidSignatureBuilder, WebPushClient,
+    WebPushMessageBuilder,
 };
 
 /// VAPID keys loaded from database or environment
@@ -243,18 +243,9 @@ pub struct SendResult {
 /// Convert a notification to a push payload
 pub fn notification_to_push_payload(notification: &serde_json::Value) -> PushPayload {
     PushPayload {
-        id: notification["id"]
-            .as_str()
-            .unwrap_or_default()
-            .to_string(),
-        title: notification["title"]
-            .as_str()
-            .unwrap_or("ASAP")
-            .to_string(),
-        body: notification["message"]
-            .as_str()
-            .unwrap_or("")
-            .to_string(),
+        id: notification["id"].as_str().unwrap_or_default().to_string(),
+        title: notification["title"].as_str().unwrap_or("ASAP").to_string(),
+        body: notification["message"].as_str().unwrap_or("").to_string(),
         icon: notification["icon"].as_str().map(|s| s.to_string()),
         image: None,
         tag: format!(
@@ -275,12 +266,11 @@ pub fn notification_to_push_payload(notification: &serde_json::Value) -> PushPay
 
 /// Check if push notifications are enabled for an account
 pub async fn is_push_enabled(pool: &PgPool, account_id: Uuid) -> Result<bool> {
-    let result: Option<(bool,)> = sqlx::query_as(
-        "SELECT push_enabled FROM notification_settings WHERE account_id = $1",
-    )
-    .bind(account_id)
-    .fetch_optional(pool)
-    .await?;
+    let result: Option<(bool,)> =
+        sqlx::query_as("SELECT push_enabled FROM notification_settings WHERE account_id = $1")
+            .bind(account_id)
+            .fetch_optional(pool)
+            .await?;
 
     // Default to true if no settings exist
     Ok(result.map(|(enabled,)| enabled).unwrap_or(true))

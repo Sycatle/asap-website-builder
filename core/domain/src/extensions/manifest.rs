@@ -845,9 +845,8 @@ pub enum ManifestValidationError {
 use std::sync::LazyLock;
 
 /// Regex for valid slugs (kebab-case) - compiled once
-static SLUG_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"^[a-z][a-z0-9-]*[a-z0-9]$").expect("Invalid slug regex")
-});
+static SLUG_REGEX: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"^[a-z][a-z0-9-]*[a-z0-9]$").expect("Invalid slug regex"));
 
 /// Regex for semantic versions - compiled once
 static SEMVER_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {

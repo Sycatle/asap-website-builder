@@ -1,5 +1,5 @@
 //! V1 MVP: Metrics API handlers
-//! 
+//!
 //! Routes for product analytics:
 //! - Track events
 //! - Batch track events
@@ -85,7 +85,7 @@ pub async fn track_event(
         payload.event_type,
         payload.website_id
     );
-    
+
     // Fire-and-forget database insert (don't block the response)
     tokio::spawn(async move {
         if let Err(e) = store_event(&pool, &payload).await {
@@ -103,7 +103,7 @@ pub async fn track_events_batch(
 ) -> StatusCode {
     let event_count = payload.events.len();
     tracing::debug!("Batch metrics: {} events", event_count);
-    
+
     // Fire-and-forget batch insert
     tokio::spawn(async move {
         if let Err(e) = store_events_batch(&pool, &payload.events).await {
@@ -120,32 +120,35 @@ async fn store_event(pool: &PgPool, event: &TrackEventRequest) -> Result<(), sql
         r#"
         INSERT INTO product_events (website_id, event_type, event_data)
         VALUES ($1, $2, $3)
-        "#
+        "#,
     )
     .bind(event.website_id)
     .bind(&event.event_type)
     .bind(event.event_data.clone().unwrap_or(serde_json::json!({})))
     .execute(pool)
     .await?;
-    
+
     Ok(())
 }
 
 /// Store multiple events in a batch transaction
-async fn store_events_batch(pool: &PgPool, events: &[TrackEventRequest]) -> Result<(), sqlx::Error> {
+async fn store_events_batch(
+    pool: &PgPool,
+    events: &[TrackEventRequest],
+) -> Result<(), sqlx::Error> {
     if events.is_empty() {
         return Ok(());
     }
-    
+
     // Use a transaction for batch insert
     let mut tx = pool.begin().await?;
-    
+
     for event in events {
         sqlx::query(
             r#"
             INSERT INTO product_events (website_id, event_type, event_data)
             VALUES ($1, $2, $3)
-            "#
+            "#,
         )
         .bind(event.website_id)
         .bind(&event.event_type)
@@ -153,10 +156,10 @@ async fn store_events_batch(pool: &PgPool, events: &[TrackEventRequest]) -> Resu
         .execute(&mut *tx)
         .await?;
     }
-    
+
     tx.commit().await?;
     tracing::debug!("Stored {} metric events", events.len());
-    
+
     Ok(())
 }
 
@@ -169,18 +172,26 @@ pub async fn get_activation_metrics(
     let website_id = match Uuid::parse_str(&id) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": "Invalid website ID format"
-            }))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid website ID format"
+                })),
+            )
+                .into_response();
         }
     };
 
     let account_id = match Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid token"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid token"
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -195,7 +206,7 @@ pub async fn get_activation_metrics(
         FROM websites w 
         LEFT JOIN website_data wd ON wd.website_id = w.id
         WHERE w.id = $1
-        "#
+        "#,
     )
     .bind(website_id)
     .fetch_optional(&pool)
@@ -205,62 +216,103 @@ pub async fn get_activation_metrics(
     let website = match website {
         Some(w) => w,
         None => {
-            return (StatusCode::NOT_FOUND, Json(serde_json::json!({
-                "error": "Website not found"
-            }))).into_response();
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "error": "Website not found"
+                })),
+            )
+                .into_response();
         }
     };
 
     if website.account_id != account_id {
-        return (StatusCode::FORBIDDEN, Json(serde_json::json!({
-            "error": "Not authorized"
-        }))).into_response();
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({
+                "error": "Not authorized"
+            })),
+        )
+            .into_response();
     }
 
     // Parse website data to check activation criteria
-    let data = website.website_data.unwrap_or_else(|| serde_json::json!({}));
-    let profile = data.get("profile").cloned().unwrap_or_else(|| serde_json::json!({}));
-    
+    let data = website
+        .website_data
+        .unwrap_or_else(|| serde_json::json!({}));
+    let profile = data
+        .get("profile")
+        .cloned()
+        .unwrap_or_else(|| serde_json::json!({}));
+
     // Count projects
-    let projects = profile.get("projects")
+    let projects = profile
+        .get("projects")
         .and_then(|p| p.as_array())
         .map(|arr| arr.len() as i32)
         .unwrap_or(0);
-    
+
     // Check CTA
-    let cta = profile.get("cta").cloned().unwrap_or_else(|| serde_json::json!({}));
-    let has_cta = cta.get("text").and_then(|t| t.as_str()).map(|s| !s.is_empty()).unwrap_or(false)
-        && cta.get("link").and_then(|l| l.as_str()).map(|s| !s.is_empty()).unwrap_or(false);
-    
+    let cta = profile
+        .get("cta")
+        .cloned()
+        .unwrap_or_else(|| serde_json::json!({}));
+    let has_cta = cta
+        .get("text")
+        .and_then(|t| t.as_str())
+        .map(|s| !s.is_empty())
+        .unwrap_or(false)
+        && cta
+            .get("link")
+            .and_then(|l| l.as_str())
+            .map(|s| !s.is_empty())
+            .unwrap_or(false);
+
     // Check contact email
-    let contact = profile.get("contact").cloned().unwrap_or_else(|| serde_json::json!({}));
-    let has_contact_email = contact.get("email")
+    let contact = profile
+        .get("contact")
+        .cloned()
+        .unwrap_or_else(|| serde_json::json!({}));
+    let has_contact_email = contact
+        .get("email")
         .and_then(|e| e.as_str())
         .map(|s| !s.is_empty() && s.contains('@'))
         .unwrap_or(false);
-    
+
     let is_published = website.status == "published";
     let has_minimum_projects = projects >= 3;
-    
+
     // Activation = all criteria met
     let is_activated = is_published && has_minimum_projects && has_cta && has_contact_email;
-    
+
     // Score: 25 points per criteria
     let mut score = 0;
-    if is_published { score += 25; }
-    if has_minimum_projects { score += 25; }
-    if has_cta { score += 25; }
-    if has_contact_email { score += 25; }
+    if is_published {
+        score += 25;
+    }
+    if has_minimum_projects {
+        score += 25;
+    }
+    if has_cta {
+        score += 25;
+    }
+    if has_contact_email {
+        score += 25;
+    }
 
-    (StatusCode::OK, Json(ActivationMetrics {
-        is_published,
-        has_minimum_projects,
-        has_cta,
-        has_contact_email,
-        is_activated,
-        project_count: projects,
-        activation_score: score,
-    })).into_response()
+    (
+        StatusCode::OK,
+        Json(ActivationMetrics {
+            is_published,
+            has_minimum_projects,
+            has_cta,
+            has_contact_email,
+            is_activated,
+            project_count: projects,
+            activation_score: score,
+        }),
+    )
+        .into_response()
 }
 
 /// Get aggregated metrics (admin only)
@@ -272,47 +324,57 @@ pub async fn get_aggregated_metrics(
     let account_id = match uuid::Uuid::parse_str(&claims.sub) {
         Ok(id) => id,
         Err(_) => {
-            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
-                "error": "Invalid account ID"
-            }))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid account ID"
+                })),
+            )
+                .into_response();
         }
     };
 
     // Check if user has admin role (plan = 'admin' or specific flag)
-    let is_admin: Option<String> = sqlx::query_scalar(
-        "SELECT plan FROM accounts WHERE id = $1"
-    )
-    .bind(account_id)
-    .fetch_optional(&pool)
-    .await
-    .ok()
-    .flatten();
+    let is_admin: Option<String> = sqlx::query_scalar("SELECT plan FROM accounts WHERE id = $1")
+        .bind(account_id)
+        .fetch_optional(&pool)
+        .await
+        .ok()
+        .flatten();
 
     // Only allow admin users to access aggregated metrics
     if is_admin.as_deref() != Some("admin") {
-        return (StatusCode::FORBIDDEN, Json(serde_json::json!({
-            "error": "Admin access required",
-            "code": "ADMIN_REQUIRED"
-        }))).into_response();
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({
+                "error": "Admin access required",
+                "code": "ADMIN_REQUIRED"
+            })),
+        )
+            .into_response();
     }
-    
+
     let now = chrono::Utc::now();
     let week_ago = now - chrono::Duration::days(7);
 
-    (StatusCode::OK, Json(AggregatedMetrics {
-        total_signups: 0,
-        github_connected: 0,
-        projects_imported: 0,
-        sites_published: 0,
-        activated_users: 0,
-        signup_to_github: 0.0,
-        github_to_import: 0.0,
-        import_to_publish: 0.0,
-        publish_to_activation: 0.0,
-        avg_projects_per_site: 0.0,
-        avg_time_to_publish: 0.0,
-        period: "week".to_string(),
-        start_date: week_ago.format("%Y-%m-%d").to_string(),
-        end_date: now.format("%Y-%m-%d").to_string(),
-    })).into_response()
+    (
+        StatusCode::OK,
+        Json(AggregatedMetrics {
+            total_signups: 0,
+            github_connected: 0,
+            projects_imported: 0,
+            sites_published: 0,
+            activated_users: 0,
+            signup_to_github: 0.0,
+            github_to_import: 0.0,
+            import_to_publish: 0.0,
+            publish_to_activation: 0.0,
+            avg_projects_per_site: 0.0,
+            avg_time_to_publish: 0.0,
+            period: "week".to_string(),
+            start_date: week_ago.format("%Y-%m-%d").to_string(),
+            end_date: now.format("%Y-%m-%d").to_string(),
+        }),
+    )
+        .into_response()
 }

@@ -1,8 +1,7 @@
 //! AI Actions module
 
-pub mod parser;
 pub mod executor;
+pub mod parser;
 
+pub use executor::{ActionBackend, ActionExecutor, ActionResult};
 pub use parser::ActionParser;
-pub use executor::{ActionExecutor, ActionBackend, ActionResult};
-

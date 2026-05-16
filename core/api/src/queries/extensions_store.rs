@@ -134,11 +134,11 @@ pub async fn list_store_extensions(
 
     // Build dynamic query
     let mut conditions = vec!["status = 'active'".to_string()];
-    
+
     if let Some(ref category) = filter.category {
         conditions.push(format!("category = '{}'", category));
     }
-    
+
     if let Some(ref min_plan) = filter.min_plan {
         // Filter extensions that require at most this plan
         let plans = match min_plan.as_str() {
@@ -148,38 +148,48 @@ pub async fn list_store_extensions(
             "business" => vec!["free", "starter", "pro", "business"],
             _ => vec!["free"],
         };
-        let plan_list = plans.iter().map(|p| format!("'{}'", p)).collect::<Vec<_>>().join(", ");
+        let plan_list = plans
+            .iter()
+            .map(|p| format!("'{}'", p))
+            .collect::<Vec<_>>()
+            .join(", ");
         conditions.push(format!("min_plan IN ({})", plan_list));
     }
-    
+
     if filter.featured_only {
         conditions.push("featured = true".to_string());
     }
-    
+
     if !filter.include_beta {
         conditions.push("beta = false".to_string());
     }
-    
+
     if !filter.include_deprecated {
         conditions.push("deprecated = false".to_string());
     }
-    
+
     if let Some(ref search) = filter.search {
         conditions.push(format!(
             "(name ILIKE '%{}%' OR description ILIKE '%{}%' OR '{}' = ANY(tags))",
-            search, search, search.to_lowercase()
+            search,
+            search,
+            search.to_lowercase()
         ));
     }
-    
+
     if let Some(ref tags) = filter.tags {
         if !tags.is_empty() {
-            let tag_array = tags.iter().map(|t| format!("'{}'", t)).collect::<Vec<_>>().join(", ");
+            let tag_array = tags
+                .iter()
+                .map(|t| format!("'{}'", t))
+                .collect::<Vec<_>>()
+                .join(", ");
             conditions.push(format!("tags && ARRAY[{}]", tag_array));
         }
     }
 
     let where_clause = conditions.join(" AND ");
-    
+
     let order_clause = match sort {
         ExtensionSort::Popular => "install_count DESC, rating_average DESC",
         ExtensionSort::Newest => "created_at DESC",
@@ -188,13 +198,8 @@ pub async fn list_store_extensions(
     };
 
     // Count total
-    let count_query = format!(
-        "SELECT COUNT(*) FROM extensions_v2 WHERE {}",
-        where_clause
-    );
-    let (total,): (i64,) = sqlx::query_as(&count_query)
-        .fetch_one(pool)
-        .await?;
+    let count_query = format!("SELECT COUNT(*) FROM extensions_v2 WHERE {}", where_clause);
+    let (total,): (i64,) = sqlx::query_as(&count_query).fetch_one(pool).await?;
 
     // Fetch page
     let query = format!(
@@ -210,7 +215,7 @@ pub async fn list_store_extensions(
         "#,
         where_clause, order_clause, limit, offset
     );
-    
+
     let rows = sqlx::query_as::<_, ExtensionStoreRow>(&query)
         .fetch_all(pool)
         .await?;
@@ -261,9 +266,7 @@ pub async fn get_featured_extensions(
 }
 
 /// Get all categories with extension counts
-pub async fn get_extension_categories(
-    pool: &PgPool,
-) -> Result<Vec<(String, i64)>, sqlx::Error> {
+pub async fn get_extension_categories(pool: &PgPool) -> Result<Vec<(String, i64)>, sqlx::Error> {
     sqlx::query_as::<_, (String, i64)>(
         r#"
         SELECT category, COUNT(*) as count
@@ -294,7 +297,8 @@ pub async fn install_extension(
         .ok_or_else(|| sqlx::Error::RowNotFound)?;
 
     // Get default settings from manifest
-    let default_settings = extension.manifest
+    let default_settings = extension
+        .manifest
         .get("default_settings")
         .cloned()
         .unwrap_or(JsonValue::Object(serde_json::Map::new()));

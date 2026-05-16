@@ -5,20 +5,18 @@
 //! Variables are single values that can be manual, synced, or computed.
 
 use axum::{
-    extract::{Path, Query, State, Extension},
-    response::IntoResponse,
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
+    response::IntoResponse,
     Json,
 };
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
-use chrono::Utc;
 
+use asap_core_domain::{CollectionItem, ComputeOperation, FilterClause, VariableComputation};
 use asap_core_shared::Claims;
-use asap_core_domain::{
-    CollectionItem, FilterClause, VariableComputation, ComputeOperation,
-};
 
 // ============================================================================
 // Response Types
@@ -255,8 +253,8 @@ pub async fn get_collection(
     match result {
         Ok(Some(row)) => {
             // Parse items from JSONB
-            let mut items: Vec<CollectionItem> = serde_json::from_value(row.items.clone())
-                .unwrap_or_default();
+            let mut items: Vec<CollectionItem> =
+                serde_json::from_value(row.items.clone()).unwrap_or_default();
 
             // Apply filtering if provided
             if let Some(filter_json) = &params.filter {
@@ -583,7 +581,7 @@ pub async fn list_variables(
                 .map(|r| {
                     // Add to quick lookup map
                     values.insert(r.key.clone(), r.value.clone());
-                    
+
                     VariableResponse {
                         id: r.id.to_string(),
                         website_id: r.website_id.to_string(),
@@ -699,13 +697,11 @@ pub async fn set_variable(
     }
 
     // Infer value type if not provided
-    let value_type = request.value_type.unwrap_or_else(|| {
-        match &request.value {
-            serde_json::Value::String(_) => "string".to_string(),
-            serde_json::Value::Number(_) => "number".to_string(),
-            serde_json::Value::Bool(_) => "boolean".to_string(),
-            _ => "json".to_string(),
-        }
+    let value_type = request.value_type.unwrap_or_else(|| match &request.value {
+        serde_json::Value::String(_) => "string".to_string(),
+        serde_json::Value::Number(_) => "number".to_string(),
+        serde_json::Value::Bool(_) => "boolean".to_string(),
+        _ => "json".to_string(),
     });
 
     let result = sqlx::query!(
@@ -890,13 +886,19 @@ fn apply_filters(items: Vec<CollectionItem>, filters: &[FilterClause]) -> Vec<Co
                         compare_json(v, &f.value) == Some(std::cmp::Ordering::Greater)
                     }
                     (asap_core_domain::FilterOperator::Gte, Some(v)) => {
-                        matches!(compare_json(v, &f.value), Some(std::cmp::Ordering::Greater | std::cmp::Ordering::Equal))
+                        matches!(
+                            compare_json(v, &f.value),
+                            Some(std::cmp::Ordering::Greater | std::cmp::Ordering::Equal)
+                        )
                     }
                     (asap_core_domain::FilterOperator::Lt, Some(v)) => {
                         compare_json(v, &f.value) == Some(std::cmp::Ordering::Less)
                     }
                     (asap_core_domain::FilterOperator::Lte, Some(v)) => {
-                        matches!(compare_json(v, &f.value), Some(std::cmp::Ordering::Less | std::cmp::Ordering::Equal))
+                        matches!(
+                            compare_json(v, &f.value),
+                            Some(std::cmp::Ordering::Less | std::cmp::Ordering::Equal)
+                        )
                     }
                     (asap_core_domain::FilterOperator::Contains, Some(v)) => {
                         if let (Some(s), Some(pattern)) = (v.as_str(), f.value.as_str()) {
@@ -930,7 +932,11 @@ fn apply_sort(mut items: Vec<CollectionItem>, sort_str: &str) -> Vec<CollectionI
             (None, Some(_)) => std::cmp::Ordering::Greater,
             (None, None) => std::cmp::Ordering::Equal,
         };
-        if desc { ordering.reverse() } else { ordering }
+        if desc {
+            ordering.reverse()
+        } else {
+            ordering
+        }
     });
 
     items
@@ -941,12 +947,8 @@ fn compare_json(a: &serde_json::Value, b: &serde_json::Value) -> Option<std::cmp
         (serde_json::Value::Number(a), serde_json::Value::Number(b)) => {
             a.as_f64().partial_cmp(&b.as_f64())
         }
-        (serde_json::Value::String(a), serde_json::Value::String(b)) => {
-            Some(a.cmp(b))
-        }
-        (serde_json::Value::Bool(a), serde_json::Value::Bool(b)) => {
-            Some(a.cmp(b))
-        }
+        (serde_json::Value::String(a), serde_json::Value::String(b)) => Some(a.cmp(b)),
+        (serde_json::Value::Bool(a), serde_json::Value::Bool(b)) => Some(a.cmp(b)),
         _ => None,
     }
 }
@@ -960,8 +962,8 @@ async fn compute_variable(
     website_id: Uuid,
     computation: serde_json::Value,
 ) -> Result<serde_json::Value, String> {
-    let comp: VariableComputation = serde_json::from_value(computation)
-        .map_err(|e| format!("Invalid computation: {}", e))?;
+    let comp: VariableComputation =
+        serde_json::from_value(computation).map_err(|e| format!("Invalid computation: {}", e))?;
 
     // Get the collection items
     let collection = sqlx::query!(

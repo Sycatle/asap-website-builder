@@ -2,11 +2,7 @@
 //!
 //! This module publishes notification events to Redis when new notifications are created.
 
-use asap_core_shared::{
-    NotificationPublisher,
-    NotificationPubSubEvent,
-    CHANNEL_NOTIFICATIONS,
-};
+use asap_core_shared::{NotificationPubSubEvent, NotificationPublisher, CHANNEL_NOTIFICATIONS};
 use redis::aio::ConnectionManager;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -28,14 +24,14 @@ impl WorkerNotificationPublisher {
 impl NotificationPublisher for WorkerNotificationPublisher {
     async fn publish(&self, event: NotificationPubSubEvent) -> anyhow::Result<()> {
         let payload = serde_json::to_string(&event)?;
-        
+
         let mut conn = self.redis.clone();
         let _: i64 = redis::cmd("PUBLISH")
             .arg(CHANNEL_NOTIFICATIONS)
             .arg(&payload)
             .query_async(&mut conn)
             .await?;
-        
+
         tracing::debug!("Published notification event to Redis");
         Ok(())
     }
@@ -76,19 +72,19 @@ pub async fn get_notifications_created_since(
     )
     .fetch_all(pool)
     .await?;
-    
+
     Ok(notifications)
 }
 
 /// Get unread count for an account
 pub async fn get_unread_count(pool: &sqlx::PgPool, account_id: Uuid) -> anyhow::Result<i64> {
     let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*)::BIGINT FROM notifications WHERE account_id = $1 AND read = false"
+        "SELECT COUNT(*)::BIGINT FROM notifications WHERE account_id = $1 AND read = false",
     )
     .bind(account_id)
     .fetch_one(pool)
     .await?;
-    
+
     Ok(count.0)
 }
 
@@ -99,11 +95,11 @@ pub async fn publish_new_notifications(
     notifications: Vec<CreatedNotification>,
 ) -> anyhow::Result<usize> {
     let mut published = 0;
-    
+
     for notification in notifications {
         // Get current unread count for this account
         let unread_count = get_unread_count(pool, notification.account_id).await?;
-        
+
         // Convert to JSON for the event
         let notification_json = serde_json::json!({
             "id": notification.id.to_string(),
@@ -120,14 +116,16 @@ pub async fn publish_new_notifications(
             "created_at": notification.created_at.to_rfc3339(),
             "read_at": serde_json::Value::Null
         });
-        
+
         // Publish to Redis
-        publisher.publish_new(
-            &notification.account_id.to_string(),
-            notification_json,
-            unread_count,
-        ).await?;
-        
+        publisher
+            .publish_new(
+                &notification.account_id.to_string(),
+                notification_json,
+                unread_count,
+            )
+            .await?;
+
         published += 1;
         tracing::debug!(
             "Published notification {} for account {}",
@@ -135,6 +133,6 @@ pub async fn publish_new_notifications(
             notification.account_id
         );
     }
-    
+
     Ok(published)
 }

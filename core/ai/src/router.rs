@@ -115,21 +115,20 @@ impl ModelRouter {
                     }
                     Err(e) => {
                         warn!("Provider {} failed: {}", provider_id, e);
-                        
+
                         // Don't fallback on certain errors
                         if !e.is_retryable() && !matches!(e, AIError::ProviderUnavailable(_)) {
                             return Err(e);
                         }
-                        
+
                         last_error = Some(e);
                     }
                 }
             }
         }
 
-        Err(last_error.unwrap_or_else(|| {
-            AIError::ProviderUnavailable("All providers failed".to_string())
-        }))
+        Err(last_error
+            .unwrap_or_else(|| AIError::ProviderUnavailable("All providers failed".to_string())))
     }
 
     /// Route a streaming chat request with automatic fallback
@@ -165,11 +164,11 @@ impl ModelRouter {
                     }
                     Err(e) => {
                         warn!("Provider {} streaming failed: {}", provider_id, e);
-                        
+
                         if !e.is_retryable() && !matches!(e, AIError::ProviderUnavailable(_)) {
                             return Err(e);
                         }
-                        
+
                         last_error = Some(e);
                     }
                 }

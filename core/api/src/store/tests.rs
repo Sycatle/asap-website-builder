@@ -28,7 +28,7 @@ fn test_extension_summary_serialization() {
     };
 
     let json = serde_json::to_value(&summary).unwrap();
-    
+
     assert_eq!(json["slug"], "github-sync");
     assert_eq!(json["name"], "GitHub Sync");
     assert_eq!(json["featured"], true);
@@ -59,7 +59,7 @@ fn test_extension_summary_serialization_installed_none() {
     };
 
     let json = serde_json::to_value(&summary).unwrap();
-    
+
     // installed should be omitted when None
     assert!(json.get("installed").is_none());
     assert!(json.get("icon").unwrap().is_null());
@@ -76,7 +76,7 @@ fn test_extension_list_response() {
     };
 
     let json = serde_json::to_value(&response).unwrap();
-    
+
     assert_eq!(json["total"], 100);
     assert_eq!(json["page"], 2);
     assert_eq!(json["per_page"], 20);
@@ -114,7 +114,7 @@ fn test_extension_detail_response() {
     };
 
     let json = serde_json::to_value(&detail).unwrap();
-    
+
     assert_eq!(json["slug"], "analytics");
     assert_eq!(json["min_plan"], "pro");
     assert_eq!(json["beta"], true);
@@ -140,7 +140,7 @@ fn test_categories_response() {
 
     let json = serde_json::to_value(&response).unwrap();
     let categories = json["categories"].as_array().unwrap();
-    
+
     assert_eq!(categories.len(), 2);
     assert_eq!(categories[0]["slug"], "integration");
     assert_eq!(categories[0]["name"], "Integrations");

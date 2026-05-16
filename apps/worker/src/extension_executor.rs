@@ -8,10 +8,10 @@ use sqlx::PgPool;
 // ============================================================================
 
 /// Trait providing metadata about an extension executor.
-/// 
+///
 /// This trait should be implemented alongside `ExtensionExecutor` to provide
 /// information for logging, debugging, and extension discovery.
-/// 
+///
 /// The `config_schema()` method returns the UI schema for configuration,
 /// which is defined in code (not in the database) to ensure:
 /// - Type safety at compile time
@@ -21,32 +21,32 @@ use sqlx::PgPool;
 pub trait ExtensionInfo {
     /// The unique slug identifier for this extension (e.g., "github-sync")
     fn slug(&self) -> &'static str;
-    
+
     /// Human-readable name of the extension
     fn name(&self) -> &'static str;
-    
+
     /// Semantic version of the extension (e.g., "1.0.0")
     fn version(&self) -> &'static str;
-    
+
     /// Brief description of what the extension does
     fn description(&self) -> &'static str;
-    
+
     /// Extension category for grouping in UI
     fn category(&self) -> &'static str {
         "other"
     }
-    
+
     /// List of event types this extension handles
     fn handled_events(&self) -> Vec<EventType>;
-    
+
     /// Configuration schema for the extension UI
-    /// 
+    ///
     /// This defines the fields, actions, and data displays for the extension
     /// configuration page. Returns None if the extension has no configuration.
     fn config_schema(&self) -> Option<ConfigSchema> {
         None
     }
-    
+
     /// Default settings for when the extension is first activated
     fn default_settings(&self) -> serde_json::Value {
         serde_json::json!({})
@@ -58,34 +58,34 @@ pub trait ExtensionInfo {
 // ============================================================================
 
 /// Trait for extension executors that process events.
-/// 
+///
 /// Implementors should also implement `ExtensionInfo` for metadata.
 #[async_trait::async_trait]
 #[allow(dead_code)]
 pub trait ExtensionExecutor: ExtensionInfo + Send + Sync {
     /// Execute the extension logic for the given event.
-    /// 
+    ///
     /// This method is called when an event matching `can_handle` is received.
     /// It should be idempotent when possible to handle retries gracefully.
     async fn execute(&self, event: &Event) -> Result<()>;
-    
+
     /// Check if this executor can handle the given event type.
-    /// 
+    ///
     /// Default implementation uses `handled_events()` from `ExtensionInfo`.
     fn can_handle(&self, event_type: &EventType) -> bool {
         self.handled_events().contains(event_type)
     }
-    
+
     /// Called before event execution (optional hook).
-    /// 
+    ///
     /// Can be used for validation, logging, or setup.
     #[allow(unused_variables)]
     async fn before_execute(&self, event: &Event) -> Result<()> {
         Ok(())
     }
-    
+
     /// Called after successful event execution (optional hook).
-    /// 
+    ///
     /// Can be used for cleanup, notifications, or metrics.
     #[allow(unused_variables)]
     async fn after_execute(&self, event: &Event) -> Result<()> {
@@ -111,7 +111,7 @@ impl ExtensionExecutorRegistry {
     /// Execute all extensions that can handle the given event
     pub async fn execute_for_event(&self, event: &Event) -> Result<()> {
         let mut handled = false;
-        
+
         for executor in &self.executors {
             if executor.can_handle(&event.event_type) {
                 tracing::info!(
@@ -119,17 +119,14 @@ impl ExtensionExecutorRegistry {
                     event.id,
                     event.event_type
                 );
-                
+
                 executor.execute(event).await?;
                 handled = true;
             }
         }
 
         if !handled {
-            tracing::debug!(
-                "No executor found for event type {:?}",
-                event.event_type
-            );
+            tracing::debug!("No executor found for event type {:?}", event.event_type);
         }
 
         Ok(())
@@ -186,8 +183,8 @@ impl ExtensionInfo for GitHubIntegrationExecutor {
 
     fn config_schema(&self) -> Option<ConfigSchema> {
         use asap_core_domain::{
-            ConfigField, ConfigAction, ConfigSection, 
-            DataDisplay, DataDisplayField, FieldValidation,
+            ConfigAction, ConfigField, ConfigSection, DataDisplay, DataDisplayField,
+            FieldValidation,
         };
 
         Some(ConfigSchema::new()
@@ -250,16 +247,17 @@ impl ExtensionInfo for GitHubIntegrationExecutor {
 
 #[async_trait::async_trait]
 impl ExtensionExecutor for GitHubIntegrationExecutor {
-
     async fn execute(&self, event: &Event) -> Result<()> {
         tracing::info!("Processing GitHub integration for event {}", event.id);
 
         // For GitHubSyncRequested, we always process it
         if event.event_type != EventType::GitHubSyncRequested {
             // Check if this is a GitHub integration event
-            let integration_type = event.payload.get("integration_type")
+            let integration_type = event
+                .payload
+                .get("integration_type")
                 .and_then(|v| v.as_str());
-            
+
             if integration_type != Some("github") {
                 tracing::debug!("Skipping non-GitHub integration event");
                 return Ok(());
@@ -273,7 +271,7 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
                 .as_str()
                 .map(|s| s.to_string())
                 .filter(|s| !s.is_empty());
-            
+
             match from_payload {
                 Some(username) => username,
                 None => {
@@ -284,14 +282,18 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
                         FROM module_configs mc
                         JOIN extensions m ON mc.module_id = m.id
                         WHERE mc.account_id = $1 AND m.slug = 'github-sync'
-                        "#
+                        "#,
                     )
                     .bind(event.account_id)
                     .fetch_optional(&self.pool)
                     .await?;
 
                     settings
-                        .and_then(|(s,)| s.get("github_username").and_then(|v| v.as_str()).map(|s| s.to_string()))
+                        .and_then(|(s,)| {
+                            s.get("github_username")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string())
+                        })
                         .ok_or_else(|| anyhow::anyhow!("GitHub username not configured"))?
                 }
             }
@@ -309,13 +311,26 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
             .or_else(|| event.payload["requested_by"].as_str())
             .unwrap_or("unknown");
 
-        tracing::info!("Fetching GitHub repos for account: {} (account_id: {})", github_username, account_id);
+        tracing::info!(
+            "Fetching GitHub repos for account: {} (account_id: {})",
+            github_username,
+            account_id
+        );
 
         // Fetch repos from GitHub (using the github-sync extension)
         // Reuse the stored client to avoid TLS/connection overhead
-        
+
         // Fetch all data in parallel for efficiency
-        let (user_result, orgs_result, repos, events_result, gists_result, starred_result, readme_result, contributions_result) = tokio::join!(
+        let (
+            user_result,
+            orgs_result,
+            repos,
+            events_result,
+            gists_result,
+            starred_result,
+            readme_result,
+            contributions_result,
+        ) = tokio::join!(
             self.github_client.fetch_user(&github_username),
             self.github_client.fetch_orgs(&github_username),
             self.github_client.fetch_repos(&github_username),
@@ -336,25 +351,35 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
         let contributions = contributions_result.ok();
 
         tracing::info!(
-            "Fetched GitHub data: {} repos, {} events, {} orgs, {} gists, {} starred", 
-            repos.len(), events.len(), orgs.len(), gists.len(), starred.len()
+            "Fetched GitHub data: {} repos, {} events, {} orgs, {} gists, {} starred",
+            repos.len(),
+            events.len(),
+            orgs.len(),
+            gists.len(),
+            starred.len()
         );
 
         // Generate website content from repos, user profile and orgs
-        let website_content = asap_github_sync::generate_website_content(repos.clone(), user.clone(), Some(orgs.clone())).await?;
+        let website_content = asap_github_sync::generate_website_content(
+            repos.clone(),
+            user.clone(),
+            Some(orgs.clone()),
+        )
+        .await?;
 
         tracing::debug!("Generated website content");
 
         // Find the user's website (try from payload first, then fallback)
-        let website_id = if let Some(website_id_str) = event.payload.get("website_id").and_then(|v| v.as_str()) {
+        let website_id = if let Some(website_id_str) =
+            event.payload.get("website_id").and_then(|v| v.as_str())
+        {
             uuid::Uuid::parse_str(website_id_str)?
         } else {
-            let website: Option<(uuid::Uuid,)> = sqlx::query_as(
-                "SELECT id FROM websites WHERE account_id = $1 LIMIT 1"
-            )
-            .bind(event.account_id)
-            .fetch_optional(&self.pool)
-            .await?;
+            let website: Option<(uuid::Uuid,)> =
+                sqlx::query_as("SELECT id FROM websites WHERE account_id = $1 LIMIT 1")
+                    .bind(event.account_id)
+                    .fetch_optional(&self.pool)
+                    .await?;
 
             match website {
                 Some((id,)) => id,
@@ -368,17 +393,16 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
         };
 
         // Save to website_data (legacy support)
-        sqlx::query(
-            "UPDATE website_data SET data = data || $1 WHERE website_id = $2"
-        )
-        .bind(&website_content)
-        .bind(website_id)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("UPDATE website_data SET data = data || $1 WHERE website_id = $2")
+            .bind(&website_content)
+            .bind(website_id)
+            .execute(&self.pool)
+            .await?;
 
         // Create repos collection using the github-sync extension helpers
-        let repos_collection = asap_github_sync::create_github_repos_collection(website_id, &repos, &github_username);
-        
+        let repos_collection =
+            asap_github_sync::create_github_repos_collection(website_id, &repos, &github_username);
+
         // Upsert the repos collection into database
         sqlx::query(
             r#"
@@ -409,11 +433,15 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
         .execute(&self.pool)
         .await?;
 
-        tracing::info!("Saved github_repos collection with {} items", repos_collection.total_count);
+        tracing::info!(
+            "Saved github_repos collection with {} items",
+            repos_collection.total_count
+        );
 
         // Create languages collection
-        let languages_collection = asap_github_sync::create_github_languages_collection(website_id, &repos);
-        
+        let languages_collection =
+            asap_github_sync::create_github_languages_collection(website_id, &repos);
+
         // Upsert the languages collection into database
         sqlx::query(
             r#"
@@ -444,7 +472,10 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
         .execute(&self.pool)
         .await?;
 
-        tracing::info!("Saved github_languages collection with {} items", languages_collection.total_count);
+        tracing::info!(
+            "Saved github_languages collection with {} items",
+            languages_collection.total_count
+        );
 
         // Create gists collection
         let gists_collection = asap_github_sync::create_github_gists_collection(website_id, &gists);
@@ -476,7 +507,10 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
         .bind(gists_collection.updated_at)
         .execute(&self.pool)
         .await?;
-        tracing::info!("Saved github_gists collection with {} items", gists_collection.total_count);
+        tracing::info!(
+            "Saved github_gists collection with {} items",
+            gists_collection.total_count
+        );
 
         // Create organizations collection
         let orgs_collection = asap_github_sync::create_github_orgs_collection(website_id, &orgs);
@@ -508,10 +542,14 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
         .bind(orgs_collection.updated_at)
         .execute(&self.pool)
         .await?;
-        tracing::info!("Saved github_organizations collection with {} items", orgs_collection.total_count);
+        tracing::info!(
+            "Saved github_organizations collection with {} items",
+            orgs_collection.total_count
+        );
 
         // Create starred repos collection
-        let starred_collection = asap_github_sync::create_github_starred_collection(website_id, &starred);
+        let starred_collection =
+            asap_github_sync::create_github_starred_collection(website_id, &starred);
         sqlx::query(
             r#"
             INSERT INTO website_collections 
@@ -540,7 +578,10 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
         .bind(starred_collection.updated_at)
         .execute(&self.pool)
         .await?;
-        tracing::info!("Saved github_starred collection with {} items", starred_collection.total_count);
+        tracing::info!(
+            "Saved github_starred collection with {} items",
+            starred_collection.total_count
+        );
 
         // Compute and save repo-based variables
         let repo_variables = asap_github_sync::compute_github_variables(&repos);
@@ -634,7 +675,7 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
                 } else {
                     "string"
                 };
-                
+
                 sqlx::query(
                     r#"
                     INSERT INTO website_variables 
@@ -668,7 +709,10 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
         // Use fetched contributions from GitHub profile page, fallback to events-based calculation
         let contributions_data = if let Some(contrib) = contributions {
             let total = contrib.get("total").and_then(|t| t.as_i64()).unwrap_or(0);
-            tracing::info!("Using scraped contributions from GitHub profile ({} total)", total);
+            tracing::info!(
+                "Using scraped contributions from GitHub profile ({} total)",
+                total
+            );
             contrib
         } else {
             tracing::info!("Falling back to events-based contributions");
@@ -736,7 +780,7 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
             ("github_organizations_count", serde_json::json!(orgs.len())),
             ("github_starred_count", serde_json::json!(starred.len())),
         ];
-        
+
         for (key, value) in extra_vars {
             sqlx::query(
                 r#"
@@ -766,8 +810,8 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
         }
 
         tracing::info!(
-            "Saved GitHub data: {} repo variables, {} contributions, 5 collections", 
-            repo_variables.len(), 
+            "Saved GitHub data: {} repo variables, {} contributions, 5 collections",
+            repo_variables.len(),
             contributions_data["total"].as_i64().unwrap_or(0)
         );
 
@@ -794,7 +838,7 @@ impl ExtensionExecutor for GitHubIntegrationExecutor {
 }
 
 /// Website Module Executor - handles website-related events
-/// 
+///
 /// NOTE: Prepared for handling website lifecycle events.
 /// Will be fully integrated when website event processing is implemented.
 #[allow(dead_code)]
@@ -871,7 +915,10 @@ impl ExtensionExecutor for WebsiteExtensionExecutor {
                 tracing::info!("Processing website deletion for event {}", event.id);
                 // Could trigger cleanup of associated resources
             }
-            EventType::ElementCreated | EventType::ElementUpdated | EventType::ElementDeleted | EventType::ElementReordered => {
+            EventType::ElementCreated
+            | EventType::ElementUpdated
+            | EventType::ElementDeleted
+            | EventType::ElementReordered => {
                 tracing::info!("Processing element change for event {}", event.id);
                 // Could trigger partial re-rendering
             }
@@ -886,7 +933,10 @@ impl ExtensionExecutor for WebsiteExtensionExecutor {
                 tracing::info!("Preset {} applied to website {}", preset_id, website_id);
             }
             _ => {
-                tracing::debug!("Unhandled event type in WebsiteExtensionExecutor: {:?}", event.event_type);
+                tracing::debug!(
+                    "Unhandled event type in WebsiteExtensionExecutor: {:?}",
+                    event.event_type
+                );
             }
         }
         Ok(())
