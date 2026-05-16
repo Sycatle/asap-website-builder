@@ -59,6 +59,16 @@ export interface Element {
   order?: number;
   order_index: number;
   layout: string;
+  /**
+   * Variant key, e.g. `"hero/split-asymmetric"`. When omitted, the section
+   * renderer falls back to its legacy single-layout output.
+   */
+  variant_key?: string;
+  /**
+   * Free-form parameters interpreted by the variant component (density,
+   * image ratio, motion intensity, etc.). Validated per variant_key.
+   */
+  variant_params?: Record<string, unknown>;
   content?: Record<string, unknown>;
   data?: Record<string, unknown>;
   settings?: Record<string, unknown>;
@@ -90,6 +100,7 @@ export interface Website {
 
 export interface WebsiteMetadata {
   theme?: Theme;
+  tokens?: DesignTokens;
   seo?: SEOMetadata;
   favicon?: string;
   logo?: string;
@@ -97,7 +108,7 @@ export interface WebsiteMetadata {
 }
 
 // ============================================
-// Theme Types
+// Theme Types (legacy — kept for backward compat)
 // ============================================
 
 export interface Theme {
@@ -110,6 +121,80 @@ export interface Theme {
   mutedColor?: string;
   borderColor?: string;
   fontFamily?: string;
+}
+
+// ============================================
+// Design Tokens (per-site visual identity)
+// ============================================
+
+export type DensityScale = 'compact' | 'default' | 'airy';
+export type RadiusPhilosophy = 'sharp' | 'soft' | 'pill';
+export type MotionIntensity = 'none' | 'subtle' | 'expressive';
+export type ShadowPhilosophy = 'flat' | 'layered' | 'glow';
+export type ColorMode = 'dark' | 'light';
+
+export interface PaletteTokens {
+  mode: ColorMode;
+  primary: string;
+  secondary?: string;
+  accent?: string;
+  background: string;
+  foreground: string;
+  muted: string;
+  border: string;
+  surface?: string;
+  onSurface?: string;
+  neutralScale?: string[]; // 11 stops, 50…950
+}
+
+export interface TypographyTokens {
+  displayFamily: string;
+  bodyFamily: string;
+  scaleRatio: number;  // e.g. 1.2 (minor third) … 1.333 (perfect fourth)
+  weights?: number[];
+  tracking?: number;   // em
+}
+
+export interface SpacingTokens {
+  base: number;        // px
+  scaleRatio: number;
+  density: DensityScale;
+}
+
+export interface RadiusTokens {
+  sm: number;
+  md: number;
+  lg: number;
+  full: number;
+  philosophy: RadiusPhilosophy;
+}
+
+export interface MotionTokens {
+  durationScale: number; // multiplier on base 200ms
+  easing: string;        // CSS easing
+  intensity: MotionIntensity;
+}
+
+export interface ShadowTokens {
+  elevationScale: string[]; // 5 levels, valid CSS box-shadow values
+  philosophy: ShadowPhilosophy;
+}
+
+export interface VoiceTokens {
+  tone?: string;       // free-form descriptor (e.g. "warm", "precise")
+  formality?: 'casual' | 'neutral' | 'formal';
+  sector?: string;     // industry — informs AI copy
+}
+
+export interface DesignTokens {
+  version: 1;
+  palette: PaletteTokens;
+  typography: TypographyTokens;
+  spacing: SpacingTokens;
+  radius: RadiusTokens;
+  motion: MotionTokens;
+  shadow: ShadowTokens;
+  voice?: VoiceTokens;
 }
 
 export interface SEOMetadata {

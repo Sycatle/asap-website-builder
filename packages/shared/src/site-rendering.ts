@@ -1,4 +1,4 @@
-import type { Element, Page, SEOMetadata, Theme, Website } from './types';
+import type { DesignTokens, Element, Page, SEOMetadata, Theme, Website } from './types';
 
 export type SiteModuleKey = string;
 
@@ -23,6 +23,7 @@ export interface SiteRenderPayload {
   website: Website;
   pages: SiteRenderPage[];
   theme?: Theme;
+  tokens?: DesignTokens;
   seo?: SEOMetadata;
   assets?: SiteAsset[];
   modules?: SiteModuleKey[];
