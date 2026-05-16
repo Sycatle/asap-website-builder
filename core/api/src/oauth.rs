@@ -914,10 +914,8 @@ async fn exchange_github_code(
     ))
 }
 
-// TODO: Implement avatar download
-// This function will be re-enabled once we confirm file storage is working properly
-/// Download avatar from OAuth provider and store in user's cloud storage
-/// Uses naming convention: {provider}-avatar.{extension} (e.g., github-avatar.png)
+/// Download avatar from OAuth provider and store in user's cloud storage.
+/// Naming convention: {provider}-avatar.{extension} (e.g. github-avatar.png).
 async fn download_and_store_avatar(
     pool: &PgPool,
     account_id: Uuid,
