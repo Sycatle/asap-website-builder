@@ -298,30 +298,34 @@ pub async fn delete_account(
         }))).into_response();
     }
 
-    // 5-6. Optional tables: file_audit_logs and file_contents
-    // Use savepoints to isolate optional deletions
-    for (table_name, query_str) in [
-        ("file_audit_logs", "DELETE FROM file_audit_logs WHERE account_id = $1"),
-        ("file_contents", "DELETE FROM file_contents WHERE file_id IN (SELECT id FROM files WHERE account_id = $1)"),
+    // 5-6. Optional tables: file_audit_logs and file_contents.
+    // Savepoints isolate deletes that may target tables that don't exist in some envs.
+    // Savepoint names are static literals — never interpolate user/runtime data here.
+    for (label, savepoint, sp_release, sp_rollback, query_str) in [
+        (
+            "file_audit_logs",
+            "SAVEPOINT sp_file_audit_logs",
+            "RELEASE SAVEPOINT sp_file_audit_logs",
+            "ROLLBACK TO SAVEPOINT sp_file_audit_logs",
+            "DELETE FROM file_audit_logs WHERE account_id = $1",
+        ),
+        (
+            "file_contents",
+            "SAVEPOINT sp_file_contents",
+            "RELEASE SAVEPOINT sp_file_contents",
+            "ROLLBACK TO SAVEPOINT sp_file_contents",
+            "DELETE FROM file_contents WHERE file_id IN (SELECT id FROM files WHERE account_id = $1)",
+        ),
     ] {
-        // Create a savepoint before attempting the delete
-        if let Ok(_) = sqlx::query(&format!("SAVEPOINT sp_{}", table_name))
-            .execute(&mut *tx)
-            .await 
-        {
+        if sqlx::query(savepoint).execute(&mut *tx).await.is_ok() {
             match sqlx::query(query_str).bind(account_id).execute(&mut *tx).await {
                 Ok(_) => {
-                    tracing::debug!("Deleted {} for account {}", table_name, account_id);
-                    let _ = sqlx::query(&format!("RELEASE SAVEPOINT sp_{}", table_name))
-                        .execute(&mut *tx)
-                        .await;
+                    tracing::debug!("Deleted {} for account {}", label, account_id);
+                    let _ = sqlx::query(sp_release).execute(&mut *tx).await;
                 }
                 Err(_) => {
-                    // Rollback to savepoint to keep transaction valid
-                    let _ = sqlx::query(&format!("ROLLBACK TO SAVEPOINT sp_{}", table_name))
-                        .execute(&mut *tx)
-                        .await;
-                    tracing::debug!("Table {} does not exist or delete failed, continuing", table_name);
+                    let _ = sqlx::query(sp_rollback).execute(&mut *tx).await;
+                    tracing::debug!("Table {} does not exist or delete failed, continuing", label);
                 }
             }
         }
