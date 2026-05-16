@@ -10,7 +10,9 @@
 //! - `context`: User and website context loading
 //! - `conversation`: Conversation history management
 //! - `tools`: Data tools execution, screenshot capture
-//! - `handlers`: Main HTTP handlers (chat, chat_stream, quota, status)
+//! - `handlers`: chat + chat_stream HTTP handlers
+//! - `quota`: quota and status endpoints
+//! - `conversations`: list/get/delete conversation endpoints
 //! - `actions`: AI action execution (update sections, themes, etc.)
 //! - `vision`: Vision/screenshot endpoints for GPT-4 Vision
 //! - `cache`: Redis-based caching for AI context (performance optimization)
@@ -19,8 +21,10 @@ mod actions;
 pub mod cache;
 mod context;
 mod conversation;
+mod conversations;
 mod handlers;
 mod helpers;
+mod quota;
 mod tools;
 mod types;
 mod vision;
@@ -62,9 +66,9 @@ pub use types::{
 };
 
 // Public handlers for router registration
-pub use handlers::{
-    chat, chat_stream, delete_conversation, get_conversation, get_quota, list_conversations, status,
-};
+pub use conversations::{delete_conversation, get_conversation, list_conversations};
+pub use handlers::{chat, chat_stream};
+pub use quota::{get_quota, status};
 
 pub use actions::execute_action;
 
