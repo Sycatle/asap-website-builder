@@ -152,7 +152,7 @@ impl PaymentGateway for StripeProvider {
         tracing::info!("Fetching subscription: {}", subscription_id);
 
         let response = self.client
-            .get(&format!("https://api.stripe.com/v1/subscriptions/{}", subscription_id))
+            .get(format!("https://api.stripe.com/v1/subscriptions/{}", subscription_id))
             .bearer_auth(&self.api_key)
             .send()
             .await

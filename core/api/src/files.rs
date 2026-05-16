@@ -338,8 +338,7 @@ pub async fn download_file(
     let safe_filename = file.filename
         .replace('\\', "\\\\")
         .replace('"', "\\\"")
-        .replace('\r', "")
-        .replace('\n', "");
+        .replace(['\r', '\n'], "");
     
     let response = Response::builder()
         .status(StatusCode::OK)

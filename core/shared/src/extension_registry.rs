@@ -246,14 +246,14 @@ impl ExtensionRegistry {
         // Convert fields
         let config_fields: Vec<ConfigField> = fields
             .into_iter()
-            .map(|f| Self::convert_field(f))
+            .map(Self::convert_field)
             .collect::<Result<_, _>>()?;
         schema = schema.with_fields(config_fields);
 
         // Convert actions
         let config_actions: Vec<ConfigAction> = actions
             .into_iter()
-            .map(|a| Self::convert_action(a))
+            .map(Self::convert_action)
             .collect();
         if !config_actions.is_empty() {
             schema = schema.with_actions(config_actions);
@@ -262,7 +262,7 @@ impl ExtensionRegistry {
         // Convert data displays
         let displays: Vec<DataDisplay> = data_displays
             .into_iter()
-            .map(|d| Self::convert_data_display(d))
+            .map(Self::convert_data_display)
             .collect::<Result<_, _>>()?;
         if !displays.is_empty() {
             schema = schema.with_data_display(displays);
@@ -271,7 +271,7 @@ impl ExtensionRegistry {
         // Convert sections
         let config_sections: Vec<ConfigSection> = sections
             .into_iter()
-            .map(|s| Self::convert_section(s))
+            .map(Self::convert_section)
             .collect();
         if !config_sections.is_empty() {
             schema = schema.with_sections(config_sections);
@@ -339,7 +339,7 @@ impl ExtensionRegistry {
         let fields: Vec<DataDisplayField> = display
             .fields
             .into_iter()
-            .map(|f| Self::convert_data_display_field(f))
+            .map(Self::convert_data_display_field)
             .collect::<Result<_, _>>()?;
 
         let mut data_display = match display.display_type.as_str() {

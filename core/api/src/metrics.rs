@@ -124,7 +124,7 @@ async fn store_event(pool: &PgPool, event: &TrackEventRequest) -> Result<(), sql
     )
     .bind(event.website_id)
     .bind(&event.event_type)
-    .bind(&event.event_data.clone().unwrap_or(serde_json::json!({})))
+    .bind(event.event_data.clone().unwrap_or(serde_json::json!({})))
     .execute(pool)
     .await?;
     
@@ -149,7 +149,7 @@ async fn store_events_batch(pool: &PgPool, events: &[TrackEventRequest]) -> Resu
         )
         .bind(event.website_id)
         .bind(&event.event_type)
-        .bind(&event.event_data.clone().unwrap_or(serde_json::json!({})))
+        .bind(event.event_data.clone().unwrap_or(serde_json::json!({})))
         .execute(&mut *tx)
         .await?;
     }

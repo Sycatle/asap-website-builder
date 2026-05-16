@@ -126,7 +126,7 @@ pub async fn chat(
     let (response, _rate_status) = orchestrator
         .chat(&ai_request, context, account_id, &plan)
         .await
-        .map_err(|e| ai_error_to_response(e))?;
+        .map_err(ai_error_to_response)?;
 
     // Save assistant response
     let _ = save_message(
@@ -438,12 +438,11 @@ Rules:
                 match serde_json::from_str::<IntentAnalysis>(json_str) {
                     Ok(mut analysis) => {
                         // Extract reasoning from the non-JSON part and clean markers
-                        let reasoning = clean_marker_text(&full_content
+                        let reasoning = clean_marker_text(full_content
                             .split("PLAN_START")
                             .next()
                             .unwrap_or("")
-                            .trim()
-                            .to_string());
+                            .trim());
                         analysis.reasoning = reasoning;
                         analysis
                     }
@@ -673,7 +672,7 @@ Rules:
                         // Send running status immediately
                         let plan_step_running = SseEventData::PlanStep(PlanStepData {
                             id: format!("step_{}", thinking_step.step),
-                            index: (thinking_step.step - 1) as u32,
+                            index: (thinking_step.step - 1),
                             title: thinking_step.description.clone(),
                             description: Some(thinking_step.analysis_focus.clone()),
                             status: "running".to_string(),
@@ -877,20 +876,18 @@ Then output JSON_START marker, followed by structured data:
                                 }
                                 
                                 // Parse the result
-                                let thinking = clean_marker_text(&full_content
+                                let thinking = clean_marker_text(full_content
                                     .split("INSIGHT_START")
                                     .next()
                                     .unwrap_or("")
-                                    .trim()
-                                    .to_string());
+                                    .trim());
                                 
-                                let insight = clean_marker_text(&full_content
+                                let insight = clean_marker_text(full_content
                                     .split("INSIGHT_START")
                                     .nth(1)
                                     .and_then(|s| s.split("JSON_START").next())
                                     .unwrap_or("")
-                                    .trim()
-                                    .to_string());
+                                    .trim());
                                 
                                 let result = asap_core_ai::StepResult {
                                     step: thinking_step.step,
@@ -905,7 +902,7 @@ Then output JSON_START marker, followed by structured data:
                                 // Update step status to done
                                 let plan_step_done = SseEventData::PlanStep(PlanStepData {
                                     id: format!("step_{}", thinking_step.step),
-                                    index: (thinking_step.step - 1) as u32,
+                                    index: (thinking_step.step - 1),
                                     title: thinking_step.description.clone(),
                                     description: Some(result.insight.clone()),
                                     status: "done".to_string(),
@@ -924,7 +921,7 @@ Then output JSON_START marker, followed by structured data:
                                 // Update step status to failed
                                 let plan_step_failed = SseEventData::PlanStep(PlanStepData {
                                     id: format!("step_{}", thinking_step.step),
-                                    index: (thinking_step.step - 1) as u32,
+                                    index: (thinking_step.step - 1),
                                     title: thinking_step.description.clone(),
                                     description: Some(format!("Error: {}", e)),
                                     status: "failed".to_string(),

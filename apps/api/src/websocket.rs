@@ -327,7 +327,7 @@ impl WsState {
     /// Check if an account has any connected clients
     pub async fn has_connected_clients(&self, account_id: &str) -> bool {
         let clients = self.authenticated_clients.read().await;
-        clients.get(account_id).map_or(false, |c| !c.is_empty())
+        clients.get(account_id).is_some_and(|c| !c.is_empty())
     }
 
     /// Broadcast a message to all connected clients

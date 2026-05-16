@@ -246,13 +246,11 @@ pub async fn health_check(pool: &PgPool) -> anyhow::Result<()> {
 pub async fn get_pool_info(_pool: &PgPool) -> anyhow::Result<String> {
     // Note: sqlx::PgPool doesn't expose connection metrics directly
     // We can track them ourselves or use a health check
-    let info = format!(
-        "Database Pool Info:\n  \
+    let info = "Database Pool Info:\n  \
          - Pool is active and responding\n  \
          - Monitor via: SELECT COUNT(*) FROM pg_stat_activity\n  \
          - Acquire timeout: 10s\n  \
-         - Idle timeout: 30m"
-    );
+         - Idle timeout: 30m".to_string();
     Ok(info)
 }
 

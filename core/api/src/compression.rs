@@ -318,7 +318,7 @@ mod tests {
         assert!(result.is_ok());
         
         let (compressed, stats) = result.unwrap();
-        assert!(compressed.len() > 0);
+        assert!(!compressed.is_empty());
         assert!(stats.ratio > 0.0 && stats.ratio < 100.0);
     }
 
@@ -329,6 +329,6 @@ mod tests {
         
         assert!(result.is_ok());
         let compressed = result.unwrap();
-        assert!(compressed.len() > 0);
+        assert!(!compressed.is_empty());
     }
 }

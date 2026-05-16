@@ -574,9 +574,7 @@ fn parse_sse_stream(
                         let event = buffer.drain(..pos + 2).collect::<String>();
                         
                         for line in event.lines() {
-                            if line.starts_with("data: ") {
-                                let data = &line[6..];
-                                
+                            if let Some(data) = line.strip_prefix("data: ") {
                                 // Check for stream end
                                 if data == "[DONE]" {
                                     continue;
@@ -603,7 +601,7 @@ fn parse_sse_stream(
             
             async move { Some(output) }
         })
-        .flat_map(|tokens| futures::stream::iter(tokens))
+        .flat_map(futures::stream::iter)
 }
 
 /// Calculate estimated cost for OpenAI models

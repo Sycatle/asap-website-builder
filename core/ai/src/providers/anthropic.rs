@@ -212,9 +212,7 @@ fn parse_sse_stream(
 
                 // Parse SSE format
                 for line in text.lines() {
-                    if line.starts_with("data: ") {
-                        let data = &line[6..];
-
+                    if let Some(data) = line.strip_prefix("data: ") {
                         // Parse JSON chunk
                         if let Ok(event) = serde_json::from_str::<AnthropicStreamEvent>(data) {
                             match event {

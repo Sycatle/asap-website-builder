@@ -142,7 +142,7 @@ impl GitHubClient {
         // Convert to JSON values for flexibility
         let json_repos: Vec<serde_json::Value> = filtered_repos
             .into_iter()
-            .map(|repo| serde_json::to_value(repo))
+            .map(serde_json::to_value)
             .collect::<Result<Vec<_>, _>>()?;
             
         Ok(json_repos)
@@ -203,7 +203,7 @@ impl GitHubClient {
         
         let json_orgs: Vec<serde_json::Value> = orgs
             .into_iter()
-            .map(|org| serde_json::to_value(org))
+            .map(serde_json::to_value)
             .collect::<Result<Vec<_>, _>>()?;
             
         Ok(json_orgs)
@@ -287,7 +287,7 @@ impl GitHubClient {
         
         let json_gists: Vec<serde_json::Value> = public_gists
             .into_iter()
-            .map(|g| serde_json::to_value(g))
+            .map(serde_json::to_value)
             .collect::<Result<Vec<_>, _>>()?;
             
         Ok(json_gists)
@@ -321,7 +321,7 @@ impl GitHubClient {
         
         let json_starred: Vec<serde_json::Value> = starred
             .into_iter()
-            .map(|s| serde_json::to_value(s))
+            .map(serde_json::to_value)
             .collect::<Result<Vec<_>, _>>()?;
             
         Ok(json_starred)

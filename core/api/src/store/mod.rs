@@ -223,10 +223,7 @@ pub async fn list_extensions(
             for row in rows {
                 // Check if installed (only if authenticated)
                 let installed = if let Some(acc_id) = account_id {
-                    match is_extension_installed(&pool, acc_id, &row.slug).await {
-                        Ok(is_installed) => Some(is_installed),
-                        Err(_) => None,
-                    }
+                    (is_extension_installed(&pool, acc_id, &row.slug).await).ok()
                 } else {
                     None
                 };
@@ -288,10 +285,7 @@ pub async fn get_extension(
         Ok(Some(row)) => {
             // Check if installed
             let installed = if let Some(acc_id) = account_id {
-                match is_extension_installed(&pool, acc_id, &row.slug).await {
-                    Ok(is_installed) => Some(is_installed),
-                    Err(_) => None,
-                }
+                (is_extension_installed(&pool, acc_id, &row.slug).await).ok()
             } else {
                 None
             };
@@ -381,10 +375,7 @@ pub async fn list_featured_extensions(
 
             for row in rows {
                 let installed = if let Some(acc_id) = account_id {
-                    match is_extension_installed(&pool, acc_id, &row.slug).await {
-                        Ok(is_installed) => Some(is_installed),
-                        Err(_) => None,
-                    }
+                    (is_extension_installed(&pool, acc_id, &row.slug).await).ok()
                 } else {
                     None
                 };

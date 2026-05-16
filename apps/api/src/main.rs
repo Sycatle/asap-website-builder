@@ -11,7 +11,7 @@ use std::sync::Arc;
 use axum::{Router, routing::get, Json, extract::State, middleware::Next, response::Response, body::Body, http::{Request, Method}};
 use serde_json::json;
 use sqlx::PgPool;
-use tower_http::cors::{CorsLayer, AllowOrigin};
+use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 

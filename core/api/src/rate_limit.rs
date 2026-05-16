@@ -219,7 +219,7 @@ impl RateLimiter {
         entries.retain(|_ip, ip_entries| {
             ip_entries.retain(|_endpoint, entry| {
                 // Keep if still blocked or window is recent
-                entry.blocked_until.map_or(false, |b| b > now) ||
+                entry.blocked_until.is_some_and(|b| b > now) ||
                     now.duration_since(entry.window_start) < max_age
             });
             !ip_entries.is_empty()

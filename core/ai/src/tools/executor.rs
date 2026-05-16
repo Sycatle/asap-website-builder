@@ -188,7 +188,7 @@ impl ToolExecutor {
                     let query_lower = query.to_lowercase();
                     let mut found = false;
                     
-                    for (_key, value) in &item_data {
+                    for value in item_data.values() {
                         if let Some(text) = value.as_str() {
                             if text.to_lowercase().contains(&query_lower) {
                                 found = true;
@@ -686,8 +686,7 @@ fn matches_pattern(key: &str, pattern: &str) -> bool {
 
 /// Format extension ID to human-readable name
 fn format_extension_name(id: &str) -> String {
-    id.replace('-', " ")
-        .replace('_', " ")
+    id.replace(['-', '_'], " ")
         .split_whitespace()
         .map(|word| {
             let mut chars: Vec<char> = word.chars().collect();

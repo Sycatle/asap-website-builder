@@ -64,7 +64,7 @@ impl RedisNotificationSubscriber {
         
         let client = redis::Client::open(redis_url)?;
         // Use standard connection for pub/sub
-        let mut conn = client.get_async_connection().await?;
+        let conn = client.get_async_connection().await?;
         
         // Subscribe using the sync pubsub approach with async polling
         let mut pubsub = conn.into_pubsub();
@@ -213,7 +213,7 @@ impl RedisSyncSubscriber {
         info!("Starting Redis sync subscriber...");
         
         let client = redis::Client::open(redis_url)?;
-        let mut conn = client.get_async_connection().await?;
+        let conn = client.get_async_connection().await?;
         
         // Subscribe to all sync channels
         let mut pubsub = conn.into_pubsub();

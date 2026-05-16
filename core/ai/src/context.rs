@@ -340,7 +340,7 @@ fn format_value_for_prompt(value: &serde_json::Value) -> String {
         }
         serde_json::Value::Array(arr) => {
             if arr.len() <= 3 {
-                format!("{:?}", arr.iter().map(|v| format_value_for_prompt(v)).collect::<Vec<_>>())
+                format!("{:?}", arr.iter().map(format_value_for_prompt).collect::<Vec<_>>())
             } else {
                 format!("[{} items]", arr.len())
             }

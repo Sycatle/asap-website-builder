@@ -116,7 +116,7 @@ pub async fn create_website(
             "error": "Title must be under 200 characters"
         }))).into_response();
     }
-    if payload.tagline.as_ref().map_or(false, |t| t.len() > 500) {
+    if payload.tagline.as_ref().is_some_and(|t| t.len() > 500) {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
             "error": "Tagline must be under 500 characters"
         }))).into_response();

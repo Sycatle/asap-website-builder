@@ -92,7 +92,7 @@ pub(crate) async fn resolve_extension_id(pool: &PgPool, extension_id_or_slug: &s
     .bind(&extension_def.category)
     .bind(&extension_def.icon)
     .bind(&extension_def.default_settings)
-    .bind(extension_def.config_schema.as_ref().map(|s| serde_json::to_value(s).ok()).flatten())
+    .bind(extension_def.config_schema.as_ref().and_then(|s| serde_json::to_value(s).ok()))
     .bind(extension_def.sidebar_order)
     .bind(&extension_def.sidebar_label)
     .execute(pool)

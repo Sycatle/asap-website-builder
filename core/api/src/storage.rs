@@ -4,7 +4,6 @@ use flate2::write::GzEncoder;
 use flate2::Compression;
 use sqlx::{PgPool, Row};
 use std::io::Write;
-use std::str::FromStr;
 use uuid::Uuid;
 use sha2::{Sha256, Digest};
 use hex;
@@ -123,8 +122,8 @@ impl FileStorageService {
     /// Strip metadata from filename (security) - removes path traversal and special chars
     pub fn sanitize_filename(&self, filename: &str) -> String {
         // Remove path components
-        let filename = filename.split('/').last().unwrap_or(filename);
-        let filename = filename.split('\\').last().unwrap_or(filename);
+        let filename = filename.split('/').next_back().unwrap_or(filename);
+        let filename = filename.split('\\').next_back().unwrap_or(filename);
         
         // Remove null bytes and limit to safe characters while preserving extension
         filename
@@ -236,8 +235,8 @@ impl FileStorageService {
             }
 
             // For images, verify declared type matches detected type
-            if declared_mime.starts_with("image/") && detected.starts_with("image/") {
-                if declared_mime != detected {
+            if declared_mime.starts_with("image/") && detected.starts_with("image/")
+                && declared_mime != detected {
                     tracing::warn!(
                         "MIME type mismatch: declared={}, detected={}",
                         declared_mime,
@@ -245,7 +244,6 @@ impl FileStorageService {
                     );
                     // Allow but log - some browsers send wrong MIME
                 }
-            }
         }
 
         Ok(())
@@ -920,8 +918,8 @@ mod tests {
     fn test_sanitize_filename() {
         // Extract sanitization logic for testing
         fn sanitize_filename(filename: &str) -> String {
-            let filename = filename.split('/').last().unwrap_or(filename);
-            let filename = filename.split('\\').last().unwrap_or(filename);
+            let filename = filename.split('/').next_back().unwrap_or(filename);
+            let filename = filename.split('\\').next_back().unwrap_or(filename);
             filename.replace('\0', "")
         }
         
