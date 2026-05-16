@@ -1,0 +1,36 @@
+name: Feature request
+description: Propose a new capability or improvement.
+labels: ["enhancement", "triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem does this solve? Who is affected?
+      placeholder: As a freelancer publishing a vitrine site, I can't …
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: A clear description of what you'd like to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you've tried, similar features in other tools, etc.
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and impact
+      description: What parts of the codebase or product would this touch? Any breaking changes?
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have searched existing issues and discussions for similar requests.
+          required: true

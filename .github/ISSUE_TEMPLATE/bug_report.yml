@@ -1,0 +1,78 @@
+name: Bug report
+description: Something is broken or behaves unexpectedly.
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in as much as you can — it speeds up triage significantly.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: A clear and concise description of the bug.
+      placeholder: When I click X on the dashboard, the request returns 500.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, ordered steps. Include URLs, requests, or sample data if relevant.
+      placeholder: |
+        1. Go to /app/websites/new
+        2. Pick the "freelance" preset
+        3. Click Publish
+        4. Observe …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include logs, screenshots, or stack traces if available.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: ASAP version / commit
+      placeholder: "main @ abc1234, or v0.x.y"
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment
+      options:
+        - Local development (make dev)
+        - Self-hosted (Docker Compose)
+        - Self-hosted (custom)
+        - asap.cool hosted
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, browser, Rust/Node versions if relevant.
+      placeholder: |
+        OS: Ubuntu 24.04
+        Browser: Firefox 124
+        Rust: 1.87
+        Node: 20.12
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have searched existing issues and this is not a duplicate.
+          required: true
+        - label: This is not a security vulnerability (those go to SECURITY.md).
+          required: true
