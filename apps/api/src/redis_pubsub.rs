@@ -1,43 +1,13 @@
-//! Redis Pub/Sub implementation for real-time notifications
+//! Redis Pub/Sub subscribers for real-time notifications and sync events
 //!
-//! This module provides:
-//! - RedisNotificationPublisher: publishes events to Redis
-//! - RedisNotificationSubscriber: subscribes to Redis and forwards to WebSocket
+//! Forwards events published by the worker (apps/worker/src/notification_publisher.rs)
+//! to connected WebSocket clients. The API service does not publish; it only subscribes.
 
-use asap_core_api::{NotificationPubSubEvent, NotificationPublisher, CHANNEL_NOTIFICATIONS};
-use redis::AsyncCommands;
+use asap_core_api::{NotificationPubSubEvent, CHANNEL_NOTIFICATIONS};
 use std::sync::Arc;
 use tracing::{error, info, warn};
 
 use crate::websocket::WsState;
-
-// ============================================
-// Redis Publisher
-// ============================================
-
-/// Redis-based notification publisher
-pub struct RedisNotificationPublisher {
-    redis: redis::aio::ConnectionManager,
-}
-
-impl RedisNotificationPublisher {
-    pub fn new(redis: redis::aio::ConnectionManager) -> Arc<Self> {
-        Arc::new(Self { redis })
-    }
-}
-
-#[async_trait::async_trait]
-impl NotificationPublisher for RedisNotificationPublisher {
-    async fn publish(&self, event: NotificationPubSubEvent) -> anyhow::Result<()> {
-        let payload = serde_json::to_string(&event)?;
-
-        let mut conn = self.redis.clone();
-        let _: () = conn.publish(CHANNEL_NOTIFICATIONS, &payload).await?;
-
-        tracing::debug!("Published notification event to Redis");
-        Ok(())
-    }
-}
 
 // ============================================
 // Redis Subscriber
@@ -155,42 +125,13 @@ pub fn spawn_redis_subscriber(ws_state: Arc<WsState>, redis_url: String) {
 use futures::StreamExt;
 
 // ============================================
-// Redis Sync Publisher (Phase 4)
+// Redis Sync Subscriber (Phase 4)
 // ============================================
 
 use asap_core_api::{
-    SyncPubSubEvent, SyncPublisher, CHANNEL_PRESENCE, CHANNEL_SYNC_EXTENSION, CHANNEL_SYNC_FILE,
+    SyncPubSubEvent, CHANNEL_PRESENCE, CHANNEL_SYNC_EXTENSION, CHANNEL_SYNC_FILE,
     CHANNEL_SYNC_WEBSITE,
 };
-
-/// Redis-based sync publisher
-pub struct RedisSyncPublisher {
-    redis: redis::aio::ConnectionManager,
-}
-
-impl RedisSyncPublisher {
-    pub fn new(redis: redis::aio::ConnectionManager) -> Arc<Self> {
-        Arc::new(Self { redis })
-    }
-}
-
-#[async_trait::async_trait]
-impl SyncPublisher for RedisSyncPublisher {
-    async fn publish(&self, event: SyncPubSubEvent) -> anyhow::Result<()> {
-        let payload = serde_json::to_string(&event)?;
-        let channel = event.channel();
-
-        let mut conn = self.redis.clone();
-        let _: () = conn.publish(channel, &payload).await?;
-
-        tracing::debug!("Published sync event to Redis channel: {}", channel);
-        Ok(())
-    }
-}
-
-// ============================================
-// Redis Sync Subscriber (Phase 4)
-// ============================================
 
 /// Subscribes to Redis sync channels and forwards to WebSocket
 pub struct RedisSyncSubscriber {
