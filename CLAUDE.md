@@ -35,7 +35,7 @@ Read these before touching the related code:
 | Rust lint | `cargo clippy --workspace --all-targets -- -D clippy::correctness -D clippy::suspicious` |
 | `@asap/shared` typecheck | `pnpm -F @asap/shared typecheck` |
 | `@asap/renderers` typecheck | `pnpm -F @asap/renderers typecheck` |
-| `apps/web` typecheck | `cd apps/web && pnpm exec tsc --noEmit` |
+| `apps/web` typecheck | `pnpm -F @asap/web typecheck` |
 | `apps/sites` typecheck | `cd apps/sites && pnpm exec astro check` |
 | Frontend tests (vitest, jsdom) | `pnpm --filter @asap/web test:run` |
 | Frontend build | `pnpm -r --if-present build` |
@@ -60,7 +60,7 @@ CI (`.github/workflows/ci.yml`) enforces `cargo fmt`, the two clippy lint groups
 - Don't comment the obvious; explain *why* when a constraint isn't visible from the code.
 - Don't add error-handling or fallbacks for impossible cases. Trust internal code.
 - Don't introduce abstractions speculatively. Three repeated lines beats a premature trait.
-- Server Components / Astro by default in `apps/web` and `apps/sites`. Add `"use client"` only when hooks / events require it.
+- `apps/web` is a Vite + React SPA served by nginx in production; `apps/sites` stays on Astro (SSR for public sites). Add `"use client"` only when hooks / events require it.
 - After editing a Rust file, expect `rustfmt` and `clippy` to be run; structure your changes to survive both.
 
 ## Hard constraints
