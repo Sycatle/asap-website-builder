@@ -147,7 +147,8 @@ pub fn variant_catalog() -> BTreeMap<&'static str, Vec<VariantSpec>> {
             VariantSpec {
                 key: "testimonials/pull-quote",
                 label: "Pull Quote",
-                description: "One oversized featured testimonial with a thin row of secondaries below.",
+                description:
+                    "One oversized featured testimonial with a thin row of secondaries below.",
                 params: vec![
                     density_param(),
                     VariantParamSpec {
@@ -197,7 +198,8 @@ pub fn variant_catalog() -> BTreeMap<&'static str, Vec<VariantSpec>> {
             VariantSpec {
                 key: "faq/default",
                 label: "Default",
-                description: "Existing accordion / grid / two-column variants driven by data.variant.",
+                description:
+                    "Existing accordion / grid / two-column variants driven by data.variant.",
                 params: vec![],
             },
             VariantSpec {
@@ -500,10 +502,7 @@ mod tests {
 
     #[test]
     fn validate_rejects_out_of_range_number() {
-        let (outcome, _) = validate_variant(
-            "hero/split-asymmetric",
-            &json!({"image_ratio": 2.0}),
-        );
+        let (outcome, _) = validate_variant("hero/split-asymmetric", &json!({"image_ratio": 2.0}));
         match outcome {
             VariantValidation::InvalidParam { key, .. } => assert_eq!(key, "image_ratio"),
             other => panic!("expected InvalidParam, got {:?}", other),
@@ -512,16 +511,16 @@ mod tests {
 
     #[test]
     fn validate_rejects_select_outside_options() {
-        let (outcome, _) = validate_variant(
-            "hero/full-bleed",
-            &json!({"align": "diagonal"}),
-        );
+        let (outcome, _) = validate_variant("hero/full-bleed", &json!({"align": "diagonal"}));
         assert!(matches!(outcome, VariantValidation::InvalidParam { .. }));
     }
 
     #[test]
     fn default_variant_keys() {
-        assert_eq!(default_variant_key_for("hero"), Some("hero/centered-minimal"));
+        assert_eq!(
+            default_variant_key_for("hero"),
+            Some("hero/centered-minimal")
+        );
         assert_eq!(default_variant_key_for("about"), Some("about/default"));
         assert_eq!(default_variant_key_for("unknown"), None);
     }

@@ -274,7 +274,6 @@ impl RateLimiter {
             entries.len()
         );
     }
-
 }
 
 /// Shared rate limiter type for Axum state

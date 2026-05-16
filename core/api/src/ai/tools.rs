@@ -745,6 +745,10 @@ Structure your response:
     })
 }
 
+/// Boxed future returned by [`execute_data_tools_streaming_channel`].
+pub type DataToolExecutionFuture =
+    std::pin::Pin<Box<dyn std::future::Future<Output = Option<DataToolExecution>> + Send>>;
+
 /// Execute data tools with real-time streaming via channel
 /// Returns a future that executes tools and a receiver for real-time events
 pub fn execute_data_tools_streaming_channel(
@@ -753,10 +757,7 @@ pub fn execute_data_tools_streaming_channel(
     user_message: String,
     history: Vec<asap_core_ai::Message>,
     preloaded_screenshot: Option<PreloadedScreenshot>,
-) -> (
-    std::pin::Pin<Box<dyn std::future::Future<Output = Option<DataToolExecution>> + Send>>,
-    mpsc::UnboundedReceiver<ToolEvent>,
-) {
+) -> (DataToolExecutionFuture, mpsc::UnboundedReceiver<ToolEvent>) {
     let (tx, rx) = mpsc::unbounded_channel();
 
     let future = Box::pin(async move {
@@ -773,4 +774,3 @@ pub fn execute_data_tools_streaming_channel(
 
     (future, rx)
 }
-

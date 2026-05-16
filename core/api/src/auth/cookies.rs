@@ -74,4 +74,3 @@ pub(super) fn build_logout_response() -> axum::response::Response {
 
     response
 }
-

@@ -21,7 +21,6 @@ pub(super) fn validate_password_strength(password: &str) -> Result<(), &'static 
     Ok(())
 }
 
-
 /// Hash a password using bcrypt.
 /// Cost 13 (2^13 rounds) — current OWASP recommendation. Override via BCRYPT_COST env if needed.
 pub(super) fn hash_password(password: &str) -> Result<String, bcrypt::BcryptError> {
@@ -194,4 +193,3 @@ mod password_tests {
         assert!(slug.is_empty() || !slug.chars().all(|c| c.is_alphanumeric() || c == '-'));
     }
 }
-

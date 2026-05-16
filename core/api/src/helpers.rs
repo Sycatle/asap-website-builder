@@ -3,6 +3,11 @@
 //! This module provides reusable helper functions to reduce code duplication
 //! and apply DRY (Don't Repeat Yourself) principle across handlers.
 
+// Helpers return `axum::Response` so callers can `?` them straight into a
+// handler. Boxing the response just to satisfy `result_large_err` would cost
+// an allocation on every parse.
+#![allow(clippy::result_large_err)]
+
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},

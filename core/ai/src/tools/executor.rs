@@ -91,8 +91,8 @@ impl ToolExecutor {
     /// * `context` - Website context (must include account_id for secure operations)
     ///
     /// # Security
-    /// The context should be built with `build_secure` or have account_id set.
-    /// Operations on website data are scoped to the context - ensure the context
+    /// The context must have `account_id` set. Operations on website data are
+    /// scoped to the context - ensure the context
     /// was populated only with data the account has access to.
     pub async fn execute(&self, tool_call: &ToolCall, context: &WebsiteContext) -> ToolResult {
         let function_name = &tool_call.function.name;
@@ -763,10 +763,10 @@ fn matches_pattern(key: &str, pattern: &str) -> bool {
         if parts.len() == 2 {
             let (prefix, suffix) = (parts[0], parts[1]);
             key.starts_with(prefix) && key.ends_with(suffix)
-        } else if pattern.starts_with('*') {
-            key.ends_with(&pattern[1..])
-        } else if pattern.ends_with('*') {
-            key.starts_with(&pattern[..pattern.len() - 1])
+        } else if let Some(stripped) = pattern.strip_prefix('*') {
+            key.ends_with(stripped)
+        } else if let Some(stripped) = pattern.strip_suffix('*') {
+            key.starts_with(stripped)
         } else {
             key == pattern
         }
@@ -785,11 +785,5 @@ mod tests {
         assert!(matches_pattern("github_username", "*_username"));
         assert!(matches_pattern("github_username", "github_username"));
         assert!(!matches_pattern("linkedin_username", "github_*"));
-    }
-
-    #[test]
-    fn test_format_extension_name() {
-        assert_eq!(format_extension_name("github-sync"), "Github Sync");
-        assert_eq!(format_extension_name("linkedin_import"), "Linkedin Import");
     }
 }

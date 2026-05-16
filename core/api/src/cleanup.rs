@@ -18,16 +18,11 @@ impl FileCleanupService {
     pub async fn run_cleanup(&self) -> Result<CleanupStats> {
         info!("Starting file cleanup tasks");
 
-        let mut stats = CleanupStats::default();
-
-        // Clean orphaned file metadata (files with deleted accounts)
-        stats.orphaned_files_cleaned = self.cleanup_orphaned_files().await?;
-
-        // Clean old audit logs
-        stats.audit_logs_cleaned = self.cleanup_old_audit_logs().await?;
-
-        // Reset quotas for deleted users
-        stats.quotas_cleaned = self.cleanup_deleted_user_quotas().await?;
+        let stats = CleanupStats {
+            orphaned_files_cleaned: self.cleanup_orphaned_files().await?,
+            audit_logs_cleaned: self.cleanup_old_audit_logs().await?,
+            quotas_cleaned: self.cleanup_deleted_user_quotas().await?,
+        };
 
         info!("File cleanup completed: {:?}", stats);
 

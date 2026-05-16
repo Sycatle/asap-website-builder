@@ -14,6 +14,12 @@ use super::types::{
     ErrorResponse,
 };
 
+type UtcDateTime = chrono::DateTime<chrono::Utc>;
+/// SELECT id, title, website_id, message_count, created_at, updated_at
+type ConversationListRow = (Uuid, Option<String>, Uuid, i64, UtcDateTime, UtcDateTime);
+/// SELECT id, title, website_id, created_at, updated_at
+type ConversationRow = (Uuid, Option<String>, Uuid, UtcDateTime, UtcDateTime);
+
 // ============================================================================
 // Conversation Endpoints
 // ============================================================================
@@ -63,14 +69,7 @@ pub async fn list_conversations(
             )
         })?;
 
-    let rows: Vec<(
-        Uuid,
-        Option<String>,
-        Uuid,
-        i64,
-        chrono::DateTime<chrono::Utc>,
-        chrono::DateTime<chrono::Utc>,
-    )> = sqlx::query_as(
+    let rows: Vec<ConversationListRow> = sqlx::query_as(
         r#"
         SELECT 
             c.id, c.title, c.website_id,
@@ -135,7 +134,7 @@ pub async fn get_conversation(
         )
     })?;
 
-    let conv: Option<(Uuid, Option<String>, Uuid, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(
+    let conv: Option<ConversationRow> = sqlx::query_as(
         "SELECT id, title, website_id, created_at, updated_at FROM ai_conversations WHERE id = $1 AND account_id = $2"
     )
     .bind(conversation_id)

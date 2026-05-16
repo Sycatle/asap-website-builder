@@ -200,7 +200,7 @@ pub async fn list_extensions(
     // Pagination (cap at 100)
     let pagination = Pagination {
         page: params.page.max(1),
-        per_page: params.per_page.min(100).max(1),
+        per_page: params.per_page.clamp(1, 100),
     };
 
     // Get account_id if authenticated

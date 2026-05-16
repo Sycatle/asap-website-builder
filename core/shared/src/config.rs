@@ -41,7 +41,6 @@ impl SharedConfig {
             jwt_expiration_hours,
         })
     }
-
 }
 
 impl Default for SharedConfig {

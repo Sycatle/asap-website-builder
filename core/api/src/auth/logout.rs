@@ -167,5 +167,3 @@ pub async fn is_token_blacklisted(pool: &PgPool, jti: &str) -> bool {
         }
     }
 }
-
-

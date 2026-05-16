@@ -123,7 +123,7 @@ fn get_role_permissions(role: &str) -> serde_json::Value {
             "extensions": {"manage": false, "configure": false},
             "administrators": {"view": true, "invite": false, "remove": false}
         }),
-        "viewer" | _ => serde_json::json!({
+        _ => serde_json::json!({
             "website": {"edit_settings": false, "publish": false, "delete": false},
             "content": {"create": false, "edit": false, "delete": false},
             "extensions": {"manage": false, "configure": false},

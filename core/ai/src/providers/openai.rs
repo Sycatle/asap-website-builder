@@ -838,8 +838,6 @@ mod tests {
 
     #[test]
     fn test_cost_calculation() {
-        // GPT-4o: $0.005/1K input, $0.015/1K output
-        let cost = calculate_cost("gpt-4o", 1000, 500);
         // GPT-4o with updated pricing
         let cost = calculate_cost("gpt-4o", 1000, 500);
         assert!((cost - 0.0075).abs() < 0.001); // 0.0025 + 0.005

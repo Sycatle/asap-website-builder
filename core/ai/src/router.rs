@@ -207,6 +207,34 @@ impl ModelRouter {
     }
 }
 
+use crate::config::{AnthropicConfig, OpenAIConfig};
+
+impl Default for OpenAIConfig {
+    fn default() -> Self {
+        Self {
+            api_key: String::new(),
+            base_url: "https://api.openai.com/v1".to_string(),
+            model: "gpt-4o-mini".to_string(),
+            response_model: "gpt-4o".to_string(),
+            image_model: "dall-e-3".to_string(),
+            timeout_secs: 60,
+            max_response_tokens: 4096,
+            response_temperature: 0.7,
+        }
+    }
+}
+
+impl Default for AnthropicConfig {
+    fn default() -> Self {
+        Self {
+            api_key: String::new(),
+            base_url: "https://api.anthropic.com/v1".to_string(),
+            model: "claude-3-5-sonnet-20241022".to_string(),
+            timeout_secs: 60,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -280,31 +308,3 @@ mod tests {
         assert!(router.available_providers().is_empty());
     }
 }
-
-impl Default for OpenAIConfig {
-    fn default() -> Self {
-        Self {
-            api_key: String::new(),
-            base_url: "https://api.openai.com/v1".to_string(),
-            model: "gpt-4o-mini".to_string(),
-            response_model: "gpt-4o".to_string(),
-            image_model: "dall-e-3".to_string(),
-            timeout_secs: 60,
-            max_response_tokens: 4096,
-            response_temperature: 0.7,
-        }
-    }
-}
-
-impl Default for AnthropicConfig {
-    fn default() -> Self {
-        Self {
-            api_key: String::new(),
-            base_url: "https://api.anthropic.com/v1".to_string(),
-            model: "claude-3-5-sonnet-20241022".to_string(),
-            timeout_secs: 60,
-        }
-    }
-}
-
-use crate::config::{AnthropicConfig, OpenAIConfig};

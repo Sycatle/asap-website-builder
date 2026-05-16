@@ -94,35 +94,36 @@ pub enum NotificationType {
     Custom(String),
 }
 
-impl ToString for NotificationType {
-    fn to_string(&self) -> String {
-        match self {
-            Self::WelcomeMessage => "welcome_message".to_string(),
-            Self::SystemUpdate => "system_update".to_string(),
-            Self::MaintenanceScheduled => "maintenance_scheduled".to_string(),
-            Self::PasswordChanged => "password_changed".to_string(),
-            Self::EmailVerified => "email_verified".to_string(),
-            Self::ProfileUpdated => "profile_updated".to_string(),
-            Self::WebsitePublished => "website_published".to_string(),
-            Self::WebsiteUnpublished => "website_unpublished".to_string(),
-            Self::WebsiteDataUpdated => "website_data_updated".to_string(),
-            Self::NewVisitor => "new_visitor".to_string(),
-            Self::ExtensionActivated => "extension_activated".to_string(),
-            Self::ExtensionDeactivated => "extension_deactivated".to_string(),
-            Self::ExtensionConfigUpdated => "extension_config_updated".to_string(),
-            Self::PaymentSuccessful => "payment_successful".to_string(),
-            Self::PaymentFailed => "payment_failed".to_string(),
-            Self::SubscriptionRenewed => "subscription_renewed".to_string(),
-            Self::SubscriptionExpiring => "subscription_expiring".to_string(),
-            Self::PlanUpgraded => "plan_upgraded".to_string(),
-            Self::PlanDowngraded => "plan_downgraded".to_string(),
-            Self::MilestoneReached => "milestone_reached".to_string(),
-            Self::WeeklyReport => "weekly_report".to_string(),
-            Self::TrafficSpike => "traffic_spike".to_string(),
-            Self::NewLoginDetected => "new_login_detected".to_string(),
-            Self::SuspiciousActivity => "suspicious_activity".to_string(),
-            Self::Custom(s) => format!("custom:{}", s),
-        }
+impl std::fmt::Display for NotificationType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Self::WelcomeMessage => "welcome_message",
+            Self::SystemUpdate => "system_update",
+            Self::MaintenanceScheduled => "maintenance_scheduled",
+            Self::PasswordChanged => "password_changed",
+            Self::EmailVerified => "email_verified",
+            Self::ProfileUpdated => "profile_updated",
+            Self::WebsitePublished => "website_published",
+            Self::WebsiteUnpublished => "website_unpublished",
+            Self::WebsiteDataUpdated => "website_data_updated",
+            Self::NewVisitor => "new_visitor",
+            Self::ExtensionActivated => "extension_activated",
+            Self::ExtensionDeactivated => "extension_deactivated",
+            Self::ExtensionConfigUpdated => "extension_config_updated",
+            Self::PaymentSuccessful => "payment_successful",
+            Self::PaymentFailed => "payment_failed",
+            Self::SubscriptionRenewed => "subscription_renewed",
+            Self::SubscriptionExpiring => "subscription_expiring",
+            Self::PlanUpgraded => "plan_upgraded",
+            Self::PlanDowngraded => "plan_downgraded",
+            Self::MilestoneReached => "milestone_reached",
+            Self::WeeklyReport => "weekly_report",
+            Self::TrafficSpike => "traffic_spike",
+            Self::NewLoginDetected => "new_login_detected",
+            Self::SuspiciousActivity => "suspicious_activity",
+            Self::Custom(s) => return write!(f, "custom:{}", s),
+        };
+        f.write_str(s)
     }
 }
 

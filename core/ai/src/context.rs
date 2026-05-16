@@ -4,7 +4,7 @@
 
 use uuid::Uuid;
 
-use crate::types::{SectionInfo, UserContext, WebsiteContext, WebsiteDataContext, WebsiteInfo};
+use crate::types::{SectionInfo, WebsiteContext, WebsiteInfo};
 
 /// Builds context for AI from website data
 pub struct ContextBuilder {
@@ -41,10 +41,9 @@ impl ContextBuilder {
         }
     }
 
-    /// Build context from raw data (typically from database)
-    ///
-    /// NOTE: This creates a context without account_id. For secure operations,
-    /// use `build_secure` or set account_id explicitly after building.
+    /// Build context from raw data (typically from database).
+    /// Account isolation: callers set `account_id` on the returned context when
+    /// the request is authenticated.
     pub fn build(
         &self,
         website_id: Uuid,
@@ -68,93 +67,6 @@ impl ContextBuilder {
             data: None,
             extensions: Vec::new(),
             account_id: None,
-        }
-    }
-
-    /// Build context with account isolation (recommended for production)
-    pub fn build_secure(
-        &self,
-        account_id: Uuid,
-        website_id: Uuid,
-        slug: &str,
-        title: Option<&str>,
-        preset: Option<&str>,
-        sections: Vec<SectionInfo>,
-        theme: serde_json::Value,
-    ) -> WebsiteContext {
-        WebsiteContext {
-            website: WebsiteInfo {
-                id: website_id,
-                slug: slug.to_string(),
-                title: title.map(|s| s.to_string()),
-                preset: preset.map(|s| s.to_string()),
-            },
-            sections,
-            theme,
-            available_section_types: self.available_section_types.clone(),
-            user: None,
-            data: None,
-            extensions: Vec::new(),
-            account_id: Some(account_id),
-        }
-    }
-
-    /// Build context with user and website data
-    pub fn build_with_data(
-        &self,
-        website_id: Uuid,
-        slug: &str,
-        title: Option<&str>,
-        preset: Option<&str>,
-        sections: Vec<SectionInfo>,
-        theme: serde_json::Value,
-        user: Option<UserContext>,
-        data: Option<WebsiteDataContext>,
-    ) -> WebsiteContext {
-        WebsiteContext {
-            website: WebsiteInfo {
-                id: website_id,
-                slug: slug.to_string(),
-                title: title.map(|s| s.to_string()),
-                preset: preset.map(|s| s.to_string()),
-            },
-            sections,
-            theme,
-            available_section_types: self.available_section_types.clone(),
-            user,
-            data,
-            extensions: Vec::new(),
-            account_id: None,
-        }
-    }
-
-    /// Build context with account isolation and full data (recommended for production)
-    pub fn build_with_data_secure(
-        &self,
-        account_id: Uuid,
-        website_id: Uuid,
-        slug: &str,
-        title: Option<&str>,
-        preset: Option<&str>,
-        sections: Vec<SectionInfo>,
-        theme: serde_json::Value,
-        user: Option<UserContext>,
-        data: Option<WebsiteDataContext>,
-    ) -> WebsiteContext {
-        WebsiteContext {
-            website: WebsiteInfo {
-                id: website_id,
-                slug: slug.to_string(),
-                title: title.map(|s| s.to_string()),
-                preset: preset.map(|s| s.to_string()),
-            },
-            sections,
-            theme,
-            available_section_types: self.available_section_types.clone(),
-            user,
-            data,
-            extensions: Vec::new(),
-            account_id: Some(account_id),
         }
     }
 

@@ -401,7 +401,6 @@ impl WsState {
             );
         }
     }
-
 }
 
 /// Implement the WsBroadcaster trait for WsState

@@ -47,9 +47,17 @@ pub struct UpdateElementRequest {
     pub data: Option<serde_json::Value>,
     pub visible: Option<bool>,
     /// `Some(Some(...))` to set, `Some(None)` to clear, `None` to leave untouched.
-    #[serde(default, skip_serializing_if = "Option::is_none", with = "double_option")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "double_option"
+    )]
     pub variant_key: Option<Option<String>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", with = "double_option")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "double_option"
+    )]
     pub variant_params: Option<Option<serde_json::Value>>,
 }
 

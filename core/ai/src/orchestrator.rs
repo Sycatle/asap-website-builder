@@ -205,7 +205,6 @@ impl AIOrchestrator {
 mod tests {
     use super::*;
     use crate::config::{AnthropicConfig, OpenAIConfig};
-    use serde_json::json;
 
     fn test_config() -> AIConfig {
         AIConfig {
@@ -219,18 +218,6 @@ mod tests {
             },
             ..Default::default()
         }
-    }
-
-    fn test_context() -> WebsiteContext {
-        let builder = ContextBuilder::new();
-        builder.build(
-            Uuid::new_v4(),
-            "test-site",
-            Some("Test Site"),
-            None,
-            vec![],
-            json!({}),
-        )
     }
 
     #[test]

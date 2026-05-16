@@ -18,7 +18,6 @@ use asap_core_shared::{
 use super::password::{hash_password, validate_password_strength};
 use super::{ForgotPasswordRequest, ResetPasswordRequest};
 
-
 /// Request a password reset email
 ///
 /// This endpoint always returns success to prevent email enumeration attacks.

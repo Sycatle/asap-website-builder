@@ -76,4 +76,3 @@ pub async fn status(
         "providers": providers,
     }))
 }
-

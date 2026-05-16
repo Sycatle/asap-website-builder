@@ -549,6 +549,7 @@ pub type ThoughtStreamEvent = StreamEvent;
 
 /// Execute a thinking step with streaming output
 /// Streams tokens as they are generated for ChatGPT-like UX
+#[allow(clippy::too_many_arguments)]
 pub async fn execute_thinking_step_streaming(
     router: &ModelRouter,
     step: &ThinkingStep,
