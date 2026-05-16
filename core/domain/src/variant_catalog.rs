@@ -31,6 +31,10 @@ pub struct VariantParamSpec {
     pub min: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max: Option<f64>,
+    /// Default value applied by `validate_variant` when a param is omitted.
+    /// Mirrors the `default` field in the TS catalog.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,6 +70,7 @@ pub fn variant_catalog() -> BTreeMap<&'static str, Vec<VariantSpec>> {
                         options: None,
                         min: Some(0.35),
                         max: Some(0.7),
+                        default: Some(serde_json::json!(0.55)),
                     },
                     free_string_param("visual_url", "Visual URL"),
                     free_string_param("visual_alt", "Visual alt text"),
@@ -85,6 +90,7 @@ pub fn variant_catalog() -> BTreeMap<&'static str, Vec<VariantSpec>> {
                         options: None,
                         min: Some(0.0),
                         max: Some(1.0),
+                        default: Some(serde_json::json!(0.55)),
                     },
                     VariantParamSpec {
                         key: "align",
@@ -93,6 +99,7 @@ pub fn variant_catalog() -> BTreeMap<&'static str, Vec<VariantSpec>> {
                         options: Some(vec!["left", "center", "right"]),
                         min: None,
                         max: None,
+                        default: Some(serde_json::json!("center")),
                     },
                 ],
             },
@@ -121,6 +128,7 @@ pub fn variant_catalog() -> BTreeMap<&'static str, Vec<VariantSpec>> {
                         options: Some(vec!["1", "2"]),
                         min: None,
                         max: None,
+                        default: Some(serde_json::json!("2")),
                     },
                     VariantParamSpec {
                         key: "show_numbers",
@@ -129,6 +137,7 @@ pub fn variant_catalog() -> BTreeMap<&'static str, Vec<VariantSpec>> {
                         options: None,
                         min: None,
                         max: None,
+                        default: Some(serde_json::json!(true)),
                     },
                 ],
             },
@@ -158,6 +167,7 @@ pub fn variant_catalog() -> BTreeMap<&'static str, Vec<VariantSpec>> {
                         options: None,
                         min: Some(0.0),
                         max: Some(20.0),
+                        default: Some(serde_json::json!(0)),
                     },
                 ],
             },
@@ -186,6 +196,7 @@ pub fn variant_catalog() -> BTreeMap<&'static str, Vec<VariantSpec>> {
                         options: None,
                         min: None,
                         max: None,
+                        default: Some(serde_json::json!(true)),
                     },
                 ],
             },
@@ -233,6 +244,7 @@ pub fn variant_catalog() -> BTreeMap<&'static str, Vec<VariantSpec>> {
                         options: Some(vec!["left", "center"]),
                         min: None,
                         max: None,
+                        default: Some(serde_json::json!("left")),
                     },
                 ],
             },
@@ -261,6 +273,7 @@ pub fn variant_catalog() -> BTreeMap<&'static str, Vec<VariantSpec>> {
                         options: Some(vec!["primary", "muted", "surface"]),
                         min: None,
                         max: None,
+                        default: Some(serde_json::json!("primary")),
                     },
                 ],
             },
@@ -279,7 +292,7 @@ pub fn variant_catalog() -> BTreeMap<&'static str, Vec<VariantSpec>> {
             VariantSpec {
                 key: "about/quote-statement",
                 label: "Quote Statement",
-                description: "Oversized editorial quote, no avatar.",
+                description: "Oversized editorial quote, no avatar. Strong personal brand feel.",
                 params: vec![
                     density_param(),
                     VariantParamSpec {
@@ -289,6 +302,7 @@ pub fn variant_catalog() -> BTreeMap<&'static str, Vec<VariantSpec>> {
                         options: Some(vec!["left", "center"]),
                         min: None,
                         max: None,
+                        default: Some(serde_json::json!("left")),
                     },
                     VariantParamSpec {
                         key: "show_quote_mark",
@@ -297,6 +311,7 @@ pub fn variant_catalog() -> BTreeMap<&'static str, Vec<VariantSpec>> {
                         options: None,
                         min: None,
                         max: None,
+                        default: Some(serde_json::json!(true)),
                     },
                 ],
             },
@@ -314,6 +329,7 @@ fn density_param() -> VariantParamSpec {
         options: Some(vec!["compact", "default", "airy"]),
         min: None,
         max: None,
+        default: Some(serde_json::json!("default")),
     }
 }
 
@@ -325,6 +341,7 @@ fn free_string_param(key: &'static str, label: &'static str) -> VariantParamSpec
         options: None,
         min: None,
         max: None,
+        default: None,
     }
 }
 
@@ -379,10 +396,8 @@ pub fn validate_variant(
         return (VariantValidation::UnknownVariant, serde_json::json!({}));
     };
 
-    let Some(obj) = variant_params.as_object() else {
-        // No params provided — that's fine, variant takes its defaults.
-        return (VariantValidation::Ok, serde_json::json!({}));
-    };
+    let empty = serde_json::Map::new();
+    let obj = variant_params.as_object().unwrap_or(&empty);
 
     let known_keys: std::collections::HashSet<&str> = spec.params.iter().map(|p| p.key).collect();
     let mut cleaned = serde_json::Map::new();
@@ -404,6 +419,16 @@ pub fn validate_variant(
             );
         }
         cleaned.insert(k.clone(), v.clone());
+    }
+
+    // Fill in defaults for any param the caller didn't supply.
+    for param_spec in &spec.params {
+        if cleaned.contains_key(param_spec.key) {
+            continue;
+        }
+        if let Some(default) = &param_spec.default {
+            cleaned.insert(param_spec.key.to_string(), default.clone());
+        }
     }
 
     let outcome = if dropped.is_empty() {
