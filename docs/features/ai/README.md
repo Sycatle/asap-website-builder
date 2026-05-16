@@ -29,8 +29,6 @@ Key behaviors:
             └─────────────┘            └─────────────┘
 ```
 
-## Components
-
 | Concern | Location |
 |---|---|
 | Orchestrator (provider routing, streaming, intent analysis) | `core/ai/src/orchestrator/` |
@@ -40,17 +38,55 @@ Key behaviors:
 | HTTP endpoints (SSE streams, history, settings) | `core/api/src/ai/` |
 | Chat panel UI | `apps/web/src/components/ai/` |
 
-## Subdocuments
+## Provider routing
 
-> The next files are legacy design docs retained in French. A translation pass is open — see [GitHub Issues](https://github.com/Sycatle/asap-website-builder/issues).
+The orchestrator selects a provider per request based on:
 
-| File | Topic |
-|---|---|
-| [`01-ARCHITECTURE.md`](./01-ARCHITECTURE.md) | Provider infrastructure and orchestration |
-| [`02-FEATURES.md`](./02-FEATURES.md) | Capability tiers and user-facing features |
-| [`03-API.md`](./03-API.md) | Endpoint shapes and SSE protocol |
-| [`04-SECURITY.md`](./04-SECURITY.md) | Rate limiting, abuse prevention, billing model |
-| [`05-UX.md`](./05-UX.md) | Chat panel and inline AI affordances |
+1. The task type (chat, structured tool call, vision, embedding).
+2. The user's account-level preference (`PATCH /ai/settings`).
+3. Live cost ceilings from `rate_limit/`. A provider that would exceed the per-account daily cap is skipped.
+
+If no eligible provider is available, the API returns `503` and the panel surfaces an explicit message.
+
+## Capabilities
+
+The chat panel supports three kinds of operations:
+
+- **Content drafting.** Generate copy for an existing section (headline, bullet list, CTA).
+- **Structural actions.** Add, remove, or reorder sections through structured tool calls validated against the section schemas in `packages/shared`.
+- **Visual review.** Send the current preview screenshot to a vision-capable model to get feedback on layout, contrast, or hierarchy.
+
+Anything the AI proposes is staged as a draft action. The user sees the diff on the canvas and confirms or rejects before it is committed.
+
+## API surface
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/ai/chat` | SSE stream. Emits text deltas, tool calls, and proposed actions. |
+| `GET` | `/ai/history` | Recent conversations for the authenticated account. |
+| `GET` | `/ai/usage` | Per-account daily token and cost counters. |
+| `GET` | `/ai/settings` | Provider and persona preferences. |
+| `PATCH` | `/ai/settings` | Update provider and persona preferences. |
+
+The SSE event types emitted by `/ai/chat` are defined in `core/ai/src/streaming/` (`MessageDelta`, `ToolCall`, `ActionProposed`, `ThinkingToken`, `InsightToken`, `Error`).
+
+See [`../../development/api.md`](../../development/api.md) for the full Core API reference.
+
+## Cost controls
+
+- **Daily token cap per account**, enforced before each call (`rate_limit::daily_used`).
+- **Per-request budget**, deduced from the chosen model and the prompt size.
+- **Provider fallback**, only across providers the user has explicitly enabled.
+- **Image generation** is gated behind an explicit feature flag and a stricter daily quota.
+
+The intent is that an account on the free tier cannot generate uncapped cost on the operator's API keys.
+
+## UX principles
+
+- **Always reviewable.** No action is committed without a confirm step. The dashboard renders the diff before commit.
+- **Streaming first.** All long-form responses stream so the UI never feels stuck on `loading`.
+- **Quiet failures.** Provider errors and quota errors surface in-panel, not as toast banners.
+- **Accessibility.** The chat panel supports keyboard navigation, screen-reader announcements for streamed tokens, and respects `prefers-reduced-motion` on the preview diff.
 
 ## Configuration
 
