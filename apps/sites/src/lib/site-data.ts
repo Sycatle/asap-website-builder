@@ -87,6 +87,7 @@ function normalizeRenderPayload(payload: SiteRenderPayload): SiteRenderPayload {
     ...payload,
     pages: payload.pages.map(normalizePage),
     theme: payload.theme ?? payload.website.metadata?.theme,
+    tokens: payload.tokens ?? payload.website.metadata?.tokens,
     seo: payload.seo ?? payload.website.metadata?.seo,
     schemaVersion: payload.schemaVersion ?? 'v1',
   };

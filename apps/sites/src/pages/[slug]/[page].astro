@@ -22,7 +22,7 @@ if (!payload) {
   return Astro.redirect('/404');
 }
 
-const { website, theme } = payload;
+const { website, theme, tokens } = payload;
 
 if (website.status !== 'published') {
   return Astro.redirect('/404');
@@ -37,11 +37,12 @@ if (!currentPage) {
 const seo = buildSeo(payload, currentPage, slug, pageSlug);
 ---
 
-<BaseLayout 
-  seo={seo} 
+<BaseLayout
+  seo={seo}
   theme={theme}
+  tokens={tokens}
   favicon={website.metadata?.favicon}
-  fontFamily={theme?.fontFamily}
+  fontFamily={tokens?.typography.bodyFamily ?? theme?.fontFamily}
 >
   <!-- Page Navigation (if multiple pages) -->
   {payload.pages.length > 1 && (

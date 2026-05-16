@@ -6,28 +6,39 @@
 import '@/styles/global.css';
 import SEO from '@/components/SEO.astro';
 import type { SEOProps } from '@/components/SEO.astro';
-import { buildThemeStyles, type Theme } from '@asap/shared';
+import {
+  buildThemeStyles,
+  buildTokenStyles,
+  resolveTokens,
+  type DesignTokens,
+  type Theme,
+} from '@asap/shared';
 
 interface Props {
   seo: SEOProps;
   theme?: Theme;
+  tokens?: DesignTokens;
   favicon?: string;
   fontFamily?: string;
   socialImage?: string;
 }
 
-const { seo, theme, favicon, fontFamily, socialImage } = Astro.props;
+const { seo, theme, tokens, favicon, fontFamily, socialImage } = Astro.props;
 
-const themeClass = theme?.mode === 'light' ? 'light' : 'dark';
+// Resolve the active tokens: explicit tokens win, else derive from theme, else defaults.
+const resolvedTokens = resolveTokens({ tokens, theme });
+const themeClass = resolvedTokens.palette.mode === 'light' ? 'light' : 'dark';
+const tokenStyles = buildTokenStyles(resolvedTokens);
+// Legacy theme styles kept for any consumer still reading the old vars directly.
 const themeStyles = buildThemeStyles(theme);
 
 // Font optimization: Use font-display: swap and preload critical fonts
-const fontName = fontFamily || 'Inter';
+const fontName = fontFamily || resolvedTokens.typography.bodyFamily || 'Inter';
 const fontUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@400;500;600;700;800&display=swap`;
 
 // Critical CSS inlined for faster FCP
 const criticalCss = `
-  :root { ${themeStyles || ''} }
+  :root { ${tokenStyles} ${themeStyles || ''} }
   html { scroll-behavior: smooth; }
   body { 
     font-family: '${fontName}', system-ui, -apple-system, sans-serif;
