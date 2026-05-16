@@ -3,7 +3,7 @@
 use axum::{extract::multipart::Multipart, http::StatusCode, Extension, Json};
 use uuid::Uuid;
 
-use crate::storage::FileStorageService;
+use crate::storage::{FileStorageService, UploadParams};
 use asap_core_domain::FileUploadResponse;
 use asap_core_shared::{Claims, SharedWsBroadcaster};
 
@@ -128,14 +128,16 @@ pub async fn upload_file(
     let file = storage
         .upload_file_with_metadata(
             account_id,
-            &filename,
-            &content_type,
-            &data,
-            website_id,
-            folder_id,
-            visibility.as_deref(),
-            description.as_deref(),
-            tags.as_deref(),
+            UploadParams {
+                filename: &filename,
+                mime_type: &content_type,
+                data: &data,
+                website_id,
+                folder_id,
+                visibility: visibility.as_deref(),
+                description: description.as_deref(),
+                tags: tags.as_deref(),
+            },
         )
         .await
         .map_err(|e: anyhow::Error| (StatusCode::BAD_REQUEST, format!("Upload failed: {}", e)))?;

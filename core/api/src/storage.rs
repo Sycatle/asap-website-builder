@@ -12,6 +12,18 @@ use uuid::Uuid;
 use crate::image_converter::{ImageConverter, ImageConverterConfig};
 use asap_core_domain::{AccountStorageQuota, File};
 
+/// Bundled metadata for [`FileStorageService::upload_file_with_metadata`].
+pub struct UploadParams<'a> {
+    pub filename: &'a str,
+    pub mime_type: &'a str,
+    pub data: &'a [u8],
+    pub website_id: Option<Uuid>,
+    pub folder_id: Option<Uuid>,
+    pub visibility: Option<&'a str>,
+    pub description: Option<&'a str>,
+    pub tags: Option<&'a [String]>,
+}
+
 /// FileStorageService handles file uploads, compression, and metadata management
 pub struct FileStorageService {
     pool: PgPool,
@@ -317,77 +329,24 @@ impl FileStorageService {
         hex::encode(hasher.finalize())
     }
 
-    /// Upload file with compression
-    pub async fn upload_file(
-        &self,
-        account_id: Uuid,
-        filename: &str,
-        mime_type: &str,
-        data: &[u8],
-    ) -> Result<File> {
-        // Validate file
-        self.validate_file(filename, mime_type, data.len() as i64)?;
-
-        // Check quota
-        self.check_user_quota(account_id, data.len() as i64).await?;
-
-        // Calculate hash (deduplicate by content within the same account)
-        let file_hash = self.calculate_hash(data);
-
-        // Check if file already exists for this account (content deduplication)
-        if let Ok(Some(existing_file)) = self.get_file_by_hash(account_id, &file_hash).await {
-            return Ok(existing_file);
-        }
-
-        // Decide whether to compress based on file type and size
-        let compressed_data = if self.should_compress(mime_type, data.len()) {
-            self.compress_file(data)?
-        } else {
-            // Store uncompressed
-            Bytes::copy_from_slice(data)
-        };
-
-        // Generate storage key
-        let storage_key = format!("{}/{}", account_id, Uuid::new_v4());
-
-        // Store metadata in database
-        let file = File::new(
-            account_id,
-            filename.to_string(),
-            mime_type.to_string(),
-            data.len() as i64,
-            compressed_data.len() as i64,
-            file_hash,
-            storage_key,
-        );
-
-        // Save to database
-        self.save_file(&file).await?;
-
-        // Save file content
-        self.save_file_content(file.id, &compressed_data).await?;
-
-        // Update account quota (use compressed size for quota)
-        self.update_user_quota(account_id, compressed_data.len() as i64)
-            .await?;
-
-        Ok(file)
-    }
-
     /// Upload file with full metadata (website_id optional for personal cloud)
     /// Includes automatic image conversion to WebP for supported formats
     pub async fn upload_file_with_metadata(
         &self,
         account_id: Uuid,
-        filename: &str,
-        mime_type: &str,
-        data: &[u8],
-        website_id: Option<Uuid>,
-        folder_id: Option<Uuid>,
-        visibility: Option<&str>,
-        description: Option<&str>,
-        tags: Option<&[String]>,
+        params: UploadParams<'_>,
     ) -> Result<File> {
+        let UploadParams {
+            filename,
+            mime_type,
+            data,
+            website_id,
+            folder_id,
+            visibility,
+            description,
+            tags,
+        } = params;
+
         // Validate file
         self.validate_file(filename, mime_type, data.len() as i64)?;
 
@@ -475,27 +434,6 @@ impl FileStorageService {
             .await?;
 
         Ok(file)
-    }
-
-    /// Save file metadata to database (basic)
-    async fn save_file(&self, file: &File) -> Result<()> {
-        sqlx::query(
-            "INSERT INTO files (id, account_id, filename, mime_type, original_size, compressed_size, file_hash, storage_key, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
-        )
-        .bind(file.id)
-        .bind(file.account_id)
-        .bind(&file.filename)
-        .bind(&file.mime_type)
-        .bind(file.original_size)
-        .bind(file.compressed_size)
-        .bind(&file.file_hash)
-        .bind(&file.storage_key)
-        .bind(file.created_at)
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
     }
 
     /// Save file metadata with all fields (website_id, folder_id, visibility, etc.)

@@ -996,17 +996,20 @@ async fn download_and_store_avatar(
     // Store in user's personal cloud storage with public visibility
     // No website_id = personal cloud
     let storage = FileStorageService::new(pool.clone());
+    let description = format!("Avatar imported from {}", provider);
     let file = storage
         .upload_file_with_metadata(
             account_id,
-            &filename,
-            &content_type,
-            &image_bytes,
-            None,           // website_id = None (personal cloud)
-            None,           // folder_id
-            Some("public"), // visibility = public (avatars must be accessible)
-            Some(&format!("Avatar imported from {}", provider)), // description
-            None,           // tags
+            crate::storage::UploadParams {
+                filename: &filename,
+                mime_type: &content_type,
+                data: &image_bytes,
+                website_id: None,
+                folder_id: None,
+                visibility: Some("public"), // avatars must be accessible
+                description: Some(&description),
+                tags: None,
+            },
         )
         .await?;
 
