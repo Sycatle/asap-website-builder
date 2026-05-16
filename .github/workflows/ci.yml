@@ -29,9 +29,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: cargo fmt
-        # Not enforced yet: large existing diff. Run locally before tightening.
         run: cargo fmt --all -- --check
-        continue-on-error: true
 
       - name: cargo clippy (correctness/suspicious are hard failures)
         # Correctness and suspicious lints catch real bugs and pass today,
