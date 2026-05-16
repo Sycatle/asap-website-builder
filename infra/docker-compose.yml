@@ -105,7 +105,7 @@ services:
     networks:
       - asap-network
 
-  # Web application (Astro) - Dev mode with hot reload
+  # Web application (Vite SPA) - Dev mode with hot reload
   # Note: In development, this is completely overridden by docker-compose.dev.yml
   web:
     image: node:20-alpine
