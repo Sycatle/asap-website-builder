@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback, us
 import { useAuthStore } from "@/lib/store/authStore"
 import { usePWA } from "@/hooks/usePWA"
 import { loggers } from "@/lib/logger"
+import { getWsBaseUrl } from "@/lib/api/base-url"
 
 const wsLogger = loggers.ws
 
@@ -65,9 +66,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const isConnectingRef = useRef(false)
   const socketIdRef = useRef(0)
   
-  const wsUrl = typeof window !== 'undefined' 
-    ? (import.meta.env.PUBLIC_WS_URL || 'ws://localhost:3000/ws')
-    : 'ws://localhost:3000/ws'
+  const wsUrl = getWsBaseUrl()
   
   const maxReconnectAttempts = 10
   const reconnectInterval = 1000
