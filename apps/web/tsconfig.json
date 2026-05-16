@@ -1,8 +1,26 @@
 {
-  "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": false,
+    "verbatimModuleSyntax": false,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
     "jsx": "react-jsx",
     "jsxImportSource": "react",
+    "allowJs": false,
+    "noEmit": true,
+    "useDefineForClassFields": true,
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
@@ -13,5 +31,6 @@
       "@asap/extension-github-sync": ["../../extensions/github-sync/frontend/src/index.ts"],
       "@asap/extension-github-sync/*": ["../../extensions/github-sync/frontend/src/*"]
     }
-  }
+  },
+  "include": ["src", "tests", "vite.config.ts", "vitest.config.ts"]
 }

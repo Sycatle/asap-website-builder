@@ -4,7 +4,6 @@ import tseslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import reactPlugin from "eslint-plugin-react";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
-import astroPlugin from "eslint-plugin-astro";
 import prettierConfig from "eslint-config-prettier";
 
 export default [
@@ -12,12 +11,10 @@ export default [
   {
     ignores: [
       "dist/**",
-      ".astro/**",
       "node_modules/**",
       "*.config.{js,mjs,cjs}",
       "postcss.config.cjs",
       "tailwind.config.cjs",
-      "**/*.astro", // Let Astro handle .astro files
     ],
   },
 
