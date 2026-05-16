@@ -33,10 +33,11 @@ jobs:
         run: cargo fmt --all -- --check
         continue-on-error: true
 
-      - name: cargo clippy
-        # Not enforced yet: many pre-existing warnings. Promote to -D warnings once cleaned.
-        run: cargo clippy --workspace --all-targets
-        continue-on-error: true
+      - name: cargo clippy (correctness/suspicious are hard failures)
+        # Correctness and suspicious lints catch real bugs and pass today,
+        # so they're enforced. Style/pedantic warnings are still emitted but
+        # not blocking — promote them once the existing diff is cleaned up.
+        run: cargo clippy --workspace --all-targets -- -D clippy::correctness -D clippy::suspicious
 
       - name: cargo build
         run: cargo build --workspace --all-targets
