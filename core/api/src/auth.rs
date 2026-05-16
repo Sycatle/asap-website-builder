@@ -16,7 +16,9 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+mod cookies;
 mod types;
+use cookies::{build_auth_response_with_cookies, build_logout_response};
 pub use types::{
     AccountResponse, ChangePasswordRequest, ForgotPasswordRequest, LoginRequest, LoginResponse,
     LoginResponseV2, MeResponse, RefreshTokenRequest, ResetPasswordRequest, SignupRequest,
@@ -32,71 +34,6 @@ const DEFAULT_TAGLINE: &str = "";
 /// JWT issuer constant for token validation
 pub const JWT_ISSUER: &str = "asap-auth";
 pub const JWT_AUDIENCE: &str = "asap-api";
-
-/// Build auth response with secure HttpOnly cookies
-/// This sets both access_token and refresh_token as cookies for cross-domain SSO
-fn build_auth_response_with_cookies<T: Serialize>(
-    status: StatusCode,
-    body: T,
-    access_token: &str,
-    refresh_token: &str,
-    access_expires_secs: u64,
-    refresh_expires_secs: u64,
-) -> axum::response::Response {
-    let cookie_config = CookieConfig::from_env();
-
-    let auth_cookies = AuthCookies {
-        access_token: access_token.to_string(),
-        refresh_token: refresh_token.to_string(),
-        access_token_expires_secs: access_expires_secs,
-        refresh_token_expires_secs: refresh_expires_secs,
-    };
-
-    let (access_cookie, refresh_cookie) = auth_cookies.to_cookie_headers(&cookie_config);
-
-    let mut response = (status, Json(body)).into_response();
-
-    // Set auth cookies
-    if let Ok(access_header) = header::HeaderValue::from_str(&access_cookie) {
-        response
-            .headers_mut()
-            .append(header::SET_COOKIE, access_header);
-    }
-    if let Ok(refresh_header) = header::HeaderValue::from_str(&refresh_cookie) {
-        response
-            .headers_mut()
-            .append(header::SET_COOKIE, refresh_header);
-    }
-
-    response
-}
-
-/// Build logout response that clears auth cookies
-fn build_logout_response() -> axum::response::Response {
-    let cookie_config = CookieConfig::from_env();
-    let (clear_access, clear_refresh) = AuthCookies::clear_headers(&cookie_config);
-
-    let mut response = (
-        StatusCode::OK,
-        Json(serde_json::json!({
-            "message": "Logged out successfully"
-        })),
-    )
-        .into_response();
-
-    if let Ok(access_header) = header::HeaderValue::from_str(&clear_access) {
-        response
-            .headers_mut()
-            .append(header::SET_COOKIE, access_header);
-    }
-    if let Ok(refresh_header) = header::HeaderValue::from_str(&clear_refresh) {
-        response
-            .headers_mut()
-            .append(header::SET_COOKIE, refresh_header);
-    }
-
-    response
-}
 
 /// Validate password strength
 /// Returns Ok(()) if valid, Err with error message if invalid
