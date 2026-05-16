@@ -40,6 +40,28 @@ pub async fn stripe_webhook(
             (StatusCode::BAD_REQUEST, "Missing signature").into_response()
         })?;
 
+    // Replay protection: Stripe-Signature is "t=<unix>,v1=<sig>,..."
+    // Reject events whose timestamp is older than the tolerance window.
+    const STRIPE_TOLERANCE_SECS: i64 = 300;
+    let header_ts = signature
+        .split(',')
+        .find_map(|kv| kv.strip_prefix("t="))
+        .and_then(|s| s.parse::<i64>().ok())
+        .ok_or_else(|| {
+            tracing::error!("Stripe-Signature header missing or malformed timestamp");
+            (StatusCode::BAD_REQUEST, "Invalid signature").into_response()
+        })?;
+    let now = chrono::Utc::now().timestamp();
+    if (now - header_ts).abs() > STRIPE_TOLERANCE_SECS {
+        tracing::error!(
+            "Stripe webhook timestamp outside tolerance (t={}, now={}, delta={}s)",
+            header_ts,
+            now,
+            now - header_ts
+        );
+        return Err((StatusCode::UNAUTHORIZED, "Stale webhook").into_response());
+    }
+
     // Verify webhook signature
     payment_gateway
         .verify_webhook_signature(&payload, signature)
