@@ -8,7 +8,7 @@
  */
 
 import React, { useState } from 'react';
-import { cn, getData } from '../../utils';
+import { cn, getData, withVariantFields } from '../../utils';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { SectionWrapper } from '../ui/section-wrapper';
@@ -16,6 +16,7 @@ import { Container } from '../ui/container';
 import { Icons, getIcon } from '../icons';
 import { CONTACT_SCHEMA } from '@asap/shared';
 import type { Section } from '../../types';
+import { ContactInlineStrip } from './contact-variants/inline-strip';
 
 export interface SectionProps {
   section: Section;
@@ -27,7 +28,16 @@ interface SocialLink {
   href: string;
 }
 
-export function ContactSection({ section, className }: SectionProps) {
+export function ContactSection({ section: rawSection, className }: SectionProps) {
+  const section = withVariantFields(rawSection);
+  const variant = section.variant_key;
+  if (variant === 'contact/inline-strip') {
+    return <ContactInlineStrip section={section} className={className} />;
+  }
+  return <ContactDefault section={section} className={className} />;
+}
+
+function ContactDefault({ section, className }: SectionProps) {
   const defaults = CONTACT_SCHEMA.defaultSettings;
 
   // Extract data from section

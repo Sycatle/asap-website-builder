@@ -9,13 +9,14 @@
  */
 
 import React from 'react';
-import { cn, getData } from '../../utils';
+import { cn, getData, withVariantFields } from '../../utils';
 import { Badge } from '../ui/badge';
 import { SectionWrapper } from '../ui/section-wrapper';
 import { Container } from '../ui/container';
 import { getIcon } from '../icons';
 import { ABOUT_SCHEMA } from '@asap/shared';
 import type { Section } from '../../types';
+import { AboutQuoteStatement } from './about-variants/quote-statement';
 
 export interface SectionProps {
   section: Section;
@@ -40,7 +41,16 @@ interface SocialLink {
   href: string;
 }
 
-export function AboutSection({ section, className }: SectionProps) {
+export function AboutSection({ section: rawSection, className }: SectionProps) {
+  const section = withVariantFields(rawSection);
+  const variant = section.variant_key;
+  if (variant === 'about/quote-statement') {
+    return <AboutQuoteStatement section={section} className={className} />;
+  }
+  return <AboutDefault section={section} className={className} />;
+}
+
+function AboutDefault({ section, className }: SectionProps) {
   const defaults = ABOUT_SCHEMA.defaultSettings;
 
   // Extract data from section

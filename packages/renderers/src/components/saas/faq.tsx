@@ -8,7 +8,7 @@
  */
 
 import React, { useState } from 'react';
-import { cn, getData } from '../../utils';
+import { cn, getData, withVariantFields } from '../../utils';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { SectionWrapper } from '../ui/section-wrapper';
@@ -16,6 +16,7 @@ import { Container } from '../ui/container';
 import { Icons } from '../icons';
 import { FAQ_SCHEMA } from '@asap/shared';
 import type { Section } from '../../types';
+import { FAQTwoColumn } from './faq-variants/two-column';
 
 export interface SectionProps {
   section: Section;
@@ -28,7 +29,16 @@ interface Question {
   category?: string;
 }
 
-export function FAQSection({ section, className }: SectionProps) {
+export function FAQSection({ section: rawSection, className }: SectionProps) {
+  const section = withVariantFields(rawSection);
+  const variant = section.variant_key;
+  if (variant === 'faq/two-column') {
+    return <FAQTwoColumn section={section} className={className} />;
+  }
+  return <FAQDefault section={section} className={className} />;
+}
+
+function FAQDefault({ section, className }: SectionProps) {
   const defaults = FAQ_SCHEMA.defaultSettings;
 
   // Extract data from section

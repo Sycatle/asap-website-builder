@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { getData } from '../../utils';
+import { getData, withVariantFields } from '../../utils';
 import { SectionWrapper } from '../ui/section-wrapper';
 import { SectionHeader } from '../ui/section-header';
 import { Container } from '../ui/container';
@@ -14,6 +14,7 @@ import { Card, CardContent } from '../ui/card';
 import { Avatar } from '../ui/avatar';
 import { TESTIMONIALS_SCHEMA } from '@asap/shared';
 import type { Section } from '../../types';
+import { TestimonialsPullQuote } from './testimonials-variants/pull-quote';
 
 export interface SectionProps {
   section: Section;
@@ -28,7 +29,16 @@ interface Testimonial {
   avatar_src?: string;
 }
 
-export function TestimonialsSection({ section, className }: SectionProps) {
+export function TestimonialsSection({ section: rawSection, className }: SectionProps) {
+  const section = withVariantFields(rawSection);
+  const variant = section.variant_key;
+  if (variant === 'testimonials/pull-quote') {
+    return <TestimonialsPullQuote section={section} className={className} />;
+  }
+  return <TestimonialsGrid section={section} className={className} />;
+}
+
+function TestimonialsGrid({ section, className }: SectionProps) {
   const defaults = TESTIMONIALS_SCHEMA.defaultSettings;
 
   // Extract data from section

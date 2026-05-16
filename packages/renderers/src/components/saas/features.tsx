@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { cn, getData } from '../../utils';
+import { cn, getData, withVariantFields } from '../../utils';
 import { SectionWrapper } from '../ui/section-wrapper';
 import { SectionHeader } from '../ui/section-header';
 import { Container } from '../ui/container';
@@ -16,6 +16,7 @@ import { IconBox } from '../ui/icon-box';
 import { getIcon } from '../icons';
 import { FEATURES_SCHEMA } from '@asap/shared';
 import type { Section } from '../../types';
+import { FeaturesCompactList } from './features-variants/compact-list';
 
 export interface SectionProps {
   section: Section;
@@ -29,7 +30,16 @@ interface Feature {
   badge?: string;
 }
 
-export function FeaturesSection({ section, className }: SectionProps) {
+export function FeaturesSection({ section: rawSection, className }: SectionProps) {
+  const section = withVariantFields(rawSection);
+  const variant = section.variant_key;
+  if (variant === 'features/compact-list') {
+    return <FeaturesCompactList section={section} className={className} />;
+  }
+  return <FeaturesCardsGrid section={section} className={className} />;
+}
+
+function FeaturesCardsGrid({ section, className }: SectionProps) {
   const defaults = FEATURES_SCHEMA.defaultSettings;
 
   // Extract data from section

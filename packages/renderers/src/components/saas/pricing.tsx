@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { cn, getData } from '../../utils';
+import { cn, getData, withVariantFields } from '../../utils';
 import { SectionWrapper } from '../ui/section-wrapper';
 import { SectionHeader } from '../ui/section-header';
 import { Container } from '../ui/container';
@@ -16,10 +16,20 @@ import { Button } from '../ui/button';
 import { Icons } from '../icons';
 import { PRICING_SCHEMA } from '@asap/shared';
 import type { Section } from '../../types';
+import { PricingComparisonTable } from './pricing-variants/comparison-table';
 
 export interface SectionProps {
   section: Section;
   className?: string;
+}
+
+export function PricingSection({ section: rawSection, className }: SectionProps) {
+  const section = withVariantFields(rawSection);
+  const variant = section.variant_key;
+  if (variant === 'pricing/comparison-table') {
+    return <PricingComparisonTable section={section} className={className} />;
+  }
+  return <PricingCards section={section} className={className} />;
 }
 
 interface PricingPlan {
@@ -34,7 +44,7 @@ interface PricingPlan {
   cta_variant?: 'default' | 'outline';
 }
 
-export function PricingSection({ section, className }: SectionProps) {
+function PricingCards({ section, className }: SectionProps) {
   const defaults = PRICING_SCHEMA.defaultSettings;
 
   // Extract data from section

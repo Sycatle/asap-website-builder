@@ -1,12 +1,13 @@
 /**
  * Hero Section Component
- * 
- * Main landing section with headline, CTAs, and social proof.
- * Handles its own data extraction from section.
+ *
+ * Dispatches to the right variant based on `section.variant_key`, with the
+ * legacy single-layout (`centered-minimal`) as the default. Each variant is
+ * a standalone implementation in `./hero-variants/`.
  */
 
 import React from 'react';
-import { cn, getData } from '../../utils';
+import { cn, getData, withVariantFields } from '../../utils';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { SectionWrapper } from '../ui/section-wrapper';
@@ -15,6 +16,8 @@ import { AvatarGroup } from '../ui/avatar';
 import { Icons, getIcon } from '../icons';
 import { HERO_SCHEMA } from '@asap/shared';
 import type { Section } from '../../types';
+import { HeroSplitAsymmetric } from './hero-variants/split-asymmetric';
+import { HeroFullBleed } from './hero-variants/full-bleed';
 
 export interface SectionProps {
   section: Section;
@@ -27,7 +30,21 @@ interface DashboardStat {
   label: string;
 }
 
-export function HeroSection({ section, className }: SectionProps) {
+export function HeroSection({ section: rawSection, className }: SectionProps) {
+  const section = withVariantFields(rawSection);
+  const variant = section.variant_key;
+
+  if (variant === 'hero/split-asymmetric') {
+    return <HeroSplitAsymmetric section={section} className={className} />;
+  }
+  if (variant === 'hero/full-bleed') {
+    return <HeroFullBleed section={section} className={className} />;
+  }
+  // Default: centered-minimal (legacy layout, also matches "hero/centered-minimal").
+  return <HeroCenteredMinimal section={section} className={className} />;
+}
+
+function HeroCenteredMinimal({ section, className }: SectionProps) {
   const defaults = HERO_SCHEMA.defaultSettings;
 
   // Extract data from section

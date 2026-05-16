@@ -6,20 +6,30 @@
  */
 
 import React from 'react';
-import { cn, getData } from '../../utils';
+import { cn, getData, withVariantFields } from '../../utils';
 import { SectionWrapper } from '../ui/section-wrapper';
 import { Container } from '../ui/container';
 import { Button } from '../ui/button';
 import { getIcon } from '../icons';
 import { CTA_SCHEMA } from '@asap/shared';
 import type { Section } from '../../types';
+import { CTABanner } from './cta-variants/banner';
 
 export interface SectionProps {
   section: Section;
   className?: string;
 }
 
-export function CTASection({ section, className }: SectionProps) {
+export function CTASection({ section: rawSection, className }: SectionProps) {
+  const section = withVariantFields(rawSection);
+  const variant = section.variant_key;
+  if (variant === 'cta/banner') {
+    return <CTABanner section={section} className={className} />;
+  }
+  return <CTACentered section={section} className={className} />;
+}
+
+function CTACentered({ section, className }: SectionProps) {
   const defaults = CTA_SCHEMA.defaultSettings;
 
   // Extract data from section

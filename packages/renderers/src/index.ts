@@ -33,3 +33,6 @@ export * from './components';
 
 // Main renderer and registry
 export * from './renderers';
+
+// Variant catalog (available variant_keys per section type)
+export * from './variant-catalog';
