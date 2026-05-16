@@ -15,7 +15,10 @@ use axum::{
     Json,
 };
 use base64::Engine;
+use hmac::{Hmac, Mac};
+use rand::RngCore;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use uuid::Uuid;
 use chrono::Utc;
@@ -23,6 +26,44 @@ use chrono::Utc;
 use asap_core_shared::{
     generate_token_with_jti, generate_refresh_token, generate_jti, SharedConfig,
 };
+
+type HmacSha256 = Hmac<Sha256>;
+
+const B64: base64::engine::GeneralPurpose = base64::engine::general_purpose::URL_SAFE_NO_PAD;
+
+/// Encode an OAuth state payload as `<base64url(json)>.<base64url(hmac)>`.
+/// HMAC integrity protects the embedded PKCE verifier and CSRF token.
+fn encode_state(payload: &OAuthStatePayload, secret: &str) -> String {
+    let json = serde_json::to_vec(payload).expect("OAuthStatePayload serialization");
+    let body = B64.encode(&json);
+    let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
+        .expect("HMAC accepts any key length");
+    mac.update(json.as_slice());
+    let tag = B64.encode(mac.finalize().into_bytes());
+    format!("{body}.{tag}")
+}
+
+/// Decode and verify a signed OAuth state token.
+fn decode_state(state: &str, secret: &str) -> Option<OAuthStatePayload> {
+    let (body_b64, tag_b64) = state.split_once('.')?;
+    let json = B64.decode(body_b64).ok()?;
+    let tag = B64.decode(tag_b64).ok()?;
+    let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).ok()?;
+    mac.update(&json);
+    mac.verify_slice(&tag).ok()?;
+    serde_json::from_slice(&json).ok()
+}
+
+/// Generate a PKCE verifier (43-128 chars of URL-safe randomness) and its S256 challenge.
+fn pkce_pair() -> (String, String) {
+    let mut bytes = [0u8; 32];
+    rand::thread_rng().fill_bytes(&mut bytes);
+    let verifier = B64.encode(bytes);
+    let mut hasher = Sha256::new();
+    hasher.update(verifier.as_bytes());
+    let challenge = B64.encode(hasher.finalize());
+    (verifier, challenge)
+}
 
 /// OAuth providers we support
 #[derive(Debug, Clone, Copy)]
@@ -60,13 +101,17 @@ pub struct OAuthUrlResponse {
     pub redirect_url: String,
 }
 
-/// OAuth state payload - encoded in base64 and passed through OAuth flow
+/// OAuth state payload - encoded as `base64url(json).base64url(hmac)` and passed through OAuth flow.
+/// The HMAC binds the embedded PKCE verifier so a tampered state is rejected on callback.
 #[derive(Debug, Serialize, Deserialize)]
 struct OAuthStatePayload {
     /// CSRF protection token
     csrf: String,
     /// Optional redirect URL after successful auth
     redirect_url: Option<String>,
+    /// PKCE code_verifier — present for providers we exchange with PKCE.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pkce_verifier: Option<String>,
 }
 
 /// OAuth callback query parameters
@@ -122,6 +167,7 @@ struct GitHubUserInfo {
 pub async fn initiate_oauth(
     Path(provider): Path<String>,
     Query(params): Query<InitiateOAuthRequest>,
+    Extension(config): Extension<SharedConfig>,
 ) -> Result<Json<OAuthUrlResponse>, impl IntoResponse> {
     let provider = match OAuthProvider::from_str(&provider) {
         Ok(p) => p,
@@ -135,18 +181,23 @@ pub async fn initiate_oauth(
         }
     };
 
-    // Generate CSRF token using secure random UUID
     let csrf_token = Uuid::new_v4().to_string();
 
-    // Build state payload with CSRF token and optional redirect URL
+    // PKCE only for providers that support it on OAuth Apps. Google does; GitHub OAuth Apps does not.
+    let (pkce_verifier, pkce_challenge) = match provider {
+        OAuthProvider::Google => {
+            let (v, c) = pkce_pair();
+            (Some(v), Some(c))
+        }
+        OAuthProvider::GitHub => (None, None),
+    };
+
     let state_payload = OAuthStatePayload {
         csrf: csrf_token,
         redirect_url: params.redirect_url,
+        pkce_verifier,
     };
-    
-    // Encode state as base64 JSON
-    let state_json = serde_json::to_string(&state_payload).unwrap_or_default();
-    let state = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(state_json.as_bytes());
+    let state = encode_state(&state_payload, &config.jwt_secret);
 
     let oauth_url = match provider {
         OAuthProvider::Google => {
@@ -154,7 +205,10 @@ pub async fn initiate_oauth(
                 .unwrap_or_else(|_| "GOOGLE_CLIENT_ID_NOT_SET".to_string());
             let redirect_uri = std::env::var("GOOGLE_REDIRECT_URI")
                 .unwrap_or_else(|_| "http://localhost:3000/api/auth/oauth/google/callback".to_string());
-            
+
+            let challenge = pkce_challenge
+                .as_deref()
+                .expect("PKCE challenge is generated for Google");
             format!(
                 "https://accounts.google.com/o/oauth2/v2/auth?\
                 client_id={}&\
@@ -162,11 +216,14 @@ pub async fn initiate_oauth(
                 response_type=code&\
                 scope=openid%20email%20profile&\
                 state={}&\
+                code_challenge={}&\
+                code_challenge_method=S256&\
                 access_type=offline&\
                 prompt=consent",
                 client_id,
                 urlencoding::encode(&redirect_uri),
-                state
+                state,
+                challenge,
             )
         }
         OAuthProvider::GitHub => {
@@ -174,7 +231,7 @@ pub async fn initiate_oauth(
                 .unwrap_or_else(|_| "GITHUB_CLIENT_ID_NOT_SET".to_string());
             let redirect_uri = std::env::var("GITHUB_REDIRECT_URI")
                 .unwrap_or_else(|_| "http://localhost:3000/api/auth/oauth/github/callback".to_string());
-            
+
             format!(
                 "https://github.com/login/oauth/authorize?\
                 client_id={}&\
@@ -222,44 +279,47 @@ pub async fn oauth_callback(
         ));
     }
 
-    // Decode state payload to extract redirect_url and CSRF token
-    let state_payload: Option<OAuthStatePayload> = params.state.as_ref().and_then(|state| {
-        base64::engine::general_purpose::URL_SAFE_NO_PAD
-            .decode(state)
-            .ok()
-            .and_then(|bytes| String::from_utf8(bytes).ok())
-            .and_then(|json: String| serde_json::from_str::<OAuthStatePayload>(&json).ok())
-    });
-    
-    let redirect_url_from_state = state_payload.as_ref().and_then(|p| p.redirect_url.clone());
-    
-    // Validate CSRF token format (must be valid UUID)
-    // The state parameter mechanism provides CSRF protection by:
-    // 1. Being generated server-side with unpredictable UUID
-    // 2. Roundtripping through the OAuth provider
-    // 3. Being validated here before processing
-    if let Some(ref payload) = state_payload {
-        if Uuid::parse_str(&payload.csrf).is_err() {
-            tracing::warn!("Invalid CSRF token format in OAuth state");
+    // Decode and HMAC-verify state payload.
+    let state_payload = match params.state.as_deref() {
+        Some(state) => match decode_state(state, &config.jwt_secret) {
+            Some(p) => p,
+            None => {
+                tracing::warn!("OAuth state failed HMAC verification or decode");
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({
+                        "error": "Invalid OAuth state",
+                        "code": "STATE_INVALID"
+                    }))
+                ));
+            }
+        },
+        None => {
+            tracing::warn!("Missing state parameter in OAuth callback");
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(serde_json::json!({
-                    "error": "Invalid CSRF token format",
-                    "code": "CSRF_INVALID"
+                    "error": "Missing state parameter",
+                    "code": "STATE_MISSING"
                 }))
             ));
         }
-        tracing::debug!("OAuth state validated, CSRF token format OK");
-    } else {
-        tracing::warn!("Missing state parameter in OAuth callback");
+    };
+
+    let redirect_url_from_state = state_payload.redirect_url.clone();
+    let pkce_verifier = state_payload.pkce_verifier.clone();
+
+    if Uuid::parse_str(&state_payload.csrf).is_err() {
+        tracing::warn!("Invalid CSRF token format in OAuth state");
         return Err((
             StatusCode::BAD_REQUEST,
             Json(serde_json::json!({
-                "error": "Missing state parameter",
-                "code": "STATE_MISSING"
+                "error": "Invalid CSRF token format",
+                "code": "CSRF_INVALID"
             }))
         ));
     }
+    tracing::debug!("OAuth state HMAC verified, CSRF token format OK");
 
     let provider = match OAuthProvider::from_str(&provider) {
         Ok(p) => p,
@@ -276,7 +336,17 @@ pub async fn oauth_callback(
     // Exchange authorization code for access token
     let (oauth_email, oauth_user_id, display_name, avatar_url, given_name, family_name) = match provider {
         OAuthProvider::Google => {
-            exchange_google_code(&params.code).await?
+            let verifier = pkce_verifier.as_deref().ok_or_else(|| {
+                tracing::warn!("Google OAuth callback missing PKCE verifier in state");
+                (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({
+                        "error": "Missing PKCE verifier",
+                        "code": "PKCE_MISSING"
+                    })),
+                )
+            })?;
+            exchange_google_code(&params.code, verifier).await?
         }
         OAuthProvider::GitHub => {
             exchange_github_code(&params.code).await?
@@ -567,6 +637,7 @@ pub async fn oauth_callback(
 /// Exchange Google authorization code for user info
 async fn exchange_google_code(
     code: &str,
+    code_verifier: &str,
 ) -> Result<(String, String, Option<String>, Option<String>, Option<String>, Option<String>), (StatusCode, Json<serde_json::Value>)> {
     let client_id = std::env::var("GOOGLE_CLIENT_ID")
         .map_err(|_| {
@@ -601,6 +672,7 @@ async fn exchange_google_code(
             ("client_secret", &client_secret),
             ("redirect_uri", &redirect_uri),
             ("grant_type", "authorization_code"),
+            ("code_verifier", code_verifier),
         ])
         .send()
         .await
@@ -911,6 +983,72 @@ async fn download_and_store_avatar(
         filename,
         image_bytes.len()
     );
-    
+
     Ok(file.id)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pkce_challenge_matches_s256_of_verifier() {
+        let (verifier, challenge) = pkce_pair();
+        let mut hasher = Sha256::new();
+        hasher.update(verifier.as_bytes());
+        let expected = B64.encode(hasher.finalize());
+        assert_eq!(challenge, expected);
+        assert!(verifier.len() >= 43, "verifier must be >= 43 chars (RFC 7636)");
+    }
+
+    #[test]
+    fn state_roundtrip_preserves_payload() {
+        let payload = OAuthStatePayload {
+            csrf: Uuid::new_v4().to_string(),
+            redirect_url: Some("https://app.example.com/cb".to_string()),
+            pkce_verifier: Some("v".repeat(64)),
+        };
+        let token = encode_state(&payload, "test-secret-1234567890123456789012");
+        let decoded = decode_state(&token, "test-secret-1234567890123456789012").unwrap();
+        assert_eq!(decoded.csrf, payload.csrf);
+        assert_eq!(decoded.redirect_url, payload.redirect_url);
+        assert_eq!(decoded.pkce_verifier, payload.pkce_verifier);
+    }
+
+    #[test]
+    fn state_decode_rejects_wrong_secret() {
+        let payload = OAuthStatePayload {
+            csrf: Uuid::new_v4().to_string(),
+            redirect_url: None,
+            pkce_verifier: Some("v".repeat(64)),
+        };
+        let token = encode_state(&payload, "secret-A-1234567890123456789012345");
+        assert!(decode_state(&token, "secret-B-1234567890123456789012345").is_none());
+    }
+
+    #[test]
+    fn state_decode_rejects_tampered_body() {
+        let payload = OAuthStatePayload {
+            csrf: Uuid::new_v4().to_string(),
+            redirect_url: None,
+            pkce_verifier: None,
+        };
+        let secret = "test-secret-1234567890123456789012";
+        let token = encode_state(&payload, secret);
+        let (body, tag) = token.split_once('.').unwrap();
+        // flip one character in the body
+        let mut tampered_body = body.to_string();
+        let last = tampered_body.pop().unwrap();
+        tampered_body.push(if last == 'A' { 'B' } else { 'A' });
+        let tampered = format!("{tampered_body}.{tag}");
+        assert!(decode_state(&tampered, secret).is_none());
+    }
+
+    #[test]
+    fn state_decode_rejects_malformed() {
+        let secret = "test-secret-1234567890123456789012";
+        assert!(decode_state("not-a-valid-token", secret).is_none());
+        assert!(decode_state("only-one-segment", secret).is_none());
+        assert!(decode_state("", secret).is_none());
+    }
 }

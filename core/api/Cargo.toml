@@ -50,7 +50,9 @@ rust_decimal = { version = "1.36", features = ["serde"] }
 bytes = { workspace = true }
 flate2 = { workspace = true }
 sha2 = { workspace = true }
+hmac = { workspace = true }
 hex = { workspace = true }
+rand = "0.8"
 futures = { workspace = true }
 tokio-stream = "0.1"
 async-stream = "0.3"
