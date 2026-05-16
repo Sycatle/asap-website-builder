@@ -1,3 +1,6 @@
+<!-- translation-pending -->
+> **Note:** this document is a legacy design doc retained in French. A translation pass is planned — see GitHub Issues. Open a PR or an issue if you need it sooner.
+
 # Sécurité, Performance & Pricing
 
 > **Document**: 04-SECURITY.md  

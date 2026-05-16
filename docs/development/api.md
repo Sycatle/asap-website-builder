@@ -1,3 +1,6 @@
+<!-- translation-pending -->
+> **Note:** this document is a legacy design doc retained in French. A translation pass is planned — see GitHub Issues. Open a PR or an issue if you need it sooner.
+
 # Contrat d'API du Core
 
 Ce document décrit les routes HTTP exposées par le **Core API** (pas les modules). Le core fournit la structure et les données utilisateur. Les modules consomment cette API pour implémenter les fonctionnalités.

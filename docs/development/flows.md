@@ -1,3 +1,6 @@
+<!-- translation-pending -->
+> **Note:** this document is a legacy design doc retained in French. A translation pass is planned — see GitHub Issues. Open a PR or an issue if you need it sooner.
+
 # Parcours Fonctionnels (Flux avec Extensions)
 
 Ce document décrit les flux utilisateur et système avec l'architecture **core + extensions**.
