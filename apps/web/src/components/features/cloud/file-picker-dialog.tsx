@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useTranslation } from 'react-i18next'
 import { Image as ImageIcon, File as FileIcon, Check } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
+import { getApiBaseUrl } from "@/lib/api/base-url"
 
 import {
   ResponsiveDialog,
@@ -92,7 +93,7 @@ export function FilePickerDialog({
   // Helper to construct file URL with auth token
   const getFileUrl = (fileId: string) => {
     const token = localStorage.getItem('auth_token')
-    return `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${fileId}?token=${token}`
+    return `${getApiBaseUrl()}/files/${fileId}?token=${token}`
   }
 
   return (

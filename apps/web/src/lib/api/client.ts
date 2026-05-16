@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance, type AxiosError, type AxiosRequestConfig, type InternalAxiosRequestConfig } from 'axios';
+import { getApiBaseUrl } from './base-url';
 
 export class APIError extends Error {
   constructor(
@@ -126,7 +127,7 @@ export class APIClient {
   private csrfToken: string | null = null;
 
   constructor() {
-    this.baseURL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
+    this.baseURL = getApiBaseUrl();
     
     this.client = axios.create({
       baseURL: this.baseURL,

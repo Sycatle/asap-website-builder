@@ -6,8 +6,9 @@
  */
 
 import type { Website, FreelanceDevProfile } from '@asap/shared';
+import { getApiBaseUrl } from './base-url';
 
-const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
+const API_URL = getApiBaseUrl();
 
 // Re-export types for backward compatibility
 export type PublicWebsite = Website;

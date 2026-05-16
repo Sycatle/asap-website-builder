@@ -1,6 +1,7 @@
 "use client"
 
 import { Image, Film, Music, FileText, File } from "lucide-react";
+import { getApiBaseUrl } from "@/lib/api/base-url";
 
 /**
  * Shared file utilities for file handling across the application
@@ -80,7 +81,7 @@ export function getFileTypeLabel(mimeType: string): string {
  * Get authenticated file URL for API access
  */
 export function getFileUrl(fileId: string): string {
-  const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
+  const API_URL = getApiBaseUrl();
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
   return `${API_URL}/files/${fileId}${token ? `?token=${token}` : ''}`;
 }

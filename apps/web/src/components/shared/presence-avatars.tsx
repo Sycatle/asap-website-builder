@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useEffect, useState, useRef, useCallback } from "react"
 import { cn } from "@/lib/utils"
+import { getApiBaseUrl } from "@/lib/api/base-url"
 import {
   Avatar,
   AvatarFallback,
@@ -60,9 +61,7 @@ const getAvatarUrl = (url?: string): string | undefined => {
   const fileIdMatch = url.match(/\/files\/([a-f0-9-]+)/)
   if (fileIdMatch) {
     const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
-    const baseUrl = typeof window !== 'undefined'
-      ? (import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api')
-      : 'http://localhost:3000/api'
+    const baseUrl = getApiBaseUrl()
     return token ? `${baseUrl}/files/${fileIdMatch[1]}?token=${token}` : url
   }
   return url

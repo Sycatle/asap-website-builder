@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useState, useEffect } from "react"
 import { Spinner } from "@/components/ui/spinner"
+import { getApiBaseUrl } from "@/lib/api/base-url"
 
 import {
   Avatar,
@@ -58,7 +59,7 @@ export interface AccountSettingsProps {
 
 const getFileUrl = (fileId: string) => {
   const token = localStorage.getItem('auth_token')
-  return `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${fileId}?token=${token}`
+  return `${getApiBaseUrl()}/files/${fileId}?token=${token}`
 }
 
 // ============================================================================
@@ -132,7 +133,7 @@ export function AccountSettings({
       const displayUrl = getFileUrl(avatarFileId)
       setAvatarUrl(displayUrl)
       
-      const avatarStorageUrl = `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${avatarFileId}`
+      const avatarStorageUrl = `${getApiBaseUrl()}/files/${avatarFileId}`
       const currentAccount = await accountsAPI.getAccount(user.id)
       const currentData = currentAccount.data || {}
       await accountsAPI.updateAccountData(user.id, {
@@ -162,7 +163,7 @@ export function AccountSettings({
     const displayUrl = getFileUrl(file.id)
     setAvatarUrl(displayUrl)
     
-    const avatarStorageUrl = `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${file.id}`
+    const avatarStorageUrl = `${getApiBaseUrl()}/files/${file.id}`
     
     const updatePromise = async () => {
       const currentAccount = await accountsAPI.getAccount(user.id)

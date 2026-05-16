@@ -4,6 +4,7 @@ import { authAPI } from '../api/auth';
 import { accountsAPI } from '../api/accounts';
 import { websitesAPI } from '../api/websites';
 import { apiClient } from '../api/client';
+import { getApiBaseUrl } from '../api/base-url';
 import type { MeResponse, UserData, Website } from '../types';
 
 // Re-export UserData type for backward compatibility
@@ -238,9 +239,7 @@ export const useAuthStore = create<AuthState>()(
         // This is needed for <img> tags which can't use Authorization headers
         const fileIdMatch = storedUrl.match(/\/files\/([a-f0-9-]+)/);
         if (fileIdMatch) {
-          const baseUrl = typeof window !== 'undefined' 
-            ? (import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api')
-            : 'http://localhost:3000/api';
+          const baseUrl = getApiBaseUrl();
           // Get token from localStorage for authenticated file access
           const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
           if (token) {

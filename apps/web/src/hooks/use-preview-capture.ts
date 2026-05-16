@@ -11,6 +11,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
+import { getApiBaseUrl } from '@/lib/api/base-url';
 
 export type Viewport = 'desktop' | 'tablet' | 'mobile';
 
@@ -192,7 +193,7 @@ export async function uploadPreviewCapture(
   formData.append('viewport', viewport);
 
   // Use the API base URL from environment
-  const apiBase = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
+  const apiBase = getApiBaseUrl();
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
   
   // Get CSRF token from apiClient
@@ -252,7 +253,7 @@ export async function analyzePreviewCapture(
   params: VisualAnalysisParams
 ): Promise<VisualAnalysisResponse> {
   // Use the API base URL from environment
-  const apiBase = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
+  const apiBase = getApiBaseUrl();
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
   
   // Get CSRF token from apiClient

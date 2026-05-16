@@ -1,5 +1,7 @@
 "use client"
 
+import { getApiBaseUrl } from "@/lib/api/base-url";
+
 // Re-export shared components
 export { ChangeIndicator, getPercentageChange } from "@/components/shared";
 export { formatRelativeTimeFr as formatTimeAgo } from "@/lib/utils/formatters";
@@ -28,9 +30,7 @@ export function getSeededValue(websiteId: string | undefined, min: number, max: 
  */
 export function getAuthenticatedFileUrl(fileId: string): string {
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-  const baseUrl = typeof window !== 'undefined'
-    ? (import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api')
-    : 'http://localhost:3000/api';
+  const baseUrl = getApiBaseUrl();
   return token ? `${baseUrl}/files/${fileId}?token=${token}` : '';
 }
 

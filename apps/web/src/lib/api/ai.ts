@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import { getApiBaseUrl } from './base-url';
 
 // ============================================================================
 // Types
@@ -491,7 +492,7 @@ export function streamChatMessage(
       const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
       
       // Build URL
-      const apiBase = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
+      const apiBase = getApiBaseUrl();
       const url = `${apiBase}/ai/chat/stream`;
       
       // Helper to make the fetch request

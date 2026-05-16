@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import { getApiBaseUrl } from './base-url';
 import type { 
   FileMetadata, 
   QuotaUsage, 
@@ -74,7 +75,7 @@ export const filesAPI = {
       headers['X-CSRF-Token'] = csrfToken;
     }
 
-    const response = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files`, {
+    const response = await fetch(`${getApiBaseUrl()}/files`, {
       method: 'POST',
       headers,
       body: formData,
@@ -93,7 +94,7 @@ export const filesAPI = {
               'X-CSRF-Token': csrfToken,
             };
             
-            const retryResponse = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/files`, {
+            const retryResponse = await fetch(`${getApiBaseUrl()}/files`, {
               method: 'POST',
               headers: retryHeaders,
               body: formData,

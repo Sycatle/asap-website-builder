@@ -95,7 +95,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
   
   // Get the API URL for CSP connect-src directive
-  const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api';
+  const { getApiBaseUrl } = await import('./lib/api/base-url');
+  const apiUrl = getApiBaseUrl();
   // Extract the origin (protocol + host) for CSP - CSP needs the origin, not paths
   const apiOrigin = new URL(apiUrl).origin;
   const apiHost = new URL(apiUrl).host;

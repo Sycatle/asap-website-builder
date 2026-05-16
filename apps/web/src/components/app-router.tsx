@@ -6,6 +6,7 @@ import { ErrorBoundary } from "@/components/shared"
 import { Spinner } from "@/components/ui/spinner"
 import { RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { getApiBaseUrl } from "@/lib/api/base-url"
 
 // Helper to create lazy components with error handling for HMR issues
 function lazyWithRetry<T extends ComponentType<any>>(
@@ -293,7 +294,7 @@ export default function AppRouter() {
       
       // Validate token with API
       try {
-        const response = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/auth/me`, {
+        const response = await fetch(`${getApiBaseUrl()}/auth/me`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -307,7 +308,7 @@ export default function AppRouter() {
           if (refreshToken) {
             try {
               const refreshResponse = await fetch(
-                `${import.meta.env.PUBLIC_API_URL || 'http://localhost:3000/api'}/auth/refresh`,
+                `${getApiBaseUrl()}/auth/refresh`,
                 {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
