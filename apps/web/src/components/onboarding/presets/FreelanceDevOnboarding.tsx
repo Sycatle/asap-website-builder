@@ -231,12 +231,11 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
   // Save profile data
   const saveProfileData = async () => {
     if (!websiteId) return;
-    
-    try {
-      const currentData = await websitesAPI.getData(websiteId);
-      await websitesAPI.patchData(websiteId, {
-        ...currentData,
-        profile: {
+
+    const currentData = await websitesAPI.getData(websiteId);
+    await websitesAPI.patchData(websiteId, {
+      ...currentData,
+      profile: {
           version: 1,
           slug,
           identity: {
@@ -282,15 +281,12 @@ export function FreelanceDevOnboarding({ onComplete }: FreelanceDevOnboardingPro
             mode: 'dark',
             avatarStyle: 'rounded',
           },
-          seo: {
-            title: `${name} — ${title}`,
-            description: tagline,
-          },
+        seo: {
+          title: `${name} — ${title}`,
+          description: tagline,
         },
-      });
-    } catch (error) {
-      throw error;
-    }
+      },
+    });
   };
 
   // Handle step completion

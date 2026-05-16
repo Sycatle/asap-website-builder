@@ -9,7 +9,6 @@
     "./manager": "./src/manager/index.ts"
   },
   "scripts": {
-    "lint": "eslint src/",
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {

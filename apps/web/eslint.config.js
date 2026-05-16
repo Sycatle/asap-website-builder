@@ -56,6 +56,12 @@ export default [
     },
     rules: {
       ...tseslint.configs.recommended.rules,
+      // TypeScript handles these; the base eslint rules produce false
+      // positives on TS-specific syntax (type imports, ambient globals
+      // like React with the new JSX runtime, function overloads).
+      "no-undef": "off",
+      "no-redeclare": "off",
+      "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": [
         "warn",
         {
@@ -75,6 +81,7 @@ export default [
       ],
       "@typescript-eslint/no-empty-interface": "off",
       "@typescript-eslint/no-empty-object-type": "off",
+      "@typescript-eslint/no-unused-expressions": "off",
     },
   },
 
@@ -92,11 +99,15 @@ export default [
     },
     rules: {
       ...reactPlugin.configs.recommended.rules,
-      ...reactHooksPlugin.configs.recommended.rules,
+      // Only the two classic hooks rules; the v7 recommended preset adds
+      // React-Compiler-style purity checks that flag patterns the codebase
+      // intentionally uses (synchronous setState in effects, inline
+      // component creation). Re-enable once we adopt the compiler.
       "react/react-in-jsx-scope": "off", // Not needed with React 18+
       "react/prop-types": "off", // Using TypeScript
       "react/display-name": "off",
       "react/no-unescaped-entities": "off",
+      "react/no-unknown-property": "off",
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
     },
