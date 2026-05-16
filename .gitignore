@@ -1,7 +1,7 @@
 # Rust
 target/
-Cargo.lock
 **/*.rs.bk
+# Cargo.lock is committed (binary workspace).
 
 # SQLx offline cache (local build cache)
 .sqlx/
