@@ -1,0 +1,51 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                UPDATE website_administrators \n                SET role = $1, \n                    permissions = $2, \n                    status = $3,\n                    account_id = $4,\n                    invitation_token = $5,\n                    accepted_at = CASE WHEN $3 = 'active' THEN now() ELSE NULL END,\n                    updated_at = now()\n                WHERE id = $6\n                RETURNING id, email, role, status, invited_at\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "role",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "invited_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Jsonb",
+        "Text",
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "bd42793deb975aacfcf462f4b46533c084ab117d4471c313d6b6ee85963778f5"
+}

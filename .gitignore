@@ -3,9 +3,10 @@ target/
 **/*.rs.bk
 # Cargo.lock is committed (binary workspace).
 
-# SQLx offline cache (local build cache)
-.sqlx/
-**/.sqlx/
+# SQLx offline cache — committed so CI can run with SQLX_OFFLINE=true
+# (CI does `cargo sqlx prepare --check`, see .github/workflows/ci.yml).
+# Regenerate with `cargo sqlx prepare --workspace -- --all-targets`
+# against a live Postgres after any SQL change.
 
 # Node.js
 node_modules/

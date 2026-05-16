@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT \n            collection_slug,\n            source_extension,\n            total_count,\n            sync_status,\n            synced_at\n        FROM website_collections\n        WHERE website_id = $1\n        ORDER BY collection_slug\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "collection_slug",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "source_extension",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "total_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "sync_status",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "synced_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "46625a81ddba2a40b060c2059ecd11ce8cc845b93bbc85e33f75f9af0df4c421"
+}

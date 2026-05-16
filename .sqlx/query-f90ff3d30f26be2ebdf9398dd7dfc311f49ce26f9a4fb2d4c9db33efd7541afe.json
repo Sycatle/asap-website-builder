@@ -1,0 +1,95 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO element_templates (account_id, name, description, element_type, variant, settings, preview_image, tags)\n        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)\n        RETURNING id, account_id, name, description, element_type, variant, settings, \n                  preview_image, tags, is_favorite, created_at, updated_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "account_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "element_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "variant",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "settings",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 7,
+        "name": "preview_image",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "tags",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 9,
+        "name": "is_favorite",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 10,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Text",
+        "Varchar",
+        "Varchar",
+        "Jsonb",
+        "Text",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "f90ff3d30f26be2ebdf9398dd7dfc311f49ce26f9a4fb2d4c9db33efd7541afe"
+}

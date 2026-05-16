@@ -1,0 +1,89 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id, account_id, name, description, element_type, variant, settings, \n               preview_image, tags, is_favorite, created_at, updated_at\n        FROM element_templates\n        WHERE id = $1 AND account_id = $2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "account_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "element_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "variant",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "settings",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 7,
+        "name": "preview_image",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "tags",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 9,
+        "name": "is_favorite",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 10,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "25e06bcd89f9562db9e2e748370fb2d872e5f8211758f0fc31d5226a6589671a"
+}

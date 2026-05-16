@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE website_administrators SET status = 'revoked', updated_at = now() WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bfceec577bf1214ab3ab05585848818e7c0d2ec50ba45196d90ad9c8fe0fa113"
+}

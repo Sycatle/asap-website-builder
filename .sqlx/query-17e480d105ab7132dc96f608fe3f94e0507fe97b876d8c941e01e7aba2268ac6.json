@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id, name, description, element_type, variant, preview_image, tags, is_favorite, created_at\n        FROM element_templates\n        WHERE account_id = $1\n          AND ($2::text IS NULL OR element_type = $2)\n          AND ($3::boolean = false OR is_favorite = true)\n          AND ($4::text IS NULL OR $4 = ANY(tags))\n          AND ($5::text IS NULL OR name ILIKE '%' || $5 || '%' OR description ILIKE '%' || $5 || '%')\n        ORDER BY created_at DESC\n        LIMIT $6 OFFSET $7\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "element_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "variant",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "preview_image",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "tags",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 7,
+        "name": "is_favorite",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Bool",
+        "Text",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "17e480d105ab7132dc96f608fe3f94e0507fe97b876d8c941e01e7aba2268ac6"
+}

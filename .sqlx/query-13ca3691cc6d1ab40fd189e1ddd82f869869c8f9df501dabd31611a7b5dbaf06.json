@@ -1,0 +1,96 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE element_templates\n        SET \n            name = COALESCE($3, name),\n            description = COALESCE($4, description),\n            variant = COALESCE($5, variant),\n            settings = COALESCE($6, settings),\n            preview_image = COALESCE($7, preview_image),\n            tags = COALESCE($8, tags),\n            is_favorite = COALESCE($9, is_favorite),\n            updated_at = now()\n        WHERE id = $1 AND account_id = $2\n        RETURNING id, account_id, name, description, element_type, variant, settings, \n                  preview_image, tags, is_favorite, created_at, updated_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "account_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "element_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "variant",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "settings",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 7,
+        "name": "preview_image",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "tags",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 9,
+        "name": "is_favorite",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 10,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Text",
+        "Varchar",
+        "Jsonb",
+        "Text",
+        "TextArray",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "13ca3691cc6d1ab40fd189e1ddd82f869869c8f9df501dabd31611a7b5dbaf06"
+}

@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO website_variables (\n            website_id, key, value, value_type, source\n        ) VALUES ($1, $2, $3, $4, 'manual')\n        ON CONFLICT (website_id, key) DO UPDATE SET\n            value = $3,\n            value_type = $4,\n            source = 'manual',\n            stale = FALSE,\n            updated_at = NOW()\n        RETURNING id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Jsonb",
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "018e669c67d650f80ba3139a63319594097b583057e31adbcd96a862e222d131"
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO events (account_id, event_type, payload)\n                SELECT account_id, 'SYNC_COLLECTION', $2\n                FROM websites WHERE id = $1\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dd3799e426566767180d105badfa1808745c09e540d810db03df6ca30f769a31"
+}
