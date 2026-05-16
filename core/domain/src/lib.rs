@@ -2,6 +2,7 @@ pub mod administrators;
 pub mod collections;
 pub mod design_tokens;
 pub mod design_tokens_derive;
+pub mod variant_catalog;
 pub mod errors;
 pub mod events;
 pub mod extension_schema;
@@ -58,6 +59,10 @@ pub use design_tokens::{
     TypographyTokens, VoiceTokens,
 };
 pub use design_tokens_derive::{derive_tokens, hex_to_hsl, hsl_to_hex, BrandBrief, HarmonyScheme};
+pub use variant_catalog::{
+    default_variant_key_for, find_variant, validate_variant, variant_catalog,
+    VariantParamSpec, VariantParamType, VariantSpec, VariantValidation,
+};
 pub use errors::{DomainError, Result};
 pub use events::{Event, EventType};
 pub use extension_schema::{
