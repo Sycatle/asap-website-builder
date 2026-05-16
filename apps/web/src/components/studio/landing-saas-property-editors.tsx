@@ -842,6 +842,7 @@ export function LandingSaaSPropertyEditor({
         open={showSaveTemplateDialog}
         onOpenChange={setShowSaveTemplateDialog}
         elementType={element.element_type}
+        variantKey={element.variant_key}
         settings={settings}
         defaultName={element.title || ''}
       />

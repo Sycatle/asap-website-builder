@@ -22,6 +22,8 @@ export interface SaveTemplateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   elementType: string;
+  /** Native `Element.variant_key`. Optional during the transition window. */
+  variantKey?: string | null;
   settings: Record<string, unknown>;
   defaultName?: string;
   onSaved?: () => void;
@@ -31,6 +33,7 @@ export function SaveTemplateDialog({
   open,
   onOpenChange,
   elementType,
+  variantKey,
   settings,
   defaultName = '',
   onSaved,
@@ -68,8 +71,13 @@ export function SaveTemplateDialog({
 
     setIsSaving(true);
     try {
-      const variant = settings.variant as string | undefined;
-      
+      // Prefer the native column; fall back to the legacy settings.variant field
+      // for templates created before the variant_key migration.
+      const variant =
+        variantKey ?? (typeof settings.variant_key === 'string'
+          ? settings.variant_key
+          : (settings.variant as string | undefined)) ?? undefined;
+
       await templatesAPI.create({
         name: name.trim(),
         description: description.trim() || undefined,
@@ -179,15 +187,21 @@ export function SaveTemplateDialog({
             <Badge variant="outline" className="font-mono text-xs">
               {elementType}
             </Badge>
-            {typeof settings.variant === 'string' && settings.variant && (
-              <>
-                {' · '}
-                <span className="font-medium">Variante:</span>{' '}
-                <Badge variant="outline" className="font-mono text-xs">
-                  {settings.variant}
-                </Badge>
-              </>
-            )}
+            {(() => {
+              const displayVariant =
+                variantKey ??
+                (typeof settings.variant_key === 'string' ? settings.variant_key : undefined) ??
+                (typeof settings.variant === 'string' ? settings.variant : undefined);
+              return displayVariant ? (
+                <>
+                  {' · '}
+                  <span className="font-medium">Variante:</span>{' '}
+                  <Badge variant="outline" className="font-mono text-xs">
+                    {displayVariant}
+                  </Badge>
+                </>
+              ) : null;
+            })()}
           </div>
         </div>
 
