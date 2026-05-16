@@ -176,9 +176,14 @@ pub struct LoginResponseV2 {
     pub token: String,
 }
 
-/// Hash a password using bcrypt
+/// Hash a password using bcrypt.
+/// Cost 13 (2^13 rounds) — current OWASP recommendation. Override via BCRYPT_COST env if needed.
 fn hash_password(password: &str) -> Result<String, bcrypt::BcryptError> {
-    bcrypt::hash(password, bcrypt::DEFAULT_COST)
+    let cost: u32 = std::env::var("BCRYPT_COST")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(13);
+    bcrypt::hash(password, cost)
 }
 
 /// Verify a password against a hash
