@@ -61,41 +61,31 @@ pub fn is_incompressible(mime_type: &str) -> bool {
 ///
 /// Compresses data in chunks without requiring the entire file in memory.
 /// Perfect for handling large files (100+ MB) while maintaining reasonable memory footprint.
-#[allow(dead_code)]
 pub struct StreamingCompressor {
     encoder: GzEncoder<Vec<u8>>,
-    /// Buffer size for chunked reads (stored for potential future resets)
-    buffer_size: usize,
     bytes_processed: u64,
     bytes_compressed: u64,
-    /// Compression level (stored for potential encoder recreation)
-    compression_level: Compression,
 }
 
 impl StreamingCompressor {
-    /// Create a new streaming compressor
-    ///
-    /// # Arguments
-    /// * `buffer_size` - Size of the read buffer (default: 1 MB)
-    /// * `compression_level` - Compression level (default, fast, best)
-    pub fn new(buffer_size: usize, compression_level: Compression) -> Self {
+    /// Create a new streaming compressor at the given compression level.
+    pub fn new(compression_level: Compression) -> Self {
         Self {
             encoder: GzEncoder::new(Vec::new(), compression_level),
-            buffer_size,
             bytes_processed: 0,
             bytes_compressed: 0,
-            compression_level,
         }
     }
 
-    /// Default compressor with 1 MB buffer and fast compression
+    /// Default compressor with fast compression
     pub fn default_streaming() -> Self {
-        Self::new(1024 * 1024, Compression::fast())
+        Self::new(Compression::fast())
     }
 
     /// High compression compressor (slower, but better ratio)
+    #[allow(dead_code)]
     pub fn best_compression() -> Self {
-        Self::new(1024 * 1024, Compression::best())
+        Self::new(Compression::best())
     }
 
     /// Process and compress a chunk of data
@@ -145,7 +135,7 @@ pub async fn compress_async_reader<R: AsyncRead + Unpin>(
     buffer_size: usize,
     compression_level: Compression,
 ) -> Result<(Bytes, CompressionStats)> {
-    let mut compressor = StreamingCompressor::new(buffer_size, compression_level);
+    let mut compressor = StreamingCompressor::new(compression_level);
     let mut buffer = vec![0u8; buffer_size];
 
     loop {
@@ -184,7 +174,7 @@ pub async fn compress_async_reader_limited<R: AsyncRead + Unpin>(
     max_input_size: u64,
     max_output_size: u64,
 ) -> Result<(Bytes, CompressionStats)> {
-    let mut compressor = StreamingCompressor::new(buffer_size, compression_level);
+    let mut compressor = StreamingCompressor::new(compression_level);
     let mut buffer = vec![0u8; buffer_size];
 
     loop {

@@ -303,7 +303,6 @@ impl ExtensionRegistry {
                 max: validation.max,
                 pattern: validation.pattern,
                 message: validation.message,
-                ..Default::default()
             });
         }
 

@@ -17,7 +17,8 @@ pub enum PlanStatus {
 }
 
 impl PlanStatus {
-    pub fn from_str(s: &str) -> Self {
+    /// Parse a status string into `PlanStatus`. Unknown values become `Inactive`.
+    pub fn parse(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "active" => PlanStatus::Active,
             "canceled" => PlanStatus::Canceled,
@@ -101,11 +102,11 @@ mod tests {
 
     #[test]
     fn test_plan_status_from_str() {
-        assert_eq!(PlanStatus::from_str("active"), PlanStatus::Active);
-        assert_eq!(PlanStatus::from_str("canceled"), PlanStatus::Canceled);
-        assert_eq!(PlanStatus::from_str("trialing"), PlanStatus::Trialing);
-        assert_eq!(PlanStatus::from_str("inactive"), PlanStatus::Inactive);
-        assert_eq!(PlanStatus::from_str("unknown"), PlanStatus::Inactive);
+        assert_eq!(PlanStatus::parse("active"), PlanStatus::Active);
+        assert_eq!(PlanStatus::parse("canceled"), PlanStatus::Canceled);
+        assert_eq!(PlanStatus::parse("trialing"), PlanStatus::Trialing);
+        assert_eq!(PlanStatus::parse("inactive"), PlanStatus::Inactive);
+        assert_eq!(PlanStatus::parse("unknown"), PlanStatus::Inactive);
     }
 
     #[test]

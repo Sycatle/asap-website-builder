@@ -180,7 +180,7 @@ impl PaymentGateway for StripeProvider {
             .map_err(|e| PaymentError::Unknown(e.to_string()))?;
 
         let status_str = subscription["status"].as_str().unwrap_or("canceled");
-        let status = PlanStatus::from_str(status_str);
+        let status = PlanStatus::parse(status_str);
 
         let customer_id = subscription["customer"]
             .as_str()

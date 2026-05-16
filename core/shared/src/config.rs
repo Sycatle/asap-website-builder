@@ -42,8 +42,11 @@ impl SharedConfig {
         })
     }
 
-    /// Create a default configuration (for testing)
-    pub fn default() -> Self {
+}
+
+impl Default for SharedConfig {
+    /// Default configuration for tests. Production callers must use `from_env`.
+    fn default() -> Self {
         Self {
             jwt_secret: "dev-secret-change-in-production".to_string(),
             jwt_expiration_hours: 24,

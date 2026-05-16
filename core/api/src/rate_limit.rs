@@ -275,14 +275,6 @@ impl RateLimiter {
         );
     }
 
-    /// Reset rate limit for an IP (e.g., after successful login with 2FA)
-    #[allow(dead_code)]
-    pub async fn reset(&self, ip: &str, endpoint: &str) {
-        let mut entries = self.entries.write().await;
-        if let Some(ip_entries) = entries.get_mut(ip) {
-            ip_entries.remove(endpoint);
-        }
-    }
 }
 
 /// Shared rate limiter type for Axum state
