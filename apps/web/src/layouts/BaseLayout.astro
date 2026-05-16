@@ -189,8 +189,9 @@ const { title, description = 'ASAP - Site web en 5 minutes' } = Astro.props;
                   registration.addEventListener('updatefound', function() {
                     var newWorker = registration.installing;
                     if (newWorker) {
-                      newWorker.addEventListener('statechange', function() {
-                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                      var worker = newWorker;
+                      worker.addEventListener('statechange', function() {
+                        if (worker.state === 'installed' && navigator.serviceWorker.controller) {
                           // Dispatch event for UI to show update prompt
                           window.dispatchEvent(new CustomEvent('pwa-update-available'));
                         }
@@ -240,7 +241,7 @@ const { title, description = 'ASAP - Site web en 5 minutes' } = Astro.props;
         // Track successful installation
         window.addEventListener('appinstalled', function() {
           window.__ASAP_PWA__.isInstalled = true;
-          window.__ASAP_PWA__.installPrompt = null;
+          window.__ASAP_PWA__.installPrompt = undefined;
           window.dispatchEvent(new CustomEvent('pwa-installed'));
         });
       })();

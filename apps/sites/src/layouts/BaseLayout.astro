@@ -206,9 +206,9 @@ const criticalCss = `
     <script>
       // Only run if Speculation Rules not supported
       if (!HTMLScriptElement.supports?.('speculationrules')) {
-        const prefetchCache = new Set();
-        
-        const prefetchLink = (url) => {
+        const prefetchCache = new Set<string>();
+
+        const prefetchLink = (url: string) => {
           if (prefetchCache.has(url)) return;
           if (url.startsWith('/') && !url.includes('#')) {
             prefetchCache.add(url);
@@ -219,24 +219,26 @@ const criticalCss = `
             document.head.appendChild(link);
           }
         };
-        
+
         // Prefetch on hover with debounce
-        let hoverTimer;
+        let hoverTimer: number | undefined;
         document.addEventListener('mouseover', (e) => {
-          const anchor = e.target.closest('a[href^="/"]');
+          const target = e.target as Element | null;
+          const anchor = target?.closest('a[href^="/"]') as HTMLAnchorElement | null;
           if (anchor && !anchor.rel?.includes('external')) {
-            hoverTimer = setTimeout(() => prefetchLink(anchor.href), 65);
+            hoverTimer = window.setTimeout(() => prefetchLink(anchor.href), 65);
           }
         });
-        
+
         document.addEventListener('mouseout', (e) => {
-          if (e.target.closest('a')) clearTimeout(hoverTimer);
+          const target = e.target as Element | null;
+          if (target?.closest('a')) clearTimeout(hoverTimer);
         });
-        
+
         // Prefetch visible links in navigation
         if ('requestIdleCallback' in window) {
           requestIdleCallback(() => {
-            document.querySelectorAll('nav a[href^="/"]').forEach(link => {
+            document.querySelectorAll<HTMLAnchorElement>('nav a[href^="/"]').forEach((link) => {
               prefetchLink(link.href);
             });
           });
