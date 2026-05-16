@@ -135,6 +135,8 @@ pub async fn execute_ai_action(
                 Some(&settings),
                 None,
                 None,
+                None,
+                None,
             )
             .await?;
 
@@ -230,6 +232,8 @@ pub async fn execute_ai_action(
                 Some(&settings),
                 None,
                 None,
+                None,
+                None,
             )
             .await?;
 
@@ -298,6 +302,30 @@ pub async fn execute_ai_action(
             Ok((
                 "Image generation queued (coming soon)".to_string(),
                 *target_section_id,
+            ))
+        }
+
+        AIAction::ProposeSectionVariant {
+            section_type,
+            variant_key,
+            section_id,
+            ..
+        } => {
+            // Proposals are not auto-applied. The frontend stages the proposed
+            // variant on the canvas and waits for the user to confirm. When
+            // confirmed, the studio calls the existing element update endpoints
+            // with the new variant_key / variant_params / content. So here we
+            // simply acknowledge the proposal.
+            tracing::info!(
+                section_type = section_type,
+                variant_key = variant_key,
+                section_id = ?section_id,
+                "Section variant proposed by AI"
+            );
+
+            Ok((
+                format!("Proposed '{}' variant for {}", variant_key, section_type),
+                *section_id,
             ))
         }
     }

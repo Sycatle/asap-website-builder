@@ -105,6 +105,11 @@ pub fn format_action_description(action: &AIAction) -> String {
         AIAction::UpdateTheme { .. } => "Updating theme".to_string(),
         AIAction::UpdateMetadata { .. } => "Updating metadata".to_string(),
         AIAction::GenerateImage { .. } => "Generating image".to_string(),
+        AIAction::ProposeSectionVariant {
+            section_type,
+            variant_key,
+            ..
+        } => format!("Proposing {} variant '{}'", section_type, variant_key),
     }
 }
 

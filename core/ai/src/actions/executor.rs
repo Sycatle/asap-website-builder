@@ -280,6 +280,27 @@ impl ActionExecutor {
                     *target_section_id,
                 )
             }
+            AIAction::ProposeSectionVariant {
+                section_type,
+                variant_key,
+                section_id,
+                ..
+            } => {
+                debug!(
+                    section_type = section_type,
+                    variant_key = variant_key,
+                    section_id = ?section_id,
+                    "DRY-RUN: Propose section variant"
+                );
+                (
+                    action.action_type(),
+                    format!(
+                        "[DRY-RUN] Would propose {} variant '{}'",
+                        section_type, variant_key
+                    ),
+                    *section_id,
+                )
+            }
         };
 
         ActionResult {

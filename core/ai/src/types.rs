@@ -301,6 +301,22 @@ pub enum AIAction {
         #[serde(default)]
         target_property: Option<String>,
     },
+
+    /// AI-proposed section variant. The renderer dispatches on `variant_key`,
+    /// the studio shows the diff, and the user accepts before persistence.
+    /// `section_id` is None for new sections (added at `position` if given).
+    ProposeSectionVariant {
+        section_type: String,
+        variant_key: String,
+        #[serde(default)]
+        variant_params: serde_json::Value,
+        #[serde(default)]
+        content: Option<serde_json::Value>,
+        #[serde(default)]
+        section_id: Option<Uuid>,
+        #[serde(default)]
+        position: Option<i32>,
+    },
 }
 
 impl AIAction {
@@ -315,6 +331,7 @@ impl AIAction {
             Self::UpdateTheme { .. } => "UPDATE_THEME",
             Self::UpdateMetadata { .. } => "UPDATE_METADATA",
             Self::GenerateImage { .. } => "GENERATE_IMAGE",
+            Self::ProposeSectionVariant { .. } => "PROPOSE_SECTION_VARIANT",
         }
     }
 
