@@ -33,34 +33,25 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 4321
-          env:
-            - name: HOST
-              value: "0.0.0.0"
-            - name: PORT
-              value: "4321"
-            - name: NODE_ENV
-              value: "production"
-            - name: PUBLIC_API_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: asap-config
-                  key: PUBLIC_API_URL
+          # nginx static SPA — PUBLIC_API_URL is baked at build time
+          # (Vite inlines import.meta.env.PUBLIC_* into the bundle), so
+          # runtime env vars are no longer needed here.
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "100m"
+              memory: "32Mi"
+              cpu: "20m"
             limits:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: "128Mi"
+              cpu: "200m"
           readinessProbe:
             httpGet:
-              path: /
+              path: /healthz
               port: 4321
-            initialDelaySeconds: 10
+            initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /
+              path: /healthz
               port: 4321
-            initialDelaySeconds: 30
+            initialDelaySeconds: 15
             periodSeconds: 30
