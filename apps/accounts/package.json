@@ -18,7 +18,7 @@
   "license": "MIT",
   "description": "ASAP Accounts - Authentication & Account Management",
   "dependencies": {
-    "@asap/shared": "file:../../packages/shared",
+    "@asap/shared": "workspace:*",
     "@astrojs/node": "^9.5.1",
     "@astrojs/react": "^4.4.2",
     "@radix-ui/react-alert-dialog": "^1.1.15",
