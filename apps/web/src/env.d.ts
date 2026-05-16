@@ -1,4 +1,15 @@
-/// <reference types="astro/client" />
+/// <reference types="vite/client" />
+
+interface ImportMetaEnv {
+  readonly PUBLIC_API_URL?: string;
+  readonly PUBLIC_WS_URL?: string;
+  readonly PUBLIC_ACCOUNTS_URL?: string;
+  readonly PUBLIC_SITE_URL?: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
