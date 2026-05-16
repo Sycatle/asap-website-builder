@@ -197,16 +197,18 @@ pub async fn create_element(
     use crate::queries;
     let result = queries::create_website_element(
         &pool,
-        website_uuid,
-        account_id,
-        extension_uuid,
-        &payload.element_type,
-        &payload.slug,
-        &payload.title,
-        payload.order.unwrap_or(0),
-        payload.layout.as_deref().unwrap_or("full"),
-        &settings,
-        &data,
+        queries::CreateElementInput {
+            website_id: website_uuid,
+            account_id,
+            extension_id: extension_uuid,
+            element_type: &payload.element_type,
+            slug: &payload.slug,
+            title: &payload.title,
+            order: payload.order.unwrap_or(0),
+            layout: payload.layout.as_deref().unwrap_or("full"),
+            settings: &settings,
+            data: &data,
+        },
     )
     .await;
 

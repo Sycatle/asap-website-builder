@@ -175,18 +175,21 @@ pub async fn execute_ai_action(
                     .unwrap_or("new")
             );
 
+            let data = serde_json::json!({});
             let element_id = crate::queries::create_website_element(
                 pool,
-                website_id,
-                account_id,
-                None, // extension_id
-                section_type,
-                &slug,
-                section_type, // title = section_type for now
-                order,
-                "default", // layout
-                &settings,
-                &serde_json::json!({}), // data
+                crate::queries::CreateElementInput {
+                    website_id,
+                    account_id,
+                    extension_id: None,
+                    element_type: section_type,
+                    slug: &slug,
+                    title: section_type,
+                    order,
+                    layout: "default",
+                    settings: &settings,
+                    data: &data,
+                },
             )
             .await?;
 

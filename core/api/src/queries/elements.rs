@@ -87,22 +87,27 @@ pub async fn list_website_elements(
         .collect())
 }
 
+/// Input bundle for [`create_website_element`].
+pub struct CreateElementInput<'a> {
+    pub website_id: Uuid,
+    pub account_id: Uuid,
+    pub extension_id: Option<Uuid>,
+    pub element_type: &'a str,
+    pub slug: &'a str,
+    pub title: &'a str,
+    pub order: i32,
+    pub layout: &'a str,
+    pub settings: &'a JsonValue,
+    pub data: &'a JsonValue,
+}
+
 /// Create an element for a website
 pub async fn create_website_element(
     pool: &PgPool,
-    website_id: Uuid,
-    account_id: Uuid,
-    extension_id: Option<Uuid>,
-    element_type: &str,
-    slug: &str,
-    title: &str,
-    order: i32,
-    layout: &str,
-    settings: &JsonValue,
-    data: &JsonValue,
+    input: CreateElementInput<'_>,
 ) -> Result<Uuid, Box<dyn std::error::Error + Send + Sync>> {
     // Verify website access (owner or active administrator)
-    if !super::verify_website_access(pool, website_id, account_id).await? {
+    if !super::verify_website_access(pool, input.website_id, input.account_id).await? {
         return Err("Website not found".into());
     }
 
@@ -114,15 +119,15 @@ pub async fn create_website_element(
         "#
     )
     .bind(element_id)
-    .bind(website_id)
-    .bind(extension_id)
-    .bind(element_type)
-    .bind(slug)
-    .bind(title)
-    .bind(order)
-    .bind(layout)
-    .bind(settings)
-    .bind(data)
+    .bind(input.website_id)
+    .bind(input.extension_id)
+    .bind(input.element_type)
+    .bind(input.slug)
+    .bind(input.title)
+    .bind(input.order)
+    .bind(input.layout)
+    .bind(input.settings)
+    .bind(input.data)
     .execute(pool)
     .await?;
 
