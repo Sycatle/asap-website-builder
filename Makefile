@@ -6,7 +6,12 @@
 
 
 
-PUBLIC_SITES_URL=http://localhost:4322# Sites app URL (for canonical links)PUBLIC_API_URL=http://localhost:3000/api# API endpoint - Points to the ASAP API server# =============================================================================
+# Sites app URL (used for canonical links)
+PUBLIC_SITES_URL = http://localhost:4322
+# API endpoint - points to the ASAP API server
+PUBLIC_API_URL = http://localhost:3000/api
+
+# =============================================================================
 # Use bash for shell commands (required for read -n, [[ ]], etc.)
 SHELL := /bin/bash
 # =============================================================================
