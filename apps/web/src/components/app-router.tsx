@@ -43,6 +43,7 @@ const StudioPage = lazyWithRetry(() => import("@/components/studio/studio-page")
 const PagesPage = lazyWithRetry(() => import("@/components/features/pages/pages-page"))
 const AdministratorsPage = lazyWithRetry(() => import("@/components/features/settings/administrators-page"))
 const ThemePage = lazyWithRetry(() => import("@/components/features/settings/theme-page"))
+const DesignPage = lazyWithRetry(() => import("@/components/features/design/design-page"))
 const WebsiteSelector = lazyWithRetry(() => import("@/components/pages/website-selector"))
 const AnalyticsPage = lazyWithRetry(() => import("@/components/features/analytics/analytics-page"))
 const SeoPage = lazyWithRetry(() => import("@/components/features/seo/seo-page"))
@@ -64,6 +65,7 @@ type Route =
   | { page: "pages"; websiteId: string }
   | { page: "administrators"; websiteId: string }
   | { page: "theme"; websiteId: string }
+  | { page: "design"; websiteId: string }
   | { page: "analytics"; websiteId: string }
   | { page: "seo"; websiteId: string }
   | { page: "not-found" }
@@ -126,6 +128,9 @@ function parseRoute(pathname: string): Route {
     
     case "theme":
       return { page: "theme", websiteId }
+
+    case "design":
+      return { page: "design", websiteId }
     
     case "analytics":
       return { page: "analytics", websiteId }
@@ -233,6 +238,8 @@ function getPageTitle(route: Route): string {
       return "Administrateurs"
     case "theme":
       return "Thème"
+    case "design":
+      return "Design"
     case "analytics":
       return "Analytics"
     case "seo":
@@ -452,7 +459,10 @@ export default function AppRouter() {
       
       case "theme":
         return <ThemePage />
-      
+
+      case "design":
+        return <DesignPage websiteId={route.websiteId} />
+
       case "analytics":
         return <AnalyticsPage />
       

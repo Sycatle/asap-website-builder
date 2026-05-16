@@ -12,6 +12,7 @@ import {
   Users,
   Palette,
   Puzzle,
+  Wand2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -34,6 +35,7 @@ export const pageIcons = {
   settings: { icon: Settings, gradient: "from-zinc-500 to-zinc-700" },
   administrators: { icon: Users, gradient: "from-amber-500 to-orange-500" },
   theme: { icon: Palette, gradient: "from-pink-500 to-rose-500" },
+  design: { icon: Wand2, gradient: "from-indigo-500 to-fuchsia-500" },
   extensions: { icon: Puzzle, gradient: "from-fuchsia-500 to-purple-500" },
 } as const
 

@@ -7,7 +7,7 @@
  */
 
 import { apiClient } from './client';
-import type { FreelanceProject } from '@asap/shared';
+import type { DesignTokens, FreelanceProject } from '@asap/shared';
 
 // ============================================
 // Onboarding Steps
@@ -107,7 +107,40 @@ export const onboardingAPI = {
   async skipGitHubImport(websiteId: string): Promise<void> {
     return apiClient.post(`/websites/${websiteId}/onboarding/skip-github`, {});
   },
+
+  /**
+   * Derive design tokens from a seed color and an optional brief.
+   * Stateless — caller persists into the website metadata once the user confirms.
+   */
+  async deriveTokens(input: DeriveTokensInput): Promise<DesignTokens> {
+    const response = await apiClient.post<DeriveTokensResponse>(
+      '/websites/onboarding/derive-tokens',
+      input,
+    );
+    return response.tokens;
+  },
 };
+
+// ============================================
+// Derive design tokens types
+// ============================================
+
+export type FormalityChoice = 'casual' | 'neutral' | 'formal';
+export type ColorModeChoice = 'dark' | 'light';
+export type HarmonyChoice = 'analogous' | 'complementary' | 'triadic';
+
+export interface DeriveTokensInput {
+  seed_color: string;
+  sector?: string;
+  tone?: string;
+  formality?: FormalityChoice;
+  mode?: ColorModeChoice;
+  harmony?: HarmonyChoice;
+}
+
+export interface DeriveTokensResponse {
+  tokens: DesignTokens;
+}
 
 // ============================================
 // Onboarding Helper Functions

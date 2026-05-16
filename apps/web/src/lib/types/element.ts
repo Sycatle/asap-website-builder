@@ -36,6 +36,10 @@ export interface UpdateElementRequest {
   settings?: Record<string, unknown>;
   data?: Record<string, unknown>;
   visible?: boolean;
+  /** Set to a string to choose a variant, or null to clear. Omit to leave untouched. */
+  variant_key?: string | null;
+  /** Set to an object to update params, or null to clear. Omit to leave untouched. */
+  variant_params?: Record<string, unknown> | null;
 }
 
 export interface ReorderElementsRequest {

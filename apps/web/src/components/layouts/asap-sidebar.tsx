@@ -132,6 +132,14 @@ export function AsapSidebar({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Design" isActive={isActive('/design')}>
+                      <Link href={buildUrl('/design')}>
+                        <PageIcon page="design" size="sm" isActive={isActive('/design')} />
+                        <span className={cn(isActive('/design') && "text-primary font-semibold")}>Design</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
 
                   {/* Analytics */}
                   <SidebarMenuItem>
