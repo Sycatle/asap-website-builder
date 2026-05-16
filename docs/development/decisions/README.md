@@ -1,105 +1,123 @@
-# Journal des décisions d'architecture
+# Architecture Decision Records
 
-Ce fichier enregistre les choix importants faits pour la conception d'ASAP. Chaque entrée suit le modèle **ADR** (Architecture Decision Record) simplifié.
+This folder records significant architectural choices for ASAP. Each entry follows a lightweight ADR (Architecture Decision Record) format: context, decision, consequences. Append-only — supersede an ADR with a new one rather than rewriting history.
 
----
-
-## ADR-0001 – Choix du backend : Rust (Axum) + PostgreSQL
-
-**Date :** 2025-12-08
-
-### Contexte
-
-Nous devons choisir un stack backend pour gérer les tenants, les utilisateurs, les sites, et exécuter des tâches asynchrones. Les performances, la sécurité mémoire et la scalabilité sont des facteurs clés.
-
-### Décision
-
-Utiliser **Rust** avec le framework **Axum** pour exposer l'API HTTP, et **PostgreSQL** comme base de données principale.
-
-### Alternatives envisagées
-
-| Option | Avantages | Inconvénients |
-|--------|-----------|---------------|
-| Node/TypeScript (Fastify, NestJS) | Productivité élevée | Consommation CPU plus importante |
-| PHP (Laravel) | Familiarité | Modèle d'exécution moins adapté aux tâches asynchrones |
-| Go | Simple et performant | Typage moins riche, moins de garanties mémoire |
-
-### Arguments
-
-- Rust offre une exécution native (perf), un modèle mémoire sûr (moins de bugs) et un async/await robuste
-- La communauté Rust backend (Axum, SQLx) est mature et bien documentée
-- PostgreSQL est fiable, ACID, supporte JSONB et RLS, idéal pour un SaaS multitenant
-
-### Conséquences
-
-- ✅ Performances excellentes
-- ✅ Sécurité mémoire garantie
-- ⚠️ Nécessité de compétences Rust dans l'équipe
-- ⚠️ Investissement initial plus élevé par rapport à du Node/PHP
+When you propose a change that alters a public API, the data model, or a foundational pattern, open an ADR PR before or alongside the implementation.
 
 ---
 
-## ADR-0002 – Séparation lecture/écriture via projections locales
+## ADR-0001 — Backend stack: Rust (Axum) + PostgreSQL
 
-**Date :** 2025-12-08
+**Date:** 2025-12-08  
+**Status:** Accepted
 
-### Contexte
+### Context
+We need a backend that handles multi-tenant data, exposes an HTTP API, and runs asynchronous jobs. Performance, memory safety, and long-term maintenance cost matter.
 
-Nous devons servir potentiellement des milliers de websites avec des temps de chargement très bas sans surcharger la base de données.
+### Decision
+Use **Rust** with the **Axum** framework for the HTTP API. Use **PostgreSQL** as the primary database, accessed through **SQLx**.
 
-### Décision
+### Alternatives considered
+- **Node.js (Fastify / NestJS).** Higher productivity, weaker memory guarantees, heavier per-request CPU.
+- **PHP (Laravel).** Familiar, but execution model fits less well with long-running async work.
+- **Go.** Simple and performant, but a less expressive type system.
 
-Adopter un modèle **CQRS léger** : l'écriture se fait dans PostgreSQL et la lecture publique se fait à partir de projections (JSON ou SQLite) générées par un worker.
+### Rationale
+Rust gives native performance, memory safety, and a mature async ecosystem (Axum, SQLx, Tokio). PostgreSQL is ACID, supports JSONB and row-level security, and is well understood at the operational level.
 
-### Alternatives envisagées
-
-| Option | Avantages | Inconvénients |
-|--------|-----------|---------------|
-| Lecture directe PostgreSQL | Simple | Charge sur la DB, latence |
-| Cache Redis + API | Rapide | Infrastructure supplémentaire, invalidation complexe |
-
-### Arguments
-
-- Les fichiers JSON/SQLite sont ultra rapides à charger (TTFB quasi instantané) et ne nécessitent pas de connexion base
-- La projection asynchrone permet d'étaler la charge en arrière-plan et d'éviter les contentions
-- Facilite un futur basculement vers un stockage edge (Turso, D1) ou un CDN
-
-### Conséquences
-
-- ✅ TTFB < 100ms sans CDN
-- ✅ Scalabilité horizontale des lectures
-- ⚠️ Introduction d'un composant worker supplémentaire
-- ⚠️ Complexité du débogage accrue entre config en base et projection locale
+### Consequences
+- + Excellent runtime performance and low memory footprint.
+- + Strong compile-time guarantees reduce a class of production bugs.
+- − Rust expertise required to contribute to the core.
+- − Slower initial iteration speed compared to a JS/TS backend.
 
 ---
 
-## ADR-0003 – Monorepo et open-core
+## ADR-0002 — CQRS-lite reads via local projections
 
-**Date :** 2025-12-08
+**Date:** 2025-12-08  
+**Status:** Accepted
 
-### Contexte
+### Context
+The public site renderer (`apps/sites`) may serve many sites per second. Reading directly from PostgreSQL on every page load couples public latency to authoring-side write load.
 
-Nous souhaitons ouvrir une partie du code tout en gardant des modules propriétaires.
+### Decision
+Adopt a lightweight CQRS pattern. Writes go to PostgreSQL. The worker generates **per-site projections** (JSON / SQLite) that `apps/sites` reads to render published pages.
 
-### Décision
+### Alternatives considered
+- **Direct PostgreSQL reads on the public path.** Simpler, but couples public latency to authoring load.
+- **Redis cache in front of the API.** Fast, but invalidation is complex and Redis is not the source of truth.
 
-Structurer le projet en **monorepo** avec un dossier `core/` open-source et des dossiers `modules/` privés. Le monorepo contient également les applications (`apps/`) et l'infrastructure.
+### Rationale
+File-based projections give near-instant TTFB without an extra service in the public request path and they make a future move to an edge store (Turso, D1) or a CDN straightforward.
 
-### Alternatives envisagées
+### Consequences
+- + Public TTFB stays low without a CDN.
+- + Read scaling is decoupled from write load.
+- − One more component to operate (worker projection pipeline).
+- − Two states to reason about when debugging: row in Postgres vs. projection on disk.
 
-| Option | Avantages | Inconvénients |
-|--------|-----------|---------------|
-| Plusieurs repos (microservices) | Isolation | Complexité pour débuter |
-| Repo unique 100% fermé | Simplicité | Moins d'attractivité dev, pas de contributions |
+---
 
-### Arguments
+## ADR-0003 — Single monorepo with BSL-licensed source
 
-- Le monorepo simplifie le développement et la gestion des dépendances internes
-- L'open-core permet de bénéficier de contributions tout en conservant un avantage compétitif avec les modules premium
+**Date:** 2025-12-08  
+**Superseded by ADR-0004:** the open-core split has been dropped in favor of a single license.
 
-### Conséquences
+### Context
+We wanted to ship public source code while protecting the commercial hosting business.
 
-- ✅ Développement simplifié
-- ✅ Contributions externes possibles
-- ⚠️ Nécessité d'outils pour gérer la release open-source vs propriétaire
-- ⚠️ Exigence d'une gouvernance claire sur ce qui reste ouvert ou non
+### Decision (historical)
+Keep everything in one monorepo and originally split it into an open-source `core/` and a private `modules/` directory.
+
+### Outcome
+The `modules/` split was removed before public release. The repository ships under a single license (see ADR-0004) instead of mixing OSS and proprietary code in the same tree.
+
+---
+
+## ADR-0004 — License: Business Source License 1.1 → Apache 2.0
+
+**Date:** 2026-05-16  
+**Status:** Accepted
+
+### Context
+The repository is public. We need a license that signals "source-available" while protecting the commercial offering on `asap.cool` for a reasonable runway.
+
+### Decision
+License the entire repository under the **Business Source License 1.1**. Change Date: **2030-05-16**. Change License: **Apache License 2.0**. Additional Use Grant: any production use that is not a competing hosted website-builder service.
+
+### Alternatives considered
+- **MIT / Apache-2.0.** Maximum adoption, but allows a hyperscaler to re-host the project as a competitor.
+- **Open-core split.** Adds two licenses, two enforcement boundaries, and operational overhead for a single-maintainer project.
+- **Elastic License 2.0.** Similar protection but less developer-friendly perception than BSL.
+
+### Rationale
+BSL is well understood (HashiCorp, MariaDB, Sentry). The automatic Apache 2.0 conversion after four years gives a hard commitment to eventually-open code while protecting the commercial runway.
+
+### Consequences
+- + Public-facing source for review, audit, and self-hosting.
+- + The hosted SaaS retains a meaningful commercial moat for four years.
+- − Not OSI-approved during the BSL window — some communities and companies will treat it as proprietary.
+
+---
+
+## Template for new ADRs
+
+Copy `template.md` (TODO) or follow this skeleton:
+
+```markdown
+## ADR-NNNN — <title>
+
+**Date:** YYYY-MM-DD
+**Status:** Proposed | Accepted | Superseded by ADR-XXXX
+
+### Context
+
+### Decision
+
+### Alternatives considered
+
+### Rationale
+
+### Consequences
+```
