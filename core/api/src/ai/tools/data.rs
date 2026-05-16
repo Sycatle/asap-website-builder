@@ -1,139 +1,25 @@
-//! Data tools integration for AI
+//! Chain-of-thought tool execution loop.
 //!
-//! Handles tool execution, screenshot capture, and context gathering
-//! for AI responses.
+//! `execute_data_tools_with_events` is the workhorse that runs the AI's
+//! tool-calling loop until the model stops requesting tools or hits the
+//! iteration cap. `execute_data_tools_streaming_channel` wraps that in a
+//! `(future, receiver)` pair so the SSE handler can interleave tool events
+//! with the streamed response.
 
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::sync::mpsc;
 
 use asap_core_ai::{
     get_tool_definitions, AIOrchestrator, OpenAIProvider, ToolExecutor, WebsiteContext,
 };
 
-// ============================================================================
-// Types
-// ============================================================================
-
-/// Result of executing data tools
-#[derive(Debug, Clone)]
-pub struct DataToolExecution {
-    /// Combined tool results as context for the final response
-    pub context_additions: String,
-    /// Visual analysis request if the AI wants to analyze a screenshot
-    pub visual_analysis_request: Option<asap_core_ai::VisualAnalysisRequest>,
-}
-
-/// A single executed tool call with its result
-#[derive(Debug, Clone, Serialize)]
-pub struct ExecutedToolCall {
-    pub id: String,
-    pub tool_name: String,
-    pub success: bool,
-    pub description: String,
-    /// Duration in milliseconds
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub duration_ms: Option<u64>,
-}
-
-/// Tool event for real-time streaming
-#[derive(Debug, Clone)]
-pub enum ToolEvent {
-    /// Tool call started
-    Started {
-        id: String,
-        tool_name: String,
-        description: String,
-    },
-    /// Tool call completed
-    Completed {
-        id: String,
-        tool_name: String,
-        success: bool,
-        description: String,
-        duration_ms: u64,
-        result_preview: Option<String>,
-    },
-}
-
-/// Screenshot capture result
-#[derive(Debug)]
-pub struct ScreenshotData {
-    pub image_base64: String,
-    pub width: u32,
-    pub height: u32,
-}
+use super::{
+    capture_screenshot_server_side, DataToolExecution, ExecutedToolCall, PreloadedScreenshot,
+    ToolEvent, ToolEventSender,
+};
 
 /// Maximum iterations for tool calling loop to prevent infinite loops
 const MAX_TOOL_ITERATIONS: usize = 5;
-
-/// Preloaded screenshot handle type alias for clarity
-pub type PreloadedScreenshot = tokio::task::JoinHandle<Result<ScreenshotData, String>>;
-
-/// Channel sender for tool events
-pub type ToolEventSender = mpsc::UnboundedSender<ToolEvent>;
-
-// ============================================================================
-// Screenshot Capture
-// ============================================================================
-
-/// Capture a screenshot via the screenshot service
-pub async fn capture_screenshot_server_side(
-    screenshot_url: &str,
-    website_slug: &str,
-    viewport: &str,
-) -> Result<ScreenshotData, String> {
-    let client = reqwest::Client::new();
-
-    #[derive(Serialize)]
-    struct CaptureRequest<'a> {
-        #[serde(rename = "websiteSlug")]
-        website_slug: &'a str,
-        viewport: &'a str,
-        #[serde(rename = "waitFor")]
-        wait_for: u32,
-    }
-
-    #[derive(Deserialize)]
-    struct CaptureResponse {
-        image: String,
-        width: u32,
-        height: u32,
-    }
-
-    let response = client
-        .post(format!("{}/capture", screenshot_url))
-        .json(&CaptureRequest {
-            website_slug,
-            viewport,
-            wait_for: 1500,
-        })
-        .timeout(Duration::from_secs(30))
-        .send()
-        .await
-        .map_err(|e| format!("Failed to connect to screenshot service: {}", e))?;
-
-    if !response.status().is_success() {
-        let error_text = response.text().await.unwrap_or_default();
-        return Err(format!("Screenshot service error: {}", error_text));
-    }
-
-    let capture: CaptureResponse = response
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse screenshot response: {}", e))?;
-
-    Ok(ScreenshotData {
-        image_base64: capture.image,
-        width: capture.width,
-        height: capture.height,
-    })
-}
-
-// ============================================================================
-// Tool Helpers
-// ============================================================================
 
 /// Get a human-readable description for a tool
 pub fn get_tool_description(tool_name: &str) -> &'static str {
