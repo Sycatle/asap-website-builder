@@ -116,7 +116,7 @@ pub async fn forgot_password(
     // For now, log the token for development/testing only
     let reset_url = format!(
         "{}/reset-password?token={}",
-        std::env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:4321".to_string()),
+        crate::helpers::frontend_url(),
         reset_token.token
     );
 

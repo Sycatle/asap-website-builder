@@ -8,6 +8,13 @@
 // an allocation on every parse.
 #![allow(clippy::result_large_err)]
 
+/// Resolve the public frontend URL from `FRONTEND_URL`, falling back to the
+/// dev origin. Centralized so the dev fallback is in one place; production
+/// deployments are expected to set the env var explicitly.
+pub fn frontend_url() -> String {
+    std::env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:4321".to_string())
+}
+
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
