@@ -1,0 +1,70 @@
+---
+import '@/styles/global.css';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy — ASAP</title>
+    <meta name="description" content="How ASAP collects, uses, and protects your personal data." />
+    <link rel="canonical" href="https://asap.cool/legal/privacy" />
+  </head>
+  <body class="min-h-screen bg-white text-slate-900">
+    <main class="mx-auto max-w-3xl px-6 py-16 prose prose-slate">
+      <p><a href="/" class="text-slate-500 hover:text-slate-900">← ASAP</a></p>
+      <h1>Privacy Policy</h1>
+      <p><em>Draft — not legal advice. See <code>legal/PRIVACY.md</code> for the canonical version.</em></p>
+      <p><em>Last updated: <!-- TODO --></em></p>
+
+      <p>
+        ASAP is operated by <strong><!-- TODO: legal entity --></strong>, reachable at
+        <strong><!-- TODO: privacy email --></strong>.
+      </p>
+
+      <h2>1. Data we collect</h2>
+      <ul>
+        <li><strong>Account</strong> — email, hashed password, plan, locale.</li>
+        <li><strong>Content</strong> — websites, files, page elements, design tokens.</li>
+        <li><strong>Operational</strong> — IP, user agent, request logs (30 days).</li>
+        <li><strong>Billing</strong> — Stripe customer id, invoices (10 years).</li>
+        <li><strong>Communications</strong> — support tickets, transactional emails.</li>
+      </ul>
+
+      <h2>2. Sub-processors</h2>
+      <ul>
+        <li><strong>Stripe</strong> — payments.</li>
+        <li><strong>Resend</strong> — transactional email.</li>
+        <li><strong><!-- TODO --></strong> — application hosting.</li>
+        <li><strong><!-- TODO --></strong> — file storage + backups.</li>
+      </ul>
+
+      <h2>3. Your rights (GDPR Art. 15-21)</h2>
+      <ul>
+        <li><strong>Access &amp; portability</strong> — <code>GET /api/account/export</code> or Settings → Account → "Export my data".</li>
+        <li><strong>Erasure</strong> — <code>DELETE /api/accounts/{'{id}'}</code> or Settings → Account → "Delete my account".</li>
+        <li><strong>Rectification</strong> — edit your profile in Settings.</li>
+        <li><strong>Complaints</strong> — your local supervisory authority (in France, the CNIL).</li>
+      </ul>
+
+      <h2>4. Cookies</h2>
+      <p>Only strictly necessary first-party storage (auth, CSRF, locale). No analytics or marketing cookies by default.</p>
+
+      <h2>5. Security</h2>
+      <ul>
+        <li>bcrypt password hashing (cost 13).</li>
+        <li>Short-lived JWT access tokens; refresh tokens rotate and revoke the family on reuse.</li>
+        <li>Backups encrypted client-side before leaving the cluster.</li>
+        <li>HTTPS end-to-end in production.</li>
+      </ul>
+
+      <h2>6. Contact</h2>
+      <p><strong><!-- TODO: privacy email --></strong></p>
+
+      <p class="mt-12">
+        <a href="/legal/terms" class="text-slate-500 hover:text-slate-900">Terms of Service →</a>
+      </p>
+    </main>
+  </body>
+</html>
