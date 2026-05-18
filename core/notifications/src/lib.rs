@@ -6,8 +6,10 @@
 //! - Read/unread state management
 //! - Notification categories and priorities
 
+pub mod email;
 pub mod service;
 pub mod types;
 
+pub use email::*;
 pub use service::*;
 pub use types::*;

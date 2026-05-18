@@ -10,6 +10,7 @@ use chrono::{Duration, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use asap_core_notifications::{PasswordResetEmail, SharedEmailProvider};
 use asap_core_shared::{
     generate_password_reset_token, hash_token, validate_password_reset_token, SharedConfig,
     PASSWORD_RESET_TOKEN_LIFETIME_SECS,
@@ -26,6 +27,7 @@ use super::{ForgotPasswordRequest, ResetPasswordRequest};
 pub async fn forgot_password(
     State(pool): State<PgPool>,
     Extension(config): Extension<SharedConfig>,
+    Extension(email_provider): Extension<SharedEmailProvider>,
     Json(payload): Json<ForgotPasswordRequest>,
 ) -> impl IntoResponse {
     // Validate email format
@@ -112,22 +114,28 @@ pub async fn forgot_password(
         }))).into_response();
     }
 
-    // TODO: In production, send email with reset link
-    // For now, log the token for development/testing only
     let reset_url = format!(
         "{}/reset-password?token={}",
         crate::helpers::frontend_url(),
         reset_token.token
     );
 
-    // SECURITY: Only log reset URL in debug builds - never in production
-    #[cfg(debug_assertions)]
-    tracing::debug!("[DEV ONLY] Password reset URL: {}", reset_url);
+    let from = std::env::var("EMAIL_FROM").unwrap_or_else(|_| "ASAP <noreply@asap.cool>".into());
+    let app_name = std::env::var("APP_NAME").unwrap_or_else(|_| "ASAP".into());
+    let message = PasswordResetEmail {
+        to: &account.email,
+        reset_url: &reset_url,
+        app_name: &app_name,
+    }
+    .render(from);
 
-    tracing::info!("Password reset requested for {}", account.email);
-
-    // Create notification (optional - can be used for email sending)
-    // In the future, this could trigger an email notification
+    // Anti-enumeration: a delivery failure must not leak whether the address
+    // exists. We log and continue with the generic success response.
+    if let Err(e) = email_provider.send(message).await {
+        tracing::error!(account = %account.email, error = %e, "failed to send password reset email");
+    } else {
+        tracing::info!("Password reset email queued for {}", account.email);
+    }
 
     (
         StatusCode::OK,

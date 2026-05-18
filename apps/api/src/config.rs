@@ -63,7 +63,7 @@ pub struct Config {
 
 impl Config {
     pub fn from_env() -> Result<Self> {
-        Ok(Config {
+        let config = Config {
             database_url: env::var("DATABASE_URL").context(
                 "DATABASE_URL must be set. Example: postgresql://user:pass@localhost:5432/dbname",
             )?,
@@ -111,6 +111,29 @@ impl Config {
             },
             frontend_url: env::var("FRONTEND_URL")
                 .unwrap_or_else(|_| "http://localhost:4321".to_string()),
-        })
+        };
+        validate_email_config(is_production())?;
+        Ok(config)
     }
+}
+
+fn validate_email_config(is_prod: bool) -> Result<()> {
+    if !is_prod {
+        return Ok(());
+    }
+    if env::var("RESEND_API_KEY")
+        .map(|v| v.trim().is_empty())
+        .unwrap_or(true)
+    {
+        return Err(anyhow!(
+            "RESEND_API_KEY must be set in production — transactional email is mandatory"
+        ));
+    }
+    let from = env::var("EMAIL_FROM").unwrap_or_default();
+    if from.trim().is_empty() {
+        return Err(anyhow!(
+            "EMAIL_FROM must be set in production (e.g. \"ASAP <noreply@asap.cool>\")"
+        ));
+    }
+    Ok(())
 }

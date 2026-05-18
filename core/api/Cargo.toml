@@ -10,6 +10,7 @@ asap-core-domain = { path = "../domain" }
 asap-core-shared = { path = "../shared" }
 asap-core-payments = { path = "../payments" }
 asap-core-ai = { path = "../ai" }
+asap-core-notifications = { path = "../notifications" }
 
 # Async runtime
 tokio = { workspace = true }

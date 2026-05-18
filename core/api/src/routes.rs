@@ -1,5 +1,8 @@
 use crate::rate_limit::{RateLimiter, SharedRateLimiter};
 use asap_core_ai::{AIConfig, AIOrchestrator, AIRateLimiter};
+use asap_core_notifications::{
+    NoopEmailProvider, ResendConfig, ResendProvider, SharedEmailProvider,
+};
 use asap_core_shared::{NoOpBroadcaster, SharedConfig, SharedWsBroadcaster};
 use axum::{
     extract::DefaultBodyLimit,
@@ -123,6 +126,26 @@ pub async fn create_router_with_ws(
         Arc::new(orchestrator)
     };
 
+    // Email provider (Resend). In production, missing config is enforced at
+    // `apps/api/src/config.rs` startup; here we fall back to noop so unit tests
+    // and dev runs without RESEND_API_KEY stay green.
+    let email_provider: SharedEmailProvider = match ResendConfig::from_env() {
+        Some(cfg) => match ResendProvider::new(cfg) {
+            Ok(provider) => {
+                tracing::info!("Resend email provider initialized");
+                Arc::new(provider)
+            }
+            Err(e) => {
+                tracing::error!("Resend init failed ({e}); falling back to noop provider");
+                Arc::new(NoopEmailProvider)
+            }
+        },
+        None => {
+            tracing::warn!("RESEND_API_KEY not set — using noop email provider");
+            Arc::new(NoopEmailProvider)
+        }
+    };
+
     // Authenticated routes (require JWT)
     let authenticated_routes = Router::new()
         .route("/auth/me", get(crate::auth::me))
@@ -135,6 +158,7 @@ pub async fn create_router_with_ws(
         .route("/accounts/:id", get(crate::accounts::get_account))
         .route("/accounts/:id", put(crate::accounts::update_account))
         .route("/accounts/:id", delete(crate::accounts::delete_account))
+        .route("/account/export", get(crate::accounts::export_account))
         .route(
             "/accounts/:id/integrations",
             get(crate::integrations::get_integrations),
@@ -505,6 +529,7 @@ pub async fn create_router_with_ws(
         .layer(Extension(ai_orchestrator.clone()))
         .layer(Extension(storage_service.clone()))
         .layer(Extension(payment_gateway.clone()))
+        .layer(Extension(email_provider.clone()))
         .layer(Extension(config.clone()))
         .layer(Extension(broadcaster.clone()))
         .with_state(pool.clone())
@@ -580,6 +605,7 @@ pub async fn create_router_with_ws(
         )
         .layer(Extension(storage_service))
         .layer(Extension(payment_gateway))
+        .layer(Extension(email_provider))
         .layer(Extension(config.clone()))
         .with_state(pool)
         // Rate limiting for auth endpoints (applied before CSRF)

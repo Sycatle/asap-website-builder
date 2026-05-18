@@ -17,6 +17,7 @@ use sqlx::PgPool;
 use tracing::{error, info};
 use uuid::Uuid;
 
+use asap_core_notifications::{AdminInvitationEmail, SharedEmailProvider};
 use asap_core_shared::Claims;
 
 // ============================================================================
@@ -211,6 +212,7 @@ pub async fn list_administrators(
 pub async fn invite_administrator(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
+    Extension(email): Extension<SharedEmailProvider>,
     Path(website_id): Path<Uuid>,
     Json(request): Json<InviteAdministratorRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
@@ -434,7 +436,48 @@ pub async fn invite_administrator(
         request.email, website_id
     );
 
-    // TODO: Send invitation email via notification system
+    // Send invitation email (best-effort: log failures, don't fail the request).
+    // Use runtime sqlx::query to avoid bloating the offline cache for cosmetic lookups.
+    if status == "pending" {
+        let website_name: String =
+            sqlx::query_scalar::<_, String>("SELECT name FROM websites WHERE id = $1")
+                .bind(website_id)
+                .fetch_optional(&pool)
+                .await
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| "your site".to_string());
+
+        let inviter_email: String =
+            sqlx::query_scalar::<_, String>("SELECT email FROM accounts WHERE id = $1")
+                .bind(account_id)
+                .fetch_optional(&pool)
+                .await
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| "An administrator".to_string());
+
+        let accept_url = format!(
+            "{}/admin-invite?token={}",
+            crate::helpers::frontend_url(),
+            invitation_token
+        );
+        let from =
+            std::env::var("EMAIL_FROM").unwrap_or_else(|_| "ASAP <noreply@asap.cool>".into());
+        let app_name = std::env::var("APP_NAME").unwrap_or_else(|_| "ASAP".into());
+        let message = AdminInvitationEmail {
+            to: &request.email,
+            inviter_email: &inviter_email,
+            website_name: &website_name,
+            accept_url: &accept_url,
+            app_name: &app_name,
+        }
+        .render(from);
+
+        if let Err(e) = email.send(message).await {
+            error!(error = %e, "failed to send admin invitation email");
+        }
+    }
 
     let message = if status == "active" {
         "Administrator added successfully (user already has an account)"
