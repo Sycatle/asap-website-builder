@@ -1,0 +1,122 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: asap-postgres-backup
+  namespace: asap
+  labels:
+    app: asap-postgres-backup
+spec:
+  # Daily at 02:00 UTC. Adjust per-overlay if needed.
+  schedule: "0 2 * * *"
+  timeZone: "Etc/UTC"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 7
+  startingDeadlineSeconds: 600
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 3600
+      template:
+        spec:
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 70
+            runAsGroup: 70
+            fsGroup: 70
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: dump
+              image: postgres:15-alpine
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -euo pipefail
+                  export PGPASSWORD
+                  export AWS_ACCESS_KEY_ID
+                  export AWS_SECRET_ACCESS_KEY
+                  apk add --no-cache aws-cli gnupg >/dev/null
+                  STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+                  DUMP_KEY="postgres/${STAMP}.dump.gpg"
+                  gpg --batch --import /etc/backup-gpg/public.asc
+                  pg_dump \
+                    --host="${POSTGRES_HOST}" \
+                    --port="${POSTGRES_PORT}" \
+                    --username="${POSTGRES_USER}" \
+                    --dbname="${POSTGRES_DB}" \
+                    --format=custom \
+                    --no-owner \
+                    --no-privileges \
+                    --verbose \
+                    | gpg --batch --yes --trust-model always --encrypt --recipient "${GPG_RECIPIENT}" \
+                    | aws s3 cp - "s3://${BACKUP_BUCKET}/${DUMP_KEY}" \
+                        --endpoint-url "${AWS_ENDPOINT_URL:-https://s3.amazonaws.com}" \
+                        --expected-size 5368709120
+                  echo "uploaded s3://${BACKUP_BUCKET}/${DUMP_KEY}"
+              env:
+                - name: POSTGRES_HOST
+                  value: "asap-postgres"
+                - name: POSTGRES_PORT
+                  value: "5432"
+                - name: POSTGRES_USER
+                  value: "asap"
+                - name: POSTGRES_DB
+                  value: "asap"
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: asap-secrets
+                      key: postgres-password
+                - name: BACKUP_BUCKET
+                  valueFrom:
+                    secretKeyRef:
+                      name: asap-backup
+                      key: bucket
+                - name: AWS_ENDPOINT_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: asap-backup
+                      key: endpoint
+                      optional: true
+                - name: AWS_DEFAULT_REGION
+                  valueFrom:
+                    secretKeyRef:
+                      name: asap-backup
+                      key: region
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: asap-backup
+                      key: access-key-id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: asap-backup
+                      key: secret-access-key
+                - name: GPG_RECIPIENT
+                  valueFrom:
+                    secretKeyRef:
+                      name: asap-backup
+                      key: gpg-recipient
+              resources:
+                requests:
+                  memory: "256Mi"
+                  cpu: "200m"
+                limits:
+                  memory: "1Gi"
+                  cpu: "1000m"
+              volumeMounts:
+                - name: gpg-public
+                  mountPath: /etc/backup-gpg
+                  readOnly: true
+          volumes:
+            - name: gpg-public
+              secret:
+                secretName: asap-backup
+                items:
+                  - key: gpg-public-key
+                    path: public.asc

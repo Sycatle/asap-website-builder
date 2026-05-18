@@ -1,0 +1,86 @@
+name: Restore drill
+
+on:
+  schedule:
+    # First Monday of the month at 04:00 UTC.
+    - cron: "0 4 1-7 * 1"
+  workflow_dispatch:
+    inputs:
+      dump_key:
+        description: "Optional S3 key to restore. Defaults to the most recent dump."
+        required: false
+
+concurrency:
+  group: restore-drill
+  cancel-in-progress: false
+
+jobs:
+  drill:
+    name: Restore most recent backup into a throwaway DB
+    runs-on: ubuntu-latest
+    environment: restore-drill
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: asap
+          POSTGRES_PASSWORD: drill
+          POSTGRES_DB: asap_restore
+        options: >-
+          --health-cmd "pg_isready -U asap"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+    env:
+      AWS_DEFAULT_REGION: ${{ secrets.BACKUP_AWS_REGION }}
+      AWS_ENDPOINT_URL: ${{ secrets.BACKUP_AWS_ENDPOINT }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_AWS_SECRET_ACCESS_KEY }}
+      BACKUP_BUCKET: ${{ secrets.BACKUP_BUCKET }}
+      GPG_PASSPHRASE: ${{ secrets.BACKUP_GPG_PASSPHRASE }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y awscli postgresql-client gnupg
+
+      - name: Import private GPG key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.BACKUP_GPG_PRIVATE_KEY }}
+        run: |
+          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+
+      - name: Resolve dump key
+        id: resolve
+        run: |
+          if [[ -n "${{ inputs.dump_key }}" ]]; then
+            KEY="${{ inputs.dump_key }}"
+          else
+            KEY="$(aws s3 ls "s3://${BACKUP_BUCKET}/postgres/" \
+                    --endpoint-url "${AWS_ENDPOINT_URL:-https://s3.amazonaws.com}" \
+                    | sort | tail -1 | awk '{print $4}')"
+            KEY="postgres/${KEY}"
+          fi
+          echo "key=$KEY" >> "$GITHUB_OUTPUT"
+          echo "Restoring s3://${BACKUP_BUCKET}/$KEY"
+
+      - name: Restore
+        run: |
+          ./scripts/backup/restore.sh \
+            "s3://${BACKUP_BUCKET}/${{ steps.resolve.outputs.key }}" \
+            "postgres://asap:drill@localhost:5432/asap_restore"
+
+      - name: Sanity check
+        run: |
+          PGPASSWORD=drill psql -h localhost -U asap -d asap_restore -tAc "SELECT 1"
+          PGPASSWORD=drill psql -h localhost -U asap -d asap_restore -tAc "SELECT to_regclass('public.websites') IS NOT NULL" \
+            | grep -qx 't'
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Restore drill failed — backups are not validated. This is a P1."
