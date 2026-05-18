@@ -5,7 +5,6 @@
  * Route: /{slug}
  */
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import SectionsRenderer from '@/components/rendering/SectionsRenderer.astro';
 import PageNavigation from '@/components/site/PageNavigation.astro';
 import { buildSeo, getSiteRenderPayload, resolveSitePage } from '@/lib/site-data';
 
@@ -71,7 +70,17 @@ const showNavigation = payload.pages.length > 1;
         </div>
       </section>
     ) : (
-      <SectionsRenderer sections={page.sections} website={website} />
+      <section class="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <div class="text-center px-6 max-w-2xl">
+          <h1 class="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-3">
+            Rendering pipeline being rebuilt
+          </h1>
+          <p class="text-slate-600 dark:text-slate-400">
+            Sections are being migrated to AI-generated code bound to design tokens.
+            This site will render again once the new runtime ships.
+          </p>
+        </div>
+      </section>
     )}
   </div>
 </BaseLayout>
