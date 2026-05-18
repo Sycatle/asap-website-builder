@@ -12,6 +12,7 @@
     "declaration": true,
     "declarationMap": true,
     "noEmit": true,
+    "types": ["vite/client"],
     "paths": {
       "@/*": ["../../../apps/web/src/*"]
     }
