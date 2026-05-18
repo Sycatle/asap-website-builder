@@ -28,7 +28,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { templatesAPI, type ElementTemplateSummary } from '@/lib/api/templates';
 import { getElementIcon } from '@/lib/constants/elements';
-import { VARIANT_VISUALS } from './variant-picker';
 
 export interface TemplateLibraryProps {
   /** Filter by element type (optional) */
@@ -135,19 +134,8 @@ export function TemplateLibrary({
     }
   };
 
-  // Get visual for template
-  const getTemplateVisual = (template: ElementTemplateSummary) => {
-    const sectionVisuals = VARIANT_VISUALS[template.element_type];
-    if (sectionVisuals && template.variant) {
-      return sectionVisuals[template.variant];
-    }
-    // Fallback to first variant or icon
-    if (sectionVisuals) {
-      const firstVariant = Object.keys(sectionVisuals)[0];
-      return sectionVisuals[firstVariant];
-    }
-    return null;
-  };
+  // Template visual stub — section variants removed in the AI-codegen refactor.
+  const getTemplateVisual = (_template: ElementTemplateSummary) => null;
 
   if (isLoading && templates.length === 0) {
     return (

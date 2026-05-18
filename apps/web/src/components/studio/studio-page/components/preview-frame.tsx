@@ -3,7 +3,34 @@
 import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { WebsiteElement } from '@/lib/api';
-import { SectionRenderer } from '../../section-renderers';
+// Section rendering pipeline is being rebuilt around AI-generated code
+// (see /home/sycatle/.claude/plans/n-a-t-on-pas-int-grer-floofy-sifakis.md).
+// Placeholder kept inline below so the studio shell still mounts.
+function SectionRenderer({ element }: { element: { id: string; element_type: string; title?: string } }) {
+  return (
+    <div
+      data-element-id={element.id}
+      style={{
+        padding: '32px',
+        border: '1px dashed var(--border, #ccc)',
+        background: 'var(--muted, #f5f5f5)',
+        color: 'var(--muted-foreground, #666)',
+        borderRadius: 8,
+        textAlign: 'center',
+        margin: '12px 0',
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: 13,
+      }}
+    >
+      <div style={{ fontWeight: 600, marginBottom: 4 }}>
+        {element.title || element.element_type}
+      </div>
+      <div style={{ opacity: 0.7 }}>
+        Section preview unavailable — rendering pipeline being rebuilt around AI-generated code.
+      </div>
+    </div>
+  );
+}
 import { PreviewProvider } from '../../preview-context';
 import type { PreviewTheme } from '../types';
 import type { DevicePreview } from '../types';
@@ -542,11 +569,7 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
                       </div>
                     )}
                     
-                    <SectionRenderer
-                      element={element}
-                      isSelected={isSelected}
-                      onClick={() => onElementClick?.(element.id)}
-                    />
+                    <SectionRenderer element={element} />
                   </div>
                 );
               })

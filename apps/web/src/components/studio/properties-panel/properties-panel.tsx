@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { GeneralProperties } from "./general-properties";
 import { ContentProperties } from "./content-properties";
-import { VariantPicker } from "./variant-picker";
 import { cn } from "@/lib/utils";
 
 // ============================================
@@ -273,18 +272,6 @@ export function PropertiesPanel({
                   </h4>
                 </div>
                 <GeneralProperties
-                  element={element}
-                  onUpdate={handleUpdate}
-                  isUpdating={isUpdating}
-                />
-              </div>
-
-              {/* Variant Section — layout + params from the renderer catalog */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Variant
-                </h4>
-                <VariantPicker
                   element={element}
                   onUpdate={handleUpdate}
                   isUpdating={isUpdating}
