@@ -79,15 +79,14 @@ export default defineConfig({
         '@': '/src',
         // Resolve workspace packages to absolute paths to avoid duplicate module issues
         '@asap/shared': fileURLToPath(new URL('../../packages/shared/src/index.ts', import.meta.url)),
-        '@asap/renderers': fileURLToPath(new URL('../../packages/renderers/src/index.ts', import.meta.url)),
       },
     },
     // Ensure workspace packages are bundled for SSR (so Node never imports .ts files)
     ssr: {
-      noExternal: ['@asap/shared', '@asap/renderers'],
+      noExternal: ['@asap/shared'],
     },
     optimizeDeps: {
-      include: ['@asap/shared', '@asap/renderers'],
+      include: ['@asap/shared'],
     },
     build: {
       // Optimize chunk splitting for better caching
