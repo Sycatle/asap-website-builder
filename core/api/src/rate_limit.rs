@@ -64,6 +64,24 @@ impl RateLimitConfig {
         }
     }
 
+    /// Strict limit for password-reset request (anti-enumeration / mailbomb)
+    pub fn forgot_password() -> Self {
+        Self {
+            max_requests: 3,
+            window_secs: 600,         // 10 minutes
+            block_duration_secs: 900, // 15 minutes
+        }
+    }
+
+    /// Moderate limit for token refresh (catches stolen refresh-token spam)
+    pub fn refresh() -> Self {
+        Self {
+            max_requests: 30,
+            window_secs: 60,
+            block_duration_secs: 120,
+        }
+    }
+
     /// Standard API rate limit (100 per minute)
     pub fn standard() -> Self {
         Self {
@@ -357,6 +375,9 @@ pub async fn auth_rate_limit_middleware(
         "/auth/login" | "/api/auth/login" => RateLimitConfig::login(),
         "/auth/signup" | "/api/auth/signup" => RateLimitConfig::signup(),
         "/auth/change-password" | "/api/auth/change-password" => RateLimitConfig::password_change(),
+        "/auth/forgot-password" | "/api/auth/forgot-password" => RateLimitConfig::forgot_password(),
+        "/auth/reset-password" | "/api/auth/reset-password" => RateLimitConfig::forgot_password(),
+        "/auth/refresh" | "/api/auth/refresh" => RateLimitConfig::refresh(),
         _ => return next.run(req).await, // Not a rate-limited endpoint
     };
 
