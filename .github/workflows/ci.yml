@@ -83,3 +83,21 @@ jobs:
 
       - name: Test
         run: pnpm -r --if-present test -- --run
+
+  manifests:
+    name: K8s manifests guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Forbid mutable tags in production overlay
+        run: |
+          set -euo pipefail
+          file=infra/kubernetes/overlays/production/kustomization.yaml
+          if grep -E 'newTag:[[:space:]]*(latest|staging)\b' "$file"; then
+            echo "::error file=$file::Production overlay must not reference mutable image tags"
+            exit 1
+          fi
+          if grep -E 'image:[[:space:]]*[^[:space:]]+:latest' infra/kubernetes/overlays/production/*.yaml 2>/dev/null; then
+            echo "::error::Production overlay must not pin :latest images"
+            exit 1
+          fi
