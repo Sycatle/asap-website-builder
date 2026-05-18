@@ -19,7 +19,6 @@
     "@astrojs/sitemap": "^3.3.1",
     "@astrojs/tailwind": "^6.0.0",
     "@asap/shared": "workspace:*",
-    "@asap/renderers": "workspace:*",
     "astro": "^5.16.4",
     "astro-compressor": "^0.4.1",
     "@sentry/astro": "^8.45.0",

@@ -10,7 +10,6 @@ pub mod integrations;
 pub mod storage;
 pub mod templates;
 pub mod users;
-pub mod variant_catalog;
 pub mod websites;
 
 pub use administrators::{
@@ -116,10 +115,6 @@ pub use templates::{
     ListElementTemplatesQuery, UpdateElementTemplateRequest,
 };
 pub use users::{Account, AccountData};
-pub use variant_catalog::{
-    default_variant_key_for, find_variant, validate_variant, variant_catalog, VariantParamSpec,
-    VariantParamType, VariantSpec, VariantValidation,
-};
 pub use websites::{
     CreationMode, ElementLayout, ElementType, Extension, Preset, PresetConfig, PresetElementConfig,
     Website, WebsiteData, WebsiteElement, WebsiteExtension, WebsiteStatus,
