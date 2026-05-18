@@ -5,8 +5,11 @@ import react from '@astrojs/react';
 import tailwind from '@astrojs/tailwind';
 import sitemap from '@astrojs/sitemap';
 import compressor from 'astro-compressor';
+import sentry from '@sentry/astro';
 import { fileURLToPath } from 'url';
 import path from 'path';
+
+const SENTRY_DSN = process.env.SENTRY_DSN || process.env.PUBLIC_SENTRY_DSN;
 
 // https://astro.build/config
 export default defineConfig({
@@ -26,6 +29,16 @@ export default defineConfig({
   },
   
   integrations: [
+    ...(SENTRY_DSN
+      ? [
+          sentry({
+            dsn: SENTRY_DSN,
+            environment: process.env.ASAP_ENV || process.env.NODE_ENV,
+            tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? '0.05'),
+            sourceMapsUploadOptions: { telemetry: false },
+          }),
+        ]
+      : []),
     react(),
     tailwind({
       // Disable injecting base styles (we handle them in global.css)

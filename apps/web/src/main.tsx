@@ -1,10 +1,13 @@
 import { createRoot } from 'react-dom/client';
 import { Toaster } from '@/components/ui/sonner';
 import AppRouter from '@/components/app-router';
+import { initSentry } from '@/lib/sentry';
 
 import '@/styles/global.css';
 import '@/styles/studio-design-system.css';
 import '@/styles/studio-animations.css';
+
+initSentry();
 
 function bootstrapPwa() {
   const isServiceWorkerSupported = 'serviceWorker' in navigator;

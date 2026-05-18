@@ -84,19 +84,51 @@ async fn health_pool(State(pool): State<PgPool>) -> Json<serde_json::Value> {
     }))
 }
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    // Load environment variables
+fn main() -> anyhow::Result<()> {
+    // Load environment variables before reading SENTRY_DSN.
     dotenv::dotenv().ok();
 
-    // Initialize tracing
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "asap_api=debug,tower_http=debug,sqlx=info".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    // Sentry: opt-in via SENTRY_DSN. Hold the guard for the whole process so
+    // pending events are flushed on shutdown.
+    let _sentry_guard = std::env::var("SENTRY_DSN").ok().map(|dsn| {
+        sentry::init((
+            dsn,
+            sentry::ClientOptions {
+                release: sentry::release_name!(),
+                environment: std::env::var("ASAP_ENV")
+                    .or_else(|_| std::env::var("ENVIRONMENT"))
+                    .ok()
+                    .map(Into::into),
+                traces_sample_rate: std::env::var("SENTRY_TRACES_SAMPLE_RATE")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(0.05),
+                attach_stacktrace: true,
+                send_default_pii: false,
+                ..Default::default()
+            },
+        ))
+    });
+
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?
+        .block_on(run())
+}
+
+async fn run() -> anyhow::Result<()> {
+    // Initialize tracing — pipe events through Sentry when the DSN is set.
+    let fmt_layer = tracing_subscriber::fmt::layer();
+    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| "asap_api=debug,tower_http=debug,sqlx=info".into());
+    let registry = tracing_subscriber::registry()
+        .with(env_filter)
+        .with(fmt_layer);
+    if std::env::var("SENTRY_DSN").is_ok() {
+        registry.with(sentry_tracing::layer()).init();
+    } else {
+        registry.init();
+    }
 
     tracing::info!("Starting ASAP Core API");
 
@@ -179,11 +211,25 @@ async fn main() -> anyhow::Result<()> {
     )
     .await;
 
-    // Create health routes with pool state
+    // Prometheus metrics — install a process-global recorder and expose the
+    // /metrics endpoint so a sidecar (or kube-prometheus) can scrape it.
+    let metrics_handle = metrics_exporter_prometheus::PrometheusBuilder::new()
+        .install_recorder()
+        .map_err(|e| anyhow::anyhow!("failed to install Prometheus recorder: {e}"))?;
+
+    // Create health + metrics routes with pool state
     let health_router = Router::new()
         .route("/health", get(health))
         .route("/health/pool", get(health_pool))
         .with_state(pool.clone());
+
+    let metrics_router = Router::new().route(
+        "/metrics",
+        get(move || {
+            let handle = metrics_handle.clone();
+            async move { handle.render() }
+        }),
+    );
 
     // Create WebSocket router with ws_state
     let ws_router = Router::new()
@@ -225,6 +271,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .merge(health_router)
+        .merge(metrics_router)
         .merge(ws_router)
         .nest("/api", api_router)
         .layer(cors)
