@@ -4,7 +4,7 @@ use axum::{extract::State, http::StatusCode, Extension, Json};
 use sqlx::PgPool;
 use std::sync::Arc;
 
-use asap_core_ai::AIOrchestrator;
+use asap_core_ai::{AIOrchestrator, RateLimitResource};
 
 use crate::Claims;
 
@@ -19,7 +19,7 @@ use super::types::{ErrorResponse, QuotaResponse};
 /// GET /api/v1/ai/quota
 pub async fn get_quota(
     State(pool): State<PgPool>,
-    Extension(_orchestrator): Extension<Arc<AIOrchestrator>>,
+    Extension(orchestrator): Extension<Arc<AIOrchestrator>>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<QuotaResponse>, (StatusCode, Json<ErrorResponse>)> {
     let account_id = get_account_id(&claims).map_err(|s| {
@@ -45,7 +45,22 @@ pub async fn get_quota(
     })?;
 
     let daily_limit = get_plan_daily_limit(&plan);
-    let daily_used = 0u32; // TODO: Get actual usage from rate limiter
+    // Read current usage from the AI rate limiter when available. In dev (no Redis)
+    // the orchestrator runs without a limiter, so we report zero usage.
+    let daily_used: u32 = if let Some(limiter) = orchestrator.rate_limiter() {
+        match limiter
+            .check(&account_id.to_string(), &plan, RateLimitResource::Messages)
+            .await
+        {
+            Ok(status) => (status.limit - status.remaining).max(0) as u32,
+            Err(e) => {
+                tracing::warn!("Failed to read AI rate limiter status: {}", e);
+                0
+            }
+        }
+    } else {
+        0
+    };
 
     let now = chrono::Utc::now();
     let tomorrow = now.date_naive().succ_opt().unwrap();

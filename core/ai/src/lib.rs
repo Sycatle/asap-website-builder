@@ -36,7 +36,7 @@ pub use providers::{
     ChatCompletionWithTools, ImageUrlContent, MessageContent, OpenAIMessage, OpenAIMessageVision,
     OpenAIProvider, VisionContentPart,
 };
-pub use rate_limiter::AIRateLimiter;
+pub use rate_limiter::{AIRateLimiter, RateLimitResource, RateLimitStatus};
 pub use router::ModelRouter;
 pub use tools::{
     get_tool_definitions, ToolCall, ToolDefinition, ToolExecutor, ToolResult, VisualAnalysisParams,

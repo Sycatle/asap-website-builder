@@ -185,6 +185,11 @@ impl AIOrchestrator {
         &self.router
     }
 
+    /// Get the optional rate limiter handle (None in dev / when Redis is unavailable).
+    pub fn rate_limiter(&self) -> Option<Arc<AIRateLimiter>> {
+        self.rate_limiter.clone()
+    }
+
     /// Get the AI config
     pub fn config(&self) -> &AIConfig {
         &self.config
