@@ -26,8 +26,6 @@
       "@/*": ["./src/*"],
       "@asap/shared": ["../../packages/shared/src/index.ts"],
       "@asap/shared/*": ["../../packages/shared/src/*"],
-      "@asap/renderers": ["../../packages/renderers/src/index.ts"],
-      "@asap/renderers/*": ["../../packages/renderers/src/*"],
       "@asap/extension-github-sync": ["../../extensions/github-sync/frontend/src/index.ts"],
       "@asap/extension-github-sync/*": ["../../extensions/github-sync/frontend/src/*"]
     }
