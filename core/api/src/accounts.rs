@@ -623,3 +623,107 @@ pub async fn delete_account(
         }
     }
 }
+
+/// Export every record tied to the authenticated account as JSON.
+///
+/// GDPR Article 20 (data portability). Returns the full payload in one
+/// response — fine for individual users; if a single account ever grows past
+/// a few MB, switch to streaming a ZIP archive of per-table NDJSON files.
+pub async fn export_account(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let account_id = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({"error": "Invalid token"})),
+            )
+                .into_response();
+        }
+    };
+
+    async fn fetch_json(
+        pool: &PgPool,
+        query: &str,
+        account_id: Uuid,
+    ) -> Result<serde_json::Value, sqlx::Error> {
+        let rows: Vec<(serde_json::Value,)> = sqlx::query_as(query)
+            .bind(account_id)
+            .fetch_all(pool)
+            .await?;
+        Ok(serde_json::Value::Array(
+            rows.into_iter().map(|(v,)| v).collect(),
+        ))
+    }
+
+    // Build a payload across every table that holds account-scoped data.
+    // Use `to_jsonb(t)` so newly added columns flow into the export
+    // automatically without having to touch this handler.
+    let queries: &[(&str, &str)] = &[
+        (
+            "account",
+            "SELECT to_jsonb(a) - 'password_hash' FROM accounts a WHERE id = $1",
+        ),
+        (
+            "websites",
+            "SELECT to_jsonb(w) FROM websites w WHERE owner_id = $1",
+        ),
+        (
+            "files",
+            "SELECT to_jsonb(f) - 'content_blob' FROM files f WHERE owner_id = $1",
+        ),
+        (
+            "notifications",
+            "SELECT to_jsonb(n) FROM notifications n WHERE account_id = $1",
+        ),
+        (
+            "ai_conversations",
+            "SELECT to_jsonb(c) FROM ai_conversations c WHERE account_id = $1",
+        ),
+        (
+            "administrator_memberships",
+            "SELECT to_jsonb(a) FROM website_administrators a WHERE account_id = $1",
+        ),
+    ];
+
+    let mut export = serde_json::Map::new();
+    export.insert(
+        "exported_at".into(),
+        serde_json::Value::String(chrono::Utc::now().to_rfc3339()),
+    );
+    export.insert(
+        "account_id".into(),
+        serde_json::Value::String(account_id.to_string()),
+    );
+
+    for (key, sql) in queries {
+        match fetch_json(&pool, sql, account_id).await {
+            Ok(value) => {
+                export.insert((*key).to_string(), value);
+            }
+            Err(e) => {
+                // A missing relation or column means the schema has drifted — log
+                // and keep going so the export is best-effort rather than fragile.
+                tracing::warn!(table = %key, error = %e, "skipping table in export");
+                export.insert((*key).to_string(), serde_json::json!([]));
+            }
+        }
+    }
+
+    let body = serde_json::Value::Object(export);
+    let body_bytes = serde_json::to_vec_pretty(&body).unwrap_or_else(|_| b"{}".to_vec());
+
+    let mut response = axum::response::Response::new(axum::body::Body::from(body_bytes));
+    response.headers_mut().insert(
+        axum::http::header::CONTENT_TYPE,
+        "application/json".parse().unwrap(),
+    );
+    if let Ok(disp) = format!("attachment; filename=\"asap-export-{account_id}.json\"").parse() {
+        response
+            .headers_mut()
+            .insert(axum::http::header::CONTENT_DISPOSITION, disp);
+    }
+    response
+}
