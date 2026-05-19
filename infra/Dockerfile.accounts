@@ -3,7 +3,7 @@
 # Production: Multi-stage build for optimized image
 # ============================================================================
 
-FROM node:20-alpine AS base
+FROM node:26-alpine AS base
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate

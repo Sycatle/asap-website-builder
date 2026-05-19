@@ -24,7 +24,7 @@ CMD ["pnpm", "dev", "--host", "0.0.0.0"]
 # ============================================================================
 # For production - separate build (not using base image)
 # ============================================================================
-FROM node:20-alpine AS base
+FROM node:26-alpine AS base
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate

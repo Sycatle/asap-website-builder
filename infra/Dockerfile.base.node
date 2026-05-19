@@ -2,7 +2,7 @@
 # Base Node Development Image
 # Shared by Web, Accounts, and Sites services for hot reload development
 # ============================================================================
-FROM node:20-alpine
+FROM node:26-alpine
 
 WORKDIR /app
 
