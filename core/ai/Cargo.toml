@@ -61,4 +61,4 @@ swc_core = { version = "39", default-features = false, features = [
 [dev-dependencies]
 tokio-test = { workspace = true }
 mockall = { workspace = true }
-wiremock = "0.5"
+wiremock = "0.6"
