@@ -46,4 +46,4 @@ metrics = "0.24"
 metrics-exporter-prometheus = { version = "0.15", default-features = false }
 sentry = { version = "0.48", default-features = false, features = ["backtrace", "contexts", "panic", "rustls", "reqwest", "tower", "tracing"] }
 sentry-tower = { version = "0.48", features = ["http"] }
-sentry-tracing = "0.34"
+sentry-tracing = "0.48"
