@@ -32,7 +32,7 @@ uuid = { workspace = true }
 chrono = { workspace = true }
 tracing = { workspace = true }
 bytes = { workspace = true }
-regex = "1.10"
+regex = "1.12"
 
 # SSE parsing
 eventsource-stream = "0.2"

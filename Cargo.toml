@@ -20,7 +20,7 @@ license = "MIT"
 
 [workspace.dependencies]
 # Async runtime
-tokio = { version = "1.35", features = ["full"] }
+tokio = { version = "1.50", features = ["full"] }
 tokio-util = "0.7"
 
 # Web framework
@@ -45,7 +45,7 @@ anyhow = "1.0"
 thiserror = "1.0"
 
 # Utilities
-uuid = { version = "1.6", features = ["serde", "v4"] }
+uuid = { version = "1.23", features = ["serde", "v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -59,8 +59,8 @@ async-trait = "0.1"
 
 # File upload & compression
 multipart = "0.18"
-bytes = "1.5"
-flate2 = "1.0"
+bytes = "1.11"
+flate2 = "1.1"
 sha2 = "0.10"
 hmac = "0.12"
 hex = "0.4"
