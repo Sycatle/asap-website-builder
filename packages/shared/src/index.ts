@@ -19,9 +19,6 @@ export * from './tokens';
 // Freelance Profile (V1 Canonical Model)
 export * from './freelance-profile';
 
-// Landing SaaS Schemas (Property definitions)
-export * from './landing-saas-schema';
-
 // Site rendering payloads
 export * from './site-rendering';
 

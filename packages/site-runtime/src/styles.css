@@ -1,0 +1,21 @@
+/*
+ * Base layer for AI-generated sites. Imports the Tailwind layers and resets the
+ * page background / foreground to the token values so any site using the
+ * preset gets sensible defaults without per-section noise.
+ *
+ * Hosts include this once at the root, alongside the per-request token CSS
+ * emitted by `buildTokenStyles()`.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    background-color: rgb(var(--color-background));
+    color: rgb(var(--color-foreground));
+    font-family: var(--font-body);
+  }
+}

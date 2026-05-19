@@ -11,6 +11,12 @@ export interface SiteAsset {
 
 export interface SiteRenderSection extends Element {
   data: Record<string, unknown>;
+  /**
+   * Absolute (or origin-relative) URL where the compiled JS module lives.
+   * Populated by the API when the section has been generated; absent (or
+   * null) for sections that haven't been compiled yet.
+   */
+  module_url?: string | null;
 }
 
 export interface SiteRenderPage extends Omit<Page, 'elements'> {

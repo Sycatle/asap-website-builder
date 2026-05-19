@@ -1,0 +1,27 @@
+{
+  "name": "@asap/site-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Per-tenant runtime for ASAP sites: token injection, data hooks, Tailwind preset, and compiled-section host. Consumed by apps/sites (production) and apps/web (studio preview).",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tailwind-preset": "./src/tailwind-preset.cjs",
+    "./styles.css": "./src/styles.css"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@asap/shared": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "typescript": "^5.9.3"
+  }
+}
