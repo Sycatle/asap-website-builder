@@ -41,7 +41,7 @@ jobs:
       BACKUP_BUCKET: ${{ secrets.BACKUP_BUCKET }}
       GPG_PASSPHRASE: ${{ secrets.BACKUP_GPG_PASSPHRASE }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install tooling
         run: |
