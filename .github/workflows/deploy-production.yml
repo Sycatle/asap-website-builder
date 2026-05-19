@@ -126,7 +126,7 @@ jobs:
       - name: Render manifests
         run: kustomize build infra/kubernetes/overlays/production > rendered.yaml
 
-      - uses: azure/setup-kubectl@v4
+      - uses: azure/setup-kubectl@v5
         with:
           version: latest
 
