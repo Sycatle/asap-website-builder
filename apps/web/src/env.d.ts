@@ -3,6 +3,7 @@
 interface ImportMetaEnv {
   readonly PUBLIC_API_URL?: string;
   readonly PUBLIC_WS_URL?: string;
+  readonly PUBLIC_SITES_URL?: string;
   readonly PUBLIC_ACCOUNTS_URL?: string;
   readonly PUBLIC_SITE_URL?: string;
 }

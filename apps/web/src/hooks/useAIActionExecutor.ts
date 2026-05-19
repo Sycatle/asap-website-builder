@@ -12,6 +12,8 @@ import type { AIAction } from '@/lib/api/ai';
 import { executeAIAction } from '@/lib/api/ai';
 import type { WebsiteElement, CreateElementRequest, UpdateElementRequest } from '@/lib/types';
 import type { WebsiteData } from '@/lib/types';
+import { useSectionCodeProposalStore } from '@/lib/store/sectionCodeProposalStore';
+import { emitStudioEvent } from '@/lib/events/studio-events';
 
 // ============================================================================
 // Types
@@ -63,8 +65,10 @@ export function useAIActionExecutor(options: UseAIActionExecutorOptions) {
     const previousElements = queryClient.getQueryData<WebsiteElement[]>(elementsKey);
     
     if (!previousElements) return null;
-    
-    switch (action.type) {
+
+    const normalizedType = action.type ? action.type.toLowerCase() : action.type;
+    switch (normalizedType) {
+      case 'update_section_property':
       case 'update_section':
       case 'update_property': {
         if (!action.section_id) return null;
@@ -245,10 +249,15 @@ export function useAIActionExecutor(options: UseAIActionExecutorOptions) {
    * Execute via client-side mutations (original implementation)
    */
   const executeClientSide = useCallback(async (action: AIAction): Promise<ActionExecutionResult> => {
+    // Rust orchestrator emits SCREAMING_SNAKE_CASE (`PROPOSE_SECTION_CODE`)
+    // while older provider-side handlers emit lowercase (`update_section`).
+    // Normalize once so the switch matches either shape.
+    const normalizedType = action.type ? action.type.toLowerCase() : action.type;
     try {
-      switch (action.type) {
+      switch (normalizedType) {
       // ===== Section/Element Actions =====
-        
+
+        case 'update_section_property':
         case 'update_section':
         case 'update_property': {
           if (!action.section_id) {
@@ -418,8 +427,34 @@ export function useAIActionExecutor(options: UseAIActionExecutorOptions) {
           return { success: true, action };
         }
         
+        // ===== AI-proposed section code =====
+
+        case 'propose_section_code': {
+          // Proposals are never auto-applied: drop the source into the
+          // per-section store so the Code tab pre-fills its editor. The
+          // user reviews + clicks "Compile & sauvegarder" to persist.
+          if (!action.section_id || !action.source_code) {
+            return {
+              success: false,
+              action,
+              error: 'section_id and source_code required for propose_section_code',
+            };
+          }
+          useSectionCodeProposalStore
+            .getState()
+            .propose(action.section_id, action.source_code);
+          // Tell the studio shell to select this section + jump to the Code
+          // tab so the proposal is immediately visible.
+          emitStudioEvent({
+            kind: 'select-section',
+            sectionId: action.section_id,
+            tab: 'code',
+          });
+          return { success: true, action };
+        }
+
         // ===== Content Generation Actions =====
-        
+
         case 'generate_content': {
           // Content generation typically needs to update a specific section
           if (!action.target_section_id || !action.target_property) {

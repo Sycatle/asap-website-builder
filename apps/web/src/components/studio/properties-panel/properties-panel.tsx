@@ -6,10 +6,9 @@ import type { WebsiteElement } from "@/lib/types/element";
 import type { UpdateElementRequest } from "@/lib/types/element";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { 
-  X, 
-  MousePointerClick, 
-  Palette, 
+import {
+  X,
+  MousePointerClick,
   Settings2,
   Variable,
   Database,
@@ -17,9 +16,13 @@ import {
   Sparkles,
   Type,
   LayoutGrid,
+  Code2,
 } from "lucide-react";
 import { GeneralProperties } from "./general-properties";
 import { ContentProperties } from "./content-properties";
+import { SectionCodeEditor } from "../section-code/section-code-editor";
+import { SectionKnobsPanel } from "../section-code/section-knobs-panel";
+import { SectionLivePreview } from "../section-code/section-live-preview";
 import { cn } from "@/lib/utils";
 
 // ============================================
@@ -28,6 +31,15 @@ import { cn } from "@/lib/utils";
 
 interface PropertiesPanelProps {
   element: WebsiteElement | null;
+  websiteId: string;
+  websiteSlug: string;
+  /**
+   * One-shot tab request from the parent. The `nonce` is bumped each time so
+   * the panel re-applies the tab even when the value didn't change. Useful
+   * when the AI re-proposes code for the section already on screen — we want
+   * to ensure the user lands on the Code tab even if they had it open.
+   */
+  requestedTab?: { tab: 'content' | 'code'; nonce: number } | null;
   onUpdate: (elementId: string, data: UpdateElementRequest) => Promise<void>;
   onClose?: () => void;
 }
@@ -138,12 +150,21 @@ function EmptyState() {
 
 export function PropertiesPanel({
   element,
+  websiteId,
+  websiteSlug,
+  requestedTab,
   onUpdate,
   onClose,
 }: PropertiesPanelProps) {
   const [activeTab, setActiveTab] = useState<string>("content");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [previewNonce, setPreviewNonce] = useState(0);
+
+  // Honor external tab requests (nonce ensures re-applies even on no-change).
+  React.useEffect(() => {
+    if (requestedTab) setActiveTab(requestedTab.tab);
+  }, [requestedTab?.nonce, requestedTab?.tab]);
 
   // Animate in when element is selected
   React.useEffect(() => {
@@ -237,17 +258,16 @@ export function PropertiesPanel({
               <Type className="h-3.5 w-3.5" />
               Contenu
             </TabsTrigger>
-            <TabsTrigger 
-              value="style" 
-              className="flex-1 h-9 data-[state=active]:bg-muted rounded-md gap-1.5" 
-              disabled
+            <TabsTrigger
+              value="code"
+              className="flex-1 h-9 data-[state=active]:bg-muted rounded-md gap-1.5"
             >
-              <Palette className="h-3.5 w-3.5" />
-              Style
+              <Code2 className="h-3.5 w-3.5" />
+              Code
             </TabsTrigger>
-            <TabsTrigger 
-              value="settings" 
-              className="flex-1 h-9 data-[state=active]:bg-muted rounded-md gap-1.5" 
+            <TabsTrigger
+              value="settings"
+              className="flex-1 h-9 data-[state=active]:bg-muted rounded-md gap-1.5"
               disabled
             >
               <Settings2 className="h-3.5 w-3.5" />
@@ -292,19 +312,23 @@ export function PropertiesPanel({
             </div>
           </TabsContent>
 
-          {/* Style Tab (Placeholder for future) */}
-          <TabsContent value="style" className="mt-0">
-            <div className="flex h-full items-center justify-center p-6">
-              <div className="text-center space-y-3">
-                <div className="mx-auto w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                  <Palette className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Personnalisation du style</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Couleurs, espacements et typographie — bientôt disponible
-                  </p>
-                </div>
+          {/* Code Tab — AI-generated section source + live preview + knobs */}
+          <TabsContent value="code" className="mt-0 data-[state=inactive]:hidden">
+            <div className="p-4 space-y-6 pb-8">
+              <SectionCodeEditor
+                element={element}
+                websiteId={websiteId}
+                onCompiled={() => setPreviewNonce((n) => n + 1)}
+              />
+              <div className="border-t pt-4">
+                <SectionLivePreview
+                  element={element}
+                  websiteSlug={websiteSlug}
+                  refreshNonce={previewNonce}
+                />
+              </div>
+              <div className="border-t pt-4">
+                <SectionKnobsPanel element={element} onUpdate={handleUpdate} />
               </div>
             </div>
           </TabsContent>

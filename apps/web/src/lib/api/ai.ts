@@ -19,6 +19,8 @@ export interface AIAction {
   prompt?: string;
   target_section_id?: string;
   target_property?: string;
+  /** Populated for `PROPOSE_SECTION_CODE` — AI-proposed JSX/TSX for a section. */
+  source_code?: string;
 }
 
 export interface TokenUsage {

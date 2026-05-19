@@ -14,6 +14,7 @@ import { StudioDataProvider } from "../data-binding"
 import { elementsAPI, websitesAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { useHistory } from "@/hooks/use-history"
+import { onStudioEvent } from "@/lib/events/studio-events"
 
 import type { DevicePreview, PreviewTheme, StudioPageProps } from "./types"
 import { SimplePreviewCanvas } from "./components/simple-preview-canvas"
@@ -70,6 +71,23 @@ export function StudioPage({ onBack }: StudioPageProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  // Drives a one-shot tab switch in <PropertiesPanel> from external events
+  // (e.g. AI proposes section code → jump straight to the Code tab).
+  const [requestedTab, setRequestedTab] = useState<{ tab: 'content' | 'code'; nonce: number } | null>(null)
+
+  // Listen to studio-wide events: AI proposes section code, command palette
+  // navigates to a section, etc. Each event is one-shot — we bump a nonce so
+  // PropertiesPanel re-applies even if the same tab is requested twice.
+  useEffect(() => {
+    return onStudioEvent((evt) => {
+      if (evt.kind === 'select-section') {
+        setSelectedElementId(evt.sectionId)
+        if (evt.tab) {
+          setRequestedTab((prev) => ({ tab: evt.tab!, nonce: (prev?.nonce ?? 0) + 1 }))
+        }
+      }
+    })
+  }, [])
 
   // Auto-select homepage on first load
   useEffect(() => {
@@ -416,6 +434,9 @@ export function StudioPage({ onBack }: StudioPageProps) {
           properties={
             <PropertiesPanel
               element={selectedElement}
+              websiteId={website.id}
+              websiteSlug={website.slug}
+              requestedTab={requestedTab}
               onUpdate={handleUpdateElement}
             />
           }
