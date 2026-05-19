@@ -22,6 +22,7 @@ pub mod types;
 
 pub mod actions;
 pub mod providers;
+pub mod section_codegen;
 
 // Re-exports
 pub use config::{AIConfig, OpenAIConfig};
@@ -38,6 +39,10 @@ pub use providers::{
 };
 pub use rate_limiter::{AIRateLimiter, RateLimitResource, RateLimitStatus};
 pub use router::ModelRouter;
+pub use section_codegen::{
+    generate as generate_section, CodegenError, DataBindings, GeneratedSection, Knob, KnobType,
+    KnobsSchema, ValidationError as SectionValidationError,
+};
 pub use tools::{
     get_tool_definitions, ToolCall, ToolDefinition, ToolExecutor, ToolResult, VisualAnalysisParams,
     VisualAnalysisRequest, VisualAnalysisResult,

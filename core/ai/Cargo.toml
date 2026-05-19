@@ -44,6 +44,20 @@ redis = { workspace = true }
 tokio-stream = "0.1"
 pin-project-lite = "0.2"
 
+# Section codegen: parse JSX/TSX, validate, compile to JS.
+# Heavy dep but it's the right tool for the job.
+swc_core = { version = "39", default-features = false, features = [
+    "common",
+    "ecma_ast",
+    "ecma_parser",
+    "ecma_parser_typescript",
+    "ecma_visit",
+    "ecma_codegen",
+    "ecma_transforms",
+    "ecma_transforms_react",
+    "ecma_transforms_typescript",
+] }
+
 [dev-dependencies]
 tokio-test = { workspace = true }
 mockall = { workspace = true }

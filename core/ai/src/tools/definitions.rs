@@ -3,7 +3,6 @@
 //! JSON Schema definitions for AI tools (function calling).
 
 use super::types::{FunctionDefinition, ToolDefinition};
-use asap_core_domain::variant_catalog;
 use serde_json::json;
 
 /// Get all tool definitions for AI function calling
@@ -20,8 +19,43 @@ pub fn get_tool_definitions() -> Vec<ToolDefinition> {
         web_search_tool(),
         browse_url_tool(),
         analyze_trends_tool(),
-        generate_section_variant_tool(),
+        generate_section_code_tool(),
     ]
+}
+
+/// Tool to propose AI-generated JSX/TSX for a section. The runtime validates,
+/// compiles, and the user confirms before persistence.
+fn generate_section_code_tool() -> ToolDefinition {
+    ToolDefinition {
+        tool_type: "function".to_string(),
+        function: FunctionDefinition {
+            name: "generate_section_code".to_string(),
+            description: "Propose a complete React (JSX/TSX) section component for the website. The code MUST: (1) be a single default-exported function component, (2) import only from `react` or `@asap/site-runtime`, (3) read data via `useCollection(slug)` and `useVariable(key)` hooks, (4) style via Tailwind classes that resolve to the site's design tokens (e.g. `bg-primary`, `text-foreground`, `rounded-md`, `font-display`) — no hardcoded colors / sizes in inline `style`, (5) never use `dangerouslySetInnerHTML`, `eval`, `fetch`, `window`, or `document`. The proposal is shown to the user for confirmation before validation + compile + persist.".to_string(),
+            parameters: json!({
+                "type": "object",
+                "properties": {
+                    "section_type": {
+                        "type": "string",
+                        "description": "Semantic section type. Used for studio UI grouping and slug generation.",
+                        "enum": ["hero", "features", "about", "testimonials", "cta", "pricing", "faq", "contact", "footer", "navigation", "gallery", "stats", "logos", "blog-list", "content"]
+                    },
+                    "source_code": {
+                        "type": "string",
+                        "description": "Complete JSX/TSX source code. Must default-export the component. Example: `import { useCollection, useVariable } from '@asap/site-runtime'; export default function Hero() { ... return <section className=\"...\">...</section>; }`."
+                    },
+                    "section_id": {
+                        "type": "string",
+                        "description": "UUID of the section to replace. Omit to create a new section of `section_type`."
+                    },
+                    "position": {
+                        "type": "integer",
+                        "description": "Insertion position for a new section. Ignored when `section_id` is set."
+                    }
+                },
+                "required": ["section_type", "source_code"]
+            }),
+        },
+    }
 }
 
 /// Tool to search within collections (repos, languages, etc.)
@@ -341,59 +375,6 @@ fn analyze_trends_tool() -> ToolDefinition {
     }
 }
 
-/// Tool to propose a section variant. The AI picks a `variant_key` from the
-/// catalog, fills `variant_params` per the spec, and provides updated `content`.
-/// The runtime validates the output before persisting.
-fn generate_section_variant_tool() -> ToolDefinition {
-    // Build the enum of known variant keys at call time so the tool
-    // definition stays in sync with the catalog automatically.
-    let known_keys: Vec<String> = variant_catalog()
-        .into_values()
-        .flatten()
-        .map(|v| v.key.to_string())
-        .collect();
-
-    ToolDefinition {
-        tool_type: "function".to_string(),
-        function: FunctionDefinition {
-            name: "generate_section_variant".to_string(),
-            description: "Propose a section variant for a website. The AI picks a layout (`variant_key`) from the catalog and supplies parameters and content matching the variant's schema. The proposal is shown to the user for confirmation; nothing is persisted by this tool. Use this when the user asks to change a section's look, generate a new section, or refresh the visual identity.".to_string(),
-            parameters: json!({
-                "type": "object",
-                "properties": {
-                    "section_type": {
-                        "type": "string",
-                        "description": "Section type to target.",
-                        "enum": ["hero", "features", "about", "testimonials", "cta", "pricing", "faq", "contact"]
-                    },
-                    "variant_key": {
-                        "type": "string",
-                        "description": "Layout variant from the catalog. Must be one of the listed keys.",
-                        "enum": known_keys
-                    },
-                    "variant_params": {
-                        "type": "object",
-                        "description": "Parameters interpreted by the variant component (density, image_ratio, motion, etc.). Keys not in the variant spec are dropped at validation time. Wrong-type or out-of-range values are rejected."
-                    },
-                    "content": {
-                        "type": "object",
-                        "description": "Updated section content (headline, copy, CTAs, etc.). Optional — when omitted, the existing section content is kept."
-                    },
-                    "section_id": {
-                        "type": "string",
-                        "description": "UUID of the section to update. Omit to create a new section of `section_type`."
-                    },
-                    "position": {
-                        "type": "integer",
-                        "description": "Insertion position for a new section. Ignored when `section_id` is set."
-                    }
-                },
-                "required": ["section_type", "variant_key"]
-            }),
-        },
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -432,23 +413,20 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_section_variant_tool_enumerates_catalog() {
+    fn test_generate_section_code_tool_exists() {
         let tools = get_tool_definitions();
         let tool = tools
             .iter()
-            .find(|t| t.function.name == "generate_section_variant")
-            .expect("generate_section_variant tool should exist");
-
-        let enum_values = tool
+            .find(|t| t.function.name == "generate_section_code")
+            .expect("generate_section_code tool should exist");
+        let required = tool
             .function
             .parameters
-            .pointer("/properties/variant_key/enum")
+            .pointer("/required")
             .and_then(|v| v.as_array())
-            .expect("variant_key enum should be present");
-
-        let keys: Vec<&str> = enum_values.iter().filter_map(|v| v.as_str()).collect();
-        assert!(keys.contains(&"hero/split-asymmetric"));
-        assert!(keys.contains(&"features/compact-list"));
-        assert!(keys.contains(&"about/quote-statement"));
+            .expect("required array should be present");
+        let names: Vec<&str> = required.iter().filter_map(|v| v.as_str()).collect();
+        assert!(names.contains(&"section_type"));
+        assert!(names.contains(&"source_code"));
     }
 }
