@@ -135,8 +135,6 @@ pub async fn execute_ai_action(
                 Some(&settings),
                 None,
                 None,
-                None,
-                None,
             )
             .await?;
 
@@ -235,8 +233,6 @@ pub async fn execute_ai_action(
                 Some(&settings),
                 None,
                 None,
-                None,
-                None,
             )
             .await?;
 
@@ -308,26 +304,29 @@ pub async fn execute_ai_action(
             ))
         }
 
-        AIAction::ProposeSectionVariant {
+        AIAction::ProposeSectionCode {
             section_type,
-            variant_key,
             section_id,
+            source_code,
             ..
         } => {
-            // Proposals are not auto-applied. The frontend stages the proposed
-            // variant on the canvas and waits for the user to confirm. When
-            // confirmed, the studio calls the existing element update endpoints
-            // with the new variant_key / variant_params / content. So here we
-            // simply acknowledge the proposal.
+            // Proposals are not auto-applied. The studio shows the diff +
+            // live preview, the user confirms, and only then does the studio
+            // call POST /api/sites/:id/sections/:section_id/code which runs
+            // validate + compile + persist. Acknowledge here only.
             tracing::info!(
                 section_type = section_type,
-                variant_key = variant_key,
                 section_id = ?section_id,
-                "Section variant proposed by AI"
+                source_bytes = source_code.len(),
+                "Section code proposed by AI"
             );
 
             Ok((
-                format!("Proposed '{}' variant for {}", variant_key, section_type),
+                format!(
+                    "Proposed {} bytes of {} section code",
+                    source_code.len(),
+                    section_type
+                ),
                 *section_id,
             ))
         }

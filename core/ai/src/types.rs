@@ -302,18 +302,18 @@ pub enum AIAction {
         target_property: Option<String>,
     },
 
-    /// AI-proposed section variant. The renderer dispatches on `variant_key`,
-    /// the studio shows the diff, and the user accepts before persistence.
-    /// `section_id` is None for new sections (added at `position` if given).
-    ProposeSectionVariant {
+    /// AI-proposed section code. The studio shows the diff (and live preview
+    /// once compiled), the user accepts, then the studio calls the codegen
+    /// endpoint to validate + compile + persist. Nothing is auto-applied.
+    ProposeSectionCode {
+        /// Semantic section type (`hero`, `features`, ...).
         section_type: String,
-        variant_key: String,
-        #[serde(default)]
-        variant_params: serde_json::Value,
-        #[serde(default)]
-        content: Option<serde_json::Value>,
+        /// Raw JSX/TSX written by the AI.
+        source_code: String,
+        /// Optional id of an existing section to overwrite. None = new section.
         #[serde(default)]
         section_id: Option<Uuid>,
+        /// Insertion position for a new section.
         #[serde(default)]
         position: Option<i32>,
     },
@@ -331,7 +331,7 @@ impl AIAction {
             Self::UpdateTheme { .. } => "UPDATE_THEME",
             Self::UpdateMetadata { .. } => "UPDATE_METADATA",
             Self::GenerateImage { .. } => "GENERATE_IMAGE",
-            Self::ProposeSectionVariant { .. } => "PROPOSE_SECTION_VARIANT",
+            Self::ProposeSectionCode { .. } => "PROPOSE_SECTION_CODE",
         }
     }
 

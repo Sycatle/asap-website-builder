@@ -280,23 +280,24 @@ impl ActionExecutor {
                     *target_section_id,
                 )
             }
-            AIAction::ProposeSectionVariant {
+            AIAction::ProposeSectionCode {
                 section_type,
-                variant_key,
                 section_id,
+                source_code,
                 ..
             } => {
                 debug!(
                     section_type = section_type,
-                    variant_key = variant_key,
                     section_id = ?section_id,
-                    "DRY-RUN: Propose section variant"
+                    source_bytes = source_code.len(),
+                    "DRY-RUN: Propose section code"
                 );
                 (
                     action.action_type(),
                     format!(
-                        "[DRY-RUN] Would propose {} variant '{}'",
-                        section_type, variant_key
+                        "[DRY-RUN] Would propose {} bytes of {} section code",
+                        source_code.len(),
+                        section_type
                     ),
                     *section_id,
                 )

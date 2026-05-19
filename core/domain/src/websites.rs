@@ -148,12 +148,18 @@ pub struct WebsiteElement {
     pub title: String,
     pub order: i32,
     pub layout: ElementLayout,
-    /// Variant key, e.g. `"hero/split-asymmetric"`. None falls back to the legacy layout.
+    /// Raw JSX/TSX written by the AI codegen pipeline before compilation.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub variant_key: Option<String>,
-    /// Variant-specific parameters validated by the renderer.
+    pub source_code: Option<String>,
+    /// esbuild output ready to be dynamic-imported by the site runtime.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub variant_params: Option<serde_json::Value>,
+    pub compiled_js: Option<String>,
+    /// Collections / variables this section consumes, extracted at codegen time.
+    #[serde(default)]
+    pub data_bindings: serde_json::Value,
+    /// AST-extracted knobs (props) surfaced as direct edit controls in the studio.
+    #[serde(default)]
+    pub knobs_schema: serde_json::Value,
     pub settings: serde_json::Value,
     pub data: serde_json::Value,
     pub visible: bool,
@@ -463,8 +469,10 @@ mod tests {
             title: "My Projects".to_string(),
             order: 1,
             layout: ElementLayout::Grid,
-            variant_key: None,
-            variant_params: None,
+            source_code: None,
+            compiled_js: None,
+            data_bindings: serde_json::json!({}),
+            knobs_schema: serde_json::json!({}),
             settings: serde_json::json!({}),
             data: serde_json::json!({}),
             visible: true,

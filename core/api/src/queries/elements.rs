@@ -6,6 +6,61 @@ use uuid::Uuid;
 
 use super::types::WebsiteElementRow;
 
+type ElementRowTuple = (
+    Uuid,
+    Uuid,
+    Option<Uuid>,
+    String,
+    String,
+    String,
+    i32,
+    String,
+    JsonValue,
+    JsonValue,
+    bool,
+    Option<String>,
+    Option<String>,
+    JsonValue,
+    JsonValue,
+);
+
+fn map_element_row(tuple: ElementRowTuple) -> WebsiteElementRow {
+    let (
+        id,
+        website_id,
+        extension_id,
+        element_type,
+        slug,
+        title,
+        order,
+        layout,
+        settings,
+        data,
+        visible,
+        source_code,
+        compiled_js,
+        data_bindings,
+        knobs_schema,
+    ) = tuple;
+    WebsiteElementRow {
+        id,
+        website_id,
+        extension_id,
+        element_type,
+        slug,
+        title,
+        order,
+        layout,
+        settings,
+        data,
+        visible,
+        source_code,
+        compiled_js,
+        data_bindings,
+        knobs_schema,
+    }
+}
+
 /// List elements for a website
 pub async fn list_website_elements(
     pool: &PgPool,
@@ -17,29 +72,12 @@ pub async fn list_website_elements(
         return Err("Website not found".into());
     }
 
-    let rows = sqlx::query_as::<
-        _,
-        (
-            Uuid,
-            Uuid,
-            Option<Uuid>,
-            String,
-            String,
-            String,
-            i32,
-            String,
-            JsonValue,
-            JsonValue,
-            bool,
-            Option<String>,
-            Option<JsonValue>,
-        ),
-    >(
+    let rows = sqlx::query_as::<_, ElementRowTuple>(
         r#"
         SELECT
             id, website_id, extension_id, element_type, slug, title,
             "order", layout, settings, data, visible,
-            variant_key, variant_params
+            source_code, compiled_js, data_bindings, knobs_schema
         FROM website_elements
         WHERE website_id = $1
         ORDER BY "order"
@@ -49,42 +87,7 @@ pub async fn list_website_elements(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows
-        .into_iter()
-        .map(
-            |(
-                id,
-                website_id,
-                extension_id,
-                element_type,
-                slug,
-                title,
-                order,
-                layout,
-                settings,
-                data,
-                visible,
-                variant_key,
-                variant_params,
-            )| {
-                WebsiteElementRow {
-                    id,
-                    website_id,
-                    extension_id,
-                    element_type,
-                    slug,
-                    title,
-                    order,
-                    layout,
-                    settings,
-                    data,
-                    visible,
-                    variant_key,
-                    variant_params,
-                }
-            },
-        )
-        .collect())
+    Ok(rows.into_iter().map(map_element_row).collect())
 }
 
 /// Input bundle for [`create_website_element`].
@@ -134,7 +137,9 @@ pub async fn create_website_element(
     Ok(element_id)
 }
 
-/// Update a website element
+/// Update a website element. AI-codegen fields (`source_code` / `compiled_js`
+/// / `data_bindings` / `knobs_schema`) are written by the codegen endpoint,
+/// not this generic update — they always travel as a single atomic bundle.
 #[allow(clippy::too_many_arguments)]
 pub async fn update_website_element(
     pool: &PgPool,
@@ -146,8 +151,6 @@ pub async fn update_website_element(
     settings: Option<&JsonValue>,
     data: Option<&JsonValue>,
     visible: Option<bool>,
-    variant_key: Option<Option<&str>>,
-    variant_params: Option<Option<&JsonValue>>,
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
     // Verify website access (owner or active administrator)
     if !super::verify_website_access(pool, website_id, account_id).await? {
@@ -205,28 +208,6 @@ pub async fn update_website_element(
             "UPDATE website_elements SET visible = $1, updated_at = now() WHERE id = $2 AND website_id = $3"
         )
         .bind(v)
-        .bind(element_id)
-        .bind(website_id)
-        .execute(&mut *tx)
-        .await?;
-    }
-
-    if let Some(vk) = variant_key {
-        sqlx::query(
-            "UPDATE website_elements SET variant_key = $1, updated_at = now() WHERE id = $2 AND website_id = $3"
-        )
-        .bind(vk)
-        .bind(element_id)
-        .bind(website_id)
-        .execute(&mut *tx)
-        .await?;
-    }
-
-    if let Some(vp) = variant_params {
-        sqlx::query(
-            "UPDATE website_elements SET variant_params = $1, updated_at = now() WHERE id = $2 AND website_id = $3"
-        )
-        .bind(vp)
         .bind(element_id)
         .bind(website_id)
         .execute(&mut *tx)
@@ -292,29 +273,12 @@ pub async fn list_public_website_elements(
     pool: &PgPool,
     website_id: Uuid,
 ) -> Result<Vec<WebsiteElementRow>, Box<dyn std::error::Error + Send + Sync>> {
-    let rows = sqlx::query_as::<
-        _,
-        (
-            Uuid,
-            Uuid,
-            Option<Uuid>,
-            String,
-            String,
-            String,
-            i32,
-            String,
-            JsonValue,
-            JsonValue,
-            bool,
-            Option<String>,
-            Option<JsonValue>,
-        ),
-    >(
+    let rows = sqlx::query_as::<_, ElementRowTuple>(
         r#"
         SELECT
             id, website_id, extension_id, element_type, slug, title,
             "order", layout, settings, data, visible,
-            variant_key, variant_params
+            source_code, compiled_js, data_bindings, knobs_schema
         FROM website_elements
         WHERE website_id = $1 AND visible = true
         ORDER BY "order"
@@ -324,40 +288,5 @@ pub async fn list_public_website_elements(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows
-        .into_iter()
-        .map(
-            |(
-                id,
-                website_id,
-                extension_id,
-                element_type,
-                slug,
-                title,
-                order,
-                layout,
-                settings,
-                data,
-                visible,
-                variant_key,
-                variant_params,
-            )| {
-                WebsiteElementRow {
-                    id,
-                    website_id,
-                    extension_id,
-                    element_type,
-                    slug,
-                    title,
-                    order,
-                    layout,
-                    settings,
-                    data,
-                    visible,
-                    variant_key,
-                    variant_params,
-                }
-            },
-        )
-        .collect())
+    Ok(rows.into_iter().map(map_element_row).collect())
 }

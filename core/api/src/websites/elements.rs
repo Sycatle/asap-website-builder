@@ -46,45 +46,6 @@ pub struct UpdateElementRequest {
     pub settings: Option<serde_json::Value>,
     pub data: Option<serde_json::Value>,
     pub visible: Option<bool>,
-    /// `Some(Some(...))` to set, `Some(None)` to clear, `None` to leave untouched.
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        with = "double_option"
-    )]
-    pub variant_key: Option<Option<String>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        with = "double_option"
-    )]
-    pub variant_params: Option<Option<serde_json::Value>>,
-}
-
-mod double_option {
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
-    // Required by the `#[serde(with = "double_option")]` attribute, even though
-    // skip_serializing_if means it never runs in practice.
-    #[allow(dead_code)]
-    pub fn serialize<T, S>(value: &Option<Option<T>>, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        T: Serialize,
-        S: Serializer,
-    {
-        match value {
-            Some(inner) => inner.serialize(serializer),
-            None => serializer.serialize_none(),
-        }
-    }
-
-    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
-    where
-        T: Deserialize<'de>,
-        D: Deserializer<'de>,
-    {
-        Option::<T>::deserialize(deserializer).map(Some)
-    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -334,8 +295,6 @@ pub async fn update_element(
         payload.settings.as_ref(),
         payload.data.as_ref(),
         payload.visible,
-        payload.variant_key.as_ref().map(|v| v.as_deref()),
-        payload.variant_params.as_ref().map(|v| v.as_ref()),
     )
     .await;
 
@@ -638,10 +597,14 @@ pub async fn get_public_website_elements(
 
     match result {
         Ok(elements) => {
-            // Map to response format
+            // Map to response format. The `compiled_js` blob can be large —
+            // we expose a `module_url` instead, served by a dedicated route
+            // that ships proper `Content-Type: application/javascript` so the
+            // browser can `import()` it directly.
             let response: Vec<serde_json::Value> = elements
                 .into_iter()
                 .map(|e| {
+                    let has_module = e.compiled_js.is_some();
                     serde_json::json!({
                         "id": e.id.to_string(),
                         "website_id": e.website_id.to_string(),
@@ -651,7 +614,13 @@ pub async fn get_public_website_elements(
                         "content": e.data,
                         "settings": e.settings,
                         "visible": e.visible,
-                        "order_index": e.order
+                        "order_index": e.order,
+                        "source_code": e.source_code,
+                        "data_bindings": e.data_bindings,
+                        "knobs_schema": e.knobs_schema,
+                        "module_url": has_module.then(|| {
+                            format!("/api/public/sections/{}/module.js", e.id)
+                        }),
                     })
                 })
                 .collect();
