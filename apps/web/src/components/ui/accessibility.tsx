@@ -46,7 +46,7 @@ export function SkipLink({
 interface ScreenReaderOnlyProps {
   children: React.ReactNode;
   /** Element type to render */
-  as?: keyof JSX.IntrinsicElements;
+  as?: React.ElementType;
   /** Additional class names */
   className?: string;
 }
@@ -157,7 +157,7 @@ export function AccessibleHeading({
   className,
   id,
 }: AccessibleHeadingProps) {
-  const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+  const Tag = `h${level}` as React.ElementType;
   
   const sizeClasses = {
     1: 'text-4xl font-bold tracking-tight',

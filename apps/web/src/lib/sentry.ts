@@ -15,7 +15,7 @@ export function initSentry(): void {
     environment: (import.meta.env.MODE as string) || 'production',
     tracesSampleRate: Number(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE ?? '0.05'),
     sendDefaultPii: false,
-    beforeSend(event) {
+    beforeSend(event: Sentry.ErrorEvent) {
       // Strip request headers that may carry tokens.
       if (event.request?.headers) {
         delete event.request.headers.authorization;
