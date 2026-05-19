@@ -19,7 +19,7 @@
     "date-fns": "*"
   },
   "devDependencies": {
-    "@types/react": "^19.0.0",
+    "@types/react": "^19.2.14",
     "typescript": "^5.0.0",
     "vite": "^7.0.0"
   }
