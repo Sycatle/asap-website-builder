@@ -14,6 +14,9 @@ mod elements;
 mod extensions;
 mod pages;
 mod presets;
+mod public_site_data;
+mod section_code;
+mod section_module;
 
 // Re-export all public items
 pub use self::core::*;
@@ -22,3 +25,6 @@ pub use elements::*;
 pub use extensions::*;
 pub use pages::*;
 pub use presets::*;
+pub use public_site_data::*;
+pub use section_code::*;
+pub use section_module::*;

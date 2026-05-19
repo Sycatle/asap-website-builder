@@ -219,6 +219,10 @@ pub async fn create_router_with_ws(
             "/websites/:id/elements/:element_id",
             delete(crate::websites::delete_element),
         )
+        .route(
+            "/websites/:id/elements/:element_id/code",
+            post(crate::websites::compile_section_code),
+        )
         // Website pages routes
         .route(
             "/websites/:id/pages",
@@ -555,6 +559,14 @@ pub async fn create_router_with_ws(
         .route(
             "/public/websites/:slug/pages",
             get(crate::websites::get_public_website_pages),
+        )
+        .route(
+            "/public/sections/:element_id/module.js",
+            get(crate::websites::get_public_section_module),
+        )
+        .route(
+            "/public/websites/:slug/data",
+            get(crate::websites::get_public_site_data),
         )
         // Extension Store routes (public browsing)
         .route("/store/extensions", get(crate::store::list_extensions))
