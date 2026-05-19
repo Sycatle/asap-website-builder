@@ -8,7 +8,16 @@ import type {
   Theme,
   Website,
 } from '@asap/shared';
-import { sortSections } from '@/lib/rendering/normalize';
+
+// Sort sections by order_index then order. Inlined since the AI-codegen
+// refactor removed the rendering/normalize helper module.
+function sortSections(elements: Element[]): Element[] {
+  return [...elements].sort((a, b) => {
+    const ai = a.order_index ?? a.order ?? 0;
+    const bi = b.order_index ?? b.order ?? 0;
+    return ai - bi;
+  });
+}
 
 // Use INTERNAL_API_URL for server-side (SSR) requests within Docker network
 // Falls back to PUBLIC_API_URL for client-side or local development
@@ -30,6 +39,11 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   }
 }
 
+export interface PublicSiteData {
+  collections: Record<string, { slug: string; items: Array<{ id: string } & Record<string, unknown>> }>;
+  variables: Record<string, unknown>;
+}
+
 export async function getSiteRenderPayload(slug: string): Promise<SiteRenderPayload | null> {
   const normalizedSlug = slug.toLowerCase();
   const aggregated = await fetchJson<SiteRenderPayload>(`${API_URL}/public/sites/${normalizedSlug}/render`);
@@ -39,6 +53,19 @@ export async function getSiteRenderPayload(slug: string): Promise<SiteRenderPayl
   }
 
   return buildLegacyPayload(normalizedSlug);
+}
+
+/**
+ * Fetches the data envelope (collections + variables) for a published site.
+ * Returns an empty envelope when the API has no data — generated sections
+ * are written to degrade gracefully on missing keys.
+ */
+export async function getSiteData(slug: string): Promise<PublicSiteData> {
+  const normalizedSlug = slug.toLowerCase();
+  const data = await fetchJson<PublicSiteData>(
+    `${API_URL}/public/websites/${normalizedSlug}/data`,
+  );
+  return data ?? { collections: {}, variables: {} };
 }
 
 export function resolveSitePage(payload: SiteRenderPayload, pageSlug?: string | null): SiteRenderPage | null {

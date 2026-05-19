@@ -1,12 +1,16 @@
 ---
 /**
  * Dynamic Public Page - Renders any published website by slug
- * 100% SSR for optimal SEO - no client-side JavaScript needed
+ * 100% SSR for optimal SEO - sections are rendered server-side via
+ * `renderSection`, so the HTML response contains the actual content.
  * Route: /{slug}
  */
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import PageNavigation from '@/components/site/PageNavigation.astro';
-import { buildSeo, getSiteRenderPayload, resolveSitePage } from '@/lib/site-data';
+import { renderSection } from '@/lib/section-ssr';
+import { buildSeo, getSiteData, getSiteRenderPayload, resolveSitePage } from '@/lib/site-data';
+import { resolveTokens } from '@asap/shared';
+import type { SiteData } from '@asap/site-runtime';
 
 // Get slug from URL and normalize to lowercase for case-insensitive matching
 const { slug: rawSlug } = Astro.params;
@@ -36,6 +40,26 @@ if (!page) {
 
 const seo = buildSeo(payload, page, slug);
 const showNavigation = payload.pages.length > 1;
+
+// Runtime payload for AI-generated sections. Collections + variables come
+// from the public site-data endpoint; sections without compiled JS render
+// an inline placeholder so unbuilt sections don't break the page.
+const runtimeTokens = resolveTokens({ tokens, theme });
+const siteDataPayload = await getSiteData(slug);
+const runtimeData: SiteData = {
+  collections: siteDataPayload.collections,
+  variables: siteDataPayload.variables,
+};
+
+// Render every section to HTML in parallel. Sections with no compiled JS
+// (or that fail to render) come back as `null` and fall back to the inline
+// placeholder.
+const renderedSections = await Promise.all(
+  page.sections.map(async (section) => ({
+    section,
+    html: await renderSection({ section, tokens: runtimeTokens, data: runtimeData }),
+  })),
+);
 ---
 
 <BaseLayout
@@ -70,17 +94,26 @@ const showNavigation = payload.pages.length > 1;
         </div>
       </section>
     ) : (
-      <section class="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-        <div class="text-center px-6 max-w-2xl">
-          <h1 class="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-3">
-            Rendering pipeline being rebuilt
-          </h1>
-          <p class="text-slate-600 dark:text-slate-400">
-            Sections are being migrated to AI-generated code bound to design tokens.
-            This site will render again once the new runtime ships.
-          </p>
-        </div>
-      </section>
+      renderedSections.map(({ section, html }) =>
+        html ? (
+          <div data-element-id={section.id} set:html={html} />
+        ) : (
+          <section
+            data-element-id={section.id}
+            class="py-12 px-6 border-y border-border bg-muted/30"
+          >
+            <div class="max-w-2xl mx-auto text-center">
+              <p class="text-sm font-medium text-foreground/80">
+                {section.title || section.element_type}
+              </p>
+              <p class="text-xs text-muted-foreground mt-1">
+                Section not yet generated. Open the studio and ask the AI to
+                generate this section.
+              </p>
+            </div>
+          </section>
+        )
+      )
     )}
   </div>
 </BaseLayout>

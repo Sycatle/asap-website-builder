@@ -5,7 +5,9 @@
     "paths": {
       "@/*": ["src/*"],
       "@asap/shared": ["../../packages/shared/src/index.ts"],
-      "@asap/shared/*": ["../../packages/shared/src/*"]
+      "@asap/shared/*": ["../../packages/shared/src/*"],
+      "@asap/site-runtime": ["../../packages/site-runtime/src/index.ts"],
+      "@asap/site-runtime/*": ["../../packages/site-runtime/src/*"]
     },
     "jsx": "react-jsx",
     "jsxImportSource": "react"
