@@ -10,17 +10,25 @@ ASAP — source-available (BSL 1.1 → Apache 2.0 in 2030) self-hostable website
 builder. Hybrid Rust + Node monorepo.
 
 - **Rust workspace** (`Cargo.toml`): `core/{domain,shared,api,payments,notifications,ai}`, `apps/api`, `apps/worker`, `extensions/github-sync/backend`.
-- **pnpm workspace** (`pnpm-workspace.yaml`): `apps/{web,sites,accounts,screenshot}`, `packages/{shared,renderers}`, `extensions/*/frontend`.
+- **pnpm workspace** (`pnpm-workspace.yaml`): `apps/{web,sites,accounts,screenshot}`, `packages/shared`, `extensions/*/frontend`.
 - Postgres + Redis. SSE for AI streaming. WebSocket for live presence / collab.
+
+## Architecture in transition
+
+The variant-catalog / section-renderers system was removed. The replacement (AI-generated JSX consuming Tailwind utilities bound to per-site design tokens) is not yet built — see `/home/sycatle/.claude/plans/n-a-t-on-pas-int-grer-floofy-sifakis.md` for the target.
+
+Current state:
+- `packages/renderers/` deleted. `apps/sites` mounts `@asap/site-runtime` and renders each section via `<GeneratedSection>`, which dynamic-imports the compiled module by URL.
+- AI codegen pipeline lives in `core/ai/src/section_codegen/` (parse → validate → compile via `swc_core`, plus data-binding and knob extraction). Endpoint: `POST /api/websites/:id/elements/:element_id/code` runs the pipeline and atomically writes `source_code` + `compiled_js` + `data_bindings` + `knobs_schema`.
+- AI tool `generate_section_code` + action `AIAction::ProposeSectionCode` are wired through the orchestrator. The studio is responsible for showing the diff and confirming before calling the `/code` endpoint.
+- Public read path: `GET /api/public/websites/:slug/elements` returns `module_url` per compiled section; `GET /api/public/sections/:id/module.js` serves the compiled JS with proper MIME; `GET /api/public/websites/:slug/data` returns the `{ collections, variables }` envelope the runtime hands to the provider.
+- DB schema is final for v0: `website_elements.{source_code, compiled_js, data_bindings, knobs_schema}` (variant columns gone). `.sqlx` regenerated.
+- `apps/web` studio keeps the editor shell. Sections that haven't been generated render an inline placeholder in `apps/sites`; the studio's preview-frame still stubs each section pending the new edit UI.
+- **Still to build**: studio UI for `generate_section_code` round-trip (re-prompt + diff + knobs panel), websocket invalidation when a section is regenerated, optional SSR rendering of generated sections.
 
 ## Load-bearing concepts
 
-Read these before touching the related code:
-
-- **Design tokens** (`core/domain/src/design_tokens.rs`, `packages/shared/src/tokens.ts`) — per-site visual identity: palette, typography, spacing, radius, motion, shadow. Stored in `Website.metadata.tokens` (JSONB). The renderer emits CSS custom properties from these tokens; the studio Design page lets users edit them; the onboarding wizard derives them from a seed color via `derive_tokens()`.
-- **Variant catalog** (`core/domain/src/variant_catalog.rs`, `packages/renderers/src/variant-catalog.ts`) — single source of truth for `variant_key`s and their typed parameters. **Both files must stay in lockstep.** Used by: the AI tool `generate_section_variant`, the studio variant picker, the renderer dispatchers, and the validator `validate_variant()`.
-- **Native variant columns** — `website_elements` has `variant_key TEXT` and `variant_params JSONB` columns. The renderer also reads legacy `settings.variant_*` via `withVariantFields()` for pre-migration records — keep that fallback when touching dispatchers.
-- **Section dispatchers** — each section component in `packages/renderers/src/components/saas/` is a small dispatcher that routes on `section.variant_key` to a variant in `<section>-variants/`. When adding variants, update both catalogs and the dispatcher; never let one drift.
+- **Design tokens** (`core/domain/src/design_tokens.rs`, `packages/shared/src/tokens.ts`) — per-site visual identity: palette, typography, spacing, radius, motion, shadow. Stored in `Website.metadata.tokens` (JSONB). `apps/sites` injects them as CSS custom properties on `:root` per request. These are the *only* allowed source of color / spacing / typography for future AI-generated sections.
 
 ## Working on the codebase
 
@@ -34,7 +42,6 @@ Read these before touching the related code:
 | Rust format | `cargo fmt --all` (enforced in CI) |
 | Rust lint | `cargo clippy --workspace --all-targets -- -D clippy::correctness -D clippy::suspicious` |
 | `@asap/shared` typecheck | `pnpm -F @asap/shared typecheck` |
-| `@asap/renderers` typecheck | `pnpm -F @asap/renderers typecheck` |
 | `apps/web` typecheck | `pnpm -F @asap/web typecheck` |
 | `apps/sites` typecheck | `cd apps/sites && pnpm exec astro check` |
 | Frontend tests (vitest, jsdom) | `pnpm --filter @asap/web test:run` |
@@ -48,7 +55,7 @@ CI (`.github/workflows/ci.yml`) enforces `cargo fmt`, the two clippy lint groups
 - Conventional commits, English, imperative mood. Examples:
   - `fix(api): require strong JWT_SECRET and CORS allowlist in production`
   - `refactor(api): extract login endpoint into auth/login.rs`
-  - `feat(renderers): add hero/split-asymmetric variant`
+  - `feat(api): add /sections/generate endpoint`
 - One concern per commit. No mixed reformats + behaviour changes.
 - **Never** add `Co-Authored-By` trailers.
 - **Never** `git commit --no-verify`. If a hook fails, fix the underlying issue.
@@ -99,12 +106,10 @@ Migrations live in `infra/migrations/` and run via `scripts/run-migrations.sh`. 
 - Astro middleware sets a strict CSP in production — anything new that fetches across origins needs to be added to `connect-src`.
 - All public-facing docs and UI copy are in English (project decision, 2026-05).
 
-### Renderers / variants
+### Rendering (in transition)
 
-- Each section variant must work identically in SSR (`apps/sites`) and CSR studio preview (`apps/web`). No browser-only APIs at top level.
-- When adding or renaming a variant: update **both** `packages/renderers/src/variant-catalog.ts` **and** `core/domain/src/variant_catalog.rs`. Tests in `core/domain` validate the round-trip; CI catches drift.
-- Variant components read `section.variant_params` directly; the dispatcher hoists from `settings` via `withVariantFields()` for legacy records.
-- AI-proposed variants flow through `AIAction::ProposeSectionVariant`. The user must confirm before persistence — never auto-apply in the action handler.
+- The variant catalog + section dispatchers + `packages/renderers` were removed; nothing renders user sections today. Don't add a replacement piecewise — wait for the AI-codegen runtime described in the refactor plan.
+- `apps/web` = the ASAP studio (creators build sites here). `apps/sites` = the multi-tenant runtime that will serve every published site, each with its own design tokens. Keep this distinction crisp: anything that emits per-tenant CSS / hydrates per-site data belongs in `apps/sites`, not `apps/web`.
 
 ### Infra
 
@@ -119,10 +124,9 @@ When in doubt, follow the existing split rather than adding new top-level module
 - **Auth**: `core/api/src/auth.rs` is a thin module file. Each endpoint sits in its own submodule (`auth/signup.rs`, `auth/login.rs`, `auth/refresh.rs`, `auth/password_reset.rs`, `auth/account.rs`, `auth/logout.rs`, `auth/sessions.rs`). Shared helpers: `auth/cookies.rs`, `auth/password.rs`, `auth/types.rs`.
 - **AI**: `core/api/src/ai/` — handlers split into `handlers.rs` (chat + chat_stream), `quota.rs`, `conversations.rs`, plus the helper modules listed in `ai/mod.rs`. AI orchestrator + tool definitions live in `core/ai/src/`.
 - **Collections + variables**: `core/api/src/collections/` — `items.rs`, `variables.rs`, `filters.rs`, `helpers.rs`, `types.rs`.
-- **Design tokens & variants**: `core/domain/src/{design_tokens,design_tokens_derive,variant_catalog}.rs` (Rust mirror) and `packages/{shared/src/{types,tokens}.ts, renderers/src/variant-catalog.ts}` (TS source).
+- **Design tokens**: `core/domain/src/{design_tokens,design_tokens_derive}.rs` (Rust) and `packages/shared/src/{types,tokens}.ts` (TS).
 - **Onboarding wizard / Design page**: `apps/web/src/components/{onboarding/brand-identity-wizard.tsx, features/design/design-page.tsx}`.
 - **Shared crate utilities**: `core/shared/src/` — JWT, cookies, hashing. Don't reimplement these per-crate.
-- **Renderers** (used by both `apps/web` preview and `apps/sites` public): `packages/renderers/`. Components must work identically in SSR and CSR.
 
 ## Anti-patterns we've already paid for
 
@@ -134,8 +138,6 @@ These keep coming back. Don't redo them:
 - Single-file god modules — keep handler files focused; the auth/ai/collections splits are the reference patterns.
 - pnpm `file:` paths inside the workspace — use `workspace:*`.
 - `image: ...:latest` in k8s manifests — versioned tags only.
-- TS catalog updated, Rust catalog forgotten (or vice versa) — they go together.
-- Adding a variant component without listing it in the catalog — the AI tool enum is generated from the catalog at startup, so an unlisted variant is invisible to the model.
 
 ## When you're done
 
@@ -146,6 +148,6 @@ Before claiming a task is complete:
 4. `cargo fmt --all -- --check` passes.
 5. `cargo clippy --workspace --all-targets -- -D clippy::correctness -D clippy::suspicious` passes.
 6. If SQL changed: `.sqlx/` regenerated and committed; new migration added (never edit a merged one).
-7. If a variant or design-token field changed: both TS and Rust catalogs updated.
+7. If a design-token field changed: Rust (`core/domain/src/design_tokens.rs`) and TS (`packages/shared/src/{types,tokens}.ts`) stay aligned.
 8. No `.env` or secret in the diff (`git diff --cached | grep -iE 'secret|api[_-]?key|password'`).
 9. State the test commands you ran in the final response. Don't claim "tests pass" without naming them.

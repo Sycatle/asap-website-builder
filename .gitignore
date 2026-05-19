@@ -91,3 +91,6 @@ build/
 .vscode/**/workspaceStorage/
 
 infra/.env.prod
+
+# Playwright MCP scratch artifacts (browser sessions logged by the MCP agent)
+.playwright-mcp/
