@@ -20,7 +20,7 @@
     "@astrojs/react": "^4.4.2",
     "@astrojs/sitemap": "^3.7.2",
     "@astrojs/tailwind": "^6.0.0",
-    "@sentry/astro": "^8.45.0",
+    "@sentry/astro": "^10.53.1",
     "astro": "^5.16.4",
     "astro-compressor": "^0.4.1",
     "lru-cache": "^11.4.0",
