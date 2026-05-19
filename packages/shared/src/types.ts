@@ -59,16 +59,14 @@ export interface Element {
   order?: number;
   order_index: number;
   layout: string;
-  /**
-   * Variant key, e.g. `"hero/split-asymmetric"`. When omitted, the section
-   * renderer falls back to its legacy single-layout output.
-   */
-  variant_key?: string;
-  /**
-   * Free-form parameters interpreted by the variant component (density,
-   * image ratio, motion intensity, etc.). Validated per variant_key.
-   */
-  variant_params?: Record<string, unknown>;
+  /** Raw JSX/TSX written by the AI codegen pipeline. */
+  source_code?: string | null;
+  /** esbuild output ready to dynamic-import at render. */
+  compiled_js?: string | null;
+  /** Collections / variables the section consumes. */
+  data_bindings?: Record<string, unknown>;
+  /** AST-extracted props the studio renders as direct controls. */
+  knobs_schema?: Record<string, unknown>;
   content?: Record<string, unknown>;
   data?: Record<string, unknown>;
   settings?: Record<string, unknown>;
@@ -592,6 +590,11 @@ export interface WebsiteVariable {
   source: VariableSource;
   source_ref?: string;
   stale: boolean;
+  /**
+   * When `false`, the variable is excluded from the public site data envelope
+   * served at `GET /api/public/websites/:slug/data`. Defaults to `true`.
+   */
+  is_public: boolean;
   computation?: VariableComputation;
   created_at: string;
   updated_at: string;

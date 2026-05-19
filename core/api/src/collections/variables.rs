@@ -33,9 +33,9 @@ pub async fn list_variables(
 
     let result = sqlx::query!(
         r#"
-        SELECT 
+        SELECT
             id, website_id, key, value, value_type,
-            source, source_ref, stale,
+            source, source_ref, stale, is_public,
             created_at, updated_at
         FROM website_variables
         WHERE website_id = $1
@@ -63,6 +63,7 @@ pub async fn list_variables(
                         source: r.source,
                         source_ref: r.source_ref,
                         stale: r.stale,
+                        is_public: r.is_public,
                         created_at: r.created_at.to_rfc3339(),
                         updated_at: r.updated_at.to_rfc3339(),
                     }
@@ -105,9 +106,9 @@ pub async fn get_variable(
 
     let result = sqlx::query!(
         r#"
-        SELECT 
+        SELECT
             id, website_id, key, value, value_type,
-            source, source_ref, stale,
+            source, source_ref, stale, is_public,
             created_at, updated_at
         FROM website_variables
         WHERE website_id = $1 AND key = $2
@@ -129,6 +130,7 @@ pub async fn get_variable(
                 source: row.source,
                 source_ref: row.source_ref,
                 stale: row.stale,
+                is_public: row.is_public,
                 created_at: row.created_at.to_rfc3339(),
                 updated_at: row.updated_at.to_rfc3339(),
             };
@@ -174,16 +176,18 @@ pub async fn set_variable(
         serde_json::Value::Bool(_) => "boolean".to_string(),
         _ => "json".to_string(),
     });
+    let is_public = request.is_public.unwrap_or(true);
 
     let result = sqlx::query!(
         r#"
         INSERT INTO website_variables (
-            website_id, key, value, value_type, source
-        ) VALUES ($1, $2, $3, $4, 'manual')
+            website_id, key, value, value_type, source, is_public
+        ) VALUES ($1, $2, $3, $4, 'manual', $5)
         ON CONFLICT (website_id, key) DO UPDATE SET
             value = $3,
             value_type = $4,
             source = 'manual',
+            is_public = $5,
             stale = FALSE,
             updated_at = NOW()
         RETURNING id
@@ -191,7 +195,8 @@ pub async fn set_variable(
         website_id,
         key,
         request.value,
-        value_type
+        value_type,
+        is_public
     )
     .fetch_one(&pool)
     .await;

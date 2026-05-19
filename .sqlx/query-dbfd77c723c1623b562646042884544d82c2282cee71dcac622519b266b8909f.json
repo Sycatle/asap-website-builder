@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT \n            id, website_id, key, value, value_type,\n            source, source_ref, stale,\n            created_at, updated_at\n        FROM website_variables\n        WHERE website_id = $1 AND key = $2\n        ",
+  "query": "\n        SELECT\n            id, website_id, key, value, value_type,\n            source, source_ref, stale, is_public,\n            created_at, updated_at\n        FROM website_variables\n        WHERE website_id = $1\n        ORDER BY key\n        ",
   "describe": {
     "columns": [
       {
@@ -45,19 +45,23 @@
       },
       {
         "ordinal": 8,
+        "name": "is_public",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Text"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -70,8 +74,9 @@
       true,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "f10f4bcbc1e41ffc670ea0126b890d0425932bf920c0319c46968b20b33611f2"
+  "hash": "dbfd77c723c1623b562646042884544d82c2282cee71dcac622519b266b8909f"
 }

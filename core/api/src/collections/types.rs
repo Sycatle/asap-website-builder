@@ -38,6 +38,7 @@ pub struct VariableResponse {
     pub source: String,
     pub source_ref: Option<String>,
     pub stale: bool,
+    pub is_public: bool,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -73,6 +74,10 @@ pub struct UpsertCollectionRequest {
 pub struct SetVariableRequest {
     pub value: serde_json::Value,
     pub value_type: Option<String>,
+    /// When `false`, the variable is excluded from the public data envelope
+    /// served at `GET /api/public/websites/:slug/data`. Defaults to `true`
+    /// at the DB level when omitted.
+    pub is_public: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]

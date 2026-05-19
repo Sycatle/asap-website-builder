@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT id, account_id, name, description, element_type, variant, settings, \n               preview_image, tags, is_favorite, created_at, updated_at\n        FROM element_templates\n        WHERE id = $1 AND account_id = $2\n        ",
+  "query": "\n        SELECT\n            id, website_id, key, value, value_type,\n            source, source_ref, stale, is_public,\n            created_at, updated_at\n        FROM website_variables\n        WHERE website_id = $1 AND key = $2\n        ",
   "describe": {
     "columns": [
       {
@@ -10,56 +10,51 @@
       },
       {
         "ordinal": 1,
-        "name": "account_id",
+        "name": "website_id",
         "type_info": "Uuid"
       },
       {
         "ordinal": 2,
-        "name": "name",
+        "name": "key",
         "type_info": "Varchar"
       },
       {
         "ordinal": 3,
-        "name": "description",
-        "type_info": "Text"
+        "name": "value",
+        "type_info": "Jsonb"
       },
       {
         "ordinal": 4,
-        "name": "element_type",
+        "name": "value_type",
         "type_info": "Varchar"
       },
       {
         "ordinal": 5,
-        "name": "variant",
+        "name": "source",
         "type_info": "Varchar"
       },
       {
         "ordinal": 6,
-        "name": "settings",
-        "type_info": "Jsonb"
+        "name": "source_ref",
+        "type_info": "Varchar"
       },
       {
         "ordinal": 7,
-        "name": "preview_image",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 8,
-        "name": "tags",
-        "type_info": "TextArray"
-      },
-      {
-        "ordinal": 9,
-        "name": "is_favorite",
+        "name": "stale",
         "type_info": "Bool"
       },
       {
-        "ordinal": 10,
+        "ordinal": 8,
+        "name": "is_public",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 11,
+        "ordinal": 10,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -67,23 +62,22 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid"
+        "Text"
       ]
     },
     "nullable": [
       false,
       false,
       false,
-      true,
+      false,
+      false,
       false,
       true,
       false,
-      true,
-      true,
-      true,
+      false,
       false,
       false
     ]
   },
-  "hash": "25e06bcd89f9562db9e2e748370fb2d872e5f8211758f0fc31d5226a6589671a"
+  "hash": "a02ffb374b8bb04a8ab231c92ce0a961159feb189e37a2d97ec26ebc323bac2c"
 }

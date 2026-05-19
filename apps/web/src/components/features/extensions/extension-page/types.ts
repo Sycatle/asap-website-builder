@@ -29,6 +29,7 @@ export interface VariableItem {
   key: string;
   value: unknown;
   updated_at?: string;
+  is_public: boolean;
 }
 
 export interface CollectionSummaryItem {

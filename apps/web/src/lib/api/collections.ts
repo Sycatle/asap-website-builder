@@ -183,16 +183,23 @@ export const variablesAPI = {
   },
 
   /**
-   * Set a variable value (for manual variables)
+   * Set a variable value (for manual variables). `is_public` defaults to
+   * `true` server-side when omitted; pass `false` to hide it from the public
+   * data envelope.
    */
   set: async (
     websiteId: string,
     key: string,
-    value: unknown
+    value: unknown,
+    options?: { is_public?: boolean }
   ): Promise<WebsiteVariable> => {
+    const body: Record<string, unknown> = { value };
+    if (options?.is_public !== undefined) {
+      body.is_public = options.is_public;
+    }
     return apiClient.put<WebsiteVariable>(
       `/websites/${websiteId}/variables/${key}`,
-      { value }
+      body
     );
   },
 

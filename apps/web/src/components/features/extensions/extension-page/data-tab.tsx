@@ -3,6 +3,8 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Database,
   Variable,
@@ -18,6 +20,34 @@ export function DataTab({ websiteId, extensionSlug }: DataTabProps) {
   const [variables, setVariables] = React.useState<VariableItem[]>([]);
   const [collections, setCollections] = React.useState<CollectionSummaryItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [togglingKey, setTogglingKey] = React.useState<string | null>(null);
+
+  const handleTogglePublic = React.useCallback(
+    async (variable: VariableItem, next: boolean) => {
+      setTogglingKey(variable.key);
+      // Optimistic update — revert on failure.
+      const previous = variable.is_public;
+      setVariables(prev =>
+        prev.map(v => (v.key === variable.key ? { ...v, is_public: next } : v))
+      );
+      try {
+        const { variablesAPI } = await import('@/lib/api/collections');
+        await variablesAPI.set(websiteId, variable.key, variable.value, {
+          is_public: next,
+        });
+      } catch (err) {
+        console.error('Failed to update variable visibility:', err);
+        setVariables(prev =>
+          prev.map(v =>
+            v.key === variable.key ? { ...v, is_public: previous } : v
+          )
+        );
+      } finally {
+        setTogglingKey(null);
+      }
+    },
+    [websiteId]
+  );
 
   React.useEffect(() => {
     const loadData = async () => {
@@ -47,6 +77,7 @@ export function DataTab({ websiteId, extensionSlug }: DataTabProps) {
               key: v.key,
               value: v.value,
               updated_at: v.updated_at,
+              is_public: v.is_public,
             }));
           setVariables(filtered);
         } catch {
@@ -140,27 +171,49 @@ export function DataTab({ websiteId, extensionSlug }: DataTabProps) {
             </div>
           ) : (
             <div className="space-y-1 max-h-[500px] overflow-y-auto pr-1">
-              {variables.map((variable) => {
-                const typeInfo = getVariableTypeLabel(variable.value);
-                return (
-                  <div
-                    key={variable.key}
-                    className="group p-2.5 rounded-lg border bg-muted/20 hover:bg-muted/40 transition-colors"
-                  >
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <code className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-background border text-muted-foreground group-hover:text-foreground transition-colors truncate">
-                        {variable.key}
-                      </code>
-                      <span className={cn("text-[9px] font-medium uppercase", typeInfo.color)}>
-                        {typeInfo.label}
-                      </span>
+              <TooltipProvider delayDuration={200}>
+                {variables.map((variable) => {
+                  const typeInfo = getVariableTypeLabel(variable.value);
+                  return (
+                    <div
+                      key={variable.key}
+                      className="group p-2.5 rounded-lg border bg-muted/20 hover:bg-muted/40 transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <code className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-background border text-muted-foreground group-hover:text-foreground transition-colors truncate">
+                          {variable.key}
+                        </code>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={cn("text-[9px] font-medium uppercase", typeInfo.color)}>
+                            {typeInfo.label}
+                          </span>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="flex items-center gap-1">
+                                <span className="text-[9px] font-medium uppercase text-muted-foreground">
+                                  {variable.is_public ? 'Public' : 'Privé'}
+                                </span>
+                                <Switch
+                                  checked={variable.is_public}
+                                  disabled={togglingKey === variable.key}
+                                  onCheckedChange={(checked) => handleTogglePublic(variable, checked)}
+                                  aria-label={`Visibilité publique de ${variable.key}`}
+                                />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="max-w-[220px] text-xs">
+                              Si désactivé, cette variable n'est PAS exposée au site publié.
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </div>
+                      <p className="text-xs text-foreground/80 break-all line-clamp-2" title={String(variable.value)}>
+                        {formatVariableValue(variable.value, 80)}
+                      </p>
                     </div>
-                    <p className="text-xs text-foreground/80 break-all line-clamp-2" title={String(variable.value)}>
-                      {formatVariableValue(variable.value, 80)}
-                    </p>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </TooltipProvider>
             </div>
           )}
         </CardContent>
