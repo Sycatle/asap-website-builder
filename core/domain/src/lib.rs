@@ -8,7 +8,6 @@ pub mod extension_schema;
 pub mod extensions;
 pub mod integrations;
 pub mod storage;
-pub mod templates;
 pub mod users;
 pub mod websites;
 
@@ -109,10 +108,6 @@ pub use integrations::{GitHubIntegration, Integration};
 pub use storage::{
     AccountStorageQuota, File, FileFolder, FileUploadRequest, FileUploadResponse, FileVisibility,
     StorageQuotaResponse,
-};
-pub use templates::{
-    CreateElementTemplateRequest, ElementTemplate, ElementTemplateSummary,
-    ListElementTemplatesQuery, UpdateElementTemplateRequest,
 };
 pub use users::{Account, AccountData};
 pub use websites::{

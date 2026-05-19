@@ -507,25 +507,6 @@ pub async fn create_router_with_ws(
             "/ai/conversations/:id",
             delete(crate::ai::delete_conversation),
         )
-        // Element Templates routes
-        .route("/templates", get(crate::templates::list_templates))
-        .route("/templates", post(crate::templates::create_template))
-        .route(
-            "/templates/:template_id",
-            get(crate::templates::get_template),
-        )
-        .route(
-            "/templates/:template_id",
-            patch(crate::templates::update_template),
-        )
-        .route(
-            "/templates/:template_id",
-            delete(crate::templates::delete_template),
-        )
-        .route(
-            "/templates/:template_id/favorite",
-            post(crate::templates::toggle_favorite),
-        )
         .layer(Extension(ai_orchestrator.clone()))
         .layer(Extension(storage_service.clone()))
         .layer(Extension(payment_gateway.clone()))

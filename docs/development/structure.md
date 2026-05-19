@@ -8,7 +8,7 @@ This is the file-by-file map of the repository. For the architectural reasoning,
 asap-website-builder/
 ├── core/             # Rust: domain, API, shared utilities, payments, AI, notifications
 ├── extensions/       # Rust: optional features (github-sync, analytics, …)
-├── packages/         # TypeScript: @asap/shared, @asap/renderers
+├── packages/         # TypeScript: @asap/shared, @asap/site-runtime
 ├── apps/             # Executables (api, worker, web, sites, accounts, screenshot)
 ├── infra/            # Docker Compose, Dockerfiles, SQL migrations, env examples
 ├── data/             # Runtime data (logs, generated site projections) — gitignored content
@@ -49,7 +49,7 @@ Consumed by `apps/web` and `apps/sites`.
 | Package | Path | Responsibility |
 |---|---|---|
 | `@asap/shared` | `packages/shared/` | Types, constants, validation utilities |
-| `@asap/renderers` | `packages/renderers/` | React components that render each section type. Single source of truth for preview and public sites. |
+| `@asap/site-runtime` | `packages/site-runtime/` | Per-tenant runtime: design-token injection, data hooks, Tailwind preset, and compiled-section host (`<GeneratedSection>`). Consumed by `apps/sites` for production and `apps/web` for studio preview. Sections themselves are AI-generated, compiled by `core/ai/src/section_codegen`, and served as JS modules by `/api/public/sections/:id/module.js`. |
 
 ## `apps/` — Executables
 

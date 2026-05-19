@@ -32,7 +32,7 @@ ASAP is a one-page website builder organized as a **core + extensions** monorepo
 
 - **Core owns the boundary.** Authentication, tenant isolation (Postgres row-level security on `account_id`), persistence, and event emission live in `core/`. Nothing else.
 - **Extensions are leaf code.** Each extension subscribes to events from the core and exposes its own endpoints. They never reach into another extension's tables.
-- **Single source of truth for rendering.** The React renderers in `packages/renderers` are used by both the dashboard preview (`apps/web`) and the public sites (`apps/sites`). What you edit is what you publish.
+- **AI-codegen rendering pipeline.** Sections are produced as React/TSX by the AI orchestrator and compiled server-side via `core/ai/src/section_codegen` (parse → validate → swc compile). The output (`source_code`, `compiled_js`, `data_bindings`, `knobs_schema`) is persisted on `website_elements`. Public sites (`apps/sites`) fetch each section's compiled module from `/api/public/sections/:id/module.js` and render it via `@asap/site-runtime`, which exposes per-site dependencies on `globalThis.__asapDeps`. The studio (`apps/web`) consumes the same runtime for preview.
 - **Event-driven, not request-chained.** Long-running work (GitHub sync, AI generation, screenshot capture) flows through events handled by `apps/worker`, never blocking the API request loop.
 - **Type-safe across the seam.** Shared TypeScript types live in `packages/shared` and are derived from Rust domain types where possible.
 
@@ -52,7 +52,7 @@ ASAP is a one-page website builder organized as a **core + extensions** monorepo
 ```
 core/             # Rust crates: domain, api, shared, payments, ai, notifications
 extensions/       # Rust crates: github-sync, analytics, …
-packages/         # TypeScript: @asap/shared, @asap/renderers
+packages/         # TypeScript: @asap/shared, @asap/site-runtime
 apps/             # Executables: api, worker, web, sites, accounts, screenshot
 infra/            # Docker compose files and SQL migrations
 ```

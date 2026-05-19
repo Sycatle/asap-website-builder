@@ -61,8 +61,8 @@ pnpm build                      # Build all packages
 
 Packages:
 - `@asap/shared`: Types, constants, utilities (TypeScript)
-- `@asap/renderers`: React section renderers used by both Studio and public sites (DRY principle)
-- `@asap/web`: Dashboard Astro app
+- `@asap/site-runtime`: Per-tenant runtime (token injection, data hooks, compiled-section host). Consumed by `apps/sites` (production) and `apps/web` (studio preview). Sections are AI-generated, compiled server-side via `core/ai/src/section_codegen`, persisted to DB, and served as JS modules by `/api/public/sections/:id/module.js`. The runtime fetches the module URL and renders it; per-site dependencies (React, hooks, design tokens) are exposed through `globalThis.__asapDeps`.
+- `@asap/web`: Dashboard Vite + React SPA
 - `@asap/sites`: Public sites Astro app
 
 ## Code Patterns & Conventions
@@ -180,7 +180,7 @@ WHERE account_id = $1;
 
 5. **Shared Types**: Keep Rust structs (`core/domain/`) and TypeScript types (`packages/shared/src/types.ts`) in sync manually - no automatic codegen yet.
 
-6. **Rendering Parity**: Use `@asap/renderers` components for both preview (Studio) and production (public sites) to avoid duplication.
+6. **Rendering pipeline**: Sections are AI-generated code. The pipeline (parse → validate → compile via swc) lives in `core/ai/src/section_codegen` and writes `source_code`, `compiled_js`, `data_bindings`, and `knobs_schema` to `website_elements`. Public sites fetch each section module from `/api/public/sections/:id/module.js` and render it via `@asap/site-runtime`, which populates `globalThis.__asapDeps` so the compiled module can resolve React, hooks, and per-site data.
 
 ## Quick Reference
 

@@ -14,4 +14,3 @@ export * from './collections';
 export * from './public';
 export * from './store';
 export * from './ai';
-export * from './templates';

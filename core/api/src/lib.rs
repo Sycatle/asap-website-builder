@@ -24,7 +24,6 @@ pub mod rate_limit;
 pub mod routes;
 pub mod storage;
 pub mod store;
-pub mod templates;
 pub mod webhooks;
 pub mod websites;
 
