@@ -6,6 +6,8 @@ import type { WebsiteElement } from '@/lib/api';
 import { PreviewProvider } from '../../preview-context';
 import type { PreviewTheme } from '../types';
 import type { DevicePreview } from '../types';
+import { GeneratedSectionInline, ensureSiteRuntimeDeps } from './generated-section-inline';
+import { getApiBaseUrl } from '@/lib/api/base-url';
 
 /**
  * CSS Variables for light/dark themes matching the public sites
@@ -280,6 +282,16 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const rootRef = useRef<Root | null>(null);
     const [iframeReady, setIframeReady] = useState(false);
+    const apiBase = React.useMemo(() => getApiBaseUrl(), []);
+
+    // AI-generated section modules look up React/jsx-runtime/@asap/site-runtime
+    // through `globalThis.__asapDeps`. Install it once for the studio shell —
+    // dynamic imports happen in the parent realm, so the parent global is what
+    // the loader hits. The iframe window is patched too, harmlessly, in case
+    // a future code path imports from inside the iframe context.
+    useEffect(() => {
+      ensureSiteRuntimeDeps(iframeRef.current?.contentWindow ?? null);
+    }, [iframeReady]);
 
     // Expose methods to parent
     useImperativeHandle(ref, () => ({
@@ -541,28 +553,7 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
                       </div>
                     )}
                     
-                    <div
-                      data-element-id={element.id}
-                      title={element.title || element.element_type}
-                      style={{
-                        padding: '32px',
-                        border: '1px dashed var(--border, #ccc)',
-                        background: 'var(--muted, #f5f5f5)',
-                        color: 'var(--muted-foreground, #666)',
-                        borderRadius: 8,
-                        textAlign: 'center',
-                        margin: '12px 0',
-                        fontFamily: 'system-ui, sans-serif',
-                        fontSize: 13,
-                      }}
-                    >
-                      <div style={{ fontWeight: 600, marginBottom: 4 }}>
-                        {element.title || element.element_type}
-                      </div>
-                      <div style={{ opacity: 0.7 }}>
-                        (preview indisponible — sera branchée au commit 2)
-                      </div>
-                    </div>
+                    <GeneratedSectionInline element={element} apiBase={apiBase} />
                   </div>
                 );
               })
@@ -570,7 +561,7 @@ export const PreviewFrame = forwardRef<PreviewFrameHandle, PreviewFrameProps>(
           </div>
         </PreviewProvider>
       );
-    }, [iframeReady, elements, selectedElementId, onElementClick, onElementDuplicate, onElementDelete, onElementMoveUp, onElementMoveDown, device, appTheme]);
+    }, [iframeReady, elements, selectedElementId, onElementClick, onElementDuplicate, onElementDelete, onElementMoveUp, onElementMoveDown, device, appTheme, apiBase]);
 
     // Scroll to selected element when selection changes
     useEffect(() => {
