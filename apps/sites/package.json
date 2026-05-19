@@ -18,22 +18,22 @@
     "@asap/site-runtime": "workspace:*",
     "@astrojs/node": "^9.5.1",
     "@astrojs/react": "^4.4.2",
-    "@astrojs/sitemap": "^3.3.1",
+    "@astrojs/sitemap": "^3.7.2",
     "@astrojs/tailwind": "^6.0.0",
     "@sentry/astro": "^8.45.0",
     "astro": "^5.16.4",
     "astro-compressor": "^0.4.1",
     "lru-cache": "^11.4.0",
-    "react": "^19.2.1",
-    "react-dom": "^19.2.1"
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.6",
+    "@astrojs/check": "^0.9.9",
     "@tailwindcss/typography": "^0.5.19",
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
-    "autoprefixer": "^10.4.22",
-    "postcss": "^8.5.6",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.15",
     "tailwindcss": "^3.4.18",
     "typescript": "^5.9.3"
   }
