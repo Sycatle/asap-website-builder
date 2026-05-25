@@ -23,14 +23,14 @@
     "@sentry/astro": "^10.53.1",
     "astro": "^5.16.4",
     "astro-compressor": "^0.4.1",
-    "lru-cache": "^11.4.0",
+    "lru-cache": "^11.5.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
     "@tailwindcss/typography": "^0.5.19",
-    "@types/react": "^19.2.14",
+    "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.15",
