@@ -17,7 +17,7 @@
     "@asap/shared": "workspace:*",
     "@asap/site-runtime": "workspace:*",
     "@astrojs/node": "^9.5.1",
-    "@astrojs/react": "^4.4.2",
+    "@astrojs/react": "^5.0.5",
     "@astrojs/sitemap": "^3.7.2",
     "@astrojs/tailwind": "^6.0.0",
     "@sentry/astro": "^10.53.1",
