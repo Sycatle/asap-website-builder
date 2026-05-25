@@ -70,7 +70,7 @@ futures = "0.3"
 redis = { version = "0.24", features = ["aio", "tokio-comp", "connection-manager"] }
 
 # WebSocket
-tokio-tungstenite = "0.21"
+tokio-tungstenite = "0.24"
 
 # Testing
 mockall = "0.12"
