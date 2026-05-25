@@ -41,5 +41,5 @@ anyhow = { workspace = true }
 async-trait = { workspace = true }
 
 # Web Push notifications
-web-push = "0.10"
+web-push = "0.11"
 base64 = "0.22"
